@@ -1,0 +1,10 @@
+# Toko kompetitor untuk di-scrape per toko.
+# Format: shop_id | brand_name
+# shop_id bisa dilihat dari URL toko Shopee: shopee.co.id/shop/{shop_id}
+# atau dari bagian pertama product_id di DB: {shop_id}_{item_id}
+
+971755650 | Fusion R
+84615097 | H2R Cover
+# Tambahkan setelah dapat shop_id:
+# xxxxxxxx | Coversuper
+# xxxxxxxx | Autocover Indonesia

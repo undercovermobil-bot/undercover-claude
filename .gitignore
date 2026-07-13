@@ -1,0 +1,66 @@
+# =====================================================================
+#  .gitignore untuk repo Undercover
+#  Prinsip: Git HANYA untuk kode + dokumen teks (kecil).
+#  Semua DATA BESAR (xlsx, gambar, video, zip) -> simpan di Google Drive,
+#  JANGAN masuk git (biar repo tetap ramping & lolos batas GitHub 100MB/file).
+# =====================================================================
+
+# --- Spreadsheet / data katalog (ke Google Drive) ---
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.tsv
+
+# --- Arsip / snapshot export (ke Google Drive) ---
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+
+# --- Gambar & video / banner (ke Google Drive) ---
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.bmp
+*.svg
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# --- Database & dump ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Rahasia / kredensial (JANGAN pernah di-commit) ---
+.env
+.env.*
+!.env.example
+
+# --- File backup ---
+*.bak
+*.bak_*
+*~
+
+# --- Sampah sistem OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- File sementara Office ---
+~$*
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/

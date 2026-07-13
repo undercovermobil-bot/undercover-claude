@@ -1,0 +1,9 @@
+# Satu keyword per baris. Baris diawali '#' diabaikan.
+cover mobil
+body cover mobil
+cover mobil avanza
+# Brand kompetitor Shopee Mall
+cover mobil fusion r
+cover mobil h2r
+cover mobil coversuper
+cover mobil autocover indonesia

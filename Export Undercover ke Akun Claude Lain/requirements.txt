@@ -1,0 +1,12 @@
+# Core
+python-dotenv>=1.0.0      # load config dari .env
+tenacity>=8.2.0           # retry dengan backoff saat fetch gagal
+rapidfuzz>=3.6.0          # fuzzy matching nama produk (cepat, C-backed)
+
+# Scraping (Playwright langsung)
+playwright>=1.44.0        # headless browser untuk render & ambil data Shopee
+# Setelah install: jalankan `playwright install chromium`
+
+# Dashboard
+streamlit>=1.35.0         # dashboard internal sederhana
+pandas>=2.2.0             # manipulasi data untuk dashboard & compare

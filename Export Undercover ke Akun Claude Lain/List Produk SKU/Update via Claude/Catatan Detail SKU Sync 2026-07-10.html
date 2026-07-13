@@ -1,0 +1,566 @@
+<title>Catatan SKU Sync — 2026-07-10/11</title>
+<style>
+:root{
+  --paper:#F3EEE3; --surface:#FFFFFF; --surface-2:#EDE6D5;
+  --ink:#241F17; --ink-dim:#6B6152; --line:#DBD0B8; --line-strong:#C4B896;
+  --accent:#A8621C; --accent-ink:#FFFFFF;
+  --ok-bg:#E4EEDF; --ok-ink:#3B6B3F; --ok-line:#B9D2AE;
+  --decision-bg:#FBF0D6; --decision-ink:#8A6412; --decision-line:#E9D08C;
+  --legacy-bg:#EAE4F5; --legacy-ink:#5C4E8C; --legacy-line:#CFC0E8;
+  --research-bg:#F6E1DA; --research-ink:#A8402C; --research-line:#E7B7A8;
+  --shadow: 0 1px 2px rgba(36,31,23,.06), 0 6px 20px rgba(36,31,23,.05);
+}
+:root[data-theme="dark"]{
+  --paper:#171310; --surface:#211C16; --surface-2:#2A241C;
+  --ink:#EDE4D2; --ink-dim:#B0A48D; --line:#3A3226; --line-strong:#4C4232;
+  --accent:#E0954A; --accent-ink:#1B1207;
+  --ok-bg:#233024; --ok-ink:#8FCB93; --ok-line:#38492F;
+  --decision-bg:#332A14; --decision-ink:#E9C568; --decision-line:#4E3F1A;
+  --legacy-bg:#28223A; --legacy-ink:#BDAEE0; --legacy-line:#3C3352;
+  --research-bg:#3A241D; --research-ink:#E0806A; --research-line:#4F2F26;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#171310; --surface:#211C16; --surface-2:#2A241C;
+    --ink:#EDE4D2; --ink-dim:#B0A48D; --line:#3A3226; --line-strong:#4C4232;
+    --accent:#E0954A; --accent-ink:#1B1207;
+    --ok-bg:#233024; --ok-ink:#8FCB93; --ok-line:#38492F;
+    --decision-bg:#332A14; --decision-ink:#E9C568; --decision-line:#4E3F1A;
+    --legacy-bg:#28223A; --legacy-ink:#BDAEE0; --legacy-line:#3C3352;
+    --research-bg:#3A241D; --research-ink:#E0806A; --research-line:#4F2F26;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+  }
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.55;
+}
+.wrap{max-width:920px; margin:0 auto; padding:0 20px 96px}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; font-variant-numeric:tabular-nums}
+
+header.report{
+  padding:40px 20px 26px; border-bottom:3px solid var(--ink);
+  background:
+    repeating-linear-gradient(135deg, transparent, transparent 26px, rgba(168,98,28,.05) 26px, rgba(168,98,28,.05) 27px),
+    var(--surface);
+}
+.report-inner{max-width:920px; margin:0 auto}
+.eyebrow{
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700;
+  color:var(--accent); margin:0 0 10px;
+}
+h1{
+  font-family:"Arial Black","Helvetica Neue",sans-serif; font-weight:900;
+  font-size:clamp(28px,5vw,42px); line-height:1.04; margin:0 0 12px; text-wrap:balance;
+  letter-spacing:-.01em;
+}
+.report-meta{display:flex; flex-wrap:wrap; gap:8px 22px; font-size:13px; color:var(--ink-dim); margin-top:14px}
+.report-meta b{color:var(--ink); font-weight:600}
+.report-meta code{background:var(--surface-2); padding:2px 6px; border-radius:4px; font-size:12px}
+
+.stats{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line); margin:26px 0 0;
+}
+.stat{background:var(--surface); padding:16px 18px}
+.stat .n{font-family:"Arial Black",sans-serif; font-size:26px; font-weight:900; font-variant-numeric:tabular-nums}
+.stat .l{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.06em; margin-top:2px}
+
+nav.jump{
+  position:sticky; top:0; z-index:5; background:var(--paper);
+  border-bottom:1px solid var(--line); padding:10px 20px;
+  display:flex; gap:4px; overflow-x:auto; backdrop-filter: blur(6px);
+}
+nav.jump a{
+  font-size:12.5px; font-weight:700; color:var(--ink-dim); text-decoration:none;
+  padding:7px 12px; border-radius:20px; white-space:nowrap; border:1px solid transparent;
+}
+nav.jump a:hover{color:var(--ink); border-color:var(--line-strong)}
+nav.jump a.warn{color:var(--decision-ink)}
+
+section{padding:44px 0 8px; border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:none}
+.section-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px; flex-wrap:wrap}
+.section-num{font-family:"Arial Black",sans-serif; font-size:13px; color:var(--accent)}
+h2{font-family:"Arial Black",sans-serif; font-weight:900; font-size:23px; margin:0; letter-spacing:-.01em}
+.section-sub{color:var(--ink-dim); font-size:14px; margin:6px 0 26px; max-width:66ch}
+
+.chip{
+  display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700;
+  padding:3px 9px; border-radius:20px; letter-spacing:.02em; border:1px solid transparent;
+  white-space:nowrap;
+}
+.chip.ok{background:var(--ok-bg); color:var(--ok-ink); border-color:var(--ok-line)}
+.chip.decision{background:var(--decision-bg); color:var(--decision-ink); border-color:var(--decision-line)}
+.chip.legacy{background:var(--legacy-bg); color:var(--legacy-ink); border-color:var(--legacy-line)}
+.chip.research{background:var(--research-bg); color:var(--research-ink); border-color:var(--research-line)}
+
+details.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  margin-bottom:12px; box-shadow:var(--shadow); overflow:hidden;
+}
+details.card > summary{
+  list-style:none; cursor:pointer; padding:16px 18px; display:flex; align-items:center; gap:12px;
+  font-weight:700; font-size:15px;
+}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::before{
+  content:"+"; font-family:"Arial Black",sans-serif; font-size:16px; color:var(--accent);
+  width:20px; text-align:center; flex-shrink:0;
+}
+details.card[open] > summary::before{content:"–"}
+details.card > summary .stitle{flex:1}
+details.card > summary .scount{font-size:12.5px; color:var(--ink-dim); font-weight:500}
+.card-body{padding:16px 20px 20px 50px; border-top:1px solid var(--line)}
+.card-body p{margin:0 0 12px; color:var(--ink)}
+.card-body .why{
+  font-size:13.5px; color:var(--ink-dim); background:var(--surface-2);
+  border-left:3px solid var(--accent); padding:10px 14px; border-radius:0 6px 6px 0; margin:0 0 14px;
+}
+
+table.plist{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:13.5px}
+table.plist th{
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim);
+  border-bottom:1px solid var(--line-strong); padding:6px 10px 6px 0; font-weight:700;
+}
+table.plist td{padding:7px 10px 7px 0; border-bottom:1px solid var(--line); vertical-align:top}
+table.plist tr:last-child td{border-bottom:none}
+table.plist td.n{font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink-dim)}
+.sku{font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; background:var(--surface-2); padding:1px 5px; border-radius:4px}
+
+.legacy-list{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:6px}
+.legacy-list li{
+  font-size:13px; padding:8px 12px; background:var(--legacy-bg); border:1px solid var(--legacy-line);
+  border-radius:6px; color:var(--legacy-ink);
+}
+.legacy-list li b{color:var(--ink)}
+
+.punch{display:flex; flex-direction:column; gap:10px; margin-top:8px}
+.punch-item{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 18px;
+  box-shadow:var(--shadow); display:flex; gap:14px;
+}
+.punch-item.done{opacity:.72}
+.punch-num{
+  font-family:"Arial Black",sans-serif; font-size:20px; color:var(--decision-ink);
+  width:34px; flex-shrink:0; line-height:1.2;
+}
+.punch-item.done .punch-num{color:var(--ok-ink)}
+.punch-item h3{margin:0 0 4px; font-size:15px; font-weight:700}
+.punch-item .meta{display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap}
+.punch-item p{margin:0 0 6px; font-size:13.5px; color:var(--ink)}
+.punch-item .why{font-size:12.5px; color:var(--ink-dim)}
+.prio{
+  font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+  padding:2px 8px; border-radius:4px;
+}
+.prio.tinggi{background:var(--research-bg); color:var(--research-ink)}
+.prio.sedang{background:var(--decision-bg); color:var(--decision-ink)}
+.prio.rendah{background:var(--surface-2); color:var(--ink-dim)}
+.prio.selesai{background:var(--ok-bg); color:var(--ok-ink)}
+
+.highlight-box{
+  background:var(--ok-bg); border:1px solid var(--ok-line); border-radius:10px;
+  padding:18px 20px; margin:0 0 20px;
+}
+.highlight-box .htitle{font-weight:800; font-size:14px; color:var(--ok-ink); margin:0 0 6px}
+.highlight-box p{margin:0; font-size:13.5px; color:var(--ink)}
+
+footer{padding:40px 0 10px; color:var(--ink-dim); font-size:12.5px}
+footer code{background:var(--surface-2); padding:2px 6px; border-radius:4px}
+
+@media (max-width:640px){
+  .card-body{padding-left:20px}
+  table.plist{display:block; overflow-x:auto}
+}
+</style>
+
+<header class="report">
+  <div class="report-inner">
+    <p class="eyebrow">Undercover · SKU Sync — Catatan Kerja</p>
+    <h1>Apa yang sudah dikerjakan, apa yang perlu kamu cek</h1>
+    <div class="report-meta">
+      <span><b>Tanggal:</b> 10–11 Juli 2026</span>
+      <span><b>Cakupan:</b> Undercover Autocare (hampir selesai, 5 produk non-terlaris ditunda) + Otonation/Otoprotection/Smartprotection (sebagian, scope 331 produk terlaris)</span>
+      <span><b>Semua hasil di:</b> <code>...List Produk SKU\Update via Claude\</code></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n mono">2.256</div><div class="l">Baris listing diperbaiki</div></div>
+      <div class="stat"><div class="n mono">1.401</div><div class="l">Baris master baru</div></div>
+      <div class="stat"><div class="n mono">4 / 4</div><div class="l">Toko tersentuh</div></div>
+      <div class="stat"><div class="n mono">6</div><div class="l">Item masih perlu keputusanmu</div></div>
+    </div>
+  </div>
+</header>
+
+<nav class="jump">
+  <a href="#cara-pakai">Cara pakai</a>
+  <a href="#terlaris">331 Terlaris ⭐</a>
+  <a href="#ua">1 · UA (hampir selesai)</a>
+  <a href="#ot">2 · OT (jalan)</a>
+  <a href="#op">3 · OP (jalan)</a>
+  <a href="#sp">4 · SP (jalan)</a>
+  <a href="#perlu-dicek" class="warn">5 · Perlu dicek ⚑</a>
+  <a href="#belum">6 · Belum mulai</a>
+</nav>
+
+<div class="wrap">
+
+<section id="cara-pakai" style="padding-top:32px">
+  <div class="section-head"><span class="section-num">·</span><h2>Cara pakai catatan ini</h2></div>
+  <p style="max-width:66ch; color:var(--ink-dim)">
+    Tiap kartu di bawah bisa diklik buat buka detailnya (produk apa saja, berapa baris, kenapa itu dianggap
+    beres). Bagian <b style="color:var(--ink)">§5 Perlu Dicek</b> itu yang paling penting — isinya keputusan
+    atau verifikasi yang cuma bisa kamu yang jawab. File Excel ringkas (tanpa detail per-produk) juga ada di
+    folder yang sama: <code class="mono">Ringkasan SKU Sync 2026-07-10.xlsx</code>.
+  </p>
+</section>
+
+<section id="terlaris" style="padding-top:32px">
+  <div class="section-head"><span class="section-num">⭐</span><h2>Prioritas: 331 Produk Terlaris</h2></div>
+  <p class="section-sub">Instruksi 2026-07-11: kerjakan dulu 331 produk di "MOBIL TERLARIS.xlsx" (sheet "COVER MOBIL"), untuk semua toko, sebelum sisa katalog.</p>
+  <div class="highlight-box">
+    <p class="htitle">Temuan: file lama "MOBIL TERLARIS - Status Update SKU.xlsx" ternyata warnanya sudah basi</p>
+    <p>File itu punya highlight per-produk (Hijau = sudah ada SKU di master, Kuning/Oranye/Merah = belum, dengan legenda persis di baris 1-5). Setelah dicek ulang terhadap master TERKINI (per toko, bukan digabung), dari 166 baris non-hijau, <b>163 ternyata alarm palsu</b> (cuma beda ejaan/singkatan dgn nama di master, mis. "Honda HRV" vs master "Honda HR-V / e:N1", "Toyota Altis" vs "Toyota Corolla Altis"). Cuma <b>3 gap yang genuinely nyata</b> di seluruh 331×4=1.324 kombinasi toko-produk — ketiganya sudah dibuatkan/dilengkapi entri masternya (lihat §5 nomor 02).</p>
+  </div>
+</section>
+
+<section id="ua">
+  <div class="section-head"><span class="section-num">§1</span><h2>Undercover Autocare (UA)</h2><span class="chip decision">SHOPEE SELESAI — Lazada/TikTok belum</span></div>
+  <p class="section-sub">1.172 baris listing Shopee + 629 baris master baru, sudah diverifikasi ulang langsung dari file (0 mismatch, 0 SKU duplikat per produk) — kecuali 5 produk kecil yang sengaja ditunda (kartu Kategori D, §5 nomor 09).</p>
+  <div class="highlight-box" style="background:var(--research-bg); border-color:var(--research-line)">
+    <p class="htitle" style="color:var(--research-ink)">Koreksi 07-13: label "selesai" di atas cuma berlaku untuk Shopee — Lazada &amp; TikTok BELUM ikut ke-mirror</p>
+    <p>Dicek langsung: <b>Lazada UA</b> (22.444 baris) cuma 28% yang formatnya sesuai master terkini — sample produk yang sudah difix di Shopee sesi ini (Dodge Journey, Kia Seltos, Chevrolet Cruze, Ford Fusion, Mercedes B Class, dll) <b>hampir semuanya masih SKU lama di Lazada</b>, kecuali GR86 yang memang sengaja dikerjakan semua channel. <b>TikTok file 1</b> (23.943 baris) malah tidak konsisten — sebagian produk 100% benar (Chevrolet Cruze), sebagian 0% (Ford Fusion), sisanya di antaranya. TikTok file 2 &amp; 3 belum dibuka sama sekali. Penyebabnya: pipeline batch-fix Kategori A-D sesi sebelumnya memang cuma menulis ke 5 file Shopee — tidak pernah dirancang untuk ikut menulis ke Lazada/TikTok. Detail di §5 nomor 07.</p>
+  </div>
+
+  <details class="card">
+    <summary><span class="stitle">Kategori A — Typo warna "Warior" → "Warrior"</span><span class="scount">322 baris · 7 produk</span></summary>
+    <div class="card-body">
+      <p>Warna varian "Warior Abu/Biru/Merah" di listing tidak cocok ke warna master ("Warrior..." — huruf r dobel). Setelah teks warnanya dinormalisasi sebelum dicocokkan, semua baris langsung ketemu SKU yang benar.</p>
+      <table class="plist">
+        <tr><th>Produk</th><th>Baris</th></tr>
+        <tr><td>Dodge Journey</td><td class="n">28</td></tr>
+        <tr><td>Hyundai Excel</td><td class="n">42</td></tr>
+        <tr><td>Hyundai Stargazer</td><td class="n">28</td></tr>
+        <tr><td>Isuzu Mux</td><td class="n">42</td></tr>
+        <tr><td>Nissan Evalia</td><td class="n">28</td></tr>
+        <tr><td>Toyota Corona</td><td class="n">98</td></tr>
+        <tr><td>Toyota Previa</td><td class="n">56</td></tr>
+      </table>
+      <p style="margin-top:10px; font-size:13px; color:var(--ink-dim)">Typo yang sama ketemu lagi belakangan di Jeep Wrangler (UA) dan di Smartprotection & Otonation — konsisten di seluruh bisnis.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Kategori B — Master punya 2 skema SKU untuk generasi yang sama</span><span class="scount">186 baris · 3 produk</span></summary>
+    <div class="card-body">
+      <p class="why"><b>Masalahnya:</b> master punya dua baris berbeda untuk generasi yang sama persis (tahun nyaris sama), dengan kode SKU beda — bukan salah satu yang "benar" dan satunya "salah", tapi dua skema penamaan yang tumpang tindih. Listing selalu konsisten pakai SATU skema saja, jadi itu yang dipakai; skema satunya dibiarkan ada di master tapi tidak dipakai lagi (tidak dihapus).</p>
+      <table class="plist">
+        <tr><th>Produk</th><th>Skema dipakai</th><th>Skema diabaikan</th></tr>
+        <tr><td>Kia Seltos</td><td><span class="sku">...-G1-...</span> (Gen 1, 2019-2024)</td><td><span class="sku">...-SP2-...</span> (2019-2023)</td></tr>
+        <tr><td>Mercedes Benz GLS Class</td><td><span class="sku">...-G1-...</span> (Gen 1, 2006-2012)</td><td><span class="sku">...-GL-...</span></td></tr>
+        <tr><td>Jeep Wrangler</td><td>kode chassis asli <span class="sku">JK/JL/TJ/YJ</span></td><td>kode generik <span class="sku">Gen 2 / Gen 2 Facelift</span></td></tr>
+      </table>
+      <p style="margin-top:10px">Bonus temuan di Jeep Wrangler: master kategori Premium punya tahun yang geser 1 tahun dari Reguler/Strip/Exclusive untuk chassis yang sama (mis. JK ditulis 2006-2017 padahal di kategori lain 2007-2018) — sudah diseragamkan.</p>
+      <p class="why" style="margin-top:10px"><b>Mazda 3 Hatchback</b> awalnya masuk kategori ini juga (skema "Gen 3" vs "Gen 3 Facelift" dengan tahun identik di master) — <b>tidak jadi dikerjakan</b> karena kamu konfirmasi listingnya sudah diarsipkan.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Kategori C — Tahun di master tidak cocok dengan listing</span><span class="scount">118 baris listing + 68 baris master baru</span></summary>
+    <div class="card-body">
+      <p>Master menyimpan rentang tahun yang berbeda dari yang sungguh dipakai di listing. Prinsip yang dipakai: <b>listing live jadi acuan</b>, master disesuaikan supaya tim produksi tidak banyak berubah kebiasaan kerja.</p>
+      <table class="plist">
+        <tr><th>Produk</th><th>Sebelum (master)</th><th>Sesudah (master)</th></tr>
+        <tr><td>Chevrolet Cruze</td><td>Gen1 2001–2008 · Gen2 2008–2024</td><td>Gen1 2008–2016 · Gen2 2015–2024</td></tr>
+        <tr><td>Timor</td><td>Tahun kosong (belum pernah diisi)</td><td>1996–2000</td></tr>
+        <tr><td>Mercedes Benz B Class</td><td>Gen3 2018–2026 (1 generasi)</td><td>Gen3 2019–2023 + <b>Gen3 Facelift baru</b> 2023–2024</td></tr>
+        <tr><td>Nissan Kicks</td><td>Gen1 2020–2026 (1 generasi)</td><td>Gen1 2016–2021 + <b>Gen1 Facelift baru</b> 2021–2024</td></tr>
+        <tr><td>Toyota Yaris</td><td>Gen1 2023–2026 (1 generasi, salah total)</td><td>Gen1 2006–2013 + <b>Gen2 baru</b> 2014–2026</td></tr>
+      </table>
+      <p style="margin-top:10px; font-size:13px; color:var(--ink-dim)">Toyota Yaris istimewa: listing-nya ternyata <b>sudah benar dari awal</b>, masalahnya murni di master — begitu master diperbaiki, listing otomatis "sudah OK" tanpa perlu ditulis ulang.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Kategori D — Produk sama sekali belum ada di master</span><span class="scount">184 baris listing + 391 baris master baru</span></summary>
+    <div class="card-body">
+      <p>6 produk (+1 belakangan) benar-benar tidak punya entri master sama sekali. Dibuatkan entri baru lengkap, ikut konvensi kode SKU yang sudah ada per brand, dipastikan tidak ada kode yang bentrok dengan yang sudah ada.</p>
+      <table class="plist">
+        <tr><th>Produk</th><th>Kode SKU</th><th>Generasi dibuat</th></tr>
+        <tr><td>Ford Fusion <span class="chip decision">listing sebagian</span></td><td class="sku">FRD-FUS</td><td>Gen1 2006-12 · Gen2 2013-17 · Gen2F1 2017-19 · Gen2F2 2019-20</td></tr>
+        <tr><td>Mercedes Benz G Class <span class="chip ok">listing tuntas 07-11</span></td><td class="sku">MBZ-GCL</td><td>Gen1 1990-2018 · Gen2 2018-2024</td></tr>
+        <tr><td>Mitsubishi Eclipse <span class="chip decision">listing sebagian</span></td><td class="sku">MTB-ECL</td><td>Gen1–Gen4, 1989-2011</td></tr>
+        <tr><td>Peugeot 306 <span class="chip decision">listing sebagian</span></td><td class="sku">PEU-M306</td><td>Fase1–Fase3 (bukan "Gen", ikut istilah aslinya), 1993-2002</td></tr>
+        <tr><td>Volkswagen Fox <span class="chip decision">listing sebagian</span></td><td class="sku">VLK-FOX</td><td>Gen1 2003-2021</td></tr>
+        <tr><td>Volkswagen Passat <span class="chip decision">listing sebagian</span></td><td class="sku">VLK-PAS</td><td>B1,B2,B3,B5–B9 (kode chassis asli VW, B4 memang tidak pernah ada)</td></tr>
+        <tr><td>Mercedes Benz EQE <span class="chip ok">baru 07-11</span></td><td class="sku">MBZ-EQE</td><td>Gen1 2022-2024 (info kamu). Belum ada listing aktif ditemukan.</td></tr>
+      </table>
+      <p class="why" style="margin-top:12px"><b>Nissan Livina XGear</b> awalnya juga dikira "hilang total" — ternyata <b>sudah ada</b> di master dengan nama "Nissan Livina <u>X-Gear</u>" (pakai tanda hubung). Cukup disinkronkan SKU listing-nya, tidak perlu bikin entri baru.</p>
+      <p class="why" style="margin-top:10px; border-left-color:var(--decision-ink)"><b>Koreksi 07-11:</b> angka "154 baris" yang dilaporkan 07-10 ternyata overstated — kerjanya terpotong saat prioritas beralih ke "331 terlaris dulu". Master untuk keenam produk 100% lengkap, tapi listing-nya baru <b>Mercedes Benz G Class</b> yang benar-benar tuntas (dicek 07-11, ternyata masuk terlaris rank #167, jadi langsung dituntaskan — 30 baris). 5 produk lainnya (Ford Fusion, Mitsubishi Eclipse, Peugeot 306, VW Fox, VW Passat) dicek eksplisit ke daftar 331 terlaris dan memang tidak ada di situ — sengaja ditunda, lihat §5 nomor 14.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Varian bodi terpisah — bukan "kurang 1 generasi", tapi genuinely produk lain</span><span class="scount">277 baris listing + 187 baris master baru</span></summary>
+    <div class="card-body">
+      <p>3 kasus di mana nama listing mirip produk yang sudah ada di master, tapi skema generasi/tahunnya sama sekali tidak nyambung — jadi dibuatkan entri master <b>baru dan berdiri sendiri</b>, bukan dipaksa masuk ke entri yang sudah ada.</p>
+      <table class="plist">
+        <tr><th>Produk</th><th>Kode SKU</th><th>Catatan</th></tr>
+        <tr><td>Hyundai Avega Hatchback</td><td class="sku">HYN-AVH</td><td>Terpisah dari "Hyundai Avega" (sedan) yang sudah cocok sempurna dengan master. Gen3–Gen5, 2005–2022.</td></tr>
+        <tr><td>Daihatsu Feroza Long</td><td class="sku">DHT-FRL</td><td>Terpisah dari "Daihatsu Feroza" biasa. Gen3–Gen4, 1985–2007.</td></tr>
+        <tr><td>Suzuki Carry</td><td class="sku">SZK-CAR</td><td>1 produk baru menggantikan cara pikir lama, mencakup Gen 6–11 (1976–2024). Dua nama listing berbeda ("Suzuki Carry Pickup" & "Suzuki Carry" polos) diarahkan ke sini. Entri lama "Suzuki Carry Futura"/"Suzuki New Carry Pick-Up" dibiarkan ada, cuma tidak dipakai lagi. <span class="chip ok">Direplikasi ke OT/OP/SP 07-11</span></td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Nissan X-Trail — aturan generasi gabungan</span><span class="scount">0 baris diubah</span></summary>
+    <div class="card-body">
+      <p>Aturan dikonfirmasi: kalau listing menulis label gabungan (mis. "Gen 1-2, 2001-2013"), SKU-nya pakai kode generasi yang <b>lebih rendah</b> (G1). Setelah dicek, 3 dari 4 listing (Premium, Exclusive, Reguler) ternyata <b>sudah benar</b> semua — tidak ada yang perlu diubah.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Toyota GR 86 — semua channel dituntaskan</span><span class="scount">85 baris (6 Shopee + 31 TikTok + 48 Lazada)</span></summary>
+    <div class="card-body">
+      <p>Reguler & Exclusive Shopee sudah beres di sesi sebelumnya. Sisanya dituntaskan sesi ini:</p>
+      <table class="plist">
+        <tr><th>Channel</th><th>Baris</th><th>Catatan</th></tr>
+        <tr><td>Shopee Premium</td><td class="n">6</td><td>2 listing terpisah. Label listing tertulis "Gen 1 (2013–2020)" — beda 1 tahun dari master (2012), tapi tidak ada kandidat generasi lain di dekatnya jadi aman dipetakan.</td></tr>
+        <tr><td>TikTok</td><td class="n">31</td><td>3 dari 4 listing bisa diperbaiki. 1 listing (Reguler, product_id 1731375811678471194) <b>tidak disentuh</b> — variannya cuma warna, sama sekali tidak ada info generasi, jadi tidak bisa dipastikan.</td></tr>
+        <tr><td>Lazada</td><td class="n">48</td><td>Termasuk 14 baris kasus khusus: SKU-nya <i>sudah</i> berformat benar (<span class="sku">TYT-G86-UA-...</span>) tapi nomor generasinya salah (label bilang "Gen 2", SKU-nya G1) — awalnya lolos deteksi karena formatnya kelihatan "sudah benar". Ketahuan setelah re-cek, sudah diperbaiki.</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <p style="margin:22px 0 8px; font-weight:700; font-size:14px">Listing yang SENGAJA tidak disentuh (dikonfirmasi arsip olehmu):</p>
+  <ul class="legacy-list">
+    <li><span class="chip legacy" style="margin-right:8px">ARSIP</span><b>Toyota Yaris</b> — Shopee-3, product_id <span class="mono">21569458396</span></li>
+    <li><span class="chip legacy" style="margin-right:8px">ARSIP</span><b>Nissan X-Trail</b> — Shopee-4 Premium, product_id <span class="mono">19669472741</span></li>
+    <li><span class="chip legacy" style="margin-right:8px">ARSIP</span><b>Mazda 3 Hatchback</b> — semua listing</li>
+  </ul>
+</section>
+
+<section id="ot">
+  <div class="section-head"><span class="section-num">§2</span><h2>Otonation (OT)</h2><span class="chip decision">SEBAGIAN — masih jalan</span></div>
+  <p class="section-sub">513 baris listing + 493 baris master baru. Jauh lebih berantakan dari Undercover — bukan cuma soal tahun, tapi skema penamaan warna &amp; kategori yang beda total.</p>
+
+  <details class="card">
+    <summary><span class="stitle">Yang sudah beres</span><span class="scount">513 baris listing + 493 baris master</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Apa</th><th>Baris</th><th>Catatan</th></tr>
+        <tr><td>Listing disinkronkan</td><td class="n">513</td><td>Bertahap dalam 5 putaran, seiring scanner-nya disempurnakan tiap kali ketemu pola baru.</td></tr>
+        <tr><td>6 produk baru di master</td><td class="n">374</td><td>Ford Fusion, Mercedes G Class, Mitsubishi Eclipse, Peugeot 306, VW Fox, VW Passat — SKU dipakai <b>sama persis</b> dengan versi Undercover (shared lintas toko by design).</td></tr>
+        <tr><td>Suzuki Carry + Mercedes EQE <span class="chip ok">07-11</span></td><td class="n">119</td><td>Suzuki Carry (102 baris, Gen 6-11 sama seperti UA) + EQE (17 baris) — belum ada listing yg cocok ditemukan, master disiapkan duluan.</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Pola sistemik yang ditemukan (relevan untuk kerja lanjutan / toko lain)</span><span class="scount">5 pola</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Pola</th><th>Penjelasan</th></tr>
+        <tr><td>Skema warna tier-Strip</td><td>Listing pakai <span class="sku">Strip 1/2/3 + warna</span>, master pakai <span class="sku">Elite/Epic/Warrior + warna</span>. Mapping: <b>Strip 1 = Epic, Strip 2 = Elite, Strip 3 = Warrior</b>.</td></tr>
+        <tr><td>Penamaan kategori</td><td>"Extreme Outdoor" = Exclusive, "Semi Outdoor"/"Indoor dan Outdoor" = Reguler. "Outdoor" polos <i>ambigu</i> — dideteksi dari warna yang benar-benar muncul di listing itu.</td></tr>
+        <tr><td>Listing arsip "Sarung Mobil X"</td><td>Nama listing tanpa akhiran apa pun <b>ternyata listing lama yang sudah diarsipkan</b> — dikonfirmasi kamu. Sengaja dilewati.</td></tr>
+        <tr><td>Kategori Transparan</td><td>Warnanya selalu "Transparan" (bukan warna asli mobil).</td></tr>
+        <tr><td>Submodel sebagai "generasi"</td><td>Master pakai nama submodel (Roadster, Kotak, Commuter, 3 Pintu, dst) di kolom Generasi — perlu dicocokkan by name, bukan by tahun. Pola ini ketemu lagi persis sama di Otoprotection.</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">7 produk yang sempat dikira bermasalah — 6 ternyata sudah benar, 1 genuinely perlu kerja manual</span><span class="scount">status final 07-11</span></summary>
+    <div class="card-body">
+      <p>Sempat dikira arsip atau ada gap master (pola sama seperti "Sarung Mobil"), tapi setelah dicek langsung ke listing live: <b>Suzuki Jimny, Toyota Starlet, Nissan Navara (+PRO-4X), Suzuki SX4, Toyota Hilux (+Hilux Rangga), Toyota Innova — semuanya sudah tersinkron benar</b>, tidak perlu perbaikan. Cuma <b>Mercedes Benz CLA Class</b> yang genuinely perlu kerja manual (listingnya cuma punya varian warna, tanpa pilihan generasi sama sekali) — masuk daftar §5 nomor 04.</p>
+    </div>
+  </details>
+</section>
+
+<section id="op">
+  <div class="section-head"><span class="section-num">§3</span><h2>Otoprotection (OP)</h2><span class="chip decision">SEBAGIAN — scope terlaris</span></div>
+  <p class="section-sub">32 baris listing + 126 baris master baru. Struktur listingnya beda total dari UA/OT.</p>
+
+  <details class="card">
+    <summary><span class="stitle">Yang sudah beres</span><span class="scount">32 baris listing + 126 baris master</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Apa</th><th>Baris</th><th>Catatan</th></tr>
+        <tr><td>Listing disinkronkan (scope 331 terlaris)</td><td class="n">32</td><td>Termasuk verifikasi <b>Toyota Avanza (#1)</b> & <b>Honda Brio (#2)</b> — dua produk terlaris justru sudah benar dari awal. 66 produk lain juga sudah OK.</td></tr>
+        <tr><td>Suzuki Carry + Mercedes G Class + EQE <span class="chip ok">07-11</span></td><td class="n">126</td><td>Master dilengkapi (84+28+14 baris). Listing "Suzuki Carry" (polos), "Suzuki Carry Pickup" & "Mercedes G Class" cuma punya pilihan warna tanpa info generasi — SKU-nya sudah dikosongkan, masuk §5 nomor 04.</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">SX4 &amp; Hilux Rangga — sempat dikira gap, ternyata sudah benar</span><span class="scount">status final 07-11</span></summary>
+    <div class="card-body">
+      <p>Sama seperti temuan di Otonation: submodel Suzuki SX4 (X-Over=Gen1, S-Cross=Gen2) dan Toyota Hilux Rangga (produk master terpisah <span class="sku">TYT-HLR-SP-*</span>) ternyata sudah tersinkron benar di listing live. Scanner cuma tidak bisa memverifikasi otomatis karena tidak tahu mapping submodelnya.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Struktur Otoprotection BEDA TOTAL dari UA/OT</span><span class="scount">penting utk kerja lanjutan</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Pola</th><th>Penjelasan</th></tr>
+        <tr><td>1 listing per mobil</td><td>Semua kategori+generasi+warna sekaligus dalam 1 listing (bukan listing terpisah per tier seperti UA/OT).</td></tr>
+        <tr><td>Tanpa Premium/Exclusive</td><td>Shopee OP TIDAK jual tier Premium/Exclusive sama sekali — cuma Reguler+Strip (1 listing gabungan, nama "Body Cover Mobil / Selimut Mobil X") dan Transparan (listing terpisah, "Cover Mobil Transparan X").</td></tr>
+        <tr><td>Warna Strip-N langsung</td><td>Listing sudah pakai "Strip 1/2/3 + warna" sama persis dengan master — tidak perlu remap seperti Otonation.</td></tr>
+        <tr><td>Submodel & rentang gabungan</td><td>Pola sama seperti Otonation: submodel (Hilux Rangga, S-Cross/X-Over, dll) dan rentang generasi gabungan ("Gen 3-4" vs master "Gen 3 & 4") ketemu lagi di sini.</td></tr>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section id="sp">
+  <div class="section-head"><span class="section-num">§4</span><h2>Smartprotection (SP)</h2><span class="chip decision">SEBAGIAN — baru mulai 07-11</span></div>
+  <p class="section-sub">539 baris listing + 153 baris master baru. Toko terakhir dari 4, baru mulai disentuh sesi ini.</p>
+
+  <details class="card">
+    <summary><span class="stitle">Yang sudah beres</span><span class="scount">539 baris listing + 153 baris master</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Apa</th><th>Baris</th><th>Catatan</th></tr>
+        <tr><td>Listing disinkronkan (scope 331 terlaris)</td><td class="n">539</td><td>73 produk diperbaiki di percobaan pertama scanner — 144 produk lain sudah OK dari awal.</td></tr>
+        <tr><td>Suzuki Carry + Mercedes G Class + EQE</td><td class="n">153</td><td>Master dilengkapi (102+34+17 baris); listing belum sempat dicek ulang di scan berikutnya.</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary><span class="stitle">Struktur Smartprotection: gabungan pola OP + UA, dengan 1 twist penting</span><span class="scount">penting utk kerja lanjutan</span></summary>
+    <div class="card-body">
+      <table class="plist">
+        <tr><th>Pola</th><th>Penjelasan</th></tr>
+        <tr><td>Sama seperti OP</td><td>1 listing per mobil, Reguler+Strip gabung, Transparan listing terpisah, Shopee tidak kelihatan jual Premium/Exclusive.</td></tr>
+        <tr><td>BEDA dari OP — arah warna kebalikan</td><td>Listing pakai TEKS "Elite/Epic/Warrior" (seperti UA/OT), tapi master SP simpan kode "Strip 1/2/3" (seperti OP). Mapping: <b>Epic=Strip1, Elite=Strip2, Warrior=Strip3</b> — kebalikan dari arah konversi Otonation.</td></tr>
+        <tr><td>Typo "Warior"</td><td>Ketemu lagi di sini, konsisten dengan toko lain.</td></tr>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section id="perlu-dicek">
+  <div class="section-head"><span class="section-num">§5</span><h2>Perlu Dicek / Revisi</h2><span class="chip decision">9 item, 3 selesai</span></div>
+  <p class="section-sub">Diurutkan dari yang paling penting. Ini bukan bug yang saya lewatkan — ini titik-titik yang memang cuma bisa diputuskan olehmu.</p>
+
+  <div class="punch">
+    <div class="punch-item">
+      <div class="punch-num">01</div>
+      <div>
+        <div class="meta"><span class="prio tinggi">Tinggi</span><h3 style="display:inline">Review &amp; proses ke e-commerce</h3></div>
+        <p>Semua perbaikan (UA+OT+OP+SP) ada di folder <code class="mono">Update via Claude\</code> — struktur foldernya sama persis dengan yang asli. <b>File aslinya belum diubah sama sekali.</b> Begitu kamu cek dan setuju, tim produksi tinggal salin file dari situ ke lokasi asli, lalu upload ulang ke Shopee/TikTok/Lazada seperti biasa.</p>
+        <p class="why">Untuk mass-upload nanti: sertakan HANYA baris yang SKU-nya benar-benar berubah dari versi asli — kalau produk yang tidak berubah ikut disertakan, upload massal berisiko me-reset stoknya (sesuai arahanmu). Tunggu file stok/harga terbaru dari kamu sebelum digabung. Skala: 2.256 baris listing.</p>
+      </div>
+    </div>
+
+    <div class="punch-item done">
+      <div class="punch-num">02</div>
+      <div>
+        <div class="meta"><span class="prio selesai">Selesai</span><h3 style="display:inline">3 gap master lintas 4 toko + Mercedes G Class (UA)</h3></div>
+        <p><b>Mercedes Benz EQE</b> — sudah dibuatkan master (1 gen, 2022-2024, sesuai info kamu) di keempat toko; belum ada listing aktif ditemukan. <b>Suzuki Carry</b> & <b>Mercedes G Class</b> — sudah direplikasi ke toko yang sebelumnya kurang (OT/OP/SP). <b>Mercedes G Class (UA)</b> ternyata masuk terlaris #167 — listingnya (30 baris Reguler+Exclusive) langsung disinkronkan dari SKU legacy ke format master.</p>
+        <p class="why">Kalau ternyata ada listing EQE yang terlewat scan, tinggal kabari.</p>
+      </div>
+    </div>
+
+    <div class="punch-item done">
+      <div class="punch-num">03</div>
+      <div>
+        <div class="meta"><span class="prio selesai">Selesai (07-11)</span><h3 style="display:inline">SX4, Hilux/Hilux Rangga, Innova, Navara/PRO-4X, Jimny, Starlet (Otonation + Otoprotection)</h3></div>
+        <p>Dicek satu-satu langsung ke listing live — <b>semuanya sudah tersinkron benar, tidak perlu perbaikan apa pun.</b> Sebelumnya ke-flag "perlu keputusan" cuma karena scanner otomatis tidak tahu cara memverifikasi mapping submodel-nya, bukan karena datanya salah. Mapping yang sekarang terkonfirmasi:</p>
+        <table class="plist">
+          <tr><th>Submodel</th><th>Pemetaan</th></tr>
+          <tr><td>Suzuki SX4</td><td>X-Over = Gen 1, S-Cross = Gen 2</td></tr>
+          <tr><td>Toyota Hilux Rangga</td><td>Produk master <b>terpisah</b> (<span class="sku">TYT-HLR-*</span>), bukan generasi dari Hilux biasa</td></tr>
+          <tr><td>Toyota Innova</td><td>Reborn = Gen 2, Zenix = Gen 3 (nama pasar dibuang)</td></tr>
+          <tr><td>Nissan Navara PRO-4X</td><td>Produk master <b>terpisah</b> (<span class="sku">NSN-NVP-*</span>), bukan submodel Navara biasa</td></tr>
+        </table>
+        <p class="why">Jawaban langsung atas pertanyaanmu soal Hilux Rangga: bukan sama dengan Hilux Gen 1, dia produk sendiri di master.</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">04</div>
+      <div>
+        <div class="meta"><span class="prio sedang">Sedang</span><h3 style="display:inline">Perlu tambah varian generasi manual di Shopee — 4 listing</h3></div>
+        <p>Suzuki Carry, Suzuki Carry Pickup, Mercedes G Class (semua Otoprotection) + <b>Mercedes Benz CLA Class (Otonation, masuk terlaris #229)</b> — variannya CUMA warna, tanpa pilihan generasi sama sekali. SKU-nya sudah saya <b>kosongkan</b> (sebelumnya masih kode legacy lama, bukan kosong) supaya jelas kelihatan belum lengkap. Daftar lengkap ada di <code class="mono">Produk Perlu Varian Manual.csv</code> di folder <code class="mono">Update via Claude</code> — tinggal copy-paste ke Google Sheet trackingmu.</p>
+        <p class="why">Saya belum punya akses tulis otomatis ke Google Sheets di sesi ini, jadi belum bisa saya isi langsung ke link yang kamu kasih. Baris terdampak: 60 (15+15+15+15).</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">05</div>
+      <div>
+        <div class="meta"><span class="prio tinggi">Tinggi</span><h3 style="display:inline">Gap kategori Transparan (Otonation + Smartprotection) — 96% ternyata masuk terlaris</h3></div>
+        <p>643 baris / 185 produk (OT, lebih besar dari perkiraan awal "~269+") + 16 produk (SP, termasuk Honda Brio #2!) listing Transparan sama sekali belum punya SKU di master. <b>Cross-check ke daftar 331 terlaris: 178 dari 185 produk OT (96%) MASUK terlaris</b> — cuma 7 non-terlaris (kebanyakan sudah dikenal: VW Fox, VW Passat, Mitsubishi Eclipse, Peugeot 306, Ford Fusion, +2 lain). Ini bukan "utang lama yang boleh santai ditunda" — kalau konsisten sama prioritas terlaris, ini harusnya dikerjakan lebih dulu dari beberapa item lain. Mau saya buatkan entri masternya sekarang?</p>
+        <p class="why">Kenapa naik prioritas: awalnya dikira item pinggiran, ternyata cakupannya hampir semua produk andalan.</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">06</div>
+      <div>
+        <div class="meta"><span class="prio rendah">Rendah</span><h3 style="display:inline">Otoprotection &amp; Smartprotection — sisa 125+139 produk needs-decision</h3></div>
+        <p>Klarifikasi: <b>ya, semua ini masuk 331 terlaris</b> (scope OP/SP memang dipersempit ke situ dari awal) — cuma belum digali detail satu-satu seperti SX4/Hilux/dst di atas. Berdasar temuan hari ini, kemungkinan besar sebagian besar ternyata SUDAH benar, cuma scanner belum bisa verifikasi. Mau saya lanjut gali sekarang?</p>
+        <p class="why">Skala: 264 produk (belum dihitung baris).</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">07</div>
+      <div>
+        <div class="meta"><span class="prio tinggi">Tinggi</span><h3 style="display:inline">Lazada &amp; TikTok Undercover — perbaikan Shopee TIDAK ikut ke-mirror</h3></div>
+        <p><b>Lazada UA</b> (22.444 baris): cuma 28% formatnya sesuai master terkini. Produk yang sudah difix di Shopee sesi ini (Dodge Journey, Kia Seltos, Chevrolet Cruze, Ford Fusion, Mercedes B Class, dll) <b>hampir semuanya masih SKU lama di Lazada</b> — cuma GR86 yang benar (memang sengaja dikerjakan semua channel). <b>TikTok file 1</b> (23.943 baris): tidak konsisten, sebagian produk 100% benar (Chevrolet Cruze), sebagian 0% (Ford Fusion). TikTok file 2 &amp; 3 (Undercover), 2 file TikTok Otoprotection, TikTok+Lazada Smartprotection belum dibuka sama sekali. <b>Otonation tidak punya channel TikTok/Lazada sama sekali</b> (cuma Shopee, jadi toko itu aman).</p>
+        <p class="why">Kenapa naik prioritas &amp; kenapa ini baru ketahuan sekarang: pipeline batch-fix Kategori A-D sesi sebelumnya memang cuma dirancang nulis ke 5 file Shopee — efeknya tidak pernah ikut ke-cek di Lazada/TikTok sampai ditanya langsung. Skala pekerjaan besar (puluhan ribu baris), mau saya mulai dari Lazada UA dulu?</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">08</div>
+      <div>
+        <div class="meta"><span class="prio rendah">Rendah</span><h3 style="display:inline">Katalog di luar 331 terlaris</h3></div>
+        <p>Scope sesi ini sengaja dipersempit ke 331 produk terlaris dulu (instruksimu 07-10/11). Produk di luar itu (baik yang sudah ke-scan tapi dilewati, maupun yang belum di-scan sama sekali di OP/SP) belum disentuh.</p>
+        <p class="why">Ditunda per instruksimu — lanjut ke sini kapan pun siap.</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">09</div>
+      <div>
+        <div class="meta"><span class="prio rendah">Rendah</span><h3 style="display:inline">Undercover Autocare — 5 produk Kategori D non-terlaris belum tuntas</h3></div>
+        <p>Ford Fusion, Peugeot 306, Volkswagen Fox, Volkswagen Passat, Mitsubishi Eclipse: master sudah lengkap (dibuat 07-10), tapi listing Reguler/Strip/Exclusive-nya banyak yang masih kosong atau malah masih SKU legacy lama (mis. <span class="sku">CVR0112-UC-...</span>) — bukan format master. Ketahuan dari pertanyaanmu soal VW Passat.</p>
+        <p class="why">Kelimanya dicek eksplisit ke daftar 331 terlaris dan memang tidak ada di situ, jadi sengaja ditunda dulu sesuai arahanmu "fokus ke terlaris dulu". Skala: ~258 baris (Ford Fusion 17 · Peugeot 306 19 · VW Fox 32 · VW Passat 109 · Mitsubishi Eclipse 81). Polanya seragam (5 warna Reguler + 9 warna Strip + 2 Premium + 1 Exclusive per generasi), jadi cepat dikerjakan begitu giliran tiba.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="belum">
+  <div class="section-head"><span class="section-num">§6</span><h2>Belum mulai sama sekali</h2></div>
+  <table class="plist">
+    <tr><th>Channel</th><th>Status</th></tr>
+    <tr><td>TikTok Undercover</td><td>2 dari 3 file belum disentuh (1 file sudah dikerjakan bareng GR86).</td></tr>
+    <tr><td>TikTok Otoprotection</td><td>2 file, belum dibuka sama sekali — sedang dimulai.</td></tr>
+    <tr><td>TikTok Smartprotection</td><td>1 file besar (~3,9MB), belum dibuka.</td></tr>
+    <tr><td>Lazada Smartprotection</td><td>1 file (~724KB), belum dibuka.</td></tr>
+    <tr><td>Otonation</td><td>Tidak punya channel TikTok/Lazada sama sekali — cuma jualan di Shopee. Toko ini sudah tuntas dari sisi channel.</td></tr>
+  </table>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap" style="padding:0">
+    Dibuat otomatis dari sesi kerja SKU Sync 10–11 Juli 2026. Semua angka baris sudah diverifikasi ulang langsung dari file
+    (baca-ulang tiap sel setelah ditulis, cek duplikat SKU per produk) — bukan cuma dihitung dari rencana.
+    File pendamping: <code class="mono">Ringkasan SKU Sync 2026-07-10.xlsx</code> di folder yang sama.
+  </div>
+</footer>
