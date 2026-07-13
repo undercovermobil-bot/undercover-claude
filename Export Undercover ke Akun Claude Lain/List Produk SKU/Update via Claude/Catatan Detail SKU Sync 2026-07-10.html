@@ -189,7 +189,7 @@ footer code{background:var(--surface-2); padding:2px 6px; border-radius:4px}
       <span><b>Semua hasil di:</b> <code>...List Produk SKU\Update via Claude\</code></span>
     </div>
     <div class="stats">
-      <div class="stat"><div class="n mono">2.256</div><div class="l">Baris listing diperbaiki</div></div>
+      <div class="stat"><div class="n mono">14.157</div><div class="l">Baris listing diperbaiki</div></div>
       <div class="stat"><div class="n mono">1.401</div><div class="l">Baris master baru</div></div>
       <div class="stat"><div class="n mono">4 / 4</div><div class="l">Toko tersentuh</div></div>
       <div class="stat"><div class="n mono">6</div><div class="l">Item masih perlu keputusanmu</div></div>
@@ -232,9 +232,9 @@ footer code{background:var(--surface-2); padding:2px 6px; border-radius:4px}
 <section id="ua">
   <div class="section-head"><span class="section-num">§1</span><h2>Undercover Autocare (UA)</h2><span class="chip decision">SHOPEE SELESAI — Lazada/TikTok belum</span></div>
   <p class="section-sub">1.172 baris listing Shopee + 629 baris master baru, sudah diverifikasi ulang langsung dari file (0 mismatch, 0 SKU duplikat per produk) — kecuali 5 produk kecil yang sengaja ditunda (kartu Kategori D, §5 nomor 09).</p>
-  <div class="highlight-box" style="background:var(--research-bg); border-color:var(--research-line)">
-    <p class="htitle" style="color:var(--research-ink)">Koreksi 07-13: label "selesai" di atas cuma berlaku untuk Shopee — Lazada &amp; TikTok BELUM ikut ke-mirror</p>
-    <p>Dicek langsung: <b>Lazada UA</b> (22.444 baris) cuma 28% yang formatnya sesuai master terkini — sample produk yang sudah difix di Shopee sesi ini (Dodge Journey, Kia Seltos, Chevrolet Cruze, Ford Fusion, Mercedes B Class, dll) <b>hampir semuanya masih SKU lama di Lazada</b>, kecuali GR86 yang memang sengaja dikerjakan semua channel. <b>TikTok file 1</b> (23.943 baris) malah tidak konsisten — sebagian produk 100% benar (Chevrolet Cruze), sebagian 0% (Ford Fusion), sisanya di antaranya. TikTok file 2 &amp; 3 belum dibuka sama sekali. Penyebabnya: pipeline batch-fix Kategori A-D sesi sebelumnya memang cuma menulis ke 5 file Shopee — tidak pernah dirancang untuk ikut menulis ke Lazada/TikTok. Detail di §5 nomor 07.</p>
+  <div class="highlight-box" style="background:var(--ok-bg); border-color:var(--ok-line)">
+    <p class="htitle">Update 07-13: Lazada UA sudah diperbaiki (11.901 baris) — TikTok masih tertunda</p>
+    <p>Koreksi 07-13 pagi: label "selesai" tadinya cuma berlaku Shopee, Lazada &amp; TikTok belum ke-mirror (cuma 28% format-OK di Lazada). Sudah ditindaklanjuti: <b>Lazada UA</b> (22.444 baris) kini <b>65% format-OK</b> setelah 11.901 baris disinkronkan — dibangun pipeline generik yang juga menangkap alias hubung/spasi (mis. "Honda WRV" listing vs "Honda WR-V" master). 1 produk (Wuling Baojun 310) dikecualikan karena tabrakan SKU internal. Ditemukan gap TERPISAH yang lebih besar: <b>232 produk (3.952 baris) sama sekali tidak ada di master manapun</b> — brand premium seperti Lexus, Audi, Bentley, Maserati, Aston Martin, Lamborghini, Rolls Royce, Volvo, Tesla — ini bukan soal sinkronisasi, genuinely belum pernah dibuatkan SKU. <b>TikTok file 1-3</b> (23.943+ baris, coverage 0%-100% tidak konsisten) masih tertunda. Detail di §5 nomor 07 &amp; 08.</p>
   </div>
 
   <details class="card">
@@ -449,7 +449,7 @@ footer code{background:var(--surface-2); padding:2px 6px; border-radius:4px}
 </section>
 
 <section id="perlu-dicek">
-  <div class="section-head"><span class="section-num">§5</span><h2>Perlu Dicek / Revisi</h2><span class="chip decision">9 item, 3 selesai</span></div>
+  <div class="section-head"><span class="section-num">§5</span><h2>Perlu Dicek / Revisi</h2><span class="chip decision">10 item, 3 selesai</span></div>
   <p class="section-sub">Diurutkan dari yang paling penting. Ini bukan bug yang saya lewatkan — ini titik-titik yang memang cuma bisa diputuskan olehmu.</p>
 
   <div class="punch">
@@ -514,12 +514,21 @@ footer code{background:var(--surface-2); padding:2px 6px; border-radius:4px}
       </div>
     </div>
 
-    <div class="punch-item">
+    <div class="punch-item done">
       <div class="punch-num">07</div>
       <div>
-        <div class="meta"><span class="prio tinggi">Tinggi</span><h3 style="display:inline">Lazada &amp; TikTok Undercover — perbaikan Shopee TIDAK ikut ke-mirror</h3></div>
-        <p><b>Lazada UA</b> (22.444 baris): cuma 28% formatnya sesuai master terkini. Produk yang sudah difix di Shopee sesi ini (Dodge Journey, Kia Seltos, Chevrolet Cruze, Ford Fusion, Mercedes B Class, dll) <b>hampir semuanya masih SKU lama di Lazada</b> — cuma GR86 yang benar (memang sengaja dikerjakan semua channel). <b>TikTok file 1</b> (23.943 baris): tidak konsisten, sebagian produk 100% benar (Chevrolet Cruze), sebagian 0% (Ford Fusion). TikTok file 2 &amp; 3 (Undercover), 2 file TikTok Otoprotection, TikTok+Lazada Smartprotection belum dibuka sama sekali. <b>Otonation tidak punya channel TikTok/Lazada sama sekali</b> (cuma Shopee, jadi toko itu aman).</p>
-        <p class="why">Kenapa naik prioritas &amp; kenapa ini baru ketahuan sekarang: pipeline batch-fix Kategori A-D sesi sebelumnya memang cuma dirancang nulis ke 5 file Shopee — efeknya tidak pernah ikut ke-cek di Lazada/TikTok sampai ditanya langsung. Skala pekerjaan besar (puluhan ribu baris), mau saya mulai dari Lazada UA dulu?</p>
+        <div class="meta"><span class="prio selesai">Selesai (Lazada) / Tinggi (TikTok)</span><h3 style="display:inline">Lazada &amp; TikTok Undercover</h3></div>
+        <p><b>Lazada UA</b> (22.444 baris): SUDAH diperbaiki 07-13 — 11.901 baris disinkronkan, format-OK naik dari 28% ke 65%. Pipeline juga menangkap alias hubung/spasi (Honda WRV→WR-V, dst). <b>TikTok file 1</b> (23.943 baris): masih tertunda, tidak konsisten (0%-100% tergantung produk, mis. Chevrolet Cruze 100% vs Ford Fusion 0%). TikTok file 2 &amp; 3 (Undercover), 2 file TikTok Otoprotection, TikTok+Lazada Smartprotection belum dibuka sama sekali. <b>Otonation tidak punya channel TikTok/Lazada sama sekali</b> (cuma Shopee, aman).</p>
+        <p class="why">Mau saya lanjut ke TikTok sekarang, pakai pipeline yang sama?</p>
+      </div>
+    </div>
+
+    <div class="punch-item">
+      <div class="punch-num">07b</div>
+      <div>
+        <div class="meta"><span class="prio sedang">Sedang</span><h3 style="display:inline">Lazada UA — 232 produk sama sekali tidak ada di master</h3></div>
+        <p>Ditemukan saat scan Lazada 07-13: brand-brand premium/mewah (Lexus, Audi, Bentley, Maserati, Aston Martin, Lamborghini, Rolls Royce, Volvo, Tesla) + beberapa mainstream (Kia Sorento, Isuzu D-MAX) dijual di Lazada tapi <b>tidak pernah punya entri master sama sekali</b> di toko manapun. Ini beda dari item lain — bukan soal sinkronisasi, genuinely belum pernah dibuatkan SKU-nya.</p>
+        <p class="why">Mau dibuatkan master barunya (perlu riset generasi/rentang tahun per produk, mirip Kategori D), atau dilewati dulu mengingat kemungkinan sebagian brand ini volumenya rendah? Skala: 3.952 baris / 232 produk.</p>
       </div>
     </div>
 
