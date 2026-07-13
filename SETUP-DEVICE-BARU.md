@@ -4,6 +4,10 @@ Panduan ini untuk menyalakan proyek Undercover (SKU Sync, Shopee Price Monitor, 
 di komputer/akun Claude baru, lengkap dengan konteks memory yang sudah dipelajari
 Claude sebelumnya.
 
+> **Pakai 2 komputer (marketing + e-commerce)?** Baca dulu
+> [`SETUP-MULTI-PC.md`](SETUP-MULTI-PC.md). Dokumen ini fokus ke sisi **e-commerce**
+> (buka folder repo root). Sisi **marketing** ada di folder `marketing/`.
+
 Proyek ini dipecah ke 2 tempat penyimpanan:
 
 - **GitHub (privat)** — kode `.py`, dokumen `.md`/`.docx` kecil, dan snapshot memory Claude.
