@@ -2,6 +2,10 @@
 
 Bahasa respons: **selalu Bahasa Indonesia** (instruksi eksplisit user, 2026-07-09), kecuali kode/SKU/nama variabel yang memang berformat teknis.
 
+## Ruang lingkup repo ini (penting — jangan dicampur)
+
+Repo `undercover-claude` ini **KHUSUS e-commerce**: pemeliharaan katalog/SKU produk di marketplace (Shopee/TikTok/Lazada). **Digital Marketing** (analisis Meta Ads, konten, caption, laporan performa iklan) **adalah proyek TERPISAH dengan repo & memory sendiri** — instruksi eksplisit user (2026-07-13). Jangan campur data/konteks digital marketing ke repo ini. Kalau menemukan file/laporan Meta Ads (mis. folder "Digital Marketing" di Google Drive, atau artifact "Analisis Meta Ads"), itu **di luar scope repo ini** — jangan tambahkan ke `claude-memory/` atau `CLAUDE.md` di sini, dan jangan pakai sebagai konteks kerja SKU/katalog.
+
 ## Apa proyek ini
 
 Pemeliharaan katalog produk bisnis cover mobil dengan 4 toko — **Undercover Autocare (UA)**, **Otonation (OT)**, **Otoprotection (OP)**, **Smartprotection (SP)** — di Shopee/TikTok/Lazada. User mengelola ini lintas beberapa akun/device Claude berbeda (bukan 1 sesi berkelanjutan), jadi folder `claude-memory/` di repo ini **adalah snapshot manual** dari memory asli Claude di tiap device (`~/.claude/projects/<hash>/memory/*.md`) — lihat `SETUP-DEVICE-BARU.md` untuk cara restore/sync-nya.
