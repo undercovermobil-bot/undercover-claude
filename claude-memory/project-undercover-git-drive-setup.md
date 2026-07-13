@@ -24,7 +24,7 @@ Google Drive supaya bisa dikerjakan lintas device/akun Claude.
 
 **Automation yang sudah berjalan:**
 - Windows Task Scheduler task `Undercover-AutoCommitPush` jalan tiap hari
-  **16:15** (15 menit setelah jam kerja terakhir user, ~16:00), menjalankan
+  **15:45**, menjalankan
   `scripts/auto-commit-push.ps1` — auto `git add`+commit+push kalau ada
   perubahan, log ke `auto-commit-log.txt` (lokal, tidak di-track git).
   Butuh device hidup+login saat itu; sudah diset `WakeToRun` (bangunkan dari
@@ -45,7 +45,7 @@ manual oleh user (drag-and-drop browser, atau Google Drive for Desktop).
 repo adalah snapshot manual dari
 `~/.claude/projects/<hash-folder-project>/memory/*.md`. Kalau ada memory
 baru/update di satu device, copy ulang ke `claude-memory/` lalu commit
-(auto-commit 16:15 akan otomatis push-kan kalau sudah ke-copy sebelum jam
+(auto-commit 15:45 akan otomatis push-kan kalau sudah ke-copy sebelum jam
 itu). Di device lain, `git pull` lalu salin ulang isi `claude-memory/` ke
 folder memory lokalnya. Detail lengkap di `SETUP-DEVICE-BARU.md` bagian
 "Restore memory Claude".

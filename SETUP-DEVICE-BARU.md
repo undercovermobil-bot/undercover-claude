@@ -92,7 +92,7 @@ memory lokalnya (langkah 3 di atas).
 Di device utama (per 2026-07-13: PC Windows ini), sudah ada Windows Task
 Scheduler task bernama **`Undercover-AutoCommitPush`** yang menjalankan
 [`scripts/auto-commit-push.ps1`](scripts/auto-commit-push.ps1) tiap hari jam
-**16:15** (15 menit setelah jam kerja terakhir user, 16:00). Task ini:
+**15:45**. Task ini:
 
 - Cek apakah ada perubahan (`git status --porcelain`) — kalau tidak ada,
   langsung berhenti tanpa commit kosong.
@@ -101,10 +101,10 @@ Scheduler task bernama **`Undercover-AutoCommitPush`** yang menjalankan
 - Catat hasilnya (berhasil/gagal) ke `auto-commit-log.txt` di root repo
   (file ini sengaja di-`.gitignore`, jadi hanya ada lokal).
 
-**Syarat supaya jalan:** device harus **hidup & login** jam 16:15 (Task
+**Syarat supaya jalan:** device harus **hidup & login** jam 15:45 (Task
 Scheduler tidak bisa menyalakan PC dari kondisi mati total, tapi task ini
 sudah diset `WakeToRun` — bisa membangunkan dari sleep — dan
-`StartWhenAvailable` — kalau jam 16:15 PC lagi mati, task akan otomatis
+`StartWhenAvailable` — kalau jam 15:45 PC lagi mati, task akan otomatis
 jalan begitu PC berikutnya menyala).
 
 Kalau mau setup task yang sama di device lain, jalankan ini di PowerShell
@@ -112,7 +112,7 @@ Kalau mau setup task yang sama di device lain, jalankan ini di PowerShell
 
 ```powershell
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -File "<path-ke-repo>\scripts\auto-commit-push.ps1"'
-$trigger = New-ScheduledTaskTrigger -Daily -At 16:15
+$trigger = New-ScheduledTaskTrigger -Daily -At 15:45
 $settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -DontStopOnIdleEnd
 Register-ScheduledTask -TaskName "Undercover-AutoCommitPush" -Action $action -Trigger $trigger -Settings $settings -Description "Auto commit+push proyek Undercover ke GitHub tiap akhir hari kerja"
 ```
@@ -128,7 +128,7 @@ Google Drive for Desktop (lihat Langkah 2, opsi "Back up folder from computer").
 ```
 git pull                 # ambil update kode/dokumen terbaru
 # ...kerja seperti biasa, data besar otomatis sinkron real-time lewat Google Drive...
-# ...git add/commit/push otomatis tiap 16:15 lewat Task Scheduler (Langkah 4)...
+# ...git add/commit/push otomatis tiap 15:45 lewat Task Scheduler (Langkah 4)...
 # atau manual kapan saja:
 git add -A
 git commit -m "..."

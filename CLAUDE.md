@@ -20,7 +20,7 @@ Tiga sub-proyek:
 
 - **JANGAN edit file listing/master asli langsung** (sejak 2026-07-10). Selalu copy dulu ke `Export Undercover ke Akun Claude Lain/List Produk SKU/Update via Claude/` (mirror struktur asli), edit copy-nya di sana. Detail: [`claude-memory/feedback-undercover-update-folder-workflow.md`](claude-memory/feedback-undercover-update-folder-workflow.md).
 - **Data besar (xlsx, foto, banner, zip) TIDAK ada di git** — sengaja di-`.gitignore`, hidup di Google Drive (akun `under.covermobil@gmail.com`). Jangan coba upload file besar lewat tool/MCP — sudah terbukti gagal (mentok batas ukuran konten). Transfer besar selalu manual oleh user.
-- **Sebelum menyarankan setup git/Drive/scheduler baru**, cek dulu yang sudah ada — lihat [`claude-memory/project-undercover-git-drive-setup.md`](claude-memory/project-undercover-git-drive-setup.md). Auto-commit harian sudah jalan via Task Scheduler jam 16:15.
+- **Sebelum menyarankan setup git/Drive/scheduler baru**, cek dulu yang sudah ada — lihat [`claude-memory/project-undercover-git-drive-setup.md`](claude-memory/project-undercover-git-drive-setup.md). Auto-commit harian sudah jalan via Task Scheduler jam 15:45.
 - **Jangan asumsikan path file dari memory/dokumen lama masih benar** — struktur folder bisa berubah antar sesi/export. Glob langsung di sesi berjalan sebelum menyimpulkan file ada/hilang.
 - Pertanyaan spot-check user soal 1 produk spesifik ("kenapa produk X begini?") historisnya sering membongkar bug sistemik besar — perlakukan sebagai sinyal investigasi menyeluruh, bukan pertanyaan sepele.
 
