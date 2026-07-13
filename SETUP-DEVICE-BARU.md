@@ -26,14 +26,31 @@ Taruh di lokasi yang sama dengan device lama kalau bisa, misalnya
 
 Data besar (xlsx, banner, foto, zip) **tidak ada di GitHub** — itu sengaja
 (lihat `.gitignore`) karena file-file itu terlalu besar/binary untuk git.
+Datanya ada di Google Drive: https://drive.google.com/drive/folders/168snWOIoROx-isBH3DWdECwSiYVgFHqK
+(folder "Claude", akun `under.covermobil@gmail.com`).
+
+**Catatan: upload/download data besar ini harus manual** (drag-and-drop atau
+lewat Google Drive for Desktop) — Claude tidak bisa upload file besar secara
+otomatis lewat chat/API, sudah dicoba dan mentok di batas ukuran konten per
+panggilan tool bahkan untuk file kecil sekalipun (lihat riwayat percakapan
+2026-07-13). Jadi transfer data besar selalu perlu dilakukan manual oleh
+manusia, baik di setup awal maupun kalau butuh restore ulang.
+
+Cara setup:
 
 1. Install Google Drive for Desktop, login dengan akun yang punya akses ke
-   folder Undercover di atas.
-2. Sync/mirror folder tersebut, lalu pastikan isinya (`List Produk SKU`,
-   `Banner`, `Otonation`, `Otopro`, `Smartpro`, `Undercover`, dsb) ada
-   berdampingan dengan folder hasil clone git di langkah 1 — idealnya
-   digabung jadi satu folder `Undercover` yang sama supaya path yang
-   direferensikan di memory Claude tetap cocok.
+   folder Undercover di atas (`under.covermobil@gmail.com`).
+2. **Opsi cepat (sekali jalan):** buka folder Drive itu di browser, lalu
+   drag folder-folder ini dari File Explorer ke jendela browser:
+   `List Produk SKU`, `Banner`, `Otonation`, `Otopro`, `Smartpro`, `Undercover`.
+3. **Opsi auto-sync berkelanjutan (direkomendasikan):** di Google Drive for
+   Desktop, aktifkan fitur **"Back up folder from computer"** dan pilih
+   folder-folder data di atas. Dengan ini, setiap kali file di-edit/di-save,
+   otomatis ke-upload ke Drive real-time — tidak perlu dijadwalkan, beda
+   dengan git yang butuh commit diskrit (lihat Langkah 4).
+4. Pastikan hasil sync-nya berdampingan dengan folder hasil clone git di
+   langkah 1 — idealnya digabung jadi satu folder `Undercover` yang sama
+   supaya path yang direferensikan di memory Claude tetap cocok.
 
 ## Langkah 3 — Restore memory Claude
 
@@ -70,12 +87,50 @@ git push
 Lalu di device lain, `git pull` dan salin ulang isi `claude-memory/` ke folder
 memory lokalnya (langkah 3 di atas).
 
+## Langkah 4 — (Opsional) Auto-commit & push harian
+
+Di device utama (per 2026-07-13: PC Windows ini), sudah ada Windows Task
+Scheduler task bernama **`Undercover-AutoCommitPush`** yang menjalankan
+[`scripts/auto-commit-push.ps1`](scripts/auto-commit-push.ps1) tiap hari jam
+**16:15** (15 menit setelah jam kerja terakhir user, 16:00). Task ini:
+
+- Cek apakah ada perubahan (`git status --porcelain`) — kalau tidak ada,
+  langsung berhenti tanpa commit kosong.
+- Kalau ada, otomatis `git add -A` + commit dengan pesan
+  `Auto-commit akhir hari kerja <tanggal>` + `git push origin main`.
+- Catat hasilnya (berhasil/gagal) ke `auto-commit-log.txt` di root repo
+  (file ini sengaja di-`.gitignore`, jadi hanya ada lokal).
+
+**Syarat supaya jalan:** device harus **hidup & login** jam 16:15 (Task
+Scheduler tidak bisa menyalakan PC dari kondisi mati total, tapi task ini
+sudah diset `WakeToRun` — bisa membangunkan dari sleep — dan
+`StartWhenAvailable` — kalau jam 16:15 PC lagi mati, task akan otomatis
+jalan begitu PC berikutnya menyala).
+
+Kalau mau setup task yang sama di device lain, jalankan ini di PowerShell
+(sesuaikan `$repoPath` dan jam kalau perlu):
+
+```powershell
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -File "<path-ke-repo>\scripts\auto-commit-push.ps1"'
+$trigger = New-ScheduledTaskTrigger -Daily -At 16:15
+$settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -DontStopOnIdleEnd
+Register-ScheduledTask -TaskName "Undercover-AutoCommitPush" -Action $action -Trigger $trigger -Settings $settings -Description "Auto commit+push proyek Undercover ke GitHub tiap akhir hari kerja"
+```
+
+(Ingat sesuaikan path `$repoPath` di dalam `auto-commit-push.ps1` itu sendiri
+juga kalau lokasi repo di device itu berbeda.)
+
+Data besar tidak perlu automation git karena sudah ditangani real-time oleh
+Google Drive for Desktop (lihat Langkah 2, opsi "Back up folder from computer").
+
 ## Alur kerja harian singkat
 
 ```
 git pull                 # ambil update kode/dokumen terbaru
-# ...kerja seperti biasa, data besar otomatis sinkron lewat Google Drive...
+# ...kerja seperti biasa, data besar otomatis sinkron real-time lewat Google Drive...
+# ...git add/commit/push otomatis tiap 16:15 lewat Task Scheduler (Langkah 4)...
+# atau manual kapan saja:
 git add -A
 git commit -m "..."
-git push                 # kirim update kode/dokumen
+git push
 ```

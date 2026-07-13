@@ -47,6 +47,9 @@
 *.bak_*
 *~
 
+# --- Log lokal auto-commit (lihat scripts/auto-commit-push.ps1) ---
+auto-commit-log.txt
+
 # --- Sampah sistem OS ---
 .DS_Store
 Thumbs.db
