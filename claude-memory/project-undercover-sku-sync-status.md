@@ -190,7 +190,15 @@ Jadi engine berbasis master menghasilkan SKU master-benar, tapi beda dari listin
 
 **⚠️ "Model/Tahun Lain" & "Tahun Lain" = varian CATCH-ALL** (pembeli pilih kalau tahun mobilnya tidak terdaftar) → HARUS tetap KOSONG, jangan diisi. Engine pass-1 keliru mengisinya (via fallback "single") — WAJIB di-exclude di versi final.
 
-**Belum ada penulisan apa pun ke file** — masih tahap validasi/dry-run. engine.py di scratchpad (tidak persisten). Perlu keputusan user soal pendekatan reconciliation sebelum lanjut (lihat pertanyaan yg diajukan 07-15).
+**Belum ada penulisan apa pun ke file** — masih tahap validasi/dry-run.
+
+**HANDOFF (2026-07-15 sore, user pulang kerja, lanjut di rumah). Keputusan user: PERBAIKI MASTER DULU, baru isi TikTok.** Semua sudah di-commit+push ke `main` GitHub supaya bisa dilanjut device lain:
+- **`sku-sync-scripts/engine.py`** (DI REPO sekarang, bukan scratchpad lagi) — mesin match listing→master SKU.
+- **`sku-sync-scripts/gap_analysis.py`** (DI REPO) — sudah dijalankan.
+- **`sku-sync-scripts/README-LANJUTAN.md`** (DI REPO) — catatan handoff lengkap + rencana 4-langkah. BACA INI DULU di sesi rumah.
+- **Gap analysis result**: 6.957 SKU dipakai listing UA tapi tidak ada di master (610 top-331 mobil, 2.349 motor luar-scope, 3.998 non-top). File review **`Gap SKU Master - dari Listing UA (2026-07-15).xlsx`** di `Update via Claude/` (lokal + Drive, sheet1=610 top-331).
+
+**Rencana lanjutan (di rumah)**: (1) review 610 SKU gap top-331 — ⚠️ buang yg stale/typo (Terios G2/Hardtop G4 dst), jangan telan bulat walau user bilang "master ikut e-commerce"; (2) tambahkan yg disetujui ke master via openpyxl; (3) baru isi UA TikTok blank pakai engine.py; (4) exclude varian catch-all "*/Tahun Lain" saat fill. Semua master di `Update via Claude/` py backup `.bak_TIMESTAMP`.
 
 How to apply: JANGAN fill UA TikTok blank murni dari master — banyak yg beda dari listing (master stale/incomplete utk beberapa model). Pakai hierarki e-commerce-first. Exclude varian catch-all "*/Tahun Lain". Validasi tiap iterasi ke baris terisi TAPI sadar sebagian "mismatch" itu data lama stale (cek ke master aktual utk pastikan mana yg benar, spt kasus Terios/Hardtop).
 
