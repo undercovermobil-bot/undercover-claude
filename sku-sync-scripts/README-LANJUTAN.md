@@ -33,14 +33,29 @@ lengkap/beda. Perlu lengkapi master (ikut listing e-commerce) dulu.
 
 ## Rencana lanjutan (langkah konkret)
 
-1. **Gap analysis**: dari SEMUA baris UA yg SUDAH terisi (TikTok+Shopee+Lazada),
-   ekstrak kombinasi `(model, kategori, generasi, warna) -> SKU + tahun` yang
-   BELUM ada di master. Itu daftar yg perlu ditambahkan ke master.
-   (Belum dijalankan — script gap-analysis belum dibuat.)
-2. **Review daftar gap** bareng user (ada risiko listing lama stale — cek
-   silang ke master aktual, spt kasus Terios/Hardtop).
-3. **Tambahkan ke master** yg sudah disetujui.
-4. **Baru isi UA TikTok blank** pakai `engine.py` (master-based match).
+1. ✅ **Gap analysis SUDAH DIJALANKAN** (`gap_analysis.py`). Hasil: dari semua
+   baris UA terisi (TikTok1+Shopee1-5+Lazada), ada **6.957 SKU dipakai listing
+   tapi TIDAK ada di master**:
+   - **610 top-331 (mobil)** ← ini yg relevan utk perbaiki master
+   - 2.349 motor (di luar scope proyek cover mobil)
+   - 3.998 non-top-331
+   Daftar lengkap: **`Gap SKU Master - dari Listing UA (2026-07-15).xlsx`**
+   (di folder `Update via Claude/`, sudah di lokal + Drive). Sheet 1 = 610
+   top-331, sheet 2 = motor + non-top.
+   - ⚠️ Nama model di file itu masih agak berantakan (parser prefix belum
+     tangani format "Undercover Autocare - Cover Mobil {model}" — jadi 1 model
+     bisa kepecah 2 grup). Data SKU-nya valid, tinggal rapikan grouping.
+2. **Review 610 SKU top-331** bareng user SEBELUM ditambahkan ke master —
+   ⚠️ SEBAGIAN kemungkinan data listing lama yg STALE/salah (spt Terios
+   `DHT-TRS-UA-R-G2-*` padahal master cuma py Gen 1, Hardtop `G4` vs master
+   `J40`). Jangan telan bulat-bulat; cek per model apakah generasi itu memang
+   ada. User bilang "master ikut e-commerce" TAPI tetap perlu buang yg jelas
+   error/typo.
+3. **Tambahkan ke master** yg sudah disetujui (pakai openpyxl, append ke sheet
+   brand yg sesuai, ikuti format kolom master: No/Nama Produk/Toko/Kategori/
+   Warna/Generasi/Rentang Tahun/Nama Bigseller/SKU + kolom INPUT S/T/L/BS/ACC).
+4. **Baru isi UA TikTok blank** pakai `engine.py` (master-based match) — setelah
+   master lengkap, coverage engine akan naik dari ~46% dry-run sekarang.
 
 ## engine.py — mesin pencocokan (sudah jalan, validasi 78%)
 
