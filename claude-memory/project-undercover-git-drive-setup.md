@@ -38,8 +38,21 @@ Google Drive supaya bisa dikerjakan lintas device/akun Claude.
 TIDAK BISA upload file besar ke Google Drive secara otomatis lewat tool
 chat/MCP — bahkan file xlsx 21 KB pun sudah mentok di batas ukuran konten
 base64 per panggilan tool (hasil encode terpotong saat dibaca kembali).
-Jangan ulangi eksperimen ini; transfer data besar ke Drive selalu harus
-manual oleh user (drag-and-drop browser, atau Google Drive for Desktop).
+Jangan ulangi eksperimen ini lewat jalur MCP/API.
+
+**TAPI (ditemukan 2026-07-15) ada jalur LAIN yg terbukti jalan** — kalau
+sesi Claude berjalan LANGSUNG di PC yg py Google Drive for Desktop aktif
+(`G:\My Drive\...` ke-mount): copy/tulis file biasa (Bash/PowerShell `cp`/
+`Copy-Item`) ke path `G:\My Drive\...` itu SAMA SEKALI BEDA mekanisme dari
+upload via MCP tool call — ini cuma file I/O lokal biasa, Drive Desktop yg
+mendeteksi & upload sendiri di background. Diverifikasi jalan (bukan cuma
+nulis ke mount lokal, tapi BENERAN naik ke cloud dlm hitungan detik, dicek
+via `get_file_metadata` API). Jadi: **kalau sesi Claude py akses terminal
+ke device dgn Drive Desktop aktif, TIDAK perlu lagi minta user upload
+manual** — tinggal copy ke path `G:\My Drive\...` yg sesuai. Minta manual
+ke user cuma perlu kalau (a) sesi Claude tidak py akses filesystem device
+itu (mis. sesi cloud/browser-only), atau (b) device itu tidak py Drive
+Desktop ke-mount.
 
 **Sinkronisasi memory Claude lintas device:** folder `claude-memory/` di
 repo adalah snapshot manual dari
@@ -61,3 +74,51 @@ cek dulu apakah repo masih ada dan masih dipakai (`git remote -v` di
 Undercover-AutoCommitPush`). Kalau user minta bantuan upload file besar ke
 Drive, langsung arahkan ke cara manual — jangan coba jalur MCP Drive tool
 untuk file di atas beberapa KB.
+
+**(2026-07-15) Path lokal di PC ini (bukan device asal catatan ini) adalah
+`C:\Users\OWNER\Documents\Undercover\Undercover\` (dobel "Undercover",
+BUKAN `C:\Users\chand\Documents\Undercover` spt tertulis di atas — itu path
+device lain). Selalu verifikasi path aktual per-device, jangan asumsi dari
+memory.**
+
+**Ditemukan (2026-07-15): ada DUA folder "List Produk SKU" berbeda di
+Drive**, sumber kebingungan user soal "file mana masuk kemana":
+1. **Kanonik** — `E-commerce\List Produk SKU\` langsung (folder ID
+   `1GG8ZHvJjIF5oTfBHDB1iOgPrsdNux_MF`) — master root di sini SUDAH STALE
+   (versi 07-03), tapi subfolder `Hasil Sinkronisasi SKU\` di sini AKTIF
+   dipakai (ada file `~$...xlsx` lock artinya lagi dibuka Excel oleh
+   seseorang).
+2. **Duplikat** — `E-commerce\Export Undercover ke Akun Claude Lain\List
+   Produk SKU\` (folder ID `14vfCxdQLqEltZpETXAjesyWoyYPQ9vgm`) — hasil
+   drag-and-drop manual folder lokal PC ke browser Drive tgl 13 Juli (lihat
+   step "Opsi cepat sekali jalan" di `SETUP-DEVICE-BARU.md` — upload
+   browser TIDAK merge, selalu bikin folder baru kalau nama sama). Folder
+   ini yg py subfolder `Update via Claude\` — INI yg dimaksud tabel mapping
+   "taruh file SYNCED ke sini", BUKAN folder kanonik #1.
+   **(Koreksi 2026-07-15 sore) Ternyata BUKAN auto-sync berkelanjutan** —
+   dicoba: edit file lokal jam 11:44 & 13:57, dicek lagi jam ~14:00, versi
+   di Drive (`G:\My Drive\E-commerce\Export Undercover ke Akun Claude
+   Lain\...`) MASIH versi 07-11 (stale, belum ke-update). Kesimpulan
+   sebelumnya ("timestamp identik = live sync") salah — itu cuma kebetulan
+   dari snapshot upload manual 07-13 yg dilakukan bersamaan. **"Back up
+   folder from computer" kemungkinan besar TIDAK aktif untuk folder ini**,
+   atau berhenti jalan. Solusi yg terbukti jalan: copy file langsung ke
+   path `G:\My Drive\...` (mount lokal biasa, BUKAN lewat MCP/API Drive
+   tool) — ini beda mekanisme dari limit ukuran yg didokumentasikan di
+   atas (limit itu soal upload via tool call/base64, bukan soal file I/O
+   biasa ke drive letter yg di-mount). Setelah copy manual ke `G:\`,
+   dikonfirmasi via Drive API (`get_file_metadata`) bahwa file BENERAN naik
+   ke cloud (size & modifiedTime cocok) dalam hitungan detik — jadi jalur
+   ini reliable, tinggal tidak otomatis, harus di-trigger (copy manual)
+   tiap ada perubahan.
+
+Why: user beberapa kali bingung kenapa path yg disebut sesi lain (spt tabel
+mapping dari sesi cloud) kelihatannya "tidak ada" waktu dicek manual — root
+cause-nya duplikasi folder ini, bukan file yg hilang.
+
+How to apply: kalau user sebut path Drive "List Produk SKU\...", default-kan
+ke folder #2 (di dalam "Export Undercover ke Akun Claude Lain") kecuali
+konteks eksplisit bilang root/kanonik. Belum digabungkan/dibersihkan —
+tawarkan bantuan cleanup kalau relevan, tapi jangan hapus/pindah apa pun di
+Drive tanpa konfirmasi eksplisit (banyak file di kanonik sedang aktif
+dipakai).

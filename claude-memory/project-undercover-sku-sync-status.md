@@ -112,3 +112,88 @@ How to apply: kalau user minta "lanjutkan SKU sync," tawarkan pilihan dari list 
 - **BELUM DIKERJAKAN sesi ini**: TikTok UA (masih terhambat ukuran file >4MB, nunggu upload manual user), Lazada OT (belum disentuh sama sekali), Lazada OP (belum disentuh), gap Transparan struktural lama (masih dideferred), ~1.000-an baris NO_LOOKUP di tiap toko yang butuh riset chassis-code-ke-Gen-N manual (mis. Mercedes W-code, BMW E/F/G-code, VW B-code — skema chassis eropa vs skema "Gen N" master, tidak ada pemetaan otomatis yg aman ditebak).
 
 Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 331-terlaris, dan infrastruktur lookup-nya (SP-toko-filtered) baru dibangun sesi ini — sesi depan tidak perlu bangun ulang dari nol kalau baca catatan ini dulu.
+
+**(2026-07-15, sesi lokal PC) Sesi cloud di atas (`session_01NQ1bq2AiYDdpsH13oEgfGe`) ternyata push ke branch terpisah `claude/repo-memory-access-4hthja`, BELUM di-merge ke `main`** — user paste ringkasan sesi itu ke sesi lokal ini tanpa sadar itu sesi/device terpisah, sempat bingung file mana yg harus ditaruh dimana. File Shopee/Lazada/TikTok yg "dikirim via chat" (15 file `-SYNCED`) TIDAK bisa diambil dari sesi lokal ini (beda sesi = tidak ada akses file). User perlu ambil manual dari sesi cloud itu sendiri.
+
+**Master file "asli" yang dipakai sesi cloud sbg input (`SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx`, ketemu di Downloads user 07-14 14:28, size 3.499.027 byte) py ANOMALI yg belum terjawab**: dibanding versi lama (`Update via Claude\SKU, Price, Tracking Cover Mobil.xlsx` 07-11), 5 sheet brand mewah bertambah net +1.836 baris (Lamborghini/Lexus/Maserati/Tesla/Volvo — cocok dgn 26 model baru di `master_baru_5brand.csv` yg juga ada di Downloads, "13 model mewah" versi user). Tapi 6 sheet lain BERKURANG:
+- Ford/Mitsubishi Motors/Peugeot/Volkswagen: **aman** — SKU unik identik lama vs baru (`comm -23` dua list SKU ter-sort = 0 selisih), yg hilang murni baris duplikat (konsisten dgn kerja "Audit Duplikasi SKU" yg emang berjalan).
+- **Mercedes-Benz: 44 SKU BENERAN hilang** (bukan duplikat) — seluruh "Mercedes Benz EQE" Gen 1 (4 toko x semua kategori) + "Mercedes Benz G Class" kategori Strip Gen1&2 (khusus Otoprotection+Smartprotection).
+- **Suzuki: 54 SKU BENERAN hilang** — seluruh "Suzuki Carry" kategori Strip Gen6-11 (khusus Otoprotection+Smartprotection).
+- **Konteks penting**: "Suzuki Carry Pickup" & "Mercedes Benz G Class" adalah 2 dari [[project-undercover-otoprotection-status]] NO_MASTER gap yg ditemukan 07-11 (waktu itu G Class BENAR² tidak py entri master sama sekali). Jadi entri Strip G-Class/Carry yg hilang di file 07-14 ini kemungkinan adalah FIX yg sempat ditambahkan ke master antara 07-11 dan 07-11 10:15 (jam save `Update via Claude` versi lama), lalu KETIMPA HILANG lagi oleh proses yang bikin file 07-14.
+
+**KEPUTUSAN USER (2026-07-15): ke-3 item WAJIB dikembalikan** — "itu nanti untuk pondasi kerangka produk", jadi bukan discontinue yg disengaja. **Sudah dieksekusi & selesai** hari yang sama: 44 baris Mercedes-Benz (EQE Gen1 semua toko + G Class Strip Gen1&2 OP/SP) + 54 baris Suzuki (Carry Strip Gen6-11 OP/SP) — di-copy PERSIS (verbatim, cuma renumber `r=` cell reference, bukan re-generate) dari backup `.bak_20260715_114443` (versi 07-11, sebelum ke-drop), di-append ke akhir sheet Mercedes-Benz (row 2854-2897) & Suzuki (row 3373-3426) via manipulasi XML langsung (saat itu tidak ada Python/openpyxl/LibreOffice di device ini — semua 3 dicek, tidak ada satupun terinstall).
+
+**(2026-07-15, lanjutan) Ke-15 file dari sesi cloud sudah diambil user (download manual) & ditaruh semua ke `Update via Claude\` + Drive.** File master yg didownload ulang (`SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx`, versi jam 14:50) ternyata beda dikit dari versi pagi — tambahan 26 baris di sheet Lexus (13 SKU unik x 2 toko UA+OT): varian warna **Orange** utk Lexus NX/RX/LX (ini yg dimaksud "+ Orange" di deskripsi awal user, terpisah dari lompatan 5-brand mewah yg sudah diproses duluan). Di-merge pakai openpyxl (bukan XML manual lagi) ke master yg sudah py restorasi EQE/G-Class/Carry — tidak saling menimpa krn beda sheet. Hasil akhir master: 69 sheet, Mercedes-Benz 2897 baris, Suzuki 3426 baris, Lexus 2336 baris, semua terverifikasi via openpyxl.
+
+14 file operasional (Shopee Undercover 1-5, Lazada Undercover, Shopee Otonation 1-2, Shopee Otoprotection 1, TikTok Otoprotection 1, Shopee Smartpro 1-2, TikTok Smartpro, Lazada Smartpro) sudah ditimpa ke folder `Update via Claude\List Produk {Brand}\` masing2 (nama persis sesuai file lama, semua di-backup dgn suffix `.bak_TIMESTAMP` dulu sebelum ditimpa). Semua 15 file (master+14) sudah di-copy juga ke `G:\My Drive\...\Update via Claude\` yg sama, dikonfirmasi lewat Drive API sudah naik ke cloud (bukan cuma mount lokal).
+
+**Belum berubah**: TikTok UA (nunggu upload manual user, file besar), Lazada Otonation, Lazada Otoprotection — 3 ini masih exactly seperti sebelumnya, sesi cloud belum menyentuhnya.
+
+How to apply: kalau user tanya status terkini, semua 15 file dari batch "SYNCED" hari ini SUDAH ada & current di lokal+Drive per 2026-07-15 sore. Fokus berikutnya: cross-check apakah 2 SKU (G-Class-Strip/Carry-Strip) yg baru direstore sudah ke-resolve dgn benar di file2 operasional OP/SP ini (sesi cloud yg generate file2 itu build lookup-nya SEBELUM restorasi ini ada).
+
+**(2026-07-15, update) Python 3.14.6 + openpyxl 3.1.5 sudah terinstall user di PC ini setelah sesi di atas** (`python -m pip install openpyxl` — pip bukan command terpisah di PATH, harus lewat `python -m pip`). LibreOffice/`soffice` & `pandas`/`markitdown` masih belum dicek ulang setelah ini. **Sesi depan: pakai [[skill xlsx]]/openpyxl seperti biasa untuk kerja spreadsheet di device ini, TIDAK perlu lagi manual XML surgery** (pendekatan darurat sesi ini terbukti jalan tapi rawan bug — sempat ada regex renumber yg salah rusak isi SKU, ketangkap sebelum diterapkan, lihat catatan script di atas). Live-listing Shopee toko Undercover Autocare TIDAK bisa diverifikasi langsung (domain shopee.co.id diblokir kebijakan browser tool + halaman render JS jadi WebFetch kosong) — restorasi berbasis data historis exact-match, bukan verifikasi live.
+
+---
+**(2026-07-15, CROSS-CHECK restorasi + SURVEI sync — hasil lengkap)**
+
+**Struktur file operasional (dikonfirmasi via openpyxl):**
+- Shopee (semua toko): sheet `Sheet1`, Nama Produk kolom B(2), Nama Variasi kolom D(4), SKU kolom F(6), data mulai row 7.
+- TikTok (semua toko): sheet `Template`, product_name kolom C(3), variation_value kolom E(5), seller_sku kolom K(11), data mulai row 6.
+- Lazada: sheet `template`, Seller SKU kolom M(13), data mulai row 5.
+
+**Cross-check G-Class/Carry/EQE Strip di file operasional (apakah restorasi master perlu propagasi?):**
+- **SP Shopee 1**: G Class & Carry SUDAH terisi (28/42), pakai SKU master scheme prefix UA (`MBZ-GCL-UA-S-G1-S1A`). Yang kosong (14) HANYA varian ",Tahun Lain" (tanpa generasi spesifik → wajar kosong). Tidak perlu aksi.
+- **OP TikTok 1 & SP TikTok**: G Class/Carry/Carry-Pickup terisi PENUH (15/15, 14/14). Info generasi ADA di variation_value TikTok jadi bisa auto-map. Kosong cuma di varian "Transparan …Tahun Lain".
+- **OP Shopee 1**: G Class/Carry/Carry-Pickup SEMUA kosong (15 variasi masing2). SEBABNYA: variation_value OP Shopee TIDAK punya info generasi (cuma "Strip 1 Abu", "Merah", "Orange" — tanpa tahun/gen). Ini kasus "produk tanpa varian generasi di listing" (109 model OP) yg per keputusan user 07-11 SENGAJA dikosongkan (tidak bisa ditebak generasinya). BUKAN akibat gap master, BUKAN fixable oleh restorasi. Konsisten benar.
+- **Kesimpulan cross-check**: restorasi master (98 baris) penting utk KELENGKAPAN MASTER (pondasi), tapi file operasional TIDAK kehilangan SKU — sudah terisi dari sesi2 sebelumnya (sebelum drop 07-14). Drop 07-14 cuma kena file master, tidak meng-hapus SKU yg sudah terisi di file operasional (sync engine hanya ADD/FIX, tidak delete). Aman.
+
+**2 ANOMALI DATA ditemukan (belum ditindak, perlu keputusan user — sentuh pondasi):**
+1. **Prefix UA vs SP tidak konsisten utk produk gap**: produk mapan pakai kode toko di segmen-3 SKU (Toyota Avanza SP → `TYT-AVZ-SP-...`). Tapi produk gap-fill (Mercedes G Class, EQE, Suzuki Carry bare Gen6-11) pakai `UA` utk SEMUA toko termasuk baris Otoprotection/Smartprotection (`MBZ-GCL-UA-S-...`, `SZK-CAR-UA-S-...`) — harusnya `SP` utk OP/SP. Ada di master DAN di file operasional SP Shopee (konsisten master↔operasional, jadi internal-consistent, tapi beda konvensi dari produk lain). Bandingkan: Suzuki Carry FUTURA (produk mapan) benar pakai `SZK-CRF-SP-...` utk OP/SP. TIDAK di-fix otomatis — butuh cek ke gudang/BigSeller apakah produk ini terdaftar dgn kode UA atau SP.
+2. **OP TikTok pakai SKEMA SKU BEDA TOTAL**: seller_sku OP TikTok utk G Class = `CVR0117-OTP-RSEA`, `CVR0117-OTP-RPH` (skema lama "CVR{nomor}-OTP-{kode}"), BUKAN skema master `MBZ-GCL-...`. OP Shopee justru pakai skema master (`MTB-XPC-SP-...`). Jadi inkonsisten antar-kanal DALAM toko OP yg sama. Sesi cloud "TikTok1 66 update+3.535 benar" = engine anggap kode CVR ini "sudah benar" & tidak ganti. Perlu klarifikasi user: OP TikTok harusnya pakai skema master atau memang skema CVR sendiri.
+
+**MATRIKS KANAL × TOKO (file kerja yg ADA, per struktur folder 07-15):**
+| Toko | Shopee | Lazada | TikTok |
+|------|--------|--------|--------|
+| UA (Undercover) | ✓ (1-5) | ✓ | ✓ (1-3) |
+| OT (Otonation) | ✓ (1-3) | ✗ TIDAK ADA | ✗ TIDAK ADA |
+| OP (Otoprotection) | ✓ (1-2) | ✗ TIDAK ADA | ✓ (1-2) |
+| SP (Smartprotection) | ✓ (1-2) | ✓ | ✓ |
+
+**PENTING — koreksi memory lama**: catatan "Lazada OT / Lazada OP belum disentuh" kemungkinan KELIRU — di file set lokal PC ini, OT & OP TIDAK punya folder/file Lazada sama sekali (OT malah cuma Shopee, tidak ada TikTok juga). Jadi "belum sync" ≠ "belum ada file". Kalau memang OT/OP jualan di Lazada, file-nya belum pernah masuk ke project ini (perlu user export & upload). Verifikasi ke user.
+
+**FILL-RATE terukur (openpyxl; catatan: read_only mode ada bug baca pane di sebagian Shopee & max_row TikTok — angka di bawah yg berhasil dibaca):**
+- UA Shopee 1: ~948/5181 terisi (~18%) — BANYAK blank, sebagian fillable (mis. Chery Tiggo 5X "Epic Biru,Gen 1" blank). Kemungkinan besar file 1 ini isinya dominan produk NON-top-331 (UA dulu cuma dikerjakan scope 331-terlaris + Lazada penuh, bukan full-catalog Shopee).
+- UA Lazada: ~99% (praktis selesai).
+- UA TikTok 1: ~57% (13.806/23.939) — PARSIAL, ~10rb baris blank. File TikTok besar (7MB) yg jadi bottleneck.
+- UA TikTok 2 & 3: kemungkinan kosong/placeholder (kebaca 0 baris — perlu konfirmasi ulang, bisa jadi bug baca max_row).
+
+**SISA KERJA SYNC (scope user tetap 331-terlaris dulu, per instruksi 07-15):**
+- Utama: **UA TikTok** (parsial, file besar). 
+- Sekunder: cek apakah UA Shopee punya produk top-331 yg masih blank.
+- Butuh daftar 331-terlaris (`MOBIL TERLARIS.xlsx` ada di folder `List Produk SKU`) utk filter scope — belum dibuka/dipakai sesi ini.
+
+How to apply: sebelum eksekusi sync lanjutan, buka `MOBIL TERLARIS.xlsx` dulu utk dapat daftar 331 model, lalu filter file operasional ke subset itu. Untuk 2 anomali di atas, TANYA user dulu sebelum ubah master/SKU (sentuh pondasi).
+
+---
+**(2026-07-15, mulai kerja UA TikTok sync — instruksi user: lanjut UA TikTok, scope 331 terlaris, patokan varian dari file UA e-commerce, "kalau master tidak match ikut file e-commerce Undercover")**
+
+**Daftar 331 terlaris**: `MOBIL TERLARIS - Status Update SKU.xlsx` sheet "COVER MOBIL", data row 8+, kolom B=Nama Mobil, kolom J=Status. Status per 07-08 (agak stale, sebelum brand mewah): 165 "Sudah ada SKU di master", 166 belum (89 model belum ada walau brand ada + 71 brand kosong + 6 brand tanpa sheet). Nama model FORMAT PENDEK ("Toyota Avanza", "Honda Brio") — tanpa prefix listing.
+
+**Sizing UA TikTok 1** (`Tiktok Semua Informasi Undercover 1.xlsx`, sheet Template, 23.939 baris produk): 10.133 blank. Dari itu 5.311 = top-331 (5.162 model-nya ADA di master UA, 149 tidak — cuma 3 model: Suzuki Vitara/Nissan Kicks/Honda City Hatchback, kasus submodel ambigu lama). 4.822 blank = non-top-331 (luar scope). Top-seller inti (Avanza/Brio/Rush/Ertiga dst) SUDAH terisi; yg blank = top-331 peringkat menengah, BANYAK brand mewah baru (BMW Seri5/6/7/X1/X3/X5/M3/M5/Z4, Mercedes B/G Class, Kia Sportage, Toyota Prius/Land Cruiser, Hyundai Santa Fe/Avega/Grand i10, dll).
+
+**Struktur data UA TikTok**: nama = "Cover Mobil {Model} {Tier} - Undercover Autocare" (tier di nama SERING "Reguler" walau varian sebenarnya Strip — tier nama TIDAK reliable utk kategori). variation_value = "{warna}, {gen} ({tahun})" ATAU "{gen} ({tahun}), {warna}" (urutan BOLAK-BALIK). Kategori ditentukan: warna Elite/Epic/Warrior→Strip; warna Silver→Premium; warna polos→ikut tier nama (Premium/Exclusive/else Reguler). Warna→kode SKU: Reguler Abu-abu→ABU/Hitam→HTM/Biru Benhur→BRU/Merah→MRH/Hijau Army→GRN/Orange→ORG; Strip {Elite→E,Epic→P,Warrior→W}+{Abu→AB,Biru→BR,Merah→MR}; Premium Silver→SLV. Master gen label→segmen SKU: "Gen 1"→G1, "Gen 1 Facelift"/"Gen 1F"→G1F, "Gen 1 & 2"→G1 (gabungan!), chassis codes (J40, M156, W201, JK/JL/TJ/YJ, Roadster/Paceman) langsung jadi segmen.
+
+**⚠️ TEMUAN KRITIS — master vs listing e-commerce TIDAK selalu match** (engine dibangun `scratchpad/engine.py`, divalidasi ke 12.070 baris top-331 yg SUDAH terisi: 78% match, 464 mismatch, 2.171 unresolved). Mismatch DOMINAN karena **data terisi lama itu STALE / dari master versi berbeda**, BUKAN bug engine:
+- Daihatsu Terios: master SEKARANG cuma py "Gen 1" (1997-2006). Listing jual "Gen 2-3 (2006-2026)" → SKU `DHT-TRS-UA-R-G2-ABU` yg TIDAK ADA di master sekarang.
+- Toyota Hardtop: master pakai kode gen `J40`, listing pakai `G4` (`TYT-HTP-UA-R-G4-HTM`).
+Jadi engine berbasis master menghasilkan SKU master-benar, tapi beda dari listing lama. Per instruksi user ("master ikut e-commerce"), authority = listing e-commerce, master yg harus dilengkapi/diperbaiki. Artinya pendekatan "fill dari master" saja TIDAK cukup — perlu hierarki: (1) SKU dari baris UA lain (Shopee/Lazada/TikTok) yg SUDAH terisi utk kombinasi (model,kat,gen,warna) yg sama = authority; (2) fallback master; (3) sisanya flag utk lengkapi master.
+
+**⚠️ "Model/Tahun Lain" & "Tahun Lain" = varian CATCH-ALL** (pembeli pilih kalau tahun mobilnya tidak terdaftar) → HARUS tetap KOSONG, jangan diisi. Engine pass-1 keliru mengisinya (via fallback "single") — WAJIB di-exclude di versi final.
+
+**Belum ada penulisan apa pun ke file** — masih tahap validasi/dry-run. engine.py di scratchpad (tidak persisten). Perlu keputusan user soal pendekatan reconciliation sebelum lanjut (lihat pertanyaan yg diajukan 07-15).
+
+How to apply: JANGAN fill UA TikTok blank murni dari master — banyak yg beda dari listing (master stale/incomplete utk beberapa model). Pakai hierarki e-commerce-first. Exclude varian catch-all "*/Tahun Lain". Validasi tiap iterasi ke baris terisi TAPI sadar sebagian "mismatch" itu data lama stale (cek ke master aktual utk pastikan mana yg benar, spt kasus Terios/Hardtop).
+
+File final (3.503.384 byte, sudah 0 anomali dari sisi "SKU hilang tak dijelaskan") ada di `List Produk SKU\Update via Claude\SKU, Price, Tracking Cover Mobil.xlsx` lokal (auto-backup ke Drive), dgn backup berlapis: `.bak_20260715_114443` (versi 07-11, sebelum ditimpa file 07-14) dan `.bak_20260715_135730_before_restore` (versi 07-14 sebelum di-restore). **BELUM dipromosikan ke root master** `List Produk SKU\SKU, Price, Tracking Cover Mobil.xlsx` (root masih versi 07-03, belum disentuh sama sekali).
+
+How to apply: kalau lanjut kerja master file ini atau bangun ulang lookup OP/SP, PAKAI versi final ini (bukan `SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx` mentah dari Downloads) — versi itu masih kurang 98 baris. Kalau butuh insert/append baris xlsx lagi di device ini tanpa Python: pola yg terbukti jalan ada di `scratchpad/xlsx_diff/extract_and_renumber.pl` (session lalu, mungkin sudah tidak ada di scratchpad sesi baru) — kuncinya regex renumber HARUS scoped ke `r="COL123"` attribute (`\br="([A-Z]+)\d+"`), JANGAN regex generic `[A-Z]+\d+` krn ikut merusak teks SKU yg formatnya mirip (mis. "G1"/"S1A" di dalam kode SKU ikut ke-replace kalau tidak di-scope ke atribut).
