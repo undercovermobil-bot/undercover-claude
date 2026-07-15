@@ -39,3 +39,25 @@ Ikuti [[feedback-undercover-update-folder-workflow]] — kerja tulis ke `Update 
 Why: instruksi user eksplisit soal prioritas terlaris berlaku lintas toko — dicatat di sini krn tiap toko punya struktur listing yg beda dan butuh scanner terpisah (tidak bisa reuse scan_ot2.py mentah2, walau logic intinya — submodel matching, genname numeric-set fallback — bisa di-port).
 
 How to apply: sebelum lanjut OP, baca file ini dulu supaya tidak perlu re-discover struktur dari nol. Script kunci ada di scratchpad (`scan_op_terlaris.py`, `apply_op_fix.py`/`verify_op_fix.py`) — tidak persisten antar sesi.
+
+**(2026-07-15) SCOPE DIPERLUAS dari 331-terlaris ke SELURUH katalog Shopee+TikTok, pakai lookup master penuh (69 sheet, filter Toko=Smartprotection karena OP berbagi prefix SP).** Hasil: Shopee1 51 baris update + 3.553 sudah benar (dari ~3.660 baris berisi); TikTok1 66 update + 3.535 benar; TikTok2 kosong (cuma placeholder).
+
+**Prefix nama produk OP (lebih bervariasi dari perkiraan awal)**: kombinasi Reguler+Strip pakai salah satu dari `"Body Cover Mobil / Selimut Mobil "`, `"Cover Mobil / Selimut Mobil "` (typo, harusnya "Body Cover..."), `"Body Cover Mobil/ Selimut Mobil "` (spasi hilang sblm garis miring), `"Cover Mobil/ Selimut Mobil "`, `"Body Cover Mobil/ Selimut "` (Nissan Latio, hilang juga kata "Mobil" kedua). Transparan pakai `"Cover Mobil Transparan "` — konsisten, cuma 1 pola.
+
+**Kategori ditentukan per-baris varian (bukan per-listing)**: kalau warna diawali "Strip N " → kategori Strip, kalau plain warna → Reguler — dikonfirmasi ulang, sesuai catatan lama.
+
+**Alias/typo baru yang ditemukan & ditambahkan ke classifier** (banyak overlap dgn alias OT, lihat [[project-undercover-otonation-status]] — daftar sudah dipakai/diverifikasi ulang di OP): Honda CRV/HRV/WRV/BRV, Mazda CX-5/CX9/CX3, Mitsubishi Outlander (Sport & polos) → "Mitsubishi Mitsubishi Outlander", Mitsubishi Destinator/Kuda/Xpander Cross (semua ganda "Mitsubishi Mitsubishi..."), Mini Cooper→MINI Cooper, Hyundai Santa FE (case)→Santa Fe, **Suzuki Carry Pickup → "Suzuki Carry" (BUKAN "Suzuki New Carry Pick-Up"** — terverifikasi: master "Suzuki Carry" bare punya Gen6-11 yg cocok dgn listing, "New Carry Pick-Up" cuma py 1 gen "Baru"), Nissan XTrail/Xtrail (2 varian typo)→X-Trail, Toyota Altis→Corolla Altis, Etios Valco→Toyota Etios Valco, Hilux/Kijang bare→Toyota+nama.
+
+**Bug klasifier penting yg diperbaiki (bukan cuma alias)**:
+1. Generasi berformat "Gen N : NamaPasar" (mis. "Gen 2 : Reborn"/"Gen 3 : Zenix" utk Toyota Innova) atau "Gen N : tahun-tahun" atau "Gen N tahun-tahun" (TikTok, tanpa titik-dua) — semua ditangani dgn 1 fungsi `clean_gen_part()`: kalau ada titik-dua, buang semua setelah titik-dua (apapun isinya); kalau tidak ada titik-dua, strip trailing tahun via regex (support juga "Sekarang"/"Now" dan dash ganda "1996--2002").
+2. Warna "Strip N Abu-abu"/"Strip N Biru Benhur" (listing tulis warna lengkap) vs master yg cuma simpan bentuk pendek "Strip N Abu"/"Strip N Biru" — perlu `clean_strip_color()` mapping.
+3. Submodel-sebagai-generasi yg namanya TIDAK mengandung angka sama sekali (mis. Suzuki SX4 "X-Over"/"S-Cross") butuh `SUBMODEL_GEN_MAP` eksplisit (X-Over=Gen1, S-Cross=Gen2, sesuai presenden lama) krn tidak bisa dicocokkan via collapse-text biasa.
+4. Generasi gabungan-rentang listing (mis. "Gen 1-3") vs master yg py label gabungan beda notasi (mis. "Gen 1, 2, 3") — numeric fallback lama (`digit-prefix slice match`) gagal utk kasus ini, ditambah fallback KEDUA: cocokkan cuma digit PERTAMA & TERAKHIR (bukan seluruh slice).
+
+**Ditemukan (2026-07-15): 109 model OP TERNYATA sama sekali tidak punya varian generasi di listing (Shopee+TikTok), cuma warna — jauh lebih luas dari 3 produk yg sudah dikonfirmasi user 07-11 (Suzuki Carry Pickup/Mercedes G Class/Suzuki Carry polos).** Daftar lengkap 109 model ada di `Produk_Perlu_Keputusan_Manual.xlsx` (dikirim ke user). SKU dikosongkan (tidak ditebak), konsisten dgn keputusan user 07-11.
+
+**Model genuinely tidak ada di master (bukan alias, gap asli)**: Nissan Latio, Chevrolet Estate Magnum (beda dari "Chevrolet Optra Magnum" yg ada), Toyota FJ Cruiser, Hummer H3 (beda dari "Hummer H1" yg ada) — dicatat di tracker manual.
+
+**Belum dikerjakan**: TikTok OP file 2 (kosong, tidak perlu), Lazada OP (belum disentuh sama sekali sesi ini).
+
+How to apply (update): scan_op_full.py di scratchpad (tidak persisten) adalah versi terbaru — arsitekturnya: alias substring-replace dgn guard anti-dobel (skip replace kalau target ekspansi sudah ada di teks), `collapse_gen()` (buang tahun/parentheses, lowercase, buang non-alfanumerik, "facelift"→"f") sbg pencocokan generasi utama, baru fallback ke deteksi "^Gen\s*\d" mentah + numeric-fallback (slice & first-last-digit) kalau collapse gagal.
