@@ -43,14 +43,37 @@ Cara setup:
 2. **Opsi cepat (sekali jalan):** buka folder Drive itu di browser, lalu
    drag folder-folder ini dari File Explorer ke jendela browser:
    `List Produk SKU`, `Banner`, `Otonation`, `Otopro`, `Smartpro`, `Undercover`.
-3. **Opsi auto-sync berkelanjutan (direkomendasikan):** di Google Drive for
-   Desktop, aktifkan fitur **"Back up folder from computer"** dan pilih
-   folder-folder data di atas. Dengan ini, setiap kali file di-edit/di-save,
-   otomatis ke-upload ke Drive real-time — tidak perlu dijadwalkan, beda
-   dengan git yang butuh commit diskrit (lihat Langkah 4).
-4. Pastikan hasil sync-nya berdampingan dengan folder hasil clone git di
+3. **Opsi auto-sync berkelanjutan:** di Google Drive for Desktop, fitur
+   **"Back up folder from computer"** SEHARUSNYA bikin folder itu ke-upload
+   otomatis real-time tiap disave. **Tapi ini TIDAK terverifikasi jalan**
+   (dicoba & gagal di PC utama 2026-07-15 — file yang diedit lokal jam 11:44
+   & 13:57 masih belum naik ke Drive saat dicek jam ~14:00; ternyata
+   kecocokan timestamp yang dikira "bukti auto-sync" sebelumnya cuma
+   kebetulan dari upload manual sekali-jalan). **Jangan asumsikan folder ini
+   auto-sync — selalu verifikasi dulu** (bandingkan size/timestamp file lokal
+   vs `G:\My Drive\...`) sebelum mengandalkannya.
+4. **Kalau auto-sync ternyata tidak aktif, solusi yang terbukti jalan:**
+   Google Drive for Desktop biasanya me-mount Drive sebagai drive letter lokal
+   (mis. `G:\My Drive\...`). Kalau Claude (atau siapa pun) punya akses
+   terminal ke device itu, copy/tulis file **langsung ke path itu** (`cp`/
+   `Copy-Item`, bukan drag-drop browser) — ini file I/O lokal biasa, BEDA
+   mekanisme dari upload API/MCP yang gagal (lihat catatan di bawah), dan
+   Drive Desktop yang mendeteksi + upload sendiri di background. Bisa
+   diverifikasi naik ke cloud (bukan cuma ke mount lokal) dalam hitungan
+   detik lewat Drive API/MCP tool `get_file_metadata`.
+5. Pastikan hasil sync-nya berdampingan dengan folder hasil clone git di
    langkah 1 — idealnya digabung jadi satu folder `Undercover` yang sama
    supaya path yang direferensikan di memory Claude tetap cocok.
+
+**Catatan tambahan (ditemukan 2026-07-15):** ada **DUA folder "List Produk
+SKU"** berbeda di Drive akun ini — satu kanonik langsung di root folder
+Drive di atas, satu lagi duplikat di dalam subfolder `Export Undercover ke
+Akun Claude Lain\`. Duplikat ini muncul karena drag-and-drop browser (opsi
+cepat di atas) tidak merge kalau folder tujuan sudah ada isinya, malah bikin
+folder baru. Kerja sync SKU sepanjang Juli 2026 pakai folder yang **di dalam
+`Export Undercover ke Akun Claude Lain\`** (itu yang punya subfolder `Update
+via Claude\`). Kalau bingung file "hilang", cek dulu apa kamu lihat folder
+kanonik yang stale atau folder aktif ini.
 
 ## Langkah 3 — Restore memory Claude
 
@@ -120,14 +143,18 @@ Register-ScheduledTask -TaskName "Undercover-AutoCommitPush" -Action $action -Tr
 (Ingat sesuaikan path `$repoPath` di dalam `auto-commit-push.ps1` itu sendiri
 juga kalau lokasi repo di device itu berbeda.)
 
-Data besar tidak perlu automation git karena sudah ditangani real-time oleh
-Google Drive for Desktop (lihat Langkah 2, opsi "Back up folder from computer").
+Data besar tidak pakai automation git — tapi JANGAN asumsikan itu berarti
+"tidak perlu apa-apa". Lihat Langkah 2 poin 3-4: verifikasi dulu apakah
+Google Drive for Desktop auto-sync beneran aktif di device itu; kalau tidak,
+perlu copy manual (atau minta Claude yang punya akses terminal device itu
+copy) ke path `G:\My Drive\...` tiap ada perubahan data besar.
 
 ## Alur kerja harian singkat
 
 ```
 git pull                 # ambil update kode/dokumen terbaru
-# ...kerja seperti biasa, data besar otomatis sinkron real-time lewat Google Drive...
+# ...kerja data besar: cek dulu apa Drive folder ini auto-sync (Langkah 2
+#    poin 3) — kalau tidak, copy manual ke G:\My Drive\... tiap selesai edit...
 # ...git add/commit/push otomatis tiap 15:45 lewat Task Scheduler (Langkah 4)...
 # atau manual kapan saja:
 git add -A
