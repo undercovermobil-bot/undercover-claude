@@ -7,7 +7,7 @@ Claude sebelumnya.
 > **Pakai 2 komputer (marketing + e-commerce)?** Baca dulu
 > [`SETUP-MULTI-PC.md`](SETUP-MULTI-PC.md). Dokumen ini fokus ke sisi **e-commerce**
 > (repo ini). Sisi **marketing** ada di repo terpisah:
-> [`undercover-digital-marketing`](https://github.com/undercovermobil-bot/undercover-digital-marketing).
+> [`claude-digital-marketing`](https://github.com/undercovermobil-bot/claude-digital-marketing).
 
 Proyek ini dipecah ke 2 tempat penyimpanan:
 

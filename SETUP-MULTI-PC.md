@@ -8,7 +8,7 @@ tidak tercampur dan akses tiap sisi bisa dikelola sendiri.
 
 | PC | Fungsi | Repo GitHub | Folder yang dibuka di Claude Code |
 |----|--------|-------------|-----------------------------------|
-| **PC 1** | Digital Marketing (social media & website) | [`undercover-digital-marketing`](https://github.com/undercovermobil-bot/undercover-digital-marketing) | folder clone repo marketing |
+| **PC 1** | Digital Marketing (social media & website) | [`claude-digital-marketing`](https://github.com/undercovermobil-bot/claude-digital-marketing) | folder clone repo marketing |
 | **PC 2** | E-commerce (SKU Sync, Shopee monitor, katalog) | `undercover-claude` (repo ini) | folder clone repo ini |
 
 ## Kenapa 2 repo terpisah?
@@ -23,7 +23,7 @@ mau memberi akses ke orang/tim marketing tanpa membuka data e-commerce.
 
 - **PC 2 — E-commerce (repo ini):** ikuti [`SETUP-DEVICE-BARU.md`](SETUP-DEVICE-BARU.md).
 - **PC 1 — Marketing:** ikuti `SETUP-DEVICE-BARU.md` di repo
-  [`undercover-digital-marketing`](https://github.com/undercovermobil-bot/undercover-digital-marketing).
+  [`claude-digital-marketing`](https://github.com/undercovermobil-bot/claude-digital-marketing).
 
 ## Google Drive (aset besar)
 
