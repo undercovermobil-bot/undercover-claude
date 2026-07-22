@@ -61,3 +61,88 @@ cek dulu apakah repo masih ada dan masih dipakai (`git remote -v` di
 Undercover-AutoCommitPush`). Kalau user minta bantuan upload file besar ke
 Drive, langsung arahkan ke cara manual — jangan coba jalur MCP Drive tool
 untuk file di atas beberapa KB.
+
+## Lokasi file master SKU (dikonfirmasi via MCP Google Drive, 2026-07-22)
+
+User sempat tidak bisa menemukan file master ("File masternya lokasinya
+dimana? kok aku tidak bisa menemukan"). Dikonfirmasi via
+`mcp__Google_Drive__search_files`:
+
+- **File master** = `SKU, Price, Tracking Cover Mobil.xlsx`
+  (fileId `17PjVhfdNedOYFoDU9-vJB1G4aGYIXU_h`), terakhir diubah **2026-07-03**.
+  Lokasi: **E-commerce (folder Drive utama) → List Produk SKU →**
+  `SKU, Price, Tracking Cover Mobil.xlsx` — TEPAT DI DALAM folder
+  top-level `List Produk SKU`, bukan di subfolder toko manapun.
+  1 sheet per merek mobil, format SKU `MEREK-MODEL-TOKO-KAT-GEN-WARNA`.
+  Ini file yang sama yang dipakai script-script sesi ini sebagai
+  `MASTER_from_drive_20260715.xlsx` secara lokal (nama lokal cuma
+  menandai tanggal Claude download/copy filenya ke scratchpad, BUKAN
+  tanggal modifikasi Drive-nya — filenya sendiri belum diubah sejak 07-03).
+- **Kemungkinan besar sumber kebingungan**: ada folder BERNAMA SAMA
+  `List Produk SKU` di DUA tempat berbeda:
+  1. `E-commerce/List Produk SKU/` — folder asli, isinya file master +
+     4 subfolder per toko (`List Produk Undercover/Otonation/Otopro/Smartpro`)
+     + `Hasil Sinkronisasi SKU/` + `Ekspor SKU Gudang/` + `Impor SKU Gudang/`.
+  2. `E-commerce/Export Undercover ke Akun Claude Lain/List Produk SKU/` —
+     folder staging **untuk Claude edit** sesuai aturan kerja "jangan edit
+     file asli langsung, copy dulu ke sini" (lihat
+     [[feedback-undercover-update-folder-workflow]]). Ini BUKAN master,
+     cuma copy kerja.
+  Kalau user mencari "file master" dan membuka folder kedua ini duluan,
+  wajar bingung karena tidak ada file master aslinya di situ (cuma ada
+  file/script project Shopee Price Monitor yang nyasar — lihat bagian
+  cleanup di bawah).
+- **Penting**: revisi nama model master (18 rename, 1.997 baris, lihat
+  entri sinkronisasi SKU tertanggal 2026-07-21 di
+  [[project-undercover-sku-sync-status]]) masih HANYA ada di scratchpad
+  sesi lokal (`MASTER Produk - Nama Model Disesuaikan Listing
+  (2026-07-21).xlsx`), BELUM di-upload user ke Drive — jadi file master
+  di Drive saat ini masih versi lama (pre-rename). Perlu transfer manual
+  oleh user kalau mau versi master di Drive ikut ter-update.
+
+## Survei folder E-commerce di Drive (2026-07-22) — kandidat beres-beres
+
+Disurvei via `mcp__Google_Drive__search_files` (belum ada file yang
+dihapus — ini cuma daftar temuan untuk dikonfirmasi user dulu):
+
+**Aman dihapus (junk sistem, bukan data):**
+- File `.DS_Store` — ditemukan di `List Produk SKU/` dan
+  `List Produk SKU/Hasil Sinkronisasi SKU/` (kemungkinan ada di folder
+  lain juga). File metadata Finder macOS, tidak ada isi berguna.
+
+**Kandidat redundant/superseded (perlu konfirmasi user sebelum hapus):**
+- `List Produk SKU/SKU, Price, Tracking Cover Mobil (backup sebelum
+  revisi generasi 2026-07-03).xlsx` — backup pre-revisi dari hari yang
+  sama dengan master saat ini; kemungkinan sudah tidak perlu tapi bisa
+  jadi jaring pengaman.
+- `List Produk SKU/Ekspor SKU Gudang/` berisi 3 file
+  `SKU_Gudang20260701230231581(1/2/3).xlsx` + 1 file
+  `SKU_Match_20260701230448884(8).zip` — nama file auto-generated
+  BigSeller bertanggal 2026-07-01, kemungkinan sudah digantikan oleh
+  proses sinkronisasi yang lebih baru (Toyota pilot 07-01, rollout semua
+  merek dst) — perlu dicek apakah masih dipakai referensi atau sudah usang.
+- `Export Undercover ke Akun Claude Lain/` (folder staging edit Claude)
+  berisi file-file project **Shopee Price Monitor** yang nyasar
+  (`scraperapi_backend.py`, `utils.py`, `discovery.py`, `my_products.csv`,
+  `shops.txt`) — bukan bagian dari SKU Sync, membingungkan karena
+  tercampur di folder yang seharusnya khusus staging edit SKU listing.
+- `Export Undercover ke Akun Claude Lain/Dari Downloads (di luar folder
+  proyek asli)/` — namanya sendiri menandakan "file lepas di luar
+  struktur asli"; isinya `MOBIL TERLARIS (1).xlsx` dan
+  `SKU Produk - 100 Mobil Terlaris.xlsx` (laporan turunan, bukan sumber).
+- Google Sheet bernama generik **"Report"** di folder `Report/` berisi
+  campuran log komplain customer (tab "Cahyo") DAN entri yang sama
+  sekali tidak nyambung ke bisnis cover mobil (tab "Fajar" — soal
+  pendant/anting/kalung perak) — kemungkinan sheet template/contoh yang
+  ketiban isi salah, layak dicek user apakah ini memang dokumen yang
+  dimaksud atau nyasar.
+
+Why: user eksplisit minta bantu cari lokasi master + rapikan folder
+e-commerce karena kebanyakan file bikin bingung. Belum ada aksi hapus
+yang dieksekusi (perlu konfirmasi eksplisit dulu, sesuai kebijakan
+"jangan hapus file Drive user tanpa izin").
+
+How to apply: kalau user mau lanjut hapus/pindah file-file di atas,
+konfirmasi per-item dulu (bukan hapus massal), lalu jalankan via Google
+Drive (manual oleh user, atau via MCP Drive tool kalau tersedia
+fungsi delete/trash-nya — belum dicek di sesi ini).
