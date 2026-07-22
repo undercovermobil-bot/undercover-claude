@@ -31,11 +31,11 @@ Argumen opsional:
     python buat_matriks_terlaris.py "<folder data>" "<nama output.xlsx>"
 
 Output default: MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx  (buka di Excel / Google Sheets)
-    4 sheet:
-      1. "Top 300 Mobil"       -> ranking per model (gaya file MOBIL TERLARIS lama)
+    3 sheet:
+      1. "Top 300 Mobil"       -> ranking per model + MATRIKS WARNA POLOS terintegrasi
+                                  (kolom tiap warna diurut terlaris, baris TOTAL & % tiap warna)
       2. "Detail Gen & Warna"  -> tiap baris = Model + Jenis Cover + Gen + Warna
-      3. "Matriks Warna"       -> crosstab: baris Model-Gen, kolom Warna, isi kuantitas
-      4. "Metodologi"          -> definisi, filter, diagnostik (jumlah baris per marketplace)
+      3. "Metodologi"          -> definisi, filter, diagnostik (jumlah baris per marketplace)
 
 Asumsi (bisa diubah di bagian KONFIGURASI di bawah):
     - Hanya MOBIL (Cover Mobil); motor diabaikan untuk ranking.
@@ -87,7 +87,7 @@ SKU_WARNA_CODE = {
     "HJU": "Hijau", "CKL": "Coklat", "CRM": "Cream",
 }
 
-# --- Keluarga warna POLOS untuk sheet Matriks Warna ---
+# --- Keluarga warna POLOS untuk kolom warna di sheet Top 300 ---
 # Strip (Elite/Epic/Warrior/Strip-N) DIKELUARKAN; gen-bocor/junk DIBUANG.
 # Premium/Exclusive/Transparan tetap ikut (Silver = warna Premium).
 COLOR_FAMILIES = [
@@ -168,18 +168,27 @@ def norm(s):
 # =====================================================================
 #  UTIL parsing nama produk & variasi  (sama seperti versi openpyxl)
 # =====================================================================
+# frasa cover di depan nama produk: cover/sarung/selimut (rantai '/' boleh) + mobil/motor
+_COVER_RE = re.compile(
+    r"(?:body\s+)?(?:cover|sarung|selimut)(?:\s*/\s*(?:cover|sarung|selimut))*\s+(?:mobil|motor)", re.I)
+# tipe cover di akhir nama (termasuk Transparan) - untuk dibuang + jadi penanda tipe
+_TAIL_TIERS = ["Transparant", "Transparan", "Exclusive", "Premium", "Reguler", "Strip"]
+
+
 def parse_name(name):
     if name is None:
         return None, None, False
     n = str(name).strip()
     low = n.lower()
-    is_motor = ("cover motor" in low) or ("selimut motor" in low)
+    is_motor = False
     m = None
-    for mm in re.finditer(r"(?:body\s+)?cover\s+(?:mobil|motor)(?:\s*/\s*selimut\s+(?:mobil|motor))?", n, re.I):
+    for mm in _COVER_RE.finditer(n):
         m = mm
     if m:
+        is_motor = "motor" in m.group().lower()
         n = n[m.end():]
     else:
+        is_motor = ("cover motor" in low) or ("selimut motor" in low) or ("sarung motor" in low)
         for p in NAME_PREFIXES:
             idx = n.lower().find(p.lower())
             if idx != -1:
@@ -187,14 +196,25 @@ def parse_name(name):
                 break
     n = n.strip(" -/")
     n = re.sub(r"^(transparan|transparant)\s+", "", n, flags=re.I)
+    # buang ekor pemasaran: '(J)', '- Indoor/Outdoor', embel toko
     n = re.sub(r"\s*\((?:j|jj)\)\s*$", "", n, flags=re.I)
+    n = re.sub(r"\s*[-/]?\s*\b(indoor|outdoor)\b\s*$", "", n, flags=re.I)
     n = re.sub(r"\s*-\s*(undercover autocare|undercover|otonation|otoprotection|otopro|smartprotection|smartpro)\s*$", "", n, flags=re.I)
+    # deteksi & buang tipe cover di akhir (loop 2x: mis. 'Transparan - Indoor' sudah dibuang indoor-nya)
     tier = None
-    for t in sorted(TIER_WORDS, key=len, reverse=True):
-        if re.search(r"\b" + re.escape(t) + r"\b\s*$", n, re.I):
-            tier = t
-            n = re.sub(r"\s*\b" + re.escape(t) + r"\b\s*$", "", n, flags=re.I)
+    for _ in range(2):
+        n = re.sub(r"\s*[-/]?\s*\b(indoor|outdoor)\b\s*$", "", n, flags=re.I)
+        matched = None
+        for t in _TAIL_TIERS:
+            if re.search(r"\b" + re.escape(t) + r"\b\s*$", n, re.I):
+                matched = t
+                n = re.sub(r"\s*\b" + re.escape(t) + r"\b\s*$", "", n, flags=re.I)
+                break
+        if matched is None:
             break
+        # normalisasi: Transparant -> Transparan
+        if tier is None:
+            tier = "Transparan" if matched.lower().startswith("transparan") else matched
     n = re.sub(r"\s+", " ", n).strip(" -/")
     if not n:
         return None, tier, is_motor
@@ -738,7 +758,7 @@ def write_xlsx(path, sheets):
 
 
 # =====================================================================
-#  BANGUN OUTPUT (4 sheet)
+#  BANGUN OUTPUT (3 sheet)
 # =====================================================================
 def build_output(agg, diag, out_path, root):
     model_qty = defaultdict(int)
@@ -758,20 +778,43 @@ def build_output(agg, diag, out_path, root):
     grand_qty = sum(model_qty.values())
     grand_val = sum(model_val.values())
 
+    # ---------- data WARNA POLOS per model (untuk kolom warna di Top 300) ----------
+    # Strip/Elite/Epic/Warrior DIKELUARKAN; gen-bocor/junk dibuang.
+    # Premium/Exclusive/Transparan ikut (Silver=Premium). Kolom diurut warna terlaris.
+    fam_tot = defaultdict(int)
+    fam_cell = defaultdict(int)      # (model, family) -> qty
+    for (model, tipe, gen, warna), rec in agg.items():
+        if model not in top_set:
+            continue
+        wl = (warna or "").strip().lower()
+        if tipe == "Strip" or wl.startswith(STRIP_MARK):
+            continue
+        if is_junk_warna(warna):
+            continue
+        fam = color_family(warna)
+        if fam is None:
+            continue
+        fam_tot[fam] += rec["qty"]
+        fam_cell[(model, fam)] += rec["qty"]
+    fam_cols = [f for f, _ in sorted(fam_tot.items(), key=lambda x: (-x[1], x[0]))]
+    grand_fam = sum(fam_tot.values())
+
     sheets = []
 
-    # ---------- Sheet 1: Top 300 Mobil ----------
+    # ---------- Sheet 1: Top 300 Mobil (+ matriks warna terintegrasi) ----------
     rows1 = []
     rows1.append([("MOBIL TERLARIS - Top %d Model (Detail Gen & Warna)" % TOP_N, S_TITLE)])
     rows1.append([("Sumber: order Shopee/TikTok/Lazada semua toko. Hanya pesanan sukses "
                    "(batal/belum bayar/refund dikeluarkan). Nilai = net setelah diskon. "
-                   "Lihat sheet 'Metodologi'.", S_SUB)])
+                   "Kolom warna = WARNA POLOS (Strip/Elite/Epic/Warrior tidak dihitung; "
+                   "Premium/Exclusive/Transparan dihitung, Silver=Premium). Lihat 'Metodologi'.", S_SUB)])
     rows1.append([])
     headers1 = ["No", "Nama Mobil", "Satuan", "Total Kuantitas", "% Kuantitas",
                 "Total Penjualan (Rp)", "% Nilai", "Jenis Cover Digabung", "Jumlah Varian/SKU"]
+    headers1 += fam_cols + ["Total Warna Polos"]
     rows1.append([(h, S_HEAD) for h in headers1])
     for i, model in enumerate(top_models, start=1):
-        rows1.append([
+        row = [
             (i, S_INT), (model, S_TXT), (SATUAN, S_TXT),
             (model_qty[model], S_INT),
             ((model_qty[model] / grand_qty) if grand_qty else 0, S_PCT),
@@ -779,15 +822,33 @@ def build_output(agg, diag, out_path, root):
             ((model_val[model] / grand_val) if grand_val else 0, S_PCT),
             (", ".join(sorted(model_types[model])), S_TXT),
             (len(model_skus[model]), S_INT),
-        ])
-    rows1.append([
+        ]
+        rtot = 0
+        for f in fam_cols:
+            q = fam_cell.get((model, f), 0)
+            row.append((q if q else "", S_CINT))
+            rtot += q
+        row.append((rtot, S_CINT))
+        rows1.append(row)
+    # baris TOTAL
+    totrow = [
         ("", S_TTXT), ("TOTAL (semua model, termasuk di luar Top %d)" % TOP_N, S_TTXT),
         ("", S_TTXT), (grand_qty, S_TINT), (1.0 if grand_qty else 0, S_TPCT),
         (round(grand_val), S_TIDR), (1.0 if grand_val else 0, S_TPCT),
         ("", S_TTXT), ("", S_TTXT),
-    ])
-    sheets.append({"name": "Top 300 Mobil", "rows": rows1,
-                   "widths": [5, 26, 7, 15, 11, 20, 9, 34, 14], "freeze": (5, 1)})
+    ]
+    for f in fam_cols:
+        totrow.append((fam_tot[f], S_TINT))
+    totrow.append((grand_fam, S_TINT))
+    rows1.append(totrow)
+    # baris % tiap warna (dari total warna polos)
+    pctrow = [("", S_TTXT), ("% tiap warna (dari total warna polos)", S_TTXT)] + [("", S_TTXT)] * 7
+    for f in fam_cols:
+        pctrow.append(((fam_tot[f] / grand_fam) if grand_fam else 0, S_TPCT))
+    pctrow.append((1.0 if grand_fam else 0, S_TPCT))
+    rows1.append(pctrow)
+    widths1 = [5, 26, 7, 15, 11, 20, 9, 34, 14] + [11] * len(fam_cols) + [15]
+    sheets.append({"name": "Top 300 Mobil", "rows": rows1, "widths": widths1, "freeze": (5, 3)})
 
     # ---------- Sheet 2: Detail Gen & Warna ----------
     rows2 = []
@@ -813,58 +874,7 @@ def build_output(agg, diag, out_path, root):
                    "widths": [10, 24, 13, 16, 16, 12, 12, 20, 11],
                    "freeze": (4, 1), "autofilter": "A3:I%d" % last2})
 
-    # ---------- Sheet 3: Matriks Warna (warna POLOS per model) ----------
-    # Strip/Elite/Epic/Warrior DIKELUARKAN. Premium/Exclusive/Transparan ikut
-    # (Silver = Premium). Gen-bocor/junk dibuang. Kolom diurut warna terlaris.
-    fam_tot = defaultdict(int)
-    fam_cell = defaultdict(int)      # (model, family) -> qty
-    for (model, tipe, gen, warna), rec in agg.items():
-        if model not in top_set:
-            continue
-        wl = (warna or "").strip().lower()
-        if tipe == "Strip" or wl.startswith(STRIP_MARK):
-            continue
-        if is_junk_warna(warna):
-            continue
-        fam = color_family(warna)
-        if fam is None:
-            continue
-        fam_tot[fam] += rec["qty"]
-        fam_cell[(model, fam)] += rec["qty"]
-    fam_cols = [f for f, _ in sorted(fam_tot.items(), key=lambda x: (-x[1], x[0]))]
-    # baris = model Top N yang punya penjualan warna polos, urut peringkat model
-    mat_models = sorted({m for (m, _f) in fam_cell.keys()}, key=lambda m: rank_of[m])
-
-    rows3 = []
-    rows3.append([("Matriks Warna Terlaris (warna polos) per Model - Top %d" % TOP_N, S_TITLE)])
-    rows3.append([("Hanya warna polos. Strip/Elite/Epic/Warrior dikeluarkan. "
-                   "Premium/Exclusive/Transparan ikut (Silver=Premium). "
-                   "Kolom diurut dari warna terlaris. Angka = kuantitas.", S_SUB)])
-    rows3.append([])
-    hdr3 = [("Peringkat", S_HEAD), ("Nama Mobil", S_HEAD)] + [(f, S_HEAD) for f in fam_cols] \
-        + [("Total (warna polos)", S_HEAD)]
-    rows3.append(hdr3)
-    col_tot = defaultdict(int)
-    for model in mat_models:
-        r = [(rank_of[model], S_INT), (model, S_TXT)]
-        rtot = 0
-        for f in fam_cols:
-            q = fam_cell.get((model, f), 0)
-            r.append((q if q else "", S_CINT))
-            rtot += q
-            col_tot[f] += q
-        r.append((rtot, S_CINT))
-        col_tot["__grand__"] += rtot
-        rows3.append(r)
-    trow = [("", S_TTXT), ("TOTAL (warna terlaris)", S_TTXT)]
-    for f in fam_cols:
-        trow.append((col_tot[f], S_TINT))
-    trow.append((col_tot["__grand__"], S_TINT))
-    rows3.append(trow)
-    widths3 = [10, 26] + [12] * len(fam_cols) + [14]
-    sheets.append({"name": "Matriks Warna", "rows": rows3, "widths": widths3, "freeze": (5, 3)})
-
-    # ---------- Sheet 4: Metodologi ----------
+    # ---------- Sheet 3: Metodologi ----------
     L = []
     L.append(("MOBIL TERLARIS - Metodologi & Diagnostik", S_TITLE))
     L.append(("Dibuat: %s" % datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), S_SUB))
@@ -882,9 +892,10 @@ def build_output(agg, diag, out_path, root):
         "- Model digabung lintas toko/marketplace berdasarkan nama model pada listing.",
         "- Tipe cover dari penanda warna (Elite/Warrior->Strip, Silver->Premium, "
         "Transparan->Transparan) lalu tier di nama produk.",
-        "- Sheet 'Matriks Warna': hanya warna POLOS. Strip/Elite/Epic/Warrior "
-        "dikeluarkan; Premium/Exclusive/Transparan ikut (Silver=Premium). "
-        "Warna gen-bocor/junk dibuang. Kolom diurut dari warna terlaris.",
+        "- Kolom warna di sheet 'Top 300 Mobil': hanya warna POLOS. "
+        "Strip/Elite/Epic/Warrior dikeluarkan; Premium/Exclusive/Transparan ikut "
+        "(Silver=Premium). Warna gen-bocor/junk dibuang. Kolom diurut warna "
+        "terlaris; ada baris TOTAL + baris % tiap warna (dari total warna polos).",
     ]:
         L.append((t, S_DEFAULT))
     L.append(("", S_DEFAULT))
