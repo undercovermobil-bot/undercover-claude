@@ -59,13 +59,12 @@ Data Sales Jan - Jun 2026/
   Smartpro/    Shopee|TikTok|Lazada/ ...
 ```
 
-## Isi output (4 sheet)
+## Isi output (3 sheet)
 
 | Sheet | Isi |
 |---|---|
-| **Top 300 Mobil** | Ranking per model (gaya file lama): No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU |
+| **Top 300 Mobil** | Ranking per model (No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU) **+ matriks warna polos terintegrasi**: satu kolom per warna (diurut dari terlaris) + kolom "Total Warna Polos", lalu baris **TOTAL** dan baris **% tiap warna** (dari total warna polos). Strip/Elite/Epic/Warrior **dikeluarkan** dari kolom warna; Premium/Exclusive/Transparan ikut (Silver = Premium) |
 | **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + Gen + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU |
-| **Matriks Warna** | Matriks **warna polos** per model (baris = Model, kolom = warna diurut dari terlaris, isi = kuantitas). Strip/Elite/Epic/Warrior **dikeluarkan**; Premium/Exclusive/Transparan ikut (Silver = Premium). Baris TOTAL = warna terlaris keseluruhan |
 | **Metodologi** | Definisi, filter, dan **diagnostik** (jumlah baris terbaca per marketplace, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
 
 ## Definisi & asumsi (bisa diubah di bagian `KONFIGURASI` dalam script)
