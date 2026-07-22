@@ -171,8 +171,6 @@ def norm(s):
 # frasa cover di depan nama produk: cover/sarung/selimut (rantai '/' boleh) + mobil/motor
 _COVER_RE = re.compile(
     r"(?:body\s+)?(?:cover|sarung|selimut)(?:\s*/\s*(?:cover|sarung|selimut))*\s+(?:mobil|motor)", re.I)
-# tipe cover di akhir nama (termasuk Transparan) - untuk dibuang + jadi penanda tipe
-_TAIL_TIERS = ["Transparant", "Transparan", "Exclusive", "Premium", "Reguler", "Strip"]
 
 
 def parse_name(name):
@@ -196,25 +194,31 @@ def parse_name(name):
                 break
     n = n.strip(" -/")
     n = re.sub(r"^(transparan|transparant)\s+", "", n, flags=re.I)
-    # buang ekor pemasaran: '(J)', '- Indoor/Outdoor', embel toko
     n = re.sub(r"\s*\((?:j|jj)\)\s*$", "", n, flags=re.I)
-    n = re.sub(r"\s*[-/]?\s*\b(indoor|outdoor)\b\s*$", "", n, flags=re.I)
     n = re.sub(r"\s*-\s*(undercover autocare|undercover|otonation|otoprotection|otopro|smartprotection|smartpro)\s*$", "", n, flags=re.I)
-    # deteksi & buang tipe cover di akhir (loop 2x: mis. 'Transparan - Indoor' sudah dibuang indoor-nya)
+
+    _TIER_W = ("transparant", "transparan", "exclusive", "premium", "reguler", "strip")
+    _COVER_W = ("indoor", "outdoor", "extreme", "semi", "dan")   # kata cakupan/penghubung
     tier = None
-    for _ in range(2):
-        n = re.sub(r"\s*[-/]?\s*\b(indoor|outdoor)\b\s*$", "", n, flags=re.I)
-        matched = None
-        for t in _TAIL_TIERS:
-            if re.search(r"\b" + re.escape(t) + r"\b\s*$", n, re.I):
-                matched = t
-                n = re.sub(r"\s*\b" + re.escape(t) + r"\b\s*$", "", n, flags=re.I)
-                break
-        if matched is None:
+    # 1) potong di ' - <tier/cakupan>' pertama, mis.
+    #    'Sigra - Reguler - Indoor dan Outdoor' -> 'Sigra' ; catat tier bila ada
+    cut = re.search(r"\s+[-–]\s+(?=(?:" + "|".join(_TIER_W + _COVER_W) + r")\b)", n, re.I)
+    if cut:
+        suffix = n[cut.start():]
+        n = n[:cut.start()]
+        mt = re.search(r"\b(" + "|".join(_TIER_W) + r")\b", suffix, re.I)
+        if mt:
+            w = mt.group(1).lower()
+            tier = "Transparan" if w.startswith("transparan") else mt.group(1).title()
+    # 2) buang kata tier/cakupan yang menempel di akhir (berulang); catat tier pertama
+    for _ in range(6):
+        m2 = re.search(r"[\s/(-]*\b(" + "|".join(_TIER_W + _COVER_W) + r")\b\s*\)?\s*$", n, re.I)
+        if not m2:
             break
-        # normalisasi: Transparant -> Transparan
-        if tier is None:
-            tier = "Transparan" if matched.lower().startswith("transparan") else matched
+        w = m2.group(1).lower()
+        if tier is None and w in _TIER_W:
+            tier = "Transparan" if w.startswith("transparan") else m2.group(1).title()
+        n = n[:m2.start()].rstrip(" -/(")
     n = re.sub(r"\s+", " ", n).strip(" -/")
     if not n:
         return None, tier, is_motor
