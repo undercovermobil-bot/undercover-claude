@@ -65,7 +65,7 @@ Data Sales Jan - Jun 2026/
 |---|---|
 | **Top 300 Mobil** | Ranking per model (gaya file lama): No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU |
 | **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + Gen + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU |
-| **Matriks Warna** | Crosstab: baris = Model + Gen, kolom = Warna, isi = kuantitas terjual (+ total baris/kolom) |
+| **Matriks Warna** | Matriks **warna polos** per model (baris = Model, kolom = warna diurut dari terlaris, isi = kuantitas). Strip/Elite/Epic/Warrior **dikeluarkan**; Premium/Exclusive/Transparan ikut (Silver = Premium). Baris TOTAL = warna terlaris keseluruhan |
 | **Metodologi** | Definisi, filter, dan **diagnostik** (jumlah baris terbaca per marketplace, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
 
 ## Definisi & asumsi (bisa diubah di bagian `KONFIGURASI` dalam script)

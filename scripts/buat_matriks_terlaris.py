@@ -87,6 +87,43 @@ SKU_WARNA_CODE = {
     "HJU": "Hijau", "CKL": "Coklat", "CRM": "Cream",
 }
 
+# --- Keluarga warna POLOS untuk sheet Matriks Warna ---
+# Strip (Elite/Epic/Warrior/Strip-N) DIKELUARKAN; gen-bocor/junk DIBUANG.
+# Premium/Exclusive/Transparan tetap ikut (Silver = warna Premium).
+COLOR_FAMILIES = [
+    ("Abu-abu", ["abu"]), ("Hitam", ["hitam"]), ("Hijau", ["hijau"]),
+    ("Merah", ["merah"]), ("Biru", ["biru"]), ("Silver", ["silver"]),
+    ("Putih", ["putih"]), ("Transparan", ["transparan", "transparant"]),
+    ("Orange", ["orange", "oranye"]), ("Coklat", ["coklat", "cokelat"]),
+    ("Kuning", ["kuning"]), ("Gold", ["gold", "emas"]),
+]
+STRIP_MARK = ("elite", "epic", "warrior", "warior", "strip")
+
+
+def is_junk_warna(w):
+    """True kalau token 'warna' sebetulnya gen bocor / bukan warna (mis. 'Gen 3 (2007-2012)', '500ml')."""
+    s = (w or "").strip().lower()
+    if s in ("", "(tanpa warna)"):
+        return True
+    if s.startswith("gen ") or "tahun" in s or "model lain" in s or "custom" in s or "reborn" in s:
+        return True
+    if re.search(r"\b(19|20)\d{2}\b", s):
+        return True
+    if re.search(r"\d+\s*(ml|l|liter)\b", s):
+        return True
+    if re.fullmatch(r"[\d\s./-]+", s or "x"):
+        return True
+    return False
+
+
+def color_family(w):
+    """Petakan token warna ke keluarga warna polos, atau None kalau tak dikenal."""
+    s = (w or "").strip().lower()
+    for fam, keys in COLOR_FAMILIES:
+        if any(k in s for k in keys):
+            return fam
+    return None
+
 # =====================================================================
 #  UTIL parsing angka / teks
 # =====================================================================
@@ -194,7 +231,9 @@ def parse_variation(vari):
             if warna is None:
                 warna = p
     if warna is None and parts:
-        warna = parts[0]
+        # fallback HANYA kalau token pertama bukan gen (hindari gen bocor jadi warna)
+        if not _looks_like_gen(parts[0]):
+            warna = parts[0]
     tier_w = None
     if warna:
         w0 = warna.strip()
@@ -774,47 +813,56 @@ def build_output(agg, diag, out_path, root):
                    "widths": [10, 24, 13, 16, 16, 12, 12, 20, 11],
                    "freeze": (4, 1), "autofilter": "A3:I%d" % last2})
 
-    # ---------- Sheet 3: Matriks Warna ----------
-    warna_tot = defaultdict(int)
-    cell_qty = defaultdict(int)
-    rowkey_tot = defaultdict(int)
-    rowkey_rank = {}
+    # ---------- Sheet 3: Matriks Warna (warna POLOS per model) ----------
+    # Strip/Elite/Epic/Warrior DIKELUARKAN. Premium/Exclusive/Transparan ikut
+    # (Silver = Premium). Gen-bocor/junk dibuang. Kolom diurut warna terlaris.
+    fam_tot = defaultdict(int)
+    fam_cell = defaultdict(int)      # (model, family) -> qty
     for (model, tipe, gen, warna), rec in agg.items():
         if model not in top_set:
             continue
-        warna_tot[warna] += rec["qty"]
-        rk = (model, gen)
-        cell_qty[(rk, warna)] += rec["qty"]
-        rowkey_tot[rk] += rec["qty"]
-        rowkey_rank[rk] = rank_of[model]
-    warna_cols = [w for w, _ in sorted(warna_tot.items(), key=lambda x: (-x[1], x[0]))]
-    rowkeys = sorted(rowkey_tot.keys(), key=lambda rk: (rowkey_rank[rk], -rowkey_tot[rk], rk[1]))
+        wl = (warna or "").strip().lower()
+        if tipe == "Strip" or wl.startswith(STRIP_MARK):
+            continue
+        if is_junk_warna(warna):
+            continue
+        fam = color_family(warna)
+        if fam is None:
+            continue
+        fam_tot[fam] += rec["qty"]
+        fam_cell[(model, fam)] += rec["qty"]
+    fam_cols = [f for f, _ in sorted(fam_tot.items(), key=lambda x: (-x[1], x[0]))]
+    # baris = model Top N yang punya penjualan warna polos, urut peringkat model
+    mat_models = sorted({m for (m, _f) in fam_cell.keys()}, key=lambda m: rank_of[m])
 
     rows3 = []
-    rows3.append([("Matriks Kuantitas: baris = Model + Gen, kolom = Warna (Top %d model)" % TOP_N, S_TITLE)])
+    rows3.append([("Matriks Warna Terlaris (warna polos) per Model - Top %d" % TOP_N, S_TITLE)])
+    rows3.append([("Hanya warna polos. Strip/Elite/Epic/Warrior dikeluarkan. "
+                   "Premium/Exclusive/Transparan ikut (Silver=Premium). "
+                   "Kolom diurut dari warna terlaris. Angka = kuantitas.", S_SUB)])
     rows3.append([])
-    hdr3 = [("Nama Mobil", S_HEAD), ("Gen", S_HEAD)] + [(w, S_HEAD) for w in warna_cols] + [("Total", S_HEAD)]
+    hdr3 = [("Peringkat", S_HEAD), ("Nama Mobil", S_HEAD)] + [(f, S_HEAD) for f in fam_cols] \
+        + [("Total (warna polos)", S_HEAD)]
     rows3.append(hdr3)
     col_tot = defaultdict(int)
-    for rk in rowkeys:
-        model, gen = rk
-        r = [(model, S_TXT), (gen, S_TXT)]
+    for model in mat_models:
+        r = [(rank_of[model], S_INT), (model, S_TXT)]
         rtot = 0
-        for w in warna_cols:
-            q = cell_qty.get((rk, w), 0)
+        for f in fam_cols:
+            q = fam_cell.get((model, f), 0)
             r.append((q if q else "", S_CINT))
             rtot += q
-            col_tot[w] += q
+            col_tot[f] += q
         r.append((rtot, S_CINT))
         col_tot["__grand__"] += rtot
         rows3.append(r)
-    trow = [("TOTAL", S_TTXT), ("", S_TTXT)]
-    for w in warna_cols:
-        trow.append((col_tot[w], S_TINT))
+    trow = [("", S_TTXT), ("TOTAL (warna terlaris)", S_TTXT)]
+    for f in fam_cols:
+        trow.append((col_tot[f], S_TINT))
     trow.append((col_tot["__grand__"], S_TINT))
     rows3.append(trow)
-    widths3 = [24, 16] + [11] * len(warna_cols) + [11]
-    sheets.append({"name": "Matriks Warna", "rows": rows3, "widths": widths3, "freeze": (4, 3)})
+    widths3 = [10, 26] + [12] * len(fam_cols) + [14]
+    sheets.append({"name": "Matriks Warna", "rows": rows3, "widths": widths3, "freeze": (5, 3)})
 
     # ---------- Sheet 4: Metodologi ----------
     L = []
@@ -834,6 +882,9 @@ def build_output(agg, diag, out_path, root):
         "- Model digabung lintas toko/marketplace berdasarkan nama model pada listing.",
         "- Tipe cover dari penanda warna (Elite/Warrior->Strip, Silver->Premium, "
         "Transparan->Transparan) lalu tier di nama produk.",
+        "- Sheet 'Matriks Warna': hanya warna POLOS. Strip/Elite/Epic/Warrior "
+        "dikeluarkan; Premium/Exclusive/Transparan ikut (Silver=Premium). "
+        "Warna gen-bocor/junk dibuang. Kolom diurut dari warna terlaris.",
     ]:
         L.append((t, S_DEFAULT))
     L.append(("", S_DEFAULT))
