@@ -1,91 +1,86 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-buat_matriks_terlaris.py
-========================
+buat_matriks_terlaris.py  (versi NO-INSTALL / tanpa pip)
+=========================================================
 Bangun matriks penjualan MOBIL TERLARIS (Top 300) sampai detail GEN & WARNA,
 dari data order mentah Shopee / TikTok / Lazada untuk SEMUA toko
-(Undercover, Otonation, Otopro/Otoprotection, Smartpro/Smartprotection),
-periode Jan - Jun 2026.
+(Undercover, Otonation, Otopro/Otoprotection, Smartpro/Smartprotection).
+
+>>> HANYA butuh Python (>=3.7). TIDAK perlu 'pip install' apa pun. <<<
+    Script ini membaca & menulis .xlsx pakai library BAWAAN Python
+    (zipfile + xml), jadi tidak butuh openpyxl / pandas.
 
 Kenapa berbentuk script (bukan file jadi):
-    File order mentahnya puluhan @1-2 MB. Sesuai CLAUDE.md proyek ini, file besar
-    TIDAK bisa ditarik lewat tool/MCP (mentok batas ukuran konten). Jadi
-    pemrosesan dilakukan lokal di komputermu tempat folder Drive tersinkron.
-    Bonus: bisa dipakai ulang tiap bulan.
+    File order mentahnya puluhan @1-2 MB. File sebesar itu tidak bisa ditarik
+    lewat asisten/cloud, jadi pemrosesan dilakukan lokal di komputermu tempat
+    file berada. Bonus: bisa dipakai ulang tiap bulan.
 
-Cara pakai (Windows / Mac / Linux):
-    1. Pastikan Python 3 + openpyxl terpasang:
-           pip install openpyxl
-    2. Jalankan (arahkan ke folder 'Data Sales Jan - Jun 2026'):
-           python buat_matriks_terlaris.py "C:\\path\\ke\\Data Sales Jan - Jun 2026"
-       atau taruh script ini DI DALAM folder itu lalu jalankan tanpa argumen:
-           python buat_matriks_terlaris.py
-    3. Output default: MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx (buka di Excel/Google Sheets).
+CARA PAKAI (Windows):
+    Opsi A - dobel klik file  jalankan_matriks.bat  (paling gampang).
+    Opsi B - lewat Command Prompt / PowerShell:
+        python buat_matriks_terlaris.py "C:\\Users\\OWNER\\Downloads\\Sales"
+      atau (kalau 'python' tak dikenali):
+        py buat_matriks_terlaris.py "C:\\Users\\OWNER\\Downloads\\Sales"
+
+    Cek Python ada:  buka Command Prompt, ketik:  python --version
+    (kalau muncul "Python 3.x" berarti siap; kalau tidak, install dari
+     Microsoft Store: cari "Python 3", 1 klik, gratis.)
 
 Argumen opsional:
     python buat_matriks_terlaris.py "<folder data>" "<nama output.xlsx>"
 
-Isi output (4 sheet):
-    1. "Top 300 Mobil"       -> ranking per model (gaya file MOBIL TERLARIS lama)
-    2. "Detail Gen & Warna"  -> tiap baris = Model + Jenis Cover + Gen + Warna (qty & nilai)
-    3. "Matriks Warna"       -> crosstab: baris Model-Gen, kolom Warna, isi = kuantitas
-    4. "Metodologi"          -> definisi, filter, sumber, diagnostik (jumlah baris per marketplace)
+Output default: MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx  (buka di Excel / Google Sheets)
+    4 sheet:
+      1. "Top 300 Mobil"       -> ranking per model (gaya file MOBIL TERLARIS lama)
+      2. "Detail Gen & Warna"  -> tiap baris = Model + Jenis Cover + Gen + Warna
+      3. "Matriks Warna"       -> crosstab: baris Model-Gen, kolom Warna, isi kuantitas
+      4. "Metodologi"          -> definisi, filter, diagnostik (jumlah baris per marketplace)
 
-Asumsi/definisi (bisa diubah di bagian KONFIGURASI di bawah):
+Asumsi (bisa diubah di bagian KONFIGURASI di bawah):
     - Hanya MOBIL (Cover Mobil); motor diabaikan untuk ranking.
-    - Pesanan BATAL / BELUM BAYAR / REFUND / RETUR dikeluarkan (tidak dihitung penjualan).
-    - "Total Penjualan" = nilai NET setelah diskon (subtotal item setelah diskon).
-    - Kuantitas = qty terjual dikurangi qty diretur.
-    - Model digabung lintas toko & marketplace (Toyota Avanza dari toko mana pun = 1 model).
+    - Pesanan BATAL / BELUM BAYAR / REFUND / RETUR dikeluarkan.
+    - "Total Penjualan" = nilai NET setelah diskon.
+    - Kuantitas = qty terjual - qty diretur.
+    - Model digabung lintas toko & marketplace.
 """
 
 import sys
 import os
 import re
-import glob
 import zipfile
 import tempfile
+import shutil
 import datetime
+import xml.etree.ElementTree as ET
 from collections import defaultdict, Counter
 
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-
 # =====================================================================
-#  KONFIGURASI  (ubah di sini kalau perlu)
+#  KONFIGURASI
 # =====================================================================
-TOP_N = 300                      # jumlah model teratas di sheet ringkasan
+TOP_N = 300
 SATUAN = "PCS"
 OUTPUT_DEFAULT = "MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx"
+DEFAULT_FOLDER = r"C:\Users\OWNER\Downloads\Sales"   # dipakai kalau tak ada argumen
 
-# Status yang DIKELUARKAN (dianggap bukan penjualan). Dicocokkan sebagai substring, huruf kecil.
 STATUS_EXCLUDE = [
     "batal", "cancel", "belum bayar", "unpaid", "belum dibayar",
     "return", "retur", "refund", "pengembalian", "failed", "gagal", "lost",
 ]
-
-# Kata penanda TIPE COVER dari token warna (mengikuti pola sku-sync-scripts/engine.py)
-STRIP_PREFIX = ["Elite", "Epic", "Warrior", "Warior"]  # -> cover Strip
-TIER_WORDS = ["Exclusive", "Premium", "Reguler", "Strip"]  # tier di akhir nama produk
-# Prefix nama produk yang perlu dibuang untuk dapat nama model (Shopee/TikTok/Lazada/antar toko)
+STRIP_PREFIX = ["Elite", "Epic", "Warrior", "Warior"]
+TIER_WORDS = ["Exclusive", "Premium", "Reguler", "Strip"]
 NAME_PREFIXES = [
     "Cover Mobil / Selimut Mobil ", "Body Cover Mobil / Selimut Mobil ",
     "Cover Mobil Transparan ", "Cover Mobil Transparant ",
     "Body Cover Mobil ", "Cover Mobil ",
     "Cover Motor / Selimut Motor ", "Body Cover Motor ", "Cover Motor ",
 ]
-
-# Sinonim warna (huruf kecil -> bentuk kanonik) supaya tidak terpecah karena beda penulisan
 WARNA_CANON = {
     "abu-abu": "Abu-abu", "abu abu": "Abu-abu", "abu": "Abu-abu",
     "hitam": "Hitam", "merah": "Merah", "biru": "Biru", "putih": "Putih",
     "silver": "Silver", "hijau army": "Hijau Army", "hijau": "Hijau",
     "coklat": "Coklat", "cream": "Cream", "krem": "Cream",
 }
-
-# Peta kode warna pada SKU baru (fallback kalau variasi kosong), mis. ...-G1-ABU
 SKU_WARNA_CODE = {
     "ABU": "Abu-abu", "HTM": "Hitam", "MRH": "Merah", "BRU": "Biru",
     "PUT": "Putih", "SLV": "Silver", "SIL": "Silver", "HJA": "Hijau Army",
@@ -93,43 +88,30 @@ SKU_WARNA_CODE = {
 }
 
 # =====================================================================
-#  UTIL: parsing angka format Indonesia / internasional
+#  UTIL parsing angka / teks
 # =====================================================================
 def to_num(x):
-    """Konversi nilai sel ke float. Menangani:
-       - angka asli openpyxl (int/float) -> dipakai apa adanya
-       - teks '307.490'  (titik = ribuan)      -> 307490
-       - teks '287000.00'(titik = desimal 2)   -> 287000
-       - teks '1.326.583'(titik ribuan ganda)  -> 1326583
-       - teks '289,06'   (koma = desimal)       -> 289.06
-    """
-    if x is None:
-        return 0.0
-    if isinstance(x, bool):
+    if x is None or isinstance(x, bool):
         return 0.0
     if isinstance(x, (int, float)):
         return float(x)
-    s = str(x).strip().replace(" ", " ").replace(" ", "")
+    s = str(x).strip().replace(" ", "").replace(" ", "")
     if s in ("", "-", "--"):
         return 0.0
-    # buang simbol mata uang / huruf di ekor (mis. 'gr', 'Rp')
     s = re.sub(r"[^0-9.,\-]", "", s)
     if s in ("", "-", "."):
         return 0.0
     if "," in s and "." in s:
-        # format campuran -> titik ribuan, koma desimal
         s = s.replace(".", "").replace(",", ".")
     elif "," in s:
         s = s.replace(",", ".")
     else:
-        # hanya titik (atau tidak ada)
         if s.count(".") == 1:
             after = s.split(".")[1]
-            if len(after) == 3:      # 3 digit di belakang -> ribuan (mis. 9.510)
+            if len(after) == 3:
                 s = s.replace(".", "")
-            # 1-2 digit -> anggap desimal, biarkan
         elif s.count(".") > 1:
-            s = s.replace(".", "")   # titik ribuan ganda
+            s = s.replace(".", "")
     try:
         return float(s)
     except ValueError:
@@ -141,50 +123,35 @@ def to_int(x):
 
 
 def norm(s):
-    """Normalisasi teks header/sel ke huruf kecil, rapikan spasi."""
     if s is None:
         return ""
     return re.sub(r"\s+", " ", str(s).strip().lower())
 
 
 # =====================================================================
-#  UTIL: parsing nama produk -> (model, tier, is_motor)
+#  UTIL parsing nama produk & variasi  (sama seperti versi openpyxl)
 # =====================================================================
 def parse_name(name):
-    """Ambil nama model mobil dari nama produk listing.
-       Mengembalikan (model, tier_dari_nama, is_motor).
-       Contoh: 'Undercover Autocare - Cover Mobil Toyota Avanza Reguler'
-               -> ('Toyota Avanza', 'Reguler', False)
-    """
     if name is None:
         return None, None, False
     n = str(name).strip()
     low = n.lower()
     is_motor = ("cover motor" in low) or ("selimut motor" in low)
-
-    # Buang segala prefix TOKO / brand di depan sampai frasa 'Cover Mobil/Motor'.
-    # Cari kemunculan TERAKHIR dari frasa cover, ambil sisanya.
     m = None
     for mm in re.finditer(r"(?:body\s+)?cover\s+(?:mobil|motor)(?:\s*/\s*selimut\s+(?:mobil|motor))?", n, re.I):
         m = mm
     if m:
         n = n[m.end():]
     else:
-        # fallback: buang prefix yang diketahui
         for p in NAME_PREFIXES:
             idx = n.lower().find(p.lower())
             if idx != -1:
                 n = n[idx + len(p):]
                 break
-
     n = n.strip(" -/")
-    # buang penanda transparan yang mungkin nyangkut di depan
     n = re.sub(r"^(transparan|transparant)\s+", "", n, flags=re.I)
-    # buang ekor pemasaran umum: '(J)', '- Undercover Autocare', dsb.
     n = re.sub(r"\s*\((?:j|jj)\)\s*$", "", n, flags=re.I)
     n = re.sub(r"\s*-\s*(undercover autocare|undercover|otonation|otoprotection|otopro|smartprotection|smartpro)\s*$", "", n, flags=re.I)
-
-    # deteksi & buang tier di akhir
     tier = None
     for t in sorted(TIER_WORDS, key=len, reverse=True):
         if re.search(r"\b" + re.escape(t) + r"\b\s*$", n, re.I):
@@ -197,29 +164,18 @@ def parse_name(name):
     return n, tier, is_motor
 
 
-# =====================================================================
-#  UTIL: parsing variasi -> (warna, gen, tier_dari_variasi)
-# =====================================================================
 def _looks_like_gen(tok):
     t = tok.lower()
     if "gen" in t or "model/tahun" in t or "tahun lain" in t:
         return True
-    if re.search(r"\(\s*(?:19|20)\d{2}", tok):   # ada tahun dalam kurung
+    if re.search(r"\(\s*(?:19|20)\d{2}", tok):
         return True
-    if re.match(r"^[A-Za-z]?\d+[A-Za-z]?(\s*-\s*\d+)?$", tok.strip()):  # 'G1', '1F', '1-3'
+    if re.match(r"^[A-Za-z]?\d+[A-Za-z]?(\s*-\s*\d+)?$", tok.strip()):
         return True
     return False
 
 
 def parse_variation(vari):
-    """Pisahkan token variasi menjadi (warna, gen, tier_dari_warna).
-       Menangani 3 format:
-         Shopee : 'Abu-abu,Gen 1-3 (2002-2022)'  atau  'Gen 1F (2016-2018),Silver'
-         Lazada : 'Warna:Abu-abu, Model:Gen 1 (2012-2023)'
-         TikTok : sama-sama berbentuk 'warna,gen' atau berlabel
-       tier_dari_warna: 'Strip' bila warna berawalan Elite/Warrior/Epic,
-                        'Premium' bila 'Silver', 'Transparan' bila 'Transparan', else None.
-    """
     if vari is None:
         return None, None, None
     parts = [p.strip() for p in str(vari).split(",") if p.strip() != ""]
@@ -238,9 +194,7 @@ def parse_variation(vari):
             if warna is None:
                 warna = p
     if warna is None and parts:
-        # semua terlihat seperti gen; ambil yang pertama sebagai warna cadangan
         warna = parts[0]
-
     tier_w = None
     if warna:
         w0 = warna.strip()
@@ -263,13 +217,12 @@ def canon_warna(w):
 def canon_gen(g):
     if not g:
         return "(tanpa gen)"
-    g = re.sub(r"\s*\(.*?\)\s*", " ", str(g))     # buang '(2002-2022)'
+    g = re.sub(r"\s*\(.*?\)\s*", " ", str(g))
     g = re.sub(r"\s+", " ", g).strip()
     return g if g else "(tanpa gen)"
 
 
 def warna_and_tier_from_sku(sku):
-    """Fallback: ambil (warna, gen) dari SKU baru BRAND-MODEL-TOKO-TIER-G#-WARNA."""
     if not sku:
         return None, None
     toks = re.split(r"[-_]", str(sku).strip().upper())
@@ -284,57 +237,39 @@ def warna_and_tier_from_sku(sku):
 
 
 # =====================================================================
-#  DETEKSI MARKETPLACE + PEMETAAN KOLOM
+#  DETEKSI MARKETPLACE + KOLOM
 # =====================================================================
 FIELD_MAP = {
     "shopee": {
-        "status": ["status pesanan"],
-        "product": ["nama produk"],
-        "variation": ["nama variasi"],
-        "qty": ["jumlah"],
-        "returned": ["returned quantity"],
-        "value": ["subtotal pesanan"],
+        "status": ["status pesanan"], "product": ["nama produk"],
+        "variation": ["nama variasi"], "qty": ["jumlah"],
+        "returned": ["returned quantity"], "value": ["subtotal pesanan"],
         "sku": ["nomor referensi sku", "sku induk"],
     },
     "tiktok": {
-        "status": ["order status"],
-        "product": ["product name"],
-        "variation": ["variation"],
-        "qty": ["quantity"],
+        "status": ["order status"], "product": ["product name"],
+        "variation": ["variation"], "qty": ["quantity"],
         "returned": ["sku quantity of return"],
-        "value": ["sku subtotal after discount"],
-        "sku": ["seller sku"],
+        "value": ["sku subtotal after discount"], "sku": ["seller sku"],
     },
     "lazada": {
-        "status": ["status"],
-        "product": ["itemname"],
-        "variation": ["variation"],
-        "qty": [],                 # 1 baris = 1 item
-        "returned": [],
-        "value": ["paidprice"],
-        "sku": ["sellersku"],
+        "status": ["status"], "product": ["itemname"],
+        "variation": ["variation"], "qty": [], "returned": [],
+        "value": ["paidprice"], "sku": ["sellersku"],
     },
 }
 
 
 def detect_market_and_columns(header_cells):
-    """Terima daftar sel header (sudah dinormalisasi lower), tentukan marketplace
-       dan indeks kolom untuk tiap field. Return (market, colmap) atau None."""
     hs = [norm(c) for c in header_cells]
     hset = set(hs)
 
-    def find(candidates, exact=True):
-        for cand in candidates:
-            if exact:
-                for i, h in enumerate(hs):
-                    if h == cand:
-                        return i
-            else:
-                for i, h in enumerate(hs):
-                    if cand in h:
-                        return i
-        # fallback contains
-        for cand in candidates:
+    def find(cands):
+        for cand in cands:
+            for i, h in enumerate(hs):
+                if h == cand:
+                    return i
+        for cand in cands:
             for i, h in enumerate(hs):
                 if cand in h:
                     return i
@@ -348,7 +283,6 @@ def detect_market_and_columns(header_cells):
         market = "tiktok"
     else:
         return None
-
     colmap = {}
     for field, cands in FIELD_MAP[market].items():
         colmap[field] = find(cands) if cands else None
@@ -358,7 +292,100 @@ def detect_market_and_columns(header_cells):
 
 
 # =====================================================================
-#  BACA SATU FILE ORDER
+#  PEMBACA .xlsx PAKAI LIBRARY BAWAAN (zipfile + xml)
+# =====================================================================
+NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+
+
+def _col_to_idx(ref):
+    letters = ""
+    for ch in ref:
+        if ch.isalpha():
+            letters += ch
+        else:
+            break
+    n = 0
+    for ch in letters:
+        n = n * 26 + (ord(ch.upper()) - 64)
+    return n - 1
+
+
+def _cell_value(c, shared):
+    t = c.get("t")
+    if t == "s":
+        v = c.find(NS + "v")
+        if v is not None and v.text is not None:
+            try:
+                return shared[int(v.text)]
+            except (ValueError, IndexError):
+                return None
+        return None
+    if t == "inlineStr":
+        is_ = c.find(NS + "is")
+        if is_ is not None:
+            return "".join(tt.text or "" for tt in is_.iter(NS + "t"))
+        return None
+    if t == "str":
+        v = c.find(NS + "v")
+        return v.text if v is not None else None
+    if t == "b":
+        v = c.find(NS + "v")
+        return (v is not None and v.text == "1")
+    v = c.find(NS + "v")
+    if v is None or v.text is None:
+        return None
+    s = v.text
+    try:
+        f = float(s)
+        return int(f) if f.is_integer() else f
+    except ValueError:
+        return s
+
+
+def read_xlsx_rows(path):
+    """Kembalikan list of (nama_sheet_file, rows). rows = list of list nilai sel."""
+    result = []
+    with zipfile.ZipFile(path) as z:
+        names = set(z.namelist())
+        shared = []
+        if "xl/sharedStrings.xml" in names:
+            with z.open("xl/sharedStrings.xml") as fh:
+                for ev, el in ET.iterparse(fh, events=("end",)):
+                    if el.tag == NS + "si":
+                        shared.append("".join(t.text or "" for t in el.iter(NS + "t")))
+                        el.clear()
+        sheet_files = sorted(
+            [n for n in names if re.match(r"xl/worksheets/sheet\d+\.xml$", n)],
+            key=lambda n: int(re.search(r"sheet(\d+)\.xml", n).group(1)),
+        )
+        if not sheet_files:
+            sheet_files = sorted(n for n in names if re.match(r"xl/worksheets/.*\.xml$", n))
+        for sf in sheet_files:
+            rows = []
+            with z.open(sf) as fh:
+                for ev, el in ET.iterparse(fh, events=("end",)):
+                    if el.tag == NS + "row":
+                        rowvals = {}
+                        maxc = -1
+                        auto = 0
+                        for c in el.findall(NS + "c"):
+                            ref = c.get("r") or ""
+                            if any(ch.isalpha() for ch in ref):
+                                ci = _col_to_idx(ref)
+                            else:
+                                ci = auto
+                            auto = ci + 1
+                            rowvals[ci] = _cell_value(c, shared)
+                            if ci > maxc:
+                                maxc = ci
+                        rows.append([rowvals.get(i) for i in range(maxc + 1)])
+                        el.clear()
+            result.append((sf, rows))
+    return result
+
+
+# =====================================================================
+#  PROSES 1 FILE
 # =====================================================================
 def get(row, idx):
     if idx is None or idx >= len(row):
@@ -366,40 +393,35 @@ def get(row, idx):
     return row[idx]
 
 
-def process_workbook(path, agg, diag, source_label):
-    """Baca 1 file xlsx order, akumulasi ke `agg`. Update `diag` (Counter statistik)."""
+def process_workbook(path, agg, diag):
     try:
-        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        sheets = read_xlsx_rows(path)
     except Exception as e:
         diag["file_error"] += 1
         diag.setdefault("_errors", []).append(f"{os.path.basename(path)}: {e}")
         return
-
-    for ws in wb.worksheets:
-        market = None
+    for _sf, rows in sheets:
         colmap = None
+        market = None
         header_found = False
-        for row in ws.iter_rows(values_only=True):
+        for row in rows:
             if not header_found:
-                res = detect_market_and_columns(list(row))
+                res = detect_market_and_columns(row)
                 if res:
                     market, colmap = res
                     header_found = True
                 continue
-
             product = get(row, colmap["product"])
             if product is None or str(product).strip() == "":
                 continue
-            diag[f"rows_{market}"] += 1
+            diag["rows_%s" % market] += 1
             diag["rows_total"] += 1
 
-            # --- filter status ---
             status = norm(get(row, colmap["status"])) if colmap.get("status") is not None else ""
             if any(bad in status for bad in STATUS_EXCLUDE):
                 diag["skip_status"] += 1
                 continue
 
-            # --- nama model & kategori ---
             model, tier_name, is_motor = parse_name(product)
             if is_motor:
                 diag["rows_motor"] += 1
@@ -410,7 +432,6 @@ def process_workbook(path, agg, diag, source_label):
                     diag["_sample_no_model"].append(str(product)[:70])
                 continue
 
-            # --- warna, gen, tier ---
             warna_raw, gen_raw, tier_w = parse_variation(get(row, colmap["variation"]))
             if warna_raw is None and gen_raw is None:
                 w2, g2 = warna_and_tier_from_sku(get(row, colmap.get("sku")))
@@ -418,11 +439,8 @@ def process_workbook(path, agg, diag, source_label):
                 gen_raw = gen_raw or g2
             warna = canon_warna(warna_raw)
             gen = canon_gen(gen_raw)
-
-            # tipe cover: prioritas penanda warna (Strip/Premium/Transparan), lalu tier nama
             tipe = tier_w or tier_name or "Reguler"
 
-            # --- kuantitas & nilai ---
             if market == "lazada":
                 qty = 1
             else:
@@ -436,26 +454,20 @@ def process_workbook(path, agg, diag, source_label):
                 continue
             value = to_num(get(row, colmap["value"])) if colmap.get("value") is not None else 0.0
             if ret and qty:
-                value = value * net_qty / qty     # sesuaikan nilai bila ada retur sebagian
+                value = value * net_qty / qty
 
             sku = get(row, colmap.get("sku"))
-            sku_key = str(sku).strip() if sku else f"{model}|{tipe}|{gen}|{warna}"
+            sku_key = str(sku).strip() if sku else "%s|%s|%s|%s" % (model, tipe, gen, warna)
 
-            # --- akumulasi ---
             rec = agg[(model, tipe, gen, warna)]
             rec["qty"] += net_qty
             rec["value"] += value
             rec["skus"].add(sku_key)
-            rec["markets"].add(market)
             diag["rows_counted"] += 1
-    wb.close()
+    return
 
 
-# =====================================================================
-#  KUMPULKAN SEMUA FILE (termasuk ekstrak .zip)
-# =====================================================================
 def gather_files(root):
-    """Kembalikan daftar (path_xlsx, label_sumber). Ekstrak .zip ke folder temp."""
     files = []
     tmpdirs = []
     for dirpath, _dirs, filenames in os.walk(root):
@@ -465,7 +477,7 @@ def gather_files(root):
             low = fn.lower()
             if low.startswith("~$"):
                 continue
-            if low.endswith(".xlsx") or low.endswith(".xls"):
+            if low.endswith(".xlsx"):
                 files.append((full, rel))
             elif low.endswith(".zip"):
                 try:
@@ -473,43 +485,181 @@ def gather_files(root):
                     tmpdirs.append(td)
                     with zipfile.ZipFile(full) as zf:
                         for member in zf.namelist():
-                            if member.lower().endswith((".xlsx", ".xls")) and not member.startswith("__"):
+                            if member.lower().endswith(".xlsx") and not member.startswith("__"):
                                 zf.extract(member, td)
                                 files.append((os.path.join(td, member), rel + " (zip)"))
                 except Exception as e:
-                    print(f"  ! Gagal buka zip {fn}: {e}")
+                    print("  ! Gagal buka zip %s: %s" % (fn, e))
     return files, tmpdirs
 
 
 # =====================================================================
-#  PENULISAN OUTPUT XLSX (berformat)
+#  PENULIS .xlsx PAKAI LIBRARY BAWAAN
 # =====================================================================
-FONT = "Arial"
-HEAD_FILL = PatternFill("solid", fgColor="1F4E78")
-HEAD_FONT = Font(name=FONT, bold=True, color="FFFFFF", size=10)
-TITLE_FONT = Font(name=FONT, bold=True, size=14)
-SUB_FONT = Font(name=FONT, italic=True, size=9, color="555555")
-BASE_FONT = Font(name=FONT, size=10)
-BOLD_FONT = Font(name=FONT, bold=True, size=10)
-THIN = Side(style="thin", color="BFBFBF")
-BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
-TOTAL_FILL = PatternFill("solid", fgColor="D9E1F2")
-IDR_FMT = "#,##0"
-PCT_FMT = "0.0%"
+# Indeks style (harus cocok dgn urutan cellXfs di STYLES_XML)
+S_DEFAULT, S_TITLE, S_SUB, S_HEAD, S_TXT, S_INT, S_PCT, S_IDR = 0, 1, 2, 3, 4, 5, 6, 7
+S_TTXT, S_TINT, S_TPCT, S_TIDR, S_CINT, S_BOLD = 8, 9, 10, 11, 12, 13
+
+STYLES_XML = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    '<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts>'
+    '<fonts count="5">'
+    '<font><sz val="10"/><name val="Arial"/></font>'
+    '<font><b/><sz val="10"/><name val="Arial"/></font>'
+    '<font><b/><sz val="14"/><name val="Arial"/></font>'
+    '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>'
+    '<font><i/><sz val="9"/><color rgb="FF555555"/><name val="Arial"/></font>'
+    '</fonts>'
+    '<fills count="4">'
+    '<fill><patternFill patternType="none"/></fill>'
+    '<fill><patternFill patternType="gray125"/></fill>'
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/></patternFill></fill>'
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/></patternFill></fill>'
+    '</fills>'
+    '<borders count="2">'
+    '<border><left/><right/><top/><bottom/><diagonal/></border>'
+    '<border>'
+    '<left style="thin"><color rgb="FFBFBFBF"/></left>'
+    '<right style="thin"><color rgb="FFBFBFBF"/></right>'
+    '<top style="thin"><color rgb="FFBFBFBF"/></top>'
+    '<bottom style="thin"><color rgb="FFBFBFBF"/></bottom>'
+    '<diagonal/></border>'
+    '</borders>'
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    '<cellXfs count="14">'
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'                                                                                  # 0 default
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                    # 1 title
+    '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                    # 2 subtitle
+    '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">'
+    '<alignment horizontal="center" vertical="center" wrapText="1"/></xf>'                                                                            # 3 header
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>'                                                                  # 4 data text
+    '<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>'                                            # 5 int
+    '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>'                                          # 6 percent
+    '<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>'                                            # 7 idr
+    '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>'                                      # 8 total text
+    '<xf numFmtId="3" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyNumberFormat="1"/>'                # 9 total int
+    '<xf numFmtId="164" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyNumberFormat="1"/>'              # 10 total pct
+    '<xf numFmtId="3" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyNumberFormat="1"/>'                # 11 total idr
+    '<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyAlignment="1">'
+    '<alignment horizontal="center"/></xf>'                                                                                                           # 12 center int
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                    # 13 bold
+    '</cellXfs>'
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+    '</styleSheet>'
+)
 
 
-def style_header_row(ws, row_idx, ncols):
-    for c in range(1, ncols + 1):
-        cell = ws.cell(row=row_idx, column=c)
-        cell.fill = HEAD_FILL
-        cell.font = HEAD_FONT
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = BORDER
+def _esc(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _esc_attr(s):
+    return _esc(s).replace('"', "&quot;")
+
+
+def _col_letter(idx):
+    s = ""
+    idx += 1
+    while idx > 0:
+        idx, rem = divmod(idx - 1, 26)
+        s = chr(65 + rem) + s
+    return s
+
+
+def _sheet_xml(sheet):
+    out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+           '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">']
+    freeze = sheet.get("freeze")
+    if freeze:
+        fr, fc = freeze
+        ys, xs = fr - 1, fc - 1
+        tl = _col_letter(fc - 1) + str(fr)
+        attrs = []
+        if xs > 0:
+            attrs.append('xSplit="%d"' % xs)
+        if ys > 0:
+            attrs.append('ySplit="%d"' % ys)
+        attrs += ['topLeftCell="%s"' % tl, 'activePane="bottomRight"', 'state="frozen"']
+        out.append('<sheetViews><sheetView workbookViewId="0"><pane %s/>'
+                   '<selection pane="bottomRight"/></sheetView></sheetViews>' % " ".join(attrs))
+    widths = sheet.get("widths")
+    if widths:
+        cols = "".join('<col min="%d" max="%d" width="%s" customWidth="1"/>' % (j + 1, j + 1, w)
+                       for j, w in enumerate(widths) if w)
+        out.append("<cols>%s</cols>" % cols)
+    out.append("<sheetData>")
+    for ri, row in enumerate(sheet["rows"], start=1):
+        cells = []
+        for ci, cell in enumerate(row):
+            if cell is None:
+                continue
+            val, st = cell
+            ref = _col_letter(ci) + str(ri)
+            if isinstance(val, bool):
+                val = str(val)
+            if isinstance(val, (int, float)):
+                num = int(val) if float(val).is_integer() else val
+                cells.append('<c r="%s" s="%d"><v>%s</v></c>' % (ref, st, num))
+            elif val is None or val == "":
+                cells.append('<c r="%s" s="%d"/>' % (ref, st))
+            else:
+                cells.append('<c r="%s" s="%d" t="inlineStr"><is><t xml:space="preserve">%s</t></is></c>'
+                             % (ref, st, _esc(val)))
+        out.append('<row r="%d">%s</row>' % (ri, "".join(cells)))
+    out.append("</sheetData>")
+    af = sheet.get("autofilter")
+    if af:
+        out.append('<autoFilter ref="%s"/>' % af)
+    out.append("</worksheet>")
+    return "".join(out)
+
+
+def write_xlsx(path, sheets):
+    parts = {}
+    overrides = "".join(
+        '<Override PartName="/xl/worksheets/sheet%d.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' % (i + 1)
+        for i in range(len(sheets)))
+    parts["[Content_Types].xml"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        + overrides + "</Types>")
+    parts["_rels/.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        '</Relationships>')
+    sheets_xml = "".join('<sheet name="%s" sheetId="%d" r:id="rId%d"/>'
+                         % (_esc_attr(s["name"]), i + 1, i + 1) for i, s in enumerate(sheets))
+    parts["xl/workbook.xml"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheets>%s</sheets></workbook>' % sheets_xml)
+    rels = "".join('<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet%d.xml"/>'
+                   % (i + 1, i + 1) for i in range(len(sheets)))
+    rels += ('<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+             % (len(sheets) + 1))
+    parts["xl/_rels/workbook.xml.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">%s</Relationships>' % rels)
+    parts["xl/styles.xml"] = STYLES_XML
+    for i, s in enumerate(sheets):
+        parts["xl/worksheets/sheet%d.xml" % (i + 1)] = _sheet_xml(s)
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, content in parts.items():
+            z.writestr(name, content)
+
+
+# =====================================================================
+#  BANGUN OUTPUT (4 sheet)
+# =====================================================================
 def build_output(agg, diag, out_path, root):
-    # ---------- agregasi turunan ----------
-    # per model: total qty, value, set tipe cover, set sku
     model_qty = defaultdict(int)
     model_val = defaultdict(float)
     model_types = defaultdict(set)
@@ -524,138 +674,67 @@ def build_output(agg, diag, out_path, root):
     top_models = ranked[:TOP_N]
     top_set = set(top_models)
     rank_of = {m: i + 1 for i, m in enumerate(top_models)}
-
     grand_qty = sum(model_qty.values())
     grand_val = sum(model_val.values())
 
-    wb = openpyxl.Workbook()
+    sheets = []
 
-    # =============================================================
-    #  SHEET 1: Top 300 Mobil
-    # =============================================================
-    ws1 = wb.active
-    ws1.title = "Top 300 Mobil"
-    ws1["A1"] = f"MOBIL TERLARIS - Top {TOP_N} Model (Detail Gen & Warna)"
-    ws1["A1"].font = TITLE_FONT
-    ws1["A2"] = ("Sumber: data order Shopee/TikTok/Lazada semua toko, Jan-Jun 2026. "
-                 "Hanya pesanan sukses (batal/belum bayar/refund dikeluarkan). "
-                 "Nilai = net setelah diskon. Lihat sheet 'Metodologi'.")
-    ws1["A2"].font = SUB_FONT
-    ws1.merge_cells("A2:I2")
-
+    # ---------- Sheet 1: Top 300 Mobil ----------
+    rows1 = []
+    rows1.append([("MOBIL TERLARIS - Top %d Model (Detail Gen & Warna)" % TOP_N, S_TITLE)])
+    rows1.append([("Sumber: order Shopee/TikTok/Lazada semua toko. Hanya pesanan sukses "
+                   "(batal/belum bayar/refund dikeluarkan). Nilai = net setelah diskon. "
+                   "Lihat sheet 'Metodologi'.", S_SUB)])
+    rows1.append([])
     headers1 = ["No", "Nama Mobil", "Satuan", "Total Kuantitas", "% Kuantitas",
                 "Total Penjualan (Rp)", "% Nilai", "Jenis Cover Digabung", "Jumlah Varian/SKU"]
-    hrow = 4
-    for j, h in enumerate(headers1, start=1):
-        ws1.cell(row=hrow, column=j, value=h)
-    style_header_row(ws1, hrow, len(headers1))
-
-    r = hrow + 1
-    first_data = r
+    rows1.append([(h, S_HEAD) for h in headers1])
     for i, model in enumerate(top_models, start=1):
-        ws1.cell(row=r, column=1, value=i)
-        ws1.cell(row=r, column=2, value=model)
-        ws1.cell(row=r, column=3, value=SATUAN)
-        ws1.cell(row=r, column=4, value=model_qty[model])
-        ws1.cell(row=r, column=5, value=(model_qty[model] / grand_qty) if grand_qty else 0)
-        ws1.cell(row=r, column=6, value=round(model_val[model]))
-        ws1.cell(row=r, column=7, value=(model_val[model] / grand_val) if grand_val else 0)
-        ws1.cell(row=r, column=8, value=", ".join(sorted(model_types[model])))
-        ws1.cell(row=r, column=9, value=len(model_skus[model]))
-        r += 1
-    tot_row = r
+        rows1.append([
+            (i, S_INT), (model, S_TXT), (SATUAN, S_TXT),
+            (model_qty[model], S_INT),
+            ((model_qty[model] / grand_qty) if grand_qty else 0, S_PCT),
+            (round(model_val[model]), S_IDR),
+            ((model_val[model] / grand_val) if grand_val else 0, S_PCT),
+            (", ".join(sorted(model_types[model])), S_TXT),
+            (len(model_skus[model]), S_INT),
+        ])
+    rows1.append([
+        ("", S_TTXT), ("TOTAL (semua model, termasuk di luar Top %d)" % TOP_N, S_TTXT),
+        ("", S_TTXT), (grand_qty, S_TINT), (1.0 if grand_qty else 0, S_TPCT),
+        (round(grand_val), S_TIDR), (1.0 if grand_val else 0, S_TPCT),
+        ("", S_TTXT), ("", S_TTXT),
+    ])
+    sheets.append({"name": "Top 300 Mobil", "rows": rows1,
+                   "widths": [5, 26, 7, 15, 11, 20, 9, 34, 14], "freeze": (5, 1)})
 
-    # baris total (nilai hasil hitung, bukan formula -> tampil di semua viewer)
-    ws1.cell(row=tot_row, column=2, value="TOTAL (semua model, termasuk di luar Top %d)" % TOP_N)
-    ws1.cell(row=tot_row, column=4, value=grand_qty)
-    ws1.cell(row=tot_row, column=5, value=1.0 if grand_qty else 0)
-    ws1.cell(row=tot_row, column=6, value=round(grand_val))
-    ws1.cell(row=tot_row, column=7, value=1.0 if grand_val else 0)
-    for c in range(1, len(headers1) + 1):
-        cell = ws1.cell(row=tot_row, column=c)
-        cell.font = BOLD_FONT
-        cell.fill = TOTAL_FILL
-
-    # format & border
-    for rr in range(first_data, tot_row + 1):
-        for cc in range(1, len(headers1) + 1):
-            cell = ws1.cell(row=rr, column=cc)
-            if cell.font is BASE_FONT or cell.font.name != FONT:
-                cell.font = BOLD_FONT if rr == tot_row else BASE_FONT
-            cell.border = BORDER
-            if cc in (4,):
-                cell.number_format = "#,##0"
-            elif cc == 6:
-                cell.number_format = IDR_FMT
-            elif cc in (5, 7):
-                cell.number_format = PCT_FMT
-            elif cc == 9:
-                cell.number_format = "#,##0"
-    widths1 = [5, 26, 7, 15, 11, 20, 9, 34, 14]
-    for j, w in enumerate(widths1, start=1):
-        ws1.column_dimensions[get_column_letter(j)].width = w
-    ws1.freeze_panes = ws1.cell(row=first_data, column=1)
-
-    # =============================================================
-    #  SHEET 2: Detail Gen & Warna  (long format)
-    # =============================================================
-    ws2 = wb.create_sheet("Detail Gen & Warna")
-    ws2["A1"] = "Detail Penjualan per Model + Jenis Cover + Gen + Warna (Top %d model)" % TOP_N
-    ws2["A1"].font = TITLE_FONT
+    # ---------- Sheet 2: Detail Gen & Warna ----------
+    rows2 = []
+    rows2.append([("Detail Penjualan per Model + Jenis Cover + Gen + Warna (Top %d model)" % TOP_N, S_TITLE)])
+    rows2.append([])
     headers2 = ["Peringkat", "Nama Mobil", "Jenis Cover", "Gen", "Warna",
                 "Kuantitas", "% dari Model", "Total Penjualan (Rp)", "Jumlah SKU"]
-    hrow2 = 3
-    for j, h in enumerate(headers2, start=1):
-        ws2.cell(row=hrow2, column=j, value=h)
-    style_header_row(ws2, hrow2, len(headers2))
-
-    # baris detail hanya untuk model Top N, urut peringkat model lalu qty desc
-    detail_rows = []
+    rows2.append([(h, S_HEAD) for h in headers2])
+    detail = []
     for (model, tipe, gen, warna), rec in agg.items():
         if model in top_set:
-            detail_rows.append((rank_of[model], model, tipe, gen, warna,
-                                rec["qty"], rec["value"], len(rec["skus"])))
-    detail_rows.sort(key=lambda x: (x[0], -x[5], -x[6]))
+            detail.append((rank_of[model], model, tipe, gen, warna,
+                           rec["qty"], rec["value"], len(rec["skus"])))
+    detail.sort(key=lambda x: (x[0], -x[5], -x[6]))
+    for (rank, model, tipe, gen, warna, qty, val, nsku) in detail:
+        rows2.append([
+            (rank, S_INT), (model, S_TXT), (tipe, S_TXT), (gen, S_TXT), (warna, S_TXT),
+            (qty, S_INT), ((qty / model_qty[model]) if model_qty[model] else 0, S_PCT),
+            (round(val), S_IDR), (nsku, S_INT),
+        ])
+    last2 = len(rows2)
+    sheets.append({"name": "Detail Gen & Warna", "rows": rows2,
+                   "widths": [10, 24, 13, 16, 16, 12, 12, 20, 11],
+                   "freeze": (4, 1), "autofilter": "A3:I%d" % last2})
 
-    r = hrow2 + 1
-    for (rank, model, tipe, gen, warna, qty, val, nsku) in detail_rows:
-        ws2.cell(row=r, column=1, value=rank)
-        ws2.cell(row=r, column=2, value=model)
-        ws2.cell(row=r, column=3, value=tipe)
-        ws2.cell(row=r, column=4, value=gen)
-        ws2.cell(row=r, column=5, value=warna)
-        ws2.cell(row=r, column=6, value=qty)
-        # % dari total model = qty baris / total qty model (nilai hasil hitung)
-        ws2.cell(row=r, column=7, value=(qty / model_qty[model]) if model_qty[model] else 0)
-        ws2.cell(row=r, column=8, value=round(val))
-        ws2.cell(row=r, column=9, value=nsku)
-        for cc in range(1, len(headers2) + 1):
-            cell = ws2.cell(row=r, column=cc)
-            cell.font = BASE_FONT
-            cell.border = BORDER
-            if cc == 6:
-                cell.number_format = "#,##0"
-            elif cc == 7:
-                cell.number_format = PCT_FMT
-            elif cc == 8:
-                cell.number_format = IDR_FMT
-        r += 1
-    widths2 = [10, 24, 13, 16, 16, 12, 12, 20, 11]
-    for j, w in enumerate(widths2, start=1):
-        ws2.column_dimensions[get_column_letter(j)].width = w
-    ws2.freeze_panes = ws2.cell(row=hrow2 + 1, column=1)
-    ws2.auto_filter.ref = f"A{hrow2}:I{r-1}"
-
-    # =============================================================
-    #  SHEET 3: Matriks Warna (crosstab Model-Gen x Warna)
-    # =============================================================
-    ws3 = wb.create_sheet("Matriks Warna")
-    ws3["A1"] = "Matriks Kuantitas: baris = Model + Gen, kolom = Warna (Top %d model)" % TOP_N
-    ws3["A1"].font = TITLE_FONT
-
-    # kumpulan warna sebagai kolom (urut total qty desc)
+    # ---------- Sheet 3: Matriks Warna ----------
     warna_tot = defaultdict(int)
-    cell_qty = defaultdict(int)          # (model, gen) x warna
+    cell_qty = defaultdict(int)
     rowkey_tot = defaultdict(int)
     rowkey_rank = {}
     for (model, tipe, gen, warna), rec in agg.items():
@@ -666,115 +745,85 @@ def build_output(agg, diag, out_path, root):
         cell_qty[(rk, warna)] += rec["qty"]
         rowkey_tot[rk] += rec["qty"]
         rowkey_rank[rk] = rank_of[model]
-
     warna_cols = [w for w, _ in sorted(warna_tot.items(), key=lambda x: (-x[1], x[0]))]
     rowkeys = sorted(rowkey_tot.keys(), key=lambda rk: (rowkey_rank[rk], -rowkey_tot[rk], rk[1]))
 
-    hrow3 = 3
-    ws3.cell(row=hrow3, column=1, value="Nama Mobil")
-    ws3.cell(row=hrow3, column=2, value="Gen")
-    for j, w in enumerate(warna_cols, start=3):
-        ws3.cell(row=hrow3, column=j, value=w)
-    ws3.cell(row=hrow3, column=3 + len(warna_cols), value="Total")
-    style_header_row(ws3, hrow3, 3 + len(warna_cols))
-
-    r = hrow3 + 1
-    ncol_total = 3 + len(warna_cols)
-    col_totals = defaultdict(int)     # total per kolom warna + grand total
+    rows3 = []
+    rows3.append([("Matriks Kuantitas: baris = Model + Gen, kolom = Warna (Top %d model)" % TOP_N, S_TITLE)])
+    rows3.append([])
+    hdr3 = [("Nama Mobil", S_HEAD), ("Gen", S_HEAD)] + [(w, S_HEAD) for w in warna_cols] + [("Total", S_HEAD)]
+    rows3.append(hdr3)
+    col_tot = defaultdict(int)
     for rk in rowkeys:
         model, gen = rk
-        ws3.cell(row=r, column=1, value=model)
-        ws3.cell(row=r, column=2, value=gen)
-        row_total = 0
-        for j, w in enumerate(warna_cols, start=3):
+        r = [(model, S_TXT), (gen, S_TXT)]
+        rtot = 0
+        for w in warna_cols:
             q = cell_qty.get((rk, w), 0)
-            ws3.cell(row=r, column=j, value=(q if q else None))
-            row_total += q
-            col_totals[j] += q
-        # total baris = nilai hasil hitung
-        ws3.cell(row=r, column=ncol_total, value=row_total)
-        col_totals[ncol_total] += row_total
-        for cc in range(1, ncol_total + 1):
-            cell = ws3.cell(row=r, column=cc)
-            cell.font = BASE_FONT
-            cell.border = BORDER
-            if cc >= 3:
-                cell.number_format = "#,##0"
-                cell.alignment = Alignment(horizontal="center")
-        r += 1
-    # baris total kolom (nilai hasil hitung)
-    ws3.cell(row=r, column=1, value="TOTAL")
-    for j in range(3, ncol_total + 1):
-        ws3.cell(row=r, column=j, value=col_totals.get(j, 0))
-    for cc in range(1, ncol_total + 1):
-        cell = ws3.cell(row=r, column=cc)
-        cell.font = BOLD_FONT
-        cell.fill = TOTAL_FILL
-        cell.border = BORDER
-        if cc >= 3:
-            cell.number_format = "#,##0"
-    ws3.column_dimensions["A"].width = 24
-    ws3.column_dimensions["B"].width = 16
-    for j in range(3, ncol_total + 1):
-        ws3.column_dimensions[get_column_letter(j)].width = 11
-    ws3.freeze_panes = ws3.cell(row=hrow3 + 1, column=3)
+            r.append((q if q else "", S_CINT))
+            rtot += q
+            col_tot[w] += q
+        r.append((rtot, S_CINT))
+        col_tot["__grand__"] += rtot
+        rows3.append(r)
+    trow = [("TOTAL", S_TTXT), ("", S_TTXT)]
+    for w in warna_cols:
+        trow.append((col_tot[w], S_TINT))
+    trow.append((col_tot["__grand__"], S_TINT))
+    rows3.append(trow)
+    widths3 = [24, 16] + [11] * len(warna_cols) + [11]
+    sheets.append({"name": "Matriks Warna", "rows": rows3, "widths": widths3, "freeze": (4, 3)})
 
-    # =============================================================
-    #  SHEET 4: Metodologi & Diagnostik
-    # =============================================================
-    ws4 = wb.create_sheet("Metodologi")
-    lines = [
-        ("MOBIL TERLARIS - Metodologi & Diagnostik", TITLE_FONT),
-        (f"Dibuat: {datetime.datetime.now():%Y-%m-%d %H:%M}", SUB_FONT),
-        (f"Folder sumber: {root}", SUB_FONT),
-        ("", None),
-        ("DEFINISI", BOLD_FONT),
-        ("- Cakupan: semua toko (Undercover/Otonation/Otopro/Smartpro) x Shopee/TikTok/Lazada.", BASE_FONT),
-        ("- Periode: sesuai file di folder (Jan-Jun 2026).", BASE_FONT),
-        ("- Hanya MOBIL (Cover Mobil). Motor tidak masuk ranking.", BASE_FONT),
-        ("- Status dikeluarkan (bukan penjualan): " + ", ".join(STATUS_EXCLUDE) + ".", BASE_FONT),
-        ("- Kuantitas = qty terjual - qty diretur.", BASE_FONT),
-        ("- Total Penjualan = nilai NET setelah diskon (Shopee: Subtotal Pesanan; "
-         "TikTok: SKU Subtotal After Discount; Lazada: paidPrice).", BASE_FONT),
-        ("- Model digabung lintas toko/marketplace berdasarkan nama model pada listing.", BASE_FONT),
-        ("- Tipe cover ditentukan dari penanda warna (Elite/Warrior->Strip, Silver->Premium, "
-         "Transparan->Transparan) lalu tier di nama produk.", BASE_FONT),
-        ("", None),
-        ("DIAGNOSTIK (silakan cek kewajaran angka)", BOLD_FONT),
-        (f"- Total baris order terbaca: {diag.get('rows_total',0):,}", BASE_FONT),
-        (f"    Shopee: {diag.get('rows_shopee',0):,} | TikTok: {diag.get('rows_tiktok',0):,} | "
-         f"Lazada: {diag.get('rows_lazada',0):,}", BASE_FONT),
-        (f"- Baris dihitung (mobil, sukses): {diag.get('rows_counted',0):,}", BASE_FONT),
-        (f"- Baris motor (dilewati): {diag.get('rows_motor',0):,}", BASE_FONT),
-        (f"- Dilewati krn status batal/refund/belum bayar: {diag.get('skip_status',0):,}", BASE_FONT),
-        (f"- Dilewati krn qty net <= 0 (retur penuh): {diag.get('skip_returned',0):,}", BASE_FONT),
-        (f"- Dilewati krn nama model tidak terbaca: {diag.get('skip_no_model',0):,}", BASE_FONT),
-        (f"- Jumlah model mobil unik: {len(model_qty):,}", BASE_FONT),
-        (f"- Total kuantitas semua model: {grand_qty:,}", BASE_FONT),
-        (f"- Total nilai semua model: Rp {round(grand_val):,}", BASE_FONT),
-    ]
-    rr = 1
-    for text, font in lines:
-        c = ws4.cell(row=rr, column=1, value=text)
-        if font:
-            c.font = font
-        rr += 1
+    # ---------- Sheet 4: Metodologi ----------
+    L = []
+    L.append(("MOBIL TERLARIS - Metodologi & Diagnostik", S_TITLE))
+    L.append(("Dibuat: %s" % datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), S_SUB))
+    L.append(("Folder sumber: %s" % root, S_SUB))
+    L.append(("", S_DEFAULT))
+    L.append(("DEFINISI", S_BOLD))
+    for t in [
+        "- Cakupan: semua toko (Undercover/Otonation/Otopro/Smartpro) x Shopee/TikTok/Lazada.",
+        "- Periode: sesuai file di folder.",
+        "- Hanya MOBIL (Cover Mobil). Motor tidak masuk ranking.",
+        "- Status dikeluarkan (bukan penjualan): " + ", ".join(STATUS_EXCLUDE) + ".",
+        "- Kuantitas = qty terjual - qty diretur.",
+        "- Total Penjualan = nilai NET setelah diskon (Shopee: Subtotal Pesanan; "
+        "TikTok: SKU Subtotal After Discount; Lazada: paidPrice).",
+        "- Model digabung lintas toko/marketplace berdasarkan nama model pada listing.",
+        "- Tipe cover dari penanda warna (Elite/Warrior->Strip, Silver->Premium, "
+        "Transparan->Transparan) lalu tier di nama produk.",
+    ]:
+        L.append((t, S_DEFAULT))
+    L.append(("", S_DEFAULT))
+    L.append(("DIAGNOSTIK (cek kewajaran angka)", S_BOLD))
+    for t in [
+        "- Total baris order terbaca: {:,}".format(diag.get("rows_total", 0)),
+        "    Shopee: {:,} | TikTok: {:,} | Lazada: {:,}".format(
+            diag.get("rows_shopee", 0), diag.get("rows_tiktok", 0), diag.get("rows_lazada", 0)),
+        "- Baris dihitung (mobil, sukses): {:,}".format(diag.get("rows_counted", 0)),
+        "- Baris motor (dilewati): {:,}".format(diag.get("rows_motor", 0)),
+        "- Dilewati krn status batal/refund/belum bayar: {:,}".format(diag.get("skip_status", 0)),
+        "- Dilewati krn qty net <= 0 (retur penuh): {:,}".format(diag.get("skip_returned", 0)),
+        "- Dilewati krn nama model tidak terbaca: {:,}".format(diag.get("skip_no_model", 0)),
+        "- Jumlah model mobil unik: {:,}".format(len(model_qty)),
+        "- Total kuantitas semua model: {:,}".format(grand_qty),
+        "- Total nilai semua model: Rp {:,}".format(round(grand_val)),
+    ]:
+        L.append((t, S_DEFAULT))
     if diag.get("_sample_no_model"):
-        ws4.cell(row=rr + 1, column=1, value="Contoh nama produk yang model-nya tidak terbaca:").font = BOLD_FONT
-        rr += 2
+        L.append(("", S_DEFAULT))
+        L.append(("Contoh nama produk yang model-nya tidak terbaca:", S_BOLD))
         for s in diag["_sample_no_model"]:
-            ws4.cell(row=rr, column=1, value="   " + s).font = BASE_FONT
-            rr += 1
+            L.append(("   " + s, S_DEFAULT))
     if diag.get("_errors"):
-        rr += 1
-        ws4.cell(row=rr, column=1, value="File gagal dibaca:").font = BOLD_FONT
-        rr += 1
+        L.append(("", S_DEFAULT))
+        L.append(("File gagal dibaca:", S_BOLD))
         for s in diag["_errors"]:
-            ws4.cell(row=rr, column=1, value="   " + s).font = BASE_FONT
-            rr += 1
-    ws4.column_dimensions["A"].width = 110
+            L.append(("   " + s, S_DEFAULT))
+    rows4 = [[(t, st)] for (t, st) in L]
+    sheets.append({"name": "Metodologi", "rows": rows4, "widths": [115]})
 
-    wb.save(out_path)
+    write_xlsx(out_path, sheets)
     return len(model_qty), grand_qty, grand_val
 
 
@@ -782,35 +831,32 @@ def build_output(agg, diag, out_path, root):
 #  MAIN
 # =====================================================================
 def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else "."
+    root = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_FOLDER
     out_path = sys.argv[2] if len(sys.argv) > 2 else OUTPUT_DEFAULT
     if not os.path.isdir(root):
-        print(f"ERROR: folder tidak ditemukan: {root}")
+        print("ERROR: folder tidak ditemukan: %s" % root)
+        print("Jalankan: python buat_matriks_terlaris.py \"<folder data sales>\"")
         sys.exit(1)
 
-    print(f"Memindai folder: {os.path.abspath(root)}")
+    print("Memindai folder: %s" % os.path.abspath(root))
     files, tmpdirs = gather_files(root)
-    print(f"Menemukan {len(files)} file order (xlsx/zip).")
+    print("Menemukan %d file order (xlsx/zip)." % len(files))
     if not files:
-        print("Tidak ada file order. Pastikan folder benar.")
+        print("Tidak ada file .xlsx/.zip. Pastikan folder benar.")
         sys.exit(1)
 
-    agg = defaultdict(lambda: {"qty": 0, "value": 0.0, "skus": set(), "markets": set()})
+    agg = defaultdict(lambda: {"qty": 0, "value": 0.0, "skus": set()})
     diag = Counter()
-
     for i, (path, label) in enumerate(files, start=1):
-        print(f"  [{i}/{len(files)}] {label} :: {os.path.basename(path)}")
-        process_workbook(path, agg, diag, label)
+        print("  [%d/%d] %s :: %s" % (i, len(files), label, os.path.basename(path)))
+        process_workbook(path, agg, diag)
 
-    if not agg:
-        print("Tidak ada baris penjualan mobil yang terbaca. Cek sheet Metodologi/diagnostik.")
     print("Menulis output ...")
     nmodel, gq, gv = build_output(agg, diag, out_path, os.path.abspath(root))
-    print(f"SELESAI. Model unik: {nmodel}, total qty: {gq:,}, total nilai: Rp {round(gv):,}")
-    print(f"File output: {os.path.abspath(out_path)}")
+    print("SELESAI. Model unik: %d, total qty: %s, total nilai: Rp %s"
+          % (nmodel, format(gq, ","), format(round(gv), ",")))
+    print("File output: %s" % os.path.abspath(out_path))
 
-    # bersihkan temp zip
-    import shutil
     for td in tmpdirs:
         shutil.rmtree(td, ignore_errors=True)
 

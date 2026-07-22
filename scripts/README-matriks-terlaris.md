@@ -1,6 +1,8 @@
 # Matriks Mobil Terlaris (Top 300) — sampai Gen & Warna
 
-Script: [`buat_matriks_terlaris.py`](buat_matriks_terlaris.py)
+Script: [`buat_matriks_terlaris.py`](buat_matriks_terlaris.py) — **tidak butuh `pip install` apa pun.**
+Hanya pakai library bawaan Python (baca & tulis `.xlsx` sendiri lewat `zipfile`/`xml`).
+Kalau `pip` di komputermu bermasalah/offline, script ini tetap jalan asal Python-nya ada.
 
 Membangun laporan **mobil terlaris** (Top 300 model) dari data order mentah
 **Shopee / TikTok / Lazada** untuk **semua toko** (Undercover, Otonation,
@@ -9,29 +11,43 @@ ada rincian sampai **generasi (gen)** dan **warna**.
 
 ## Kenapa script, bukan file jadi?
 
-Data mentahnya puluhan file @1–2 MB. Sesuai `CLAUDE.md`, file besar tidak bisa
-ditarik lewat tool/MCP (mentok batas ukuran konten). Jadi pemrosesan dilakukan
-lokal di komputer yang folder Drive-nya tersinkron. Untungnya jadi **bisa
-dipakai ulang tiap bulan** — cukup taruh file order baru, jalankan lagi.
+Data mentahnya puluhan file @1–2 MB — baik yang di Google Drive maupun yang
+di folder lokal seperti `Downloads\Sales`. File sebesar itu tidak bisa
+diproses langsung oleh asisten cloud, jadi pemrosesan dilakukan lokal di
+komputermu tempat file-nya berada. Bonus: **bisa dipakai ulang tiap bulan**
+— cukup taruh file order baru, jalankan lagi.
 
-## Cara pakai
+## Cara pakai — Windows, paling gampang (dobel klik)
 
-```bash
-# 1. Sekali saja: pasang library
-pip install openpyxl
+1. Salin 2 file ini ke folder data sales-mu (mis. `C:\Users\OWNER\Downloads\Sales`):
+   - `buat_matriks_terlaris.py`
+   - `jalankan_matriks.bat`
+2. Dobel-klik **`jalankan_matriks.bat`**.
+3. Kalau diminta path folder, Enter saja (default sudah diarahkan ke
+   `Downloads\Sales`) atau ketik path foldernya.
+4. Tunggu sampai muncul "Selesai" → file
+   `MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx` muncul di folder yang sama.
 
-# 2. Jalankan, arahkan ke folder data
-python buat_matriks_terlaris.py "C:\path\ke\Data Sales Jan - Jun 2026"
+Kalau muncul pesan Python tidak ditemukan: buka **Microsoft Store**, cari
+**"Python 3"**, install (gratis, tanpa perlu jadi admin), lalu jalankan
+`.bat`-nya lagi.
+
+## Cara pakai — lewat Command Prompt / PowerShell
+
+```bat
+cd "C:\path\ke\scripts"
+python buat_matriks_terlaris.py "C:\Users\OWNER\Downloads\Sales"
 ```
 
-Atau taruh script ini di dalam folder `Data Sales Jan - Jun 2026` lalu:
+Kalau `python` tidak dikenali, coba `py` sebagai gantinya:
 
-```bash
-python buat_matriks_terlaris.py
+```bat
+py buat_matriks_terlaris.py "C:\Users\OWNER\Downloads\Sales"
 ```
 
-Output default: **`MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx`** (buka di Excel / Google Sheets).
-Ganti nama output: `python buat_matriks_terlaris.py "<folder>" "<output.xlsx>"`.
+Output default: **`MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx`** (ditulis di folder
+tempat kamu menjalankan perintah). Ganti nama/lokasi output:
+`python buat_matriks_terlaris.py "<folder data>" "<output.xlsx>"`.
 
 Struktur folder yang dipindai (otomatis, rekursif — nama subfolder bebas):
 
