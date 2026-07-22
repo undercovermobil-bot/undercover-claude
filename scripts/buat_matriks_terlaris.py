@@ -568,21 +568,25 @@ def _col_letter(idx):
 
 
 def _sheet_xml(sheet):
+    rows = sheet["rows"]
+    max_col = max((len(r) for r in rows), default=0)
+    max_row = len(rows)
+    dim_ref = "A1:%s%d" % (_col_letter(max(max_col, 1) - 1), max(max_row, 1))
+
     out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">']
+    out.append('<dimension ref="%s"/>' % dim_ref)
     freeze = sheet.get("freeze")
     if freeze:
         fr, fc = freeze
         ys, xs = fr - 1, fc - 1
         tl = _col_letter(fc - 1) + str(fr)
-        attrs = []
-        if xs > 0:
-            attrs.append('xSplit="%d"' % xs)
-        if ys > 0:
-            attrs.append('ySplit="%d"' % ys)
-        attrs += ['topLeftCell="%s"' % tl, 'activePane="bottomRight"', 'state="frozen"']
-        out.append('<sheetViews><sheetView workbookViewId="0"><pane %s/>'
-                   '<selection pane="bottomRight"/></sheetView></sheetViews>' % " ".join(attrs))
+        out.append('<sheetViews><sheetView workbookViewId="0"><pane xSplit="%d" ySplit="%d" '
+                   'topLeftCell="%s" activePane="bottomRight" state="frozen"/>'
+                   '<selection pane="bottomRight"/></sheetView></sheetViews>' % (xs, ys, tl))
+    else:
+        out.append('<sheetViews><sheetView workbookViewId="0"/></sheetViews>')
+    out.append('<sheetFormatPr defaultRowHeight="15"/>')
     widths = sheet.get("widths")
     if widths:
         cols = "".join('<col min="%d" max="%d" width="%s" customWidth="1"/>' % (j + 1, j + 1, w)
@@ -628,19 +632,52 @@ def write_xlsx(path, sheets):
         '<Default Extension="xml" ContentType="application/xml"/>'
         '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
         '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+        '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
         + overrides + "</Types>")
     parts["_rels/.rels"] = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
         '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+        '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
         '</Relationships>')
+
+    now_iso = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    parts["docProps/core.xml"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+        'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        '<dc:creator>Undercover</dc:creator><cp:lastModifiedBy>Undercover</cp:lastModifiedBy>'
+        '<dcterms:created xsi:type="dcterms:W3CDTF">%s</dcterms:created>'
+        '<dcterms:modified xsi:type="dcterms:W3CDTF">%s</dcterms:modified>'
+        '</cp:coreProperties>' % (now_iso, now_iso))
+    titles = "".join('<vt:lpstr>%s</vt:lpstr>' % _esc(s["name"]) for s in sheets)
+    parts["docProps/app.xml"] = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
+        'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+        '<Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity>'
+        '<ScaleCrop>false</ScaleCrop>'
+        '<HeadingPairs><vt:vector size="2" baseType="variant">'
+        '<vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant>'
+        '<vt:variant><vt:i4>%d</vt:i4></vt:variant></vt:vector></HeadingPairs>'
+        '<TitlesOfParts><vt:vector size="%d" baseType="lpstr">%s</vt:vector></TitlesOfParts>'
+        '<LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc>'
+        '<HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion>'
+        '</Properties>' % (len(sheets), len(sheets), titles))
+
     sheets_xml = "".join('<sheet name="%s" sheetId="%d" r:id="rId%d"/>'
                          % (_esc_attr(s["name"]), i + 1, i + 1) for i, s in enumerate(sheets))
     parts["xl/workbook.xml"] = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '<sheets>%s</sheets></workbook>' % sheets_xml)
+        '<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="20000" windowHeight="12000"/></bookViews>'
+        '<sheets>%s</sheets>'
+        '<calcPr calcId="0"/>'
+        '</workbook>' % sheets_xml)
     rels = "".join('<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet%d.xml"/>'
                    % (i + 1, i + 1) for i in range(len(sheets)))
     rels += ('<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
@@ -651,9 +688,14 @@ def write_xlsx(path, sheets):
     parts["xl/styles.xml"] = STYLES_XML
     for i, s in enumerate(sheets):
         parts["xl/worksheets/sheet%d.xml" % (i + 1)] = _sheet_xml(s)
+
+    # Urutan penulisan entri zip: [Content_Types].xml duluan (konvensi OPC/Excel).
+    order = ["[Content_Types].xml", "_rels/.rels", "docProps/core.xml", "docProps/app.xml",
+             "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml"]
+    order += ["xl/worksheets/sheet%d.xml" % (i + 1) for i in range(len(sheets))]
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        for name, content in parts.items():
-            z.writestr(name, content)
+        for name in order:
+            z.writestr(name, parts[name])
 
 
 # =====================================================================
