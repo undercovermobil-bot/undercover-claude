@@ -761,10 +761,38 @@ def write_xlsx(path, sheets):
             z.writestr(name, parts[name])
 
 
+def canonicalize_model_casing(agg):
+    """Gabungkan model yang cuma beda huruf besar/kecil (mis. 'Toyota HiAce' vs
+    'Toyota Hiace') jadi satu nama. Casing pemenang = yang qty totalnya lebih
+    besar (menang suara), biar tidak perlu daftar kamus per-brand."""
+    qty_per_form = defaultdict(lambda: defaultdict(int))
+    for (model, tipe, gen, warna), rec in agg.items():
+        qty_per_form[model.lower()][model] += rec["qty"]
+    canon = {}
+    for _low, forms in qty_per_form.items():
+        if len(forms) <= 1:
+            continue
+        winner = max(forms.items(), key=lambda x: (x[1], x[0]))[0]
+        for form in forms:
+            if form != winner:
+                canon[form] = winner
+    if not canon:
+        return agg
+    new_agg = defaultdict(lambda: {"qty": 0, "value": 0.0, "skus": set()})
+    for (model, tipe, gen, warna), rec in agg.items():
+        model2 = canon.get(model, model)
+        dst = new_agg[(model2, tipe, gen, warna)]
+        dst["qty"] += rec["qty"]
+        dst["value"] += rec["value"]
+        dst["skus"] |= rec["skus"]
+    return new_agg
+
+
 # =====================================================================
 #  BANGUN OUTPUT (3 sheet)
 # =====================================================================
 def build_output(agg, diag, out_path, root):
+    agg = canonicalize_model_casing(agg)
     model_qty = defaultdict(int)
     model_val = defaultdict(float)
     model_types = defaultdict(set)
