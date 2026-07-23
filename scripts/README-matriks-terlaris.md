@@ -57,15 +57,30 @@ Data Sales Jan - Jun 2026/
   Otonation/   Shopee/ ...
   Otopro/      Shopee|TikTok/ ...
   Smartpro/    Shopee|TikTok|Lazada/ ...
+  _acuan_varian/  mass_update_....zip (atau xlsx)   <- OPSIONAL, utk setarakan gen
 ```
+
+## Penyetaraan GEN ke list Undercover terkini (opsional tapi disarankan)
+
+Gen mobil di data penjualan lama beragam (Gen 1F, Gen 2F, "2011-2020", dll).
+Supaya gennya disamakan dengan **list varian Undercover sekarang** (mis. Avanza
+cuma Gen 1-2 & Gen 3), taruh file **mass-update Shopee** (export "Ubah Massal
+Info Penjualan" — bisa `.zip` atau `.xlsx`) di mana saja dalam folder data.
+Script otomatis mengenalinya (dari isinya, bukan nama file) dan:
+
+- Membangun daftar gen kanonik per model dari listing **Reguler** Undercover.
+- Memetakan tiap gen historis (semua toko/marketplace) ke gen kanonik itu,
+  berdasarkan **kode SKU** (G1/G3…), lalu **tahun**, lalu **nomor gen**.
+
+Tanpa file acuan, gen dibiarkan apa adanya (hanya dibersihkan tahunnya).
 
 ## Isi output (3 sheet)
 
 | Sheet | Isi |
 |---|---|
-| **Top 300 Mobil** | Ranking per model (No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU) **+ matriks warna polos terintegrasi**: satu kolom per warna (diurut dari terlaris) + kolom "Total Warna Polos", lalu baris **TOTAL** dan baris **% tiap warna** (dari total warna polos). Strip/Elite/Epic/Warrior **dikeluarkan** dari kolom warna; Premium/Exclusive/Transparan ikut (Silver = Premium) |
-| **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + Gen + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU |
-| **Metodologi** | Definisi, filter, dan **diagnostik** (jumlah baris terbaca per marketplace, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
+| **Top 300 Mobil** | Ranking per model (No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU) **+ matriks warna polos terintegrasi**: blok jumlah per warna (diurut terlaris) + "Total Warna Polos" + **blok "% &lt;warna&gt;"** (persen tiap warna dari total warna polos model itu). Baris **TOTAL** menampilkan total + persen tiap warna dari seluruh penjualan warna polos. Strip/Elite/Epic/Warrior **dikeluarkan**; Premium/Exclusive/Transparan ikut (Silver = Premium) |
+| **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + **Gen (sudah disetarakan)** + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU |
+| **Metodologi** | Definisi, filter, dan **diagnostik** (jumlah baris terbaca per marketplace, jumlah file acuan, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
 
 ## Definisi & asumsi (bisa diubah di bagian `KONFIGURASI` dalam script)
 

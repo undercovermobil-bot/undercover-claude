@@ -456,78 +456,218 @@ def get(row, idx):
     return row[idx]
 
 
-def process_workbook(path, agg, diag):
+# =====================================================================
+#  ACUAN VARIAN UNDERCOVER (file mass-update) -> penyetaraan GEN
+#  Gen historis yg beragam (Gen 1F, Gen 2F, tahun, dll) disamakan dengan
+#  gen di listing Undercover TERKINI (mis. Avanza -> Gen 1-2 / Gen 3).
+# =====================================================================
+def _gen_years(s):
+    ys = [int(y) for y in re.findall(r"\b((?:19|20)\d{2})\b", str(s or ""))]
+    return (min(ys), max(ys)) if ys else None
+
+
+def _gen_nums(label):
+    gp = re.sub(r"\(.*?\)", "", str(label or ""))
+    return frozenset(int(d) for d in re.findall(r"\d+", gp) if int(d) < 20)
+
+
+def _sku_gcode(sku):
+    for t in re.split(r"[-_]", str(sku or "").upper()):
+        m = re.match(r"^G(\d+)$", t)
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _gen_words(label):
+    gp = re.sub(r"\(.*?\)", " ", str(label or "")).lower()
+    return set(re.findall(r"[a-z]{4,}", gp)) - {"gen", "model", "tahun", "lain",
+                                                "facelift", "sekarang"}
+
+
+def is_reference_header(row):
+    """True bila baris ini header file mass-update (daftar varian), bukan order."""
+    low = set(norm(c) for c in row)
+    return ("nama variasi" in low and ("sku induk" in low or "kode produk" in low)
+            and "status pesanan" not in low and "order status" not in low)
+
+
+def reference_columns(row):
+    low = [norm(c) for c in row]
+
+    def idx(name):
+        return low.index(name) if name in low else None
+    return {"product": idx("nama produk"), "variation": idx("nama variasi"), "sku": idx("sku")}
+
+
+def accumulate_canonical(rows, hidx, cols, canon_reg, canon_all):
+    if cols.get("product") is None or cols.get("variation") is None:
+        return
+    for row in rows[hidx + 1:]:
+        p = get(row, cols["product"])
+        v = get(row, cols["variation"])
+        sku = get(row, cols.get("sku"))
+        if not (p and v):
+            continue
+        model, tier, is_motor = parse_name(p)
+        if is_motor or not model:
+            continue
+        _w, gen_raw, _t = parse_variation(v)
+        if not gen_raw:
+            continue
+        label = re.sub(r"\s+", " ", str(gen_raw)).strip()
+        tgt = canon_reg if tier == "Reguler" else canon_all
+        d = tgt[model].setdefault(label, {"label": label, "years": _gen_years(label),
+                                          "nums": _gen_nums(label), "words": _gen_words(label),
+                                          "code": None})
+        c = _sku_gcode(sku)
+        if c is not None and d["code"] is None:
+            d["code"] = c
+
+
+def finalize_canonical(canon_reg, canon_all):
+    """Per model: pakai gen dari listing Reguler (yg sudah diringkas) kalau ada,
+    kalau tidak baru dari tipe cover lain."""
+    out = {}
+    for model in set(canon_reg) | set(canon_all):
+        gens = canon_reg.get(model) or canon_all.get(model)
+        if gens:
+            out[model] = list(gens.values())
+    return out
+
+
+def map_gen(model, gen_raw, sku, canonical):
+    """Petakan gen historis -> gen kanonik Undercover (urut: kode SKU, kata khas,
+    tahun, nomor gen, lalu fallback)."""
+    cgs = canonical.get(model)
+    if not cgs:
+        return canon_gen(gen_raw)
+    c = _sku_gcode(sku)
+    if c is not None:
+        h = [g for g in cgs if g["code"] == c]
+        if len(h) == 1:
+            return h[0]["label"]
+    sw = _gen_words(gen_raw)
+    if sw:
+        h = [g for g in cgs if g["words"] & sw]
+        if len(h) == 1:
+            return h[0]["label"]
+    yr = _gen_years(gen_raw)
+    if yr:
+        h = [g for g in cgs if g["years"] and not (yr[1] < g["years"][0] or yr[0] > g["years"][1])]
+        if len(h) == 1:
+            return h[0]["label"]
+        if len(h) > 1:
+            h.sort(key=lambda g: -(min(yr[1], g["years"][1]) - max(yr[0], g["years"][0])))
+            return h[0]["label"]
+    ns = _gen_nums(gen_raw)
+    if ns:
+        h = [g for g in cgs if ns & g["nums"]]
+        if len(h) == 1:
+            return h[0]["label"]
+        if len(h) > 1:
+            h.sort(key=lambda g: -len(ns & g["nums"]))
+            return h[0]["label"]
+    if len(cgs) == 1:
+        return cgs[0]["label"]
+    return "Model/Tahun Lain"
+
+
+# =====================================================================
+#  PROSES 1 ITEM ORDER
+# =====================================================================
+def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_raw, sku,
+               agg, diag, canonical):
+    diag["rows_%s" % market] += 1
+    diag["rows_total"] += 1
+    status = norm(status_raw)
+    if any(bad in status for bad in STATUS_EXCLUDE):
+        diag["skip_status"] += 1
+        return
+    model, tier_name, is_motor = parse_name(product)
+    if is_motor:
+        diag["rows_motor"] += 1
+        return
+    if not model:
+        diag["skip_no_model"] += 1
+        if len(diag.setdefault("_sample_no_model", [])) < 15:
+            diag["_sample_no_model"].append(str(product)[:70])
+        return
+    warna_raw, gen_raw, tier_w = parse_variation(variation)
+    if warna_raw is None and gen_raw is None:
+        w2, g2 = warna_and_tier_from_sku(sku)
+        warna_raw = warna_raw or w2
+        gen_raw = gen_raw or g2
+    warna = canon_warna(warna_raw)
+    gen = map_gen(model, gen_raw, sku, canonical)      # <- disetarakan ke gen Undercover
+    tipe = tier_w or tier_name or "Reguler"
+
+    if market == "lazada":
+        qty = 1
+    else:
+        qty = to_int(qty_raw) if qty_raw is not None else 1
+        if qty <= 0:
+            qty = 1
+    ret = to_int(ret_raw) if ret_raw is not None else 0
+    net_qty = qty - ret
+    if net_qty <= 0:
+        diag["skip_returned"] += 1
+        return
+    value = to_num(value_raw)
+    if ret and qty:
+        value = value * net_qty / qty
+
+    sku_key = str(sku).strip() if sku else "%s|%s|%s|%s" % (model, tipe, gen, warna)
+    rec = agg[(model, tipe, gen, warna)]
+    rec["qty"] += net_qty
+    rec["value"] += value
+    rec["skus"].add(sku_key)
+    diag["rows_counted"] += 1
+
+
+def scan_workbook(path, canon_reg, canon_all, order_items, diag):
+    """Baca 1 file. Kalau file acuan (mass-update) -> bangun gen kanonik.
+    Kalau file order -> kumpulkan item minimal ke order_items. Return 'ref'/'order'/None."""
     try:
         sheets = read_xlsx_rows(path)
     except Exception as e:
         diag["file_error"] += 1
-        diag.setdefault("_errors", []).append(f"{os.path.basename(path)}: {e}")
-        return
+        diag.setdefault("_errors", []).append("%s: %s" % (os.path.basename(path), e))
+        return None
+    kind = None
     for _sf, rows in sheets:
-        colmap = None
+        mode = None
+        hidx = None
         market = None
-        header_found = False
-        for row in rows:
-            if not header_found:
-                res = detect_market_and_columns(row)
-                if res:
-                    market, colmap = res
-                    header_found = True
-                continue
-            product = get(row, colmap["product"])
-            if product is None or str(product).strip() == "":
-                continue
-            diag["rows_%s" % market] += 1
-            diag["rows_total"] += 1
-
-            status = norm(get(row, colmap["status"])) if colmap.get("status") is not None else ""
-            if any(bad in status for bad in STATUS_EXCLUDE):
-                diag["skip_status"] += 1
-                continue
-
-            model, tier_name, is_motor = parse_name(product)
-            if is_motor:
-                diag["rows_motor"] += 1
-                continue
-            if not model:
-                diag["skip_no_model"] += 1
-                if len(diag.setdefault("_sample_no_model", [])) < 15:
-                    diag["_sample_no_model"].append(str(product)[:70])
-                continue
-
-            warna_raw, gen_raw, tier_w = parse_variation(get(row, colmap["variation"]))
-            if warna_raw is None and gen_raw is None:
-                w2, g2 = warna_and_tier_from_sku(get(row, colmap.get("sku")))
-                warna_raw = warna_raw or w2
-                gen_raw = gen_raw or g2
-            warna = canon_warna(warna_raw)
-            gen = canon_gen(gen_raw)
-            tipe = tier_w or tier_name or "Reguler"
-
-            if market == "lazada":
-                qty = 1
-            else:
-                qty = to_int(get(row, colmap["qty"])) if colmap.get("qty") is not None else 1
-                if qty <= 0:
-                    qty = 1
-            ret = to_int(get(row, colmap["returned"])) if colmap.get("returned") is not None else 0
-            net_qty = qty - ret
-            if net_qty <= 0:
-                diag["skip_returned"] += 1
-                continue
-            value = to_num(get(row, colmap["value"])) if colmap.get("value") is not None else 0.0
-            if ret and qty:
-                value = value * net_qty / qty
-
-            sku = get(row, colmap.get("sku"))
-            sku_key = str(sku).strip() if sku else "%s|%s|%s|%s" % (model, tipe, gen, warna)
-
-            rec = agg[(model, tipe, gen, warna)]
-            rec["qty"] += net_qty
-            rec["value"] += value
-            rec["skus"].add(sku_key)
-            diag["rows_counted"] += 1
-    return
+        colmap = None
+        refcols = None
+        for i, row in enumerate(rows[:20]):
+            if is_reference_header(row):
+                mode = "ref"
+                hidx = i
+                refcols = reference_columns(row)
+                break
+            res = detect_market_and_columns(row)
+            if res:
+                mode = "order"
+                hidx = i
+                market, colmap = res
+                break
+        if mode == "ref":
+            accumulate_canonical(rows, hidx, refcols, canon_reg, canon_all)
+            kind = kind or "ref"
+        elif mode == "order":
+            kind = "order"
+            for row in rows[hidx + 1:]:
+                product = get(row, colmap["product"])
+                if product is None or str(product).strip() == "":
+                    continue
+                order_items.append((
+                    market, get(row, colmap.get("status")), product,
+                    get(row, colmap["variation"]), get(row, colmap.get("qty")),
+                    get(row, colmap.get("returned")), get(row, colmap.get("value")),
+                    get(row, colmap.get("sku"))))
+    return kind
 
 
 def gather_files(root):
@@ -843,7 +983,8 @@ def build_output(agg, diag, out_path, root):
     rows1.append([])
     headers1 = ["No", "Nama Mobil", "Satuan", "Total Kuantitas", "% Kuantitas",
                 "Total Penjualan (Rp)", "% Nilai", "Jenis Cover Digabung", "Jumlah Varian/SKU"]
-    headers1 += fam_cols + ["Total Warna Polos"]
+    # blok jumlah per warna, lalu Total, lalu blok PERSENTASE per warna
+    headers1 += fam_cols + ["Total Warna Polos"] + ["% " + f for f in fam_cols]
     rows1.append([(h, S_HEAD) for h in headers1])
     for i, model in enumerate(top_models, start=1):
         row = [
@@ -855,14 +996,16 @@ def build_output(agg, diag, out_path, root):
             (", ".join(sorted(model_types[model])), S_TXT),
             (len(model_skus[model]), S_INT),
         ]
-        rtot = 0
-        for f in fam_cols:
-            q = fam_cell.get((model, f), 0)
+        qtys = [fam_cell.get((model, f), 0) for f in fam_cols]
+        rtot = sum(qtys)
+        for q in qtys:
             row.append((q if q else "", S_CINT))
-            rtot += q
         row.append((rtot, S_CINT))
+        # persentase tiap warna dari total warna polos MODEL ini
+        for q in qtys:
+            row.append(((q / rtot) if rtot else 0, S_PCT))
         rows1.append(row)
-    # baris TOTAL
+    # baris TOTAL (blok %: persentase tiap warna dari SELURUH penjualan warna polos)
     totrow = [
         ("", S_TTXT), ("TOTAL (semua model, termasuk di luar Top %d)" % TOP_N, S_TTXT),
         ("", S_TTXT), (grand_qty, S_TINT), (1.0 if grand_qty else 0, S_TPCT),
@@ -872,14 +1015,11 @@ def build_output(agg, diag, out_path, root):
     for f in fam_cols:
         totrow.append((fam_tot[f], S_TINT))
     totrow.append((grand_fam, S_TINT))
-    rows1.append(totrow)
-    # baris % tiap warna (dari total warna polos)
-    pctrow = [("", S_TTXT), ("% tiap warna (dari total warna polos)", S_TTXT)] + [("", S_TTXT)] * 7
     for f in fam_cols:
-        pctrow.append(((fam_tot[f] / grand_fam) if grand_fam else 0, S_TPCT))
-    pctrow.append((1.0 if grand_fam else 0, S_TPCT))
-    rows1.append(pctrow)
-    widths1 = [5, 26, 7, 15, 11, 20, 9, 34, 14] + [11] * len(fam_cols) + [15]
+        totrow.append(((fam_tot[f] / grand_fam) if grand_fam else 0, S_TPCT))
+    rows1.append(totrow)
+    widths1 = ([5, 26, 7, 15, 11, 20, 9, 34, 14] + [10] * len(fam_cols) + [15]
+               + [10] * len(fam_cols))
     sheets.append({"name": "Top 300 Mobil", "rows": rows1, "widths": widths1, "freeze": (5, 3)})
 
     # ---------- Sheet 2: Detail Gen & Warna ----------
@@ -927,12 +1067,19 @@ def build_output(agg, diag, out_path, root):
         "- Kolom warna di sheet 'Top 300 Mobil': hanya warna POLOS. "
         "Strip/Elite/Epic/Warrior dikeluarkan; Premium/Exclusive/Transparan ikut "
         "(Silver=Premium). Warna gen-bocor/junk dibuang. Kolom diurut warna "
-        "terlaris; ada baris TOTAL + baris % tiap warna (dari total warna polos).",
+        "terlaris; ada blok jumlah + blok '% <warna>' (persen tiap warna dari total "
+        "warna polos model itu). Baris TOTAL: blok % = persen dari SELURUH warna polos.",
+        "- GEN disetarakan dgn list Undercover terkini bila ada file acuan "
+        "mass-update (daftar varian) di folder: gen historis (Gen 1F/2F/tahun/dll) "
+        "dipetakan ke gen listing Reguler Undercover (mis. Avanza -> Gen 1-2 / Gen 3) "
+        "via kode SKU / tahun / nomor gen. Tanpa file acuan, gen dibiarkan apa adanya.",
     ]:
         L.append((t, S_DEFAULT))
     L.append(("", S_DEFAULT))
     L.append(("DIAGNOSTIK (cek kewajaran angka)", S_BOLD))
     for t in [
+        "- File acuan varian (mass-update) terbaca: {:,} | model punya gen kanonik: {:,}".format(
+            diag.get("ref_files", 0), diag.get("ref_models", 0)),
         "- Total baris order terbaca: {:,}".format(diag.get("rows_total", 0)),
         "    Shopee: {:,} | TikTok: {:,} | Lazada: {:,}".format(
             diag.get("rows_shopee", 0), diag.get("rows_tiktok", 0), diag.get("rows_lazada", 0)),
@@ -976,16 +1123,35 @@ def main():
 
     print("Memindai folder: %s" % os.path.abspath(root))
     files, tmpdirs = gather_files(root)
-    print("Menemukan %d file order (xlsx/zip)." % len(files))
+    print("Menemukan %d file (xlsx/zip)." % len(files))
     if not files:
         print("Tidak ada file .xlsx/.zip. Pastikan folder benar.")
         sys.exit(1)
 
-    agg = defaultdict(lambda: {"qty": 0, "value": 0.0, "skus": set()})
+    # Fase 1: baca semua file -> bangun acuan gen kanonik (mass-update) +
+    #         kumpulkan item order.
+    canon_reg = defaultdict(dict)
+    canon_all = defaultdict(dict)
+    order_items = []
     diag = Counter()
+    nref = 0
     for i, (path, label) in enumerate(files, start=1):
         print("  [%d/%d] %s :: %s" % (i, len(files), label, os.path.basename(path)))
-        process_workbook(path, agg, diag)
+        kind = scan_workbook(path, canon_reg, canon_all, order_items, diag)
+        if kind == "ref":
+            nref += 1
+    canonical = finalize_canonical(canon_reg, canon_all)
+    diag["ref_files"] = nref
+    diag["ref_models"] = len(canonical)
+    if nref:
+        print("File acuan varian: %d | model dgn gen kanonik: %d (gen disetarakan)" % (nref, len(canonical)))
+    else:
+        print("Tidak ada file acuan mass-update -> gen dibiarkan apa adanya.")
+
+    # Fase 2: proses tiap item order (pakai acuan gen)
+    agg = defaultdict(lambda: {"qty": 0, "value": 0.0, "skus": set()})
+    for it in order_items:
+        count_item(it[0], it[1], it[2], it[3], it[4], it[5], it[6], it[7], agg, diag, canonical)
 
     print("Menulis output ...")
     nmodel, gq, gv = build_output(agg, diag, out_path, os.path.abspath(root))
