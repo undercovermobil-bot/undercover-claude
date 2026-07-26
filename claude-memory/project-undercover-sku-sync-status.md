@@ -312,3 +312,33 @@ Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 33
   - **Verifikasi**: 0 duplikat SKU baru di Lazada (4 duplikat di Lazada Undercover = pre-existing dari sebelum sesi ini, soal BMW X5 Premium, belum diperbaiki — perlu keputusan user terpisah). Validation harness re-run sesudah apply: 80% match, 3% mismatch, mismatch count malah turun (banyak baris offset yg tadinya "salah" sekarang jadi "benar").
 - **File yg berubah hari ini (semua ada di scratchpad, sebagian sudah dikirim ke user)**: `MASTER_from_drive_20260715.xlsx`, `SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx` (864 baris Otoprotection ditambahkan), + listing: UA Shopee1-4, UA TikTok, UA Lazada, OT Shopee1-2, OP Shopee1, OP TikTok2, SP Shopee1-2, SP TikTok, SP Lazada.
 - **Pelajaran kuat baru**: kalau ada kategori (Strip/Transparan/Exclusive) yg generasinya LEBIH KASAR dari kategori lain (Reguler) utk model yg sama, JANGAN bangun tabel generasi (baik SET label maupun TAHUNnya) secara model-wide — harus per (model,kategori), soalnya label yg sama (mis. "Gen 1") bisa punya arti/rentang tahun BERBEDA TOTAL antar kategori. Ini kelas bug yg sama dgn "dual-scheme" yg sudah diketahui sebelumnya, tapi lebih halus (tidak kelihatan dari nama label yg konsisten "Gen N", cuma kelihatan kalau dicek rentang tahunnya).
+
+## RENCANA BESAR BARU: SKU berbasis FORMULA (mulai 2026-07-24) — MASIH DESAIN, BELUM DIEKSEKUSI
+
+**Instruksi eksplisit user 2026-07-24 (override aturan "7 aturan final jangan diubah"):** ubah cara tulis SKU. **Jumlah kode SKU (segmen generasi) = jumlah FORMULA (ukuran jahitan cover), BUKAN jumlah generasi.** Fokus tetap ke daftar terlaris terbaru.
+
+**Sumber data:** file upload user `Data_Mobil_Lebih_dari_1_Formula.xlsx` **Sheet2** (versi terakhir 213 model, kolom: No, Nama Mobil, Generasi/grup, Total Formula, Notes). Ada 2 versi upload — pakai yg TERBARU (229eb2b0..., 213 model). Snapshot lokal: `_formula_config_v2.json` (config per model), `_formula_models_v2.json`.
+
+**Logika final (dikonfirmasi lewat contoh user):**
+- **Total Formula = 1** → SEMUA generasi collapse jadi SATU kode. Kode = **G1** (relabel) utk model bergenerasi-angka. Contoh user: Kijang (Gen1,2,3→semua G1), Hilux (4 grup→G1), Rocky (F70/F300+Gen2 → G1, "karena ada urutan Gen 2 nya, kalau 1 formula tulis G1, berlaku utk produk lain kasus sama").
+- **Total Formula = jumlah grup** → tiap grup 1 kode = **nomor generasi PERTAMA di grup**. Contoh: Avanza (Gen1-2→G1, Gen3→G3), Corolla 9 formula (Gen1-2→G1, Gen3→G3, ... Gen9,10,12→G9, Gen11→G11), Civic 11→G1..G11.
+- **IN-BETWEEN** (formula >1 tapi ≠ jumlah grup) → cuma Mini Cooper (formula 2, 5 grup). DITUNDA (user bilang "logic menyusul").
+- Segmen bagian lain SKU (MEREK-MODEL-TOKO-KATEGORI-WARNA) TIDAK berubah, cuma segmen generasi.
+- **Model bergenerasi-NAMA (bukan angka)** tetap pakai nama, TIDAK dipaksa G1: Hardtop→J40 (user konfirm; ada listing lama pakai G4 yg perlu direvisi ke J40), HiAce→COM, Starlet→KTK/KPS (sudah benar), Jimny→3P/5P, BMW M3→chassis E30/E36/dst, Jeep Wrangler→TJ/JK/JL. (Beda dari Rocky yg PUNYA Gen-angka.)
+
+**MASALAH KRUSIAL yg ditemukan (belum diputuskan user):**
+- **17 model collapse yg master-nya TIDAK punya G1** (Vellfire punya G2+ saja, Suzuki Carry G6+, HRV G2+, Rocky F7+G2, dst). Kalau "paksa G1" (Opsi A, rekomendasi Claude, ikut instruksi Rocky) → **MASTER harus ikut ditulis ulang** supaya punya segmen G1. Kalau "pakai terendah yg ada" (Opsi B) → master aman tapi kode tak seragam. **User BELUM jawab** (AskUserQuestion 2x tak dijawab; user prefer prosa & bilang "lempar saja pertanyaannya" tapi lalu re-send file yg sama tanpa jawab).
+- **Cakupan** (listing saja vs listing+master) juga belum dijawab.
+
+**Cross-check Gen/Tahun file-formula vs master UA (`Rancangan_SKU_Formula_DRAFT_2026-07-24.xlsx`):** 46 selisih. **User klarifikasi: FILE FORMULA yg jadi patokan** (bukan master UA), karena master UA sering KURANG lengkap. Poin penting user:
+- Grup seperti "Gen 1-2" TIDAK harus ada sbg grup di listing/master — kalau ada Gen 1 saja atau Gen 2 saja itu sudah dianggap ada & sesuai. Termasuk kalau cuma ada di varian **Exclusive** (Reguler slot varian terbatas krn ada varian warna; Exclusive bisa muat lebih banyak generasi krn tanpa warna). → Jadi banyak flag "Gen belum ada di master UA" itu FALSE ALARM.
+- Vellfire: listing pakai Gen 2..Gen 4 (mulai Gen 2, bukan 1), tapi formula "Gen 1-3" → collapse G1. Di listing skrg tidak konsisten (ada G1, G2, G3F). 
+- Wuling Air EV: listing tahun sampai 2026 (formula 2022-2026 benar, master 2022-2024 outdated). Skrg sudah mostly G1.
+
+**Sudah dibuat (deliverable, dikirim ke user):**
+- `Rancangan_SKU_Formula_DRAFT_2026-07-24.xlsx` — 4 sheet: logika, peta kode SKU baru per model, cek Gen-Tahun vs UA, perlu-keputusan.
+- `Pilot_SKU_Formula_PREVIEW_2026-07-24.xlsx` — PREVIEW before→after 8 model contoh (Kijang/Avanza/Corolla/Hilux/Vellfire/Rocky/Hardtop/Civic). Hasil: **1.592 baris akan berubah** di 8 model itu (Hilux 444, Kijang 398, Corolla 350, Rocky 296, Vellfire 87, Hardtop 17; Avanza & Civic 0 = sudah benar). **102 SKU-baru-unik belum ada di master** (butuh Opsi A master-update). **132 SKU jadi kembar di Lazada** (skema collapse bikin banyak varian 1 SKU → Lazada wajib unik → varian perlu digabung/dihapus).
+
+**Script:** parser Sheet2 + config di inline python (belum dijadikan file .py permanen). Preview generator inline. `variant_new_seg()`: collapse→G1 (atau nama utk named-gen), per-row→match gen-number ke grup lalu ambil code grup.
+
+**STATUS: NUNGGU user jawab 2 keputusan (kode collapse Opsi A/B, cakupan listing±master) + ACC apakah pilot dulu atau langsung semua.** JANGAN eksekusi rewrite listing/master sampai dijawab — ini perubahan besar & sulit dibalik. Belum ada 1 pun SKU listing/master yg diubah utk skema formula ini.
