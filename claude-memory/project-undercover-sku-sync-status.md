@@ -416,7 +416,38 @@ Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 33
 - **Verifikasi sesudah: 2.778 baris cek warna → 100% benar, 0 sisa salah.**
 - **Jebakan yg kena**: menjalankan `--apply` lalu verifikasi dry-run dalam SATU perintah bikin `_motor_warna_changes.json` KETIMPA jadi kosong (dry-run kedua menemukan 0 perubahan lalu menulis ulang file log). Perbaikannya sendiri tetap berhasil — dikonfirmasi dgn baca ulang isi file. **Lain kali: pisahkan run apply dan run verifikasi, atau jangan pakai nama file log yg sama.**
 
+## Riset LAZADA + BigSeller SKU Mapping Rules (2026-07-27)
+
+**Masalah**: skema formula bikin banyak varian 1 listing berbagi SKU, padahal Lazada wajib Seller SKU unik. User menolak solusi "gabung varian manual di Lazada" (terlalu lama).
+
+**Riset ke dokumentasi BigSeller** (artikel yg user kirim `help.bigseller.com/in/detailPage/4/1/4142` — **403 kalau di-WebFetch langsung, perlu login**; isinya didapat lewat WebSearch):
+BigSeller punya fitur **SKU Mapping Rules** yg bisa mencocokkan beberapa Store SKU ke SATU merchant/warehouse SKU dgn mengabaikan awalan/akhiran. Dua mode:
+1. **Berdasarkan JUMLAH KARAKTER** — "Ignore Last N characters". Contoh resmi: `AAQ-03` + ignore last 1 → `AAQ-0`. **Butuh panjang akhiran KONSISTEN.**
+2. **Berdasarkan PEMISAH (delimiter)** — isi delimiter tetap (mis. `&`) + pilih kemunculan ke-berapa dari kanan; semua setelah delimiter itu dibuang. Contoh resmi: `Red&001&xxs&Shopee` + delimiter `&` ke-1 → `Red&001&xxs`. **TIDAK butuh panjang konsisten.**
+
+**Jawaban utk pertanyaan user "apakah perlu abaikan 3 karakter akhir? jumlah karakternya konsisten 3 ngga?":**
+- Dgn akhiran yg saya rancang sebelumnya (`-G1`,`-G11`,`-EPIC`,`-KTK`), panjangnya **TIDAK konsisten**: terukur 2–6 karakter (6.710 baris 3-char, 538 4-char, 499 5-char, 159 6-char, 4 2-char). Jadi **"ignore last 3" akan MERUSAK** sebagian SKU.
+- Maka ada 2 jalan benar:
+  - **Opsi A — DELIMITER (rekomendasi)**: pakai pemisah yg TIDAK pernah muncul di SKU dasar, mis. `_` atau `#` → `HND-CTY-UA-P-G1-SLV_G3`. Rule BigSeller: Ignore Suffix + delimiter `_` + kemunculan ke-1. Panjang bebas, dan SKU tanpa `_` tidak terpengaruh. **Sudah dicek: karakter non-alfanumerik yg ADA di Seller SKU Lazada saat ini cuma `-` , jadi `_` dan `#` dua-duanya aman.**
+  - **Opsi B — PANJANG TETAP**: semua SKU Lazada diberi akhiran 2 digit `-01`,`-02`… (selalu tepat 3 karakter termasuk tanda minus) lalu rule "ignore last 3". Konsisten TAPI harus disematkan ke **SELURUH 21.031 baris** Lazada berformat master (kalau ada baris tanpa akhiran, rule-nya akan memotong SKU itu secara salah). Maks varian berbagi 1 SKU = 10, jadi 2 digit cukup.
+- Script `fix_lazada_unik.py` sudah ada (dry-run + `--apply`), tapi **masih memakai akhiran gaya lama `-G3` yg panjangnya tidak konsisten** → HARUS diubah dulu ke Opsi A atau B sebelum dipakai. Simulasi sebelumnya: 7.910 baris diberi akhiran → 0 SKU kembar tersisa di kedua file Lazada.
+
+## Bug matcher tipe-badan + audit "kasus serupa Gran Max" (2026-07-27)
+
+**User curiga baris "Daihatsu Gran Max" polos itu salah karena Gran Max harusnya ada tipe Minibus/Pickup — TERNYATA BENAR, dan ada BUG di matcher saya.**
+- Master SUDAH benar membedakan: **Gran Max Minibus = `DHT-GMX`**, **Gran Max Pick Up = `DHT-GMXP`**.
+- **BUG**: listing menulis "Minibus"/"Pick Up" sedangkan file formula menulis "MB"/"PU" → matcher tak bisa menyamakan → 295 baris jatuh ke base "Daihatsu Gran Max" yg berstatus DITUNDA → **barisnya kelewat, tidak ikut diproses** (untung tidak menulis SKU salah).
+- **Fix**: tambah `ALIAS_RE` + `_prenorm()` di `apply_formula_sku.py` — rewrite nama listing sebelum matching: `Gran Max Minibus→Gran Max MB`, `Gran Max Pick Up→Gran Max PU`, `Carry Pick Up|Carry PU→Carry Pickup`. Sesudah fix, `dilewati_model_ditunda` turun 1.946→1.651 dan semua baris tsb ternyata **SKU-nya memang sudah G1** (0 perubahan data diperlukan) — jadi ini murni perbaikan akurasi matching, bukan koreksi data.
+
+**Audit sistematis "kasus serupa"** (cari nama model yg jadi PREFIX nama model lain): **16 kasus**. Mayoritas SAH (mobil beneran beda): Pajero vs Pajero Sport, Xpander vs Xpander Cross, Yaris vs Yaris Cross, City vs City Sedan/Hatchback, Mazda 2 vs Sedan/Hatchback, Civic vs Civic Type R/Hatchback, Feroza vs Feroza Long, Datsun Go vs GO Plus, APV vs APV Arena/Luxury, Kia Rio vs Rio Hatchback, Avega vs Avega Hatchback, Tiggo 8 vs Tiggo 8 Pro, Terra vs Terrano. **Diverifikasi: matcher mengarahkan semuanya dgn BENAR** (Type R→config Type R, Hatchback→config Hatchback, dst).
+- **Ejaan kembar ditemukan**: `Nissan X-Trail` vs `Nissan XTrail` (dua entri utk mobil sama; dua-duanya TF=1 jadi tak berdampak, tapi sebaiknya disatukan di file formula).
+- **SISA MASALAH GRAN MAX (perlu jawaban user)**: 7 baris listing namanya TANPA tipe — "Cover Mobil Daihatsu Gran Max **Premium**" (3), "**Exclusive**" (3), "**Transparan**" (1). Ini genuinely ambigu: Minibus atau Pick Up? Sekarang di-skip.
+- **Keluarga Suzuki Carry** ternyata di master ada **3 model terpisah**: `Suzuki Carry`=CAR (102 baris), `Suzuki Carry Futura`=CRF (66), `Suzuki New Carry Pick-Up`=NCR (66). Tapi file formula user cuma punya "Suzuki Carry" & "Suzuki Carry Pickup" — **Carry Futura tidak ada di file formula**. Perlu dikonfirmasi user.
+
 **Fakta tambahan yg ditemukan saat menjawab pertanyaan user (2026-07-27):**
+- **Produk MOTOR cuma ada di Undercover Autocare** — dikonfirmasi scan seluruh 17 file: UA Shopee3 (1.090 baris/232 listing), UA Shopee4 (580/124), UA TikTok (1.574/411). **Otonation, Otoprotection, Smartprotection TIDAK menjual cover motor.** Yg terdeteksi di luar itu: 9 baris di SP Shopee1 (listing "Body Cover Motor / Selimut Motor <model>" — SKU-nya KOSONG semua, cuma varian Hitam, kemungkinan listing lama/nyasar) + 2 baris di UA Shopee2 yg sebenarnya produk shampoo ("Snow Wash ... Mobil & Motor"), bukan cover motor. Jadi perbaikan 815 baris warna kemarin memang SUDAH mencakup semua toko yg relevan.
+- **Warna Premium motor = ABU** (dikonfirmasi user: "sama seperti yg di premiumnya cover mobil").
+- **Produk 'Maxi' diabaikan dulu** (instruksi user).
 - **'Maxi'** = listing `Body Cover Motor / Sarung / Selimut Motor Maxi` di **UA TikTok saja**, 5 baris warna, **SKU-nya kosong semua**. Kemungkinan besar ini lini Yamaha Maxi (bukan model spesifik) — nunggu konfirmasi user.
 - **Premium motor**: 433 baris, teks variannya **227 KOSONG + 206 literal "Default"** — artinya listing Premium motor memang **tidak punya pilihan warna sama sekali** (produk tunggal). "Default" cuma placeholder marketplace, bukan nama warna. Jadi pertanyaan sebenarnya ke user: cover motor Premium itu fisiknya warna apa (biar segmen warna SKU-nya benar)?
 - **Daihatsu Gran Max polos (No. 126)** TERNYATA = baris yg di-highlight **ungu (FFFF00FF)** — sama seperti Mitsubishi Strada Triton. Jadi **duplikat → memang harus di-skip**, bukan model tersendiri. Cuma ada 2 baris ungu di seluruh Sheet2 dan dua-duanya sudah masuk daftar BLOCKED. **Pertanyaan "Gran Max polos" SELESAI — tidak perlu jawaban user lagi.** Yang nyata cuma Gran Max **PU** (pickup) & **MB** (minibus).
