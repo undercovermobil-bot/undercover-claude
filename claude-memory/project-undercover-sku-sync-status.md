@@ -469,6 +469,22 @@ BigSeller punya fitur **SKU Mapping Rules** yg bisa mencocokkan beberapa Store S
 - **Navara**: 442 baris listing + 132 baris master (×2 file) diubah. Model terdampak: 1 (Nissan Navara).
 - **Lazada Opsi A**: **7.976 baris diberi akhiran `_<tag>`** → **SKU kembar tersisa = 0** di kedua file Lazada. Aturan yg harus diset user di BigSeller: **Ignore Suffix, delimiter `_`, kemunculan ke-1 (dari kanan)**.
 
+**SETTING BIGSELLER TERBUKTI BENAR (screenshot user 2026-07-27):** menu *Aturan Hubungan Pemetaan SKU* → centang "Jika SKU Toko Diproses Berdasarkan Aturan dan Sama Dengan Nomor SKU…" → radio **"Abaikan Akhiran"** → sub-opsi ke-3 **"Abaikan Karakter Pemisah Tetap dan Akhiran"**, pemisah **`_`**, *Saat Ada Beberapa Karakter Pemisah, Gunakan Pemisah* = **1**.
+- **Jebakan yg sempat terjadi**: user awalnya mengisi angka **2** → kolom "Tes Aturan" menampilkan hasil TIDAK berubah (`HND-CTY-UA-P-G1-SLV_G1` tetap utuh) karena sistem mencari pemisah ke-2 sedangkan SKU kita cuma punya satu `_`. Setelah diubah ke **1**, hasil tes benar → `HND-CTY-UA-P-G1-SLV`.
+- Sub-opsi lain di halaman itu: "Abaikan Akhiran N Karakter" (butuh panjang seragam — TIDAK cocok utk kita) dan "Abaikan Akhiran Karakter". JANGAN isi pemisah dgn `-` (SKU dasar punya 5 tanda `-`).
+- Halaman itu punya kolom **"Tes Aturan"** — pakai utk membuktikan SKU Shopee/TikTok (tanpa `_`) tetap utuh sebelum Simpan.
+
+## SKU MOTOR FINAL dibuat (2026-07-27) — `build_motor_sku.py`
+
+Format final (Opsi B pilihan user): **`MEREK-MODEL-TOKO-KATEGORI-MTR-WARNA`** (6 segmen), mis. `HND-VAR125-UA-R-MTR-ABU`.
+- Kategori: R=Reguler polos, S=Strip(Elite), P=Premium. Warna: ABU/HTM/MRH/BRU/GRN; Elite: EAB/EBR/EGR/EMR. Toko selalu `UA` (motor cuma dijual di Undercover Autocare).
+- **Premium → selalu `P` + `ABU`** (varian di listing kosong/"Default" krn Premium tak punya pilihan warna; user konfirmasi warnanya Abu).
+- **'Maxi' di-skip** (`SKIP_MODELS`) sesuai instruksi user.
+- Nama model disatukan lewat nomor CM lama (`CM0*(\d+)`) supaya ejaan berbeda ('Aerox' vs 'Yamaha Aerox') jadi satu model.
+- Generator kode model sama dgn rancangan sebelumnya: token angka utuh, token campur huruf-angka s/d 7 char, huruf murni 3 char, total ≤10, tabrakan diberi suffix angka.
+- **HASIL: 3.234 baris, 227 model unik, 1.785 SKU unik, 0 baris gagal.**
+- **BELUM di-apply ke file listing** — baru dibuat daftarnya utk direview user (`SKU_MOTOR_Final_2026-07-27.xlsx`, 4 sheet: Ringkasan, Daftar SKU Motor, Peta Kode Model, SKU Unik). Jalankan `python3 build_motor_sku.py --apply` kalau user sudah ACC.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
