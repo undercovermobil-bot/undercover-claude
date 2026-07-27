@@ -485,13 +485,17 @@ Format final (Opsi B pilihan user): **`MEREK-MODEL-TOKO-KATEGORI-MTR-WARNA`** (6
 - **HASIL: 3.234 baris, 227 model unik, 1.785 SKU unik, 0 baris gagal.**
 - **BELUM di-apply ke file listing** — baru dibuat daftarnya utk direview user (`SKU_MOTOR_Final_2026-07-27.xlsx`, 4 sheet: Ringkasan, Daftar SKU Motor, Peta Kode Model, SKU Unik). Jalankan `python3 build_motor_sku.py --apply` kalau user sudah ACC.
 
+**JAWABAN USER 2026-07-27 (lanjutan):**
+- **SKU motor DISETUJUI** ("motor sudah sesuai") → `build_motor_sku.py --apply` dijalankan.
+- **Nissan X-Trail vs XTrail = mobil yg SAMA**, typo di judul listing. **DICEK: sebenarnya TIDAK ADA MASALAH SKU** — master cuma punya SATU entri `Nissan X-Trail` → kode `XTR` (330 baris), dan SEMUA variasi ejaan di listing (XTrail / X-Trail / Xtrail) sudah mengarah ke `XTR`. Jadi typo-nya murni kosmetik di judul produk marketplace, tidak mempengaruhi SKU. Satu-satunya sisa: 3 baris "Nissan X-Trail Transparan" SKU-nya masih non-master (gap terpisah).
+- **Suzuki Carry Futura**: user → "kalau tidak ada di listing e-commerce tidak perlu di input". Jadi CRF **tidak usah diurus/diinput**, biarkan saja di master (tidak dipakai).
+- User minta **fokus bikin file siap upload dulu**; pertanyaan sisa menyusul.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
 3. **Honda Civic Hatchback** — Total Formula masih '?' di file formula.
-4. **Suzuki Carry Futura** — ada di master, tidak ada di listing; dihapus atau dibiarkan?
-5. **Gran Max "Blindvan"** — dianggap sama dgn Minibus (GMX)?
-6. **Nissan X-Trail vs XTrail** — dua entri utk mobil sama di file formula, sebaiknya disatukan.
+4. **Gran Max "Blindvan"** — dianggap sama dgn Minibus (GMX)? Lokasi barisnya: **6 baris di UA Lazada** (listing "…Gran Max Premium" & "…Gran Max Exclusive", varian "Blindvan (2008-2024)" / "Pickup (2008-2024)" / "Model Lain-Custom", SKU masih placeholder angka Lazada) + **1 baris di SP TikTok** ("…Gran Max Transparan") yg SKU-nya SUDAH benar `DHT-GMXP-SP-T-G1-TRP`.
 - **'Maxi'** = listing `Body Cover Motor / Sarung / Selimut Motor Maxi` di **UA TikTok saja**, 5 baris warna, **SKU-nya kosong semua**. Kemungkinan besar ini lini Yamaha Maxi (bukan model spesifik) — nunggu konfirmasi user.
 - **Premium motor**: 433 baris, teks variannya **227 KOSONG + 206 literal "Default"** — artinya listing Premium motor memang **tidak punya pilihan warna sama sekali** (produk tunggal). "Default" cuma placeholder marketplace, bukan nama warna. Jadi pertanyaan sebenarnya ke user: cover motor Premium itu fisiknya warna apa (biar segmen warna SKU-nya benar)?
 - **Daihatsu Gran Max polos (No. 126)** TERNYATA = baris yg di-highlight **ungu (FFFF00FF)** — sama seperti Mitsubishi Strada Triton. Jadi **duplikat → memang harus di-skip**, bukan model tersendiri. Cuma ada 2 baris ungu di seluruh Sheet2 dan dua-duanya sudah masuk daftar BLOCKED. **Pertanyaan "Gran Max polos" SELESAI — tidak perlu jawaban user lagi.** Yang nyata cuma Gran Max **PU** (pickup) & **MB** (minibus).
