@@ -599,6 +599,22 @@ menunjukkan "0 baris berubah" walau pemetaan 3P/5P-nya sudah benar.
 **Pelajaran**: kalau sebuah model dilaporkan "0 baris berubah" padahal pemetaannya jelas benar,
 CURIGAI dulu filter format SKU-nya — bukan logika pemetaannya.
 
+**HASIL APPLY PIPELINE DI FILE BARU (2026-07-27):**
+- Tahap 1 skema formula: **33.554 baris diubah, 141 model**. (24.312 sudah benar; 11.559 dilewati krn SKU belum format standar; 660 model ditunda; 1 varian tak terbaca)
+- Tahap 2 SKU motor MTR: **3.227 baris, 227 model, 1.785 SKU unik, 0 gagal**
+- Tahap 3 Lazada akhiran `_`: **7.503 baris dibuat unik**
+- **Mini Cooper terverifikasi 10/10 pola varian benar** (Paceman/Hatch/Clubman/Countryman/Roadster × 3-5 Pintu semua jatuh ke 3P/5P sesuai jumlah pintu).
+
+**VERIFIKASI KEUTUHAN — `cek_keutuhan.py` + pembanding `BARU_BASE/`:**
+Karena openpyxl MENULIS ULANG seluruh workbook saat save, ukuran file bisa menyusut drastis
+(mis. SP_TikTok 4,07MB→1,6MB). **Ukuran file BUKAN indikator kerusakan** — yg harus dicek: jumlah baris,
+nama produk tak berubah, dan tak ada SKU hilang.
+- Alur yg benar: `repair_xlsx.py BARU BARU_BASE` utk bikin baseline bersih (file BARU asli TIDAK bisa
+  dibuka openpyxl), lalu bandingkan `BARU_BASE` vs `BARU_FIX` pakai openpyxl (baca nilai sel sungguhan).
+- **JANGAN** hitung sel lewat parsing XML `<v>` mentah — openpyxl menulis string sbg inline/shared string
+  berbeda dari Shopee, jadi hitungannya jadi 0 palsu (sempat bikin 14/19 file terlihat "BEDA" padahal aman).
+- Hasil sementara 7 file pertama: baris identik, 0 nama berubah, **0 SKU hilang** → aman.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
