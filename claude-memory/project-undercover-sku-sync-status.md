@@ -588,6 +588,17 @@ Pakai: `python3 repair_xlsx.py <dir_sumber> <dir_hasil>`.
   berdasarkan kata kunci "3 pintu"/"5 pintu" di teks varian. Tipe bodi diabaikan sesuai instruksi user
   ("kalaupun misal ada paceman 3 pintu, bisa dijadikan 3P saja"). Sisa BLOCKED tinggal 3 model.
 
+**BUG `MASTERFMT` — segmen generasi huruf campur ditolak (ketemu 2026-07-27):**
+Pola lama `^[A-Z0-9]+-[A-Z0-9]+-(UA|OT|SP|OP)-[A-Z]-[A-Z0-9]+-[A-Z0-9]+$` mensyaratkan segmen
+generasi HURUF BESAR semua. Padahal sebagian SKU lama memakai nama tipe bodi sbg segmen generasi
+dgn huruf campur: `MNI-COO-UA-R-Roadster-BRU`, `MNI-COO-SP-S-Hatch3Pintu-S3M`, `MNI-COO-UA-R-Paceman-MRH`.
+Akibatnya baris2 itu dianggap "bukan format standar" → **dilewati diam-diam**, dan Mini Cooper
+menunjukkan "0 baris berubah" walau pemetaan 3P/5P-nya sudah benar.
+**Fix**: longgarkan HANYA segmen generasi jadi `[A-Za-z0-9]+`, segmen lain tetap ketat.
+**Dampak**: +224 baris & +2 model ikut terproses (33.330→33.554 baris, 139→141 model).
+**Pelajaran**: kalau sebuah model dilaporkan "0 baris berubah" padahal pemetaannya jelas benar,
+CURIGAI dulu filter format SKU-nya — bukan logika pemetaannya.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
