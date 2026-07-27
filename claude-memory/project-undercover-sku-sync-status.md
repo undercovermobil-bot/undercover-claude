@@ -491,6 +491,37 @@ Format final (Opsi B pilihan user): **`MEREK-MODEL-TOKO-KATEGORI-MTR-WARNA`** (6
 - **Suzuki Carry Futura**: user → "kalau tidak ada di listing e-commerce tidak perlu di input". Jadi CRF **tidak usah diurus/diinput**, biarkan saja di master (tidak dipakai).
 - User minta **fokus bikin file siap upload dulu**; pertanyaan sisa menyusul.
 
+## FILE LISTING BARU di Drive (diupload user 2026-07-27) — INVENTARIS LENGKAP
+
+User upload export listing TERBARU ke folder BARU di dalam `List Produk SKU`
+(`1GG8ZHvJjIF5oTfBHDB1iOgPrsdNux_MF`). Dibuat oleh akun **chandraadyasta@gmail.com**
+(bukan under.covermobil), 2026-07-27 ~12:37-12:41. **Struktur & fileId:**
+
+- **`Under Cover`** `178LjcV8_eDLjdIGjKROOGzbcK6tSSQ-T`
+  - `Shopee UC` `19W-wPkhVrK3QIlHr2HFNNO0Bd5IN6-mq`: 1.xlsx `1k0d7PyRFeyHXfAtOkaJy_Kviyy06rRcc` (346KB), 2.xlsx `1e3c50KJXy6KePp27e79T8FUxEEOk3Vms` (345KB), 3.xlsx `1PvkGbnxQGoQuiw9OB13Vi14t585sUX9Y` (338KB), 4.xlsx `15dMvryqnn1RaP0Ft0nCbjXycc9f1simT` (376KB), 5.xlsx `1lbq2I9_hoQxsowdTDS-Iv3KWHE53p4ZM` (156KB)
+  - `Tiktok UC` `1qRXmmKYj_jckCX_wctIr2o5b7-0TKZc6`: template_1 `1jamQV1YV1_5wkBhvpMoiepBcifTOvc05` (22KB), template_2 `1bo6SpIwvKoTIlA_IoiNqcnwBrjyvkdXM` (25KB), template_3 `1JYyIbScLFEO-gb9MNypo8BwidOBs5Clq` (5,76MB)
+  - `Lazada UC.xlsx` `1xnlJ8glIRumWt0irCvoS33yc-SFCwgqz` (2,09MB)
+- **`Smartprotection`** `1Puv1j93LV1MTVQZkiienQTd2qpOQ_ZPw`
+  - `Shopee STP` `1hMwhHtR-garF6v1OzRsL5D5fe45BxymD`: 1.xlsx `1lwj4vcFCCQ9f5PwwOVdn9SgY5VFE-mWf` (377KB), 2.xlsx `1O4r8sdqn8izzoPP0UGIuz9V6vj_lHWZA` (164KB)
+  - `Tiktok STP.xlsx` `10mWZLXsqY7AV5eanh4p9aSlfEawO3vsi` (4,07MB) | `Lazada STP.xlsx` `1BwvIAGqj5WwIGq3BXy7LU6Yz2yCQxwef` (760KB)
+- **`Otoprotection`** `1kfrsCGC3HzO2WI9fu-tbDrXTUsiB8dMX`
+  - `Shopee OTP` `1bv7eDt6q9p7SfR0-EZu3f1Z4XKxDM7H9`: 1.xlsx `1WjBI45XobHDAge0CuCFsedBMb_rcy7bo` (350KB), 2.xlsx `16VZ4Dwz6zqTvNx3KEMmFIvhcqcaq0aDj` (77KB)
+  - `TikTok OTP` `1I_cwe4L8Y_3ELtDkekOMTueQgtDhFDqJ`: template_1 `1E5z1fmuBMcwNIFfoiRAQJZRTML-sLHSi` (2,77MB), template_2 `1X-sMkv-LUn_rYmtDEaltYesKzkzFyRvZ` (4,29MB)
+  - (tanpa Lazada — konsisten, OP memang tidak jualan di Lazada)
+- **`Otonation`** `1I3olV8d5XZm05eOh-hxbkBwAXa7Qu3KD`
+  - `Shopee Otonation` `1dY3_VrqvZc1LWrVM5h-JTatS8XrpSBeC`: 1.xlsx `10-8qu6D8c2L8oklPkYWIWLqDYLMkTJBK` (337KB), 2.xlsx `1k-7HZAs3iHNZaRYnBCR5c0rBTItEx4WA` (322KB)
+  - (tanpa TikTok/Lazada — konsisten, OT Shopee-only)
+
+Total **19 file**. Cakupan channel COCOK dgn 17 file kerja yg sudah ada (+2 file TikTok UC kecil).
+**`Mini Cooper` ada di 4 file** (dicek pakai `fullText contains`): `1.xlsx` di masing-masing folder Shopee UC / Shopee STP / Shopee OTP / Shopee Otonation.
+
+**KENDALA TEKNIS PENTING (diuji 2026-07-27, jangan buang waktu mengulang):**
+- `mcp__Google_Drive__download_file_content` **BERHASIL** utk file kecil — file 22KB terunduh utuh sbg base64. Jadi mekanismenya jalan.
+- TAPI base64 ≈ 1,33× ukuran file, dan hasilnya masuk ke context. File 340KB → ~460KB base64 (~115rb token); file 5,76MB → ~7,7MB. **TIDAK MUNGKIN** ditarik lewat MCP tanpa menghabiskan context.
+- `read_file_content` (representasi teks) juga berisiko sama utk file ratusan KB, dan dokumentasinya menyatakan konten bisa terpotong utk file besar.
+- **JALUR YG TERBUKTI: minta user melampirkan file langsung di chat** → mendarat di `/root/.claude/uploads/…` dan bisa dibaca openpyxl secara lokal TANPA biaya context. Ini yg dipakai utk `Mobil_Terlaris.xlsx` & `Data_Mobil_Lebih_dari_1_Formula.xlsx` dan lancar.
+- Catatan: ini melengkapi keterbatasan lama di [[project-undercover-git-drive-setup]] (upload besar ke Drive gagal) — sekarang terbukti **download besar dari Drive juga tidak praktis**.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
