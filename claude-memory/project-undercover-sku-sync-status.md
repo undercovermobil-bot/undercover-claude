@@ -522,6 +522,43 @@ Total **19 file**. Cakupan channel COCOK dgn 17 file kerja yg sudah ada (+2 file
 - **JALUR YG TERBUKTI: minta user melampirkan file langsung di chat** → mendarat di `/root/.claude/uploads/…` dan bisa dibaca openpyxl secara lokal TANPA biaya context. Ini yg dipakai utk `Mobil_Terlaris.xlsx` & `Data_Mobil_Lebih_dari_1_Formula.xlsx` dan lancar.
 - Catatan: ini melengkapi keterbatasan lama di [[project-undercover-git-drive-setup]] (upload besar ke Drive gagal) — sekarang terbukti **download besar dari Drive juga tidak praktis**.
 
+## FILE BARU DITERIMA LEWAT LAMPIRAN CHAT (2026-07-27) — 19/19 LENGKAP
+
+User melampirkan SEMUA 19 file ke chat (ukuran cocok persis dgn inventaris Drive), mendarat di
+`/root/.claude/uploads/77f87f91-.../`. **Jalur lampiran chat TERBUKTI bisa utk file besar** (sampai 5,76MB) —
+beda dgn konektor Drive yg mentok. Catat: ini cara yg dipakai ke depan.
+
+**TEMUAN PALING PENTING — file baru ini BUKAN berisi hasil kerjaku, tapi EXPORT MENTAH dari marketplace:**
+- Toyota Kijang di UC4 masih `{G1:17, G2:17, G3:17, G4:17}` → skema formula (semua→G1) **BELUM masuk**.
+- Produk motor masih pakai kode `CM…` lama (UC1=8, UC3=1.055, UC4=364 baris) → format `MTR` **BELUM masuk**.
+- Artinya: user belum meng-upload file hasil kerjaku ke marketplace, jadi export ini = **kondisi LIVE sekarang**.
+- **KONSEKUENSI**: file hasil kerjaku (17 file lama) sudah usang dari sisi DAFTAR PRODUK. Yg benar:
+  **jalankan ulang SEMUA pekerjaan SKU di atas file baru ini** (formula mobil, SKU motor MTR, akhiran `_` Lazada),
+  supaya dapat daftar produk terkini + skema SKU baru sekaligus.
+
+**Bug openpyxl yg ketemu**: file Shopee baru gagal dibaca dgn `load_workbook(read_only=True)` →
+`ValueError: Value must be one of {'topLeft','bottomRight','topRight','bottomLeft'}` (atribut `activePane` tak lazim).
+**Solusi yg dipakai**: parse XML mentah langsung dari zip (`xl/worksheets/sheet1.xml` + `xl/sharedStrings.xml`)
+lewat `xml.etree`. Fungsi `rows_of()` sudah ditulis di scratchpad — pakai ulang kalau ketemu error sama.
+
+## MINI COOPER — struktur varian akhirnya terlihat (dari file baru)
+
+Varian Mini Cooper punya **2 sumbu**: `<warna ATAU tipe bodi>, <3 Pintu | 5 Pintu>`.
+- **Undercover (Shopee UC 1, baris 412-451, 42 baris)**: baris berwarna PUNYA SKU, tapi segmen generasinya
+  memakai NAMA TIPE BODI dan **TIDAK KONSISTEN dgn variannya**: varian "…,3 Pintu" → segmen `Roadster`;
+  varian "…,5 Pintu" → segmen `Paceman`. (mis. `MNI-COO-UA-R-Roadster-BRU` utk "Biru Benhur,3 Pintu").
+  Roadster & Paceman itu MODEL, bukan jumlah pintu → penamaan lama ini keliru.
+  Baris yg sumbu-1-nya tipe bodi ("Paceman,3 Pintu", "Hatch,3 Pintu", "Roadster,5 Pintu", "Clubman,5 Pintu",
+  "Countryman,5 Pintu") **SKU-nya KOSONG**.
+- **Smartprotection (Shopee STP 1, baris 197-236, 40 baris)**: lebih masuk akal — "3 Pintu" → segmen
+  `Hatch3Pintu`, "5 Pintu" → `Hatch5Pintu` (mis. `MNI-COO-SP-S-Hatch3Pintu-S3M`). Tapi segmennya kepanjangan &
+  campur huruf besar-kecil, tidak sesuai konvensi (G1/J40/KTK/3P).
+- **Tafsiran Claude (PERLU KONFIRMASI USER)**: Total Formula = 2 utk Mini Cooper = **3 Pintu vs 5 Pintu**
+  (dua ukuran jahitan). 5 tipe bodi (Hatch/Clubman/Countryman/Roadster/Paceman) semuanya jatuh ke salah satu
+  dari dua ukuran itu menurut jumlah pintunya. **Usul kode: `3P` dan `5P`** — konsisten dgn Suzuki Jimny yg
+  sudah pakai 3P/5P. Hasil: `MNI-COO-UA-R-3P-ABU`, `MNI-COO-SP-S-5P-S1A`, dst.
+- Yg masih harus ditanyakan: baris bertipe-bodi yg SKU-nya kosong — apakah ikut diisi sesuai jumlah pintunya?
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
