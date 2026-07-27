@@ -559,6 +559,35 @@ Varian Mini Cooper punya **2 sumbu**: `<warna ATAU tipe bodi>, <3 Pintu | 5 Pint
   sudah pakai 3P/5P. Hasil: `MNI-COO-UA-R-3P-ABU`, `MNI-COO-SP-S-5P-S1A`, dst.
 - Yg masih harus ditanyakan: baris bertipe-bodi yg SKU-nya kosong — apakah ikut diisi sesuai jumlah pintunya?
 
+## BUG EXPORT SHOPEE: `activePane="bottom_left"` — WAJIB DIPERBAIKI SEBELUM BACA
+
+**Gejala**: `load_workbook()` menolak SELURUH file export Shopee terbaru:
+`ValueError: Unable to read workbook: could not read worksheets`
+(dgn `read_only=True` errornya beda: `ValueError: Value must be one of {'topLeft','bottomRight','topRight','bottomLeft'}`).
+
+**Akar masalah**: exporter Shopee menulis `activePane="bottom_left"` (pakai garis bawah, snake_case)
+padahal skema OOXML mengharuskan camelCase `bottomLeft`. Terjadi di **10 dari 19 file** (semua yg dari Shopee).
+File TikTok & Lazada tidak kena.
+
+**Solusi permanen: `repair_xlsx.py`** (di scratchpad) — menyalin ulang xlsx sambil membuang atribut
+`activePane` dari `xl/worksheets/*.xml` lewat regex, tanpa menyentuh data. Atribut ini murni kosmetik
+(posisi split pane di tampilan Excel). Setelah diperbaiki: **19/19 file bisa dibuka openpyxl.**
+Pakai: `python3 repair_xlsx.py <dir_sumber> <dir_hasil>`.
+**JANGAN buang waktu** mencoba engine lain — ini yg tercepat & aman.
+
+## MENJALANKAN ULANG SEMUA PEKERJAAN DI ATAS FILE BARU (2026-07-27)
+
+- File asli disalin dgn nama jelas ke `BARU/` (mis. `UA_Shopee_1.xlsx`, `SP_TikTok.xlsx`),
+  lalu diperbaiki ke **`BARU_FIX/`** — inilah folder kerja yg dipakai.
+- **`files_baru.py`** = konfigurasi kolom semua 19 file. Struktur ternyata SAMA PERSIS dgn file lama:
+  Shopee `B/D/F` mulai baris 7; TikTok `C/E/K` mulai baris 6; Lazada `C/N/M` mulai baris 5 (+kolom A=Product ID).
+  Perbedaan jumlah file: UA TikTok sekarang **3 file** (dulu 1), OP Shopee **2** (dulu 1), OT Shopee **2** (dulu 3).
+- **`jalankan_semua_baru.py`** = pipeline 3 tahap berurutan: (1) skema formula cover mobil,
+  (2) SKU motor format MTR, (3) akhiran `_` Lazada. Ada dry-run + `--apply`.
+- **Mini Cooper sudah dibuka blokirnya** — dimasukkan ke `MANUAL_GROUPS` dgn kode `3P`/`5P`
+  berdasarkan kata kunci "3 pintu"/"5 pintu" di teks varian. Tipe bodi diabaikan sesuai instruksi user
+  ("kalaupun misal ada paceman 3 pintu, bisa dijadikan 3P saja"). Sisa BLOCKED tinggal 3 model.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
