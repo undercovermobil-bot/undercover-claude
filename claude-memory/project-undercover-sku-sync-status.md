@@ -448,6 +448,30 @@ BigSeller punya fitur **SKU Mapping Rules** yg bisa mencocokkan beberapa Store S
 - **Produk MOTOR cuma ada di Undercover Autocare** — dikonfirmasi scan seluruh 17 file: UA Shopee3 (1.090 baris/232 listing), UA Shopee4 (580/124), UA TikTok (1.574/411). **Otonation, Otoprotection, Smartprotection TIDAK menjual cover motor.** Yg terdeteksi di luar itu: 9 baris di SP Shopee1 (listing "Body Cover Motor / Selimut Motor <model>" — SKU-nya KOSONG semua, cuma varian Hitam, kemungkinan listing lama/nyasar) + 2 baris di UA Shopee2 yg sebenarnya produk shampoo ("Snow Wash ... Mobil & Motor"), bukan cover motor. Jadi perbaikan 815 baris warna kemarin memang SUDAH mencakup semua toko yg relevan.
 - **Warna Premium motor = ABU** (dikonfirmasi user: "sama seperti yg di premiumnya cover mobil").
 - **Produk 'Maxi' diabaikan dulu** (instruksi user).
+
+## Keputusan & temuan lanjutan (2026-07-27, sesi lanjut)
+
+**LAZADA = OPSI A (delimiter `_`) — dipilih user.** `fix_lazada_unik.py` sudah diubah: konstanta `SEP = "_"`, akhiran jadi `HND-CTY-UA-P-G1-SLV_G3`.
+- **Kekhawatiran user**: "rule ignore-suffix di BigSeller kan berlaku utk semua e-commerce, apakah Shopee/TikTok aman kalau SKU-nya tetap gabungan?" → **AMAN, dan justru ini alasan Opsi A dipilih**: mode delimiter hanya memotong kalau pemisahnya ADA. SKU Shopee/TikTok tidak mengandung `_` sama sekali (sudah dicek: karakter non-alfanumerik di SKU cuma `-`), jadi tidak tersentuh. Kalau memakai mode "potong N karakter" (Opsi B), Shopee/TikTok JUSTRU akan rusak karena rule-nya berlaku tanpa syarat. **Catatan kejujuran: perilaku BigSeller belum bisa saya uji langsung (butuh login) — sarankan user tes dulu ke 1-2 produk sebelum massal.**
+
+**NISSAN NAVARA — aturan dari user**: formula 1 = Gen 1,2,3 ; formula 2 = PRO-4X. Diimplementasikan lewat mekanisme baru `MANUAL_GROUPS` di `formula_config.py` (pengelompokan eksplisit: daftar `(kode, [kata kunci di teks varian])`), dipakai `seg_for_variant()` sebelum logika normal.
+- Master ternyata sudah memisahkan KODE MODEL: **Navara = `NSN-NVR`**, **Navara PRO-4X = `NSN-NVP`** (PRO-4X tercatat sbg "Gen 4" 2020-2026). Karena kode modelnya beda, dua-duanya boleh memakai segmen **G1** tanpa bertabrakan → hasil: `NSN-NVR-...-G1` & `NSN-NVP-...-G1`.
+- Diverifikasi: **442 baris Navara berubah** (NVR 296, NVP 146), 0 tabrakan lintas-model. Navara keluar dari daftar DITUNDA.
+
+**GRAN MAX 7 baris "tanpa tipe" — TERNYATA TIDAK AMBIGU**, tipenya ada di TEKS VARIAN (bukan di nama listing):
+- **6 baris di UA Lazada** (listing "…Gran Max Premium" & "…Gran Max Exclusive"): variannya **"Blindvan (2008-2024)"**, **"Pickup (2008-2024)"**, "Model Lain/Custom". SKU-nya masih placeholder angka Lazada (`8664138934-…`), jadi memang belum pernah dapat SKU master.
+- **1 baris di SP TikTok** ("…Gran Max Transparan", varian "Gen 1 : 2007-2026") SKU-nya `DHT-GMXP-SP-T-G1-TRP` — **sudah benar** (GMXP = pickup, G1).
+- Artinya: Blindvan→keluarga Minibus (`DHT-GMX`), Pickup→`DHT-GMXP`. Konsisten dgn rename master 2026-07-21 yg menggabung "Minibus/Blind Van"→Minibus. **Masih perlu konfirmasi user** apakah Blindvan memang disamakan dgn Minibus.
+
+**SUZUKI CARRY — user: "hanya carry dan carry pickup".** Dicek: **`Suzuki Carry Futura` (kode CRF, 66 baris) ADA di master tapi TIDAK ADA di listing e-commerce manapun** → kemungkinan model usang/tidak dijual. Perlu keputusan user: hapus dari master atau biarkan.
+
+**PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
+1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
+2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
+3. **Honda Civic Hatchback** — Total Formula masih '?' di file formula.
+4. **Suzuki Carry Futura** — ada di master, tidak ada di listing; dihapus atau dibiarkan?
+5. **Gran Max "Blindvan"** — dianggap sama dgn Minibus (GMX)?
+6. **Nissan X-Trail vs XTrail** — dua entri utk mobil sama di file formula, sebaiknya disatukan.
 - **'Maxi'** = listing `Body Cover Motor / Sarung / Selimut Motor Maxi` di **UA TikTok saja**, 5 baris warna, **SKU-nya kosong semua**. Kemungkinan besar ini lini Yamaha Maxi (bukan model spesifik) — nunggu konfirmasi user.
 - **Premium motor**: 433 baris, teks variannya **227 KOSONG + 206 literal "Default"** — artinya listing Premium motor memang **tidak punya pilihan warna sama sekali** (produk tunggal). "Default" cuma placeholder marketplace, bukan nama warna. Jadi pertanyaan sebenarnya ke user: cover motor Premium itu fisiknya warna apa (biar segmen warna SKU-nya benar)?
 - **Daihatsu Gran Max polos (No. 126)** TERNYATA = baris yg di-highlight **ungu (FFFF00FF)** — sama seperti Mitsubishi Strada Triton. Jadi **duplikat → memang harus di-skip**, bukan model tersendiri. Cuma ada 2 baris ungu di seluruh Sheet2 dan dua-duanya sudah masuk daftar BLOCKED. **Pertanyaan "Gran Max polos" SELESAI — tidak perlu jawaban user lagi.** Yang nyata cuma Gran Max **PU** (pickup) & **MB** (minibus).
