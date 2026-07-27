@@ -405,4 +405,18 @@ Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 33
 
 **Script/artefak**: `_motor_rows.json`, `_motor_cm.json`, `_motor_norm.json`, `_motor_catalog.json`, `_motor_sku_proposal.json`, `_motor_badcolor.json` (semua di scratchpad; generator masih inline python, belum jadi .py permanen).
 
-**BELUM ADA file listing motor yg diubah** — ini murni rancangan utk direview user dulu.
+**Jawaban user 2026-07-27 (sebagian):**
+- **Format motor = Opsi B (6 segmen, ada penanda 'MTR')** → `MEREK-MODEL-UA-KAT-MTR-WARNA`.
+- **ACC betulkan bug warna tertukar** → SUDAH DIKERJAKAN (lihat di bawah).
+- Sisa pertanyaan (warna Premium, 'Maxi') masih ditanyakan user ke tim produksi.
+
+**SUDAH DIEKSEKUSI 2026-07-27 — perbaikan 815 baris warna motor tertukar** (`fix_motor_warna.py`, ada dry-run + `--apply`):
+- Teks varian = acuan; kode warna dihitung ulang dari nama warnanya. Skema `CM####-UC-<suffix>` yg lama DIPERTAHANKAN (belum ganti ke skema baru — nunggu jawaban warna Premium & 'Maxi').
+- Hasil: **815 baris diperbaiki di 166 listing**. File berubah: UA Shopee3 (924 baris benar), UA Shopee4 (508), UA TikTok (1.346).
+- **Verifikasi sesudah: 2.778 baris cek warna → 100% benar, 0 sisa salah.**
+- **Jebakan yg kena**: menjalankan `--apply` lalu verifikasi dry-run dalam SATU perintah bikin `_motor_warna_changes.json` KETIMPA jadi kosong (dry-run kedua menemukan 0 perubahan lalu menulis ulang file log). Perbaikannya sendiri tetap berhasil — dikonfirmasi dgn baca ulang isi file. **Lain kali: pisahkan run apply dan run verifikasi, atau jangan pakai nama file log yg sama.**
+
+**Fakta tambahan yg ditemukan saat menjawab pertanyaan user (2026-07-27):**
+- **'Maxi'** = listing `Body Cover Motor / Sarung / Selimut Motor Maxi` di **UA TikTok saja**, 5 baris warna, **SKU-nya kosong semua**. Kemungkinan besar ini lini Yamaha Maxi (bukan model spesifik) — nunggu konfirmasi user.
+- **Premium motor**: 433 baris, teks variannya **227 KOSONG + 206 literal "Default"** — artinya listing Premium motor memang **tidak punya pilihan warna sama sekali** (produk tunggal). "Default" cuma placeholder marketplace, bukan nama warna. Jadi pertanyaan sebenarnya ke user: cover motor Premium itu fisiknya warna apa (biar segmen warna SKU-nya benar)?
+- **Daihatsu Gran Max polos (No. 126)** TERNYATA = baris yg di-highlight **ungu (FFFF00FF)** — sama seperti Mitsubishi Strada Triton. Jadi **duplikat → memang harus di-skip**, bukan model tersendiri. Cuma ada 2 baris ungu di seluruh Sheet2 dan dua-duanya sudah masuk daftar BLOCKED. **Pertanyaan "Gran Max polos" SELESAI — tidak perlu jawaban user lagi.** Yang nyata cuma Gran Max **PU** (pickup) & **MB** (minibus).
