@@ -613,7 +613,11 @@ nama produk tak berubah, dan tak ada SKU hilang.
   dibuka openpyxl), lalu bandingkan `BARU_BASE` vs `BARU_FIX` pakai openpyxl (baca nilai sel sungguhan).
 - **JANGAN** hitung sel lewat parsing XML `<v>` mentah — openpyxl menulis string sbg inline/shared string
   berbeda dari Shopee, jadi hitungannya jadi 0 palsu (sempat bikin 14/19 file terlihat "BEDA" padahal aman).
-- Hasil sementara 7 file pertama: baris identik, 0 nama berubah, **0 SKU hilang** → aman.
+- **HASIL AKHIR: 0 dari 19 file bermasalah.** Semua file: jumlah baris identik, 0 nama produk berubah,
+  **0 SKU hilang**. Total perubahan SKU terekam: UA Shopee1 2.074, Shopee2 956, Shopee3 1.759,
+  Shopee4 2.350 (+226 diisi baru), TikTok3 14.083, Lazada 6.720, OT Shopee1 1.541, Shopee2 2.163,
+  OP Shopee1 2.163, Shopee2 209, TikTok2 3.080, SP Shopee1 1.536, Shopee2 1.310, TikTok 3.083, Lazada 3.456.
+- **19 file siap upload sudah dikirim ke user** (folder `SIAP_UPLOAD/` dgn nama ramah, mis. "Undercover - Shopee 1.xlsx").
 
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
