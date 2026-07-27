@@ -342,3 +342,31 @@ Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 33
 **Script:** parser Sheet2 + config di inline python (belum dijadikan file .py permanen). Preview generator inline. `variant_new_seg()`: collapse→G1 (atau nama utk named-gen), per-row→match gen-number ke grup lalu ambil code grup.
 
 **STATUS: NUNGGU user jawab 2 keputusan (kode collapse Opsi A/B, cakupan listing±master) + ACC apakah pilot dulu atau langsung semua.** JANGAN eksekusi rewrite listing/master sampai dijawab — ini perubahan besar & sulit dibalik. Belum ada 1 pun SKU listing/master yg diubah utk skema formula ini.
+
+## PRODUK MOTOR — rancangan SKU baru (2026-07-24, user minta "sekalian update SKU produk motor")
+
+**Struktur motor BEDA FUNDAMENTAL dari mobil — WAJIB diingat:**
+- **Motor TIDAK PUNYA GENERASI sama sekali.** Varian listing HANYA warna. Jadi SKU motor tak perlu segmen generasi (mobil 6 segmen, motor 5).
+- Kategori motor cuma **Reguler** (5 warna polos + 3 warna Elite) & **Premium** (1 warna, teks varian selalu literal "Default"). Tidak ada Exclusive/Transparan.
+- Motor praktis **cuma dijual di Undercover Autocare** (Shopee3, Shopee4, TikTok; + 9 baris nyasar di SP Shopee1).
+- Skala: **3.248 baris "Cover Motor"**, **228 model unik**, 14 merek (Yamaha 44, Honda 41, Kawasaki 39, Benelli 31, Ducati 17, Vespa 15, KTM 12, Suzuki 11, dst).
+
+**SKU motor sekarang** = skema legacy `CM####-UC-<suffix>` (mis. `CM0185-UC-RPM`), sekeluarga dgn `CVR####` legacy mobil. Decode suffix: `RP<W>` = Reguler polos + huruf warna (A/H/M/B/G), `RSE<W>` = Elite, `PRPA` = Premium. **Nomor CM = identitas model** (227 nomor unik) — dipakai utk normalisasi nama listing yg tulisannya beda-beda (10 nomor CM punya >1 ejaan nama, mis. CM0009 = 'Aerox' & 'Yamaha Aerox'; CM0174 typo 'KKawasaki Z900').
+- **Masalah padding**: nomor CM ditulis 2 gaya (`CM0183` vs `CM00183`) di 121 model — harus di-normalisasi (parse pakai `CM0*(\d+)`).
+
+**BUG BESAR ditemukan (pre-existing, terlepas dari skema baru): 815 baris (29,3% dari baris berwarna) di 166 listing punya KODE WARNA SKU TIDAK COCOK dgn teks variannya.** Polanya deterministik & seragam (bukan typo acak) — kode warna tergeser posisi, konsisten 163 baris per warna:
+`Abu-abu→RPM (harusnya RPA)`, `Hitam→RPB (RPH)`, `Biru Benhur→RPH (RPB)`, `Merah→RPG (RPM)`, `Hijau Army→RPA (RPG)`. Ini pola salah-tempel massal (urutan SKU ditempel ke urutan varian yg beda). Listing yg benar (mis. Kawasaki Ninja H2) urutannya Merah/Hijau/Abu/Hitam/Biru → RPM/RPG/RPA/RPH/RPB. **Teks varian = acuan kebenaran**, kode warna tinggal dihitung ulang dari nama warna.
+
+**Rancangan skema baru (2 opsi, di file `Rancangan_SKU_MOTOR_2026-07-24.xlsx`, 5 sheet):**
+- **Opsi A (rekomendasi Claude)**: `MEREK-MODEL-TOKO-KATEGORI-WARNA` → `HND-VAR125-UA-R-ABU`. 5 segmen; motor vs mobil otomatis kebedain dari jumlah segmen.
+- **Opsi B**: `MEREK-MODEL-TOKO-KATEGORI-MTR-WARNA` → `HND-VAR125-UA-R-MTR-ABU`. 6 segmen, seragam bentuknya dgn mobil + penanda 'MTR' eksplisit (enak buat tooling yg expect 6 segmen).
+- Kode merek konsisten dgn mobil di mana overlap: Honda=HND, Suzuki=SZK, BMW=BMW. Baru utk motor: Yamaha=YMH, Kawasaki=KWS, Vespa=VSP, Ducati=DCT, Benelli=BNL, KTM=KTM, Aprilia=APR, Cleveland=CLV, BF Goodrich=BFG, Alrendo=ALR, Bajaj=BJJ.
+- Kategori: R/P/S (S utk Elite). Warna sama dgn mobil: ABU/HTM/MRH/BRU/GRN; Elite: EAB/EBR/EGR/EMR.
+- Generator kode model: token angka dipertahankan utuh, token campur huruf-angka (CB150, KLX150SM, R15, H2) dipertahankan s/d 7 char, token huruf murni diambil 3 huruf; total ≤10 char; tabrakan diberi suffix angka. **Hati-hati bug**: versi awal `t[:3]` bikin `CB150`→`CB1` dan `KLX150SM`→`KLX` (tabrakan) — sudah difix dgn deteksi `re.search(r'\d', t)`.
+- **Hasil: 1.801 baris SKU, 1.790 unik.** 11 "duplikat" semuanya JINAK (typo warna yg memang produk sama: 'Hijau'='Hijau Army', 'Eite Hijau'='Elite Hijau', 'Elite BIru'='Elite Biru').
+
+**Pertanyaan ke user yg belum dijawab (sheet 'Perlu Keputusan'):** (1) pilih Opsi A/B; (2) konfirmasi Premium motor warnanya Abu-abu (sekarang cuma tertulis "Default"); (3) model bernama "Maxi" saja (tanpa merek) — diasumsikan Yamaha Maxi; (4) ACC fix bug 815 baris warna; (5) apakah motor mau dijual di toko lain juga; (6) apakah motor mau ada kategori Exclusive/Transparan.
+
+**Script/artefak**: `_motor_rows.json`, `_motor_cm.json`, `_motor_norm.json`, `_motor_catalog.json`, `_motor_sku_proposal.json`, `_motor_badcolor.json` (semua di scratchpad; generator masih inline python, belum jadi .py permanen).
+
+**BELUM ADA file listing motor yg diubah** — ini murni rancangan utk direview user dulu.
