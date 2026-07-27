@@ -465,6 +465,10 @@ BigSeller punya fitur **SKU Mapping Rules** yg bisa mencocokkan beberapa Store S
 
 **SUZUKI CARRY — user: "hanya carry dan carry pickup".** Dicek: **`Suzuki Carry Futura` (kode CRF, 66 baris) ADA di master tapi TIDAK ADA di listing e-commerce manapun** → kemungkinan model usang/tidak dijual. Perlu keputusan user: hapus dari master atau biarkan.
 
+**HASIL APPLY (2026-07-27):**
+- **Navara**: 442 baris listing + 132 baris master (×2 file) diubah. Model terdampak: 1 (Nissan Navara).
+- **Lazada Opsi A**: **7.976 baris diberi akhiran `_<tag>`** → **SKU kembar tersisa = 0** di kedua file Lazada. Aturan yg harus diset user di BigSeller: **Ignore Suffix, delimiter `_`, kemunculan ke-1 (dari kanan)**.
+
 **PERTANYAAN YG MASIH MENGGANTUNG (user: "akan difollowup lagi, bantu ingatkan nanti") — INGATKAN di respons berikutnya:**
 1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); tipe mana berbagi formula?
 2. **Nissan Livina X-Gear** — Total Formula masih '?' di file formula.
