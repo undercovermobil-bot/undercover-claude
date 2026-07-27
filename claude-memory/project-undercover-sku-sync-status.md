@@ -341,7 +341,43 @@ Why: dicatat detail karena ini pertama kalinya OP & SP disentuh di luar scope 33
 
 **Script:** parser Sheet2 + config di inline python (belum dijadikan file .py permanen). Preview generator inline. `variant_new_seg()`: collapse→G1 (atau nama utk named-gen), per-row→match gen-number ke grup lalu ambil code grup.
 
-**STATUS: NUNGGU user jawab 2 keputusan (kode collapse Opsi A/B, cakupan listing±master) + ACC apakah pilot dulu atau langsung semua.** JANGAN eksekusi rewrite listing/master sampai dijawab — ini perubahan besar & sulit dibalik. Belum ada 1 pun SKU listing/master yg diubah utk skema formula ini.
+**STATUS: SUDAH DIEKSEKUSI 2026-07-24** (lihat bagian "EKSEKUSI" di bawah). Keputusan user: collapse→**G1 dipaksa** (master ikut diupdate), cakupan **listing + master**.
+
+### EKSEKUSI skema formula (2026-07-24) — SUDAH APPLY
+
+**Keputusan final user (dijawab lewat prosa + screenshot, setelah AskUserQuestion 2x tak dijawab):**
+- Collapse (TF=1) → **selalu G1**, walau master belum punya G1 → master ikut ditulis ulang. User eksplisit: Vellfire→G1 ("di listing e-commerce ada Gen 1 nya"), HRV→G1, Rocky→G1, "berlaku juga untuk produk lain kalau ada case yg sama".
+- Cakupan: **listing + master**.
+- **Hyundai Stargazer**: TF=2 tapi file formula cuma punya 1 grup → user kasih screenshot listing: ada Gen 1 (2022-2024) & Gen 2 (2025-2026) → jadi G1+G2. Ditangani lewat `EXTRA_GROUPS` di `formula_config.py`.
+- **Daihatsu Gran Max dipisah MB (minibus) vs PU (pickup)** — di file formula namanya tercecer 4 gaya (Gran Max PU / Gran Max Pick Up / Gran Max Minibus / Gran Max MB) → digabung lewat `MERGE_NAME`.
+- Generasi bernama tetap pakai nama (TIDAK dipaksa G1): Hardtop→J40 (user konfirm; listing lama ada yg pakai G4, sudah dikoreksi), HiAce→COM, Land Cruiser→J60, Starlet→KTK/KPS, Jimny→3P/5P, SX4→XOV/SCR, BMW M3 & Jeep Wrangler→chassis.
+
+**Script permanen (REUSABLE, di scratchpad):**
+- `formula_config.py` — parser Sheet2 file formula + aturan → `CFG` (205 model siap) & `BLOCKED` (6 ditunda). Fungsi kunci `seg_for_variant(cfg, var)`: prioritas (1) label bernama, (2) nomor Gen di teks varian, (3) overlap rentang tahun.
+- `apply_formula_sku.py` — apply ke 17 file listing + 2 file master. Ada dry-run default, `--apply` utk eksekusi. Punya matcher nama sendiri (concat-sig + token-subset, sama pola dgn `resolver_sync.master_model_of`) yg JUGA mengenali nama model BLOCKED supaya barisnya sengaja dilewati (bukan salah-match ke model lain).
+
+**HASIL APPLY:**
+- **34.511 baris listing diubah** di **138 model**; **24.541 baris master diubah** (di KEDUA file master).
+- 24.807 baris sudah benar (tak disentuh); 11.264 dilewati krn SKU-nya belum format standar (CVR legacy/kosong); 1.946 dilewati krn model ditunda; 48 varian tak terbaca.
+- Top model terdampak: BMW Seri 3 (888), Mercedes E Class (779), Toyota Camry (750), Mitsubishi Triton (740), Land Cruiser (740), Range Rover (739), Nissan Serena/Honda Accord/Odyssey/Ford Fiesta (592 masing-masing).
+
+**VERIFIKASI sebelum apply (penting, jangan skip kalau mengulang):**
+1. Model collapse → 100% hasilnya seragam 1 kode, **0 penyimpangan**.
+2. Model per-row → **4.587 baris dicek, 100% cocok** dgn nomor generasi di teks varian.
+3. **Backup semua file asli** di `BACKUP_sebelum_formula_20260724/` (19 file, 24 MB).
+- **Pelajaran**: sempat kelihatan seperti bug waktu sampel menunjukkan Corolla `G6→G5`. Setelah ditelusuri ternyata BENAR — teks variannya "Gen 5 (1983-1987)" dan SKU lama G6-nya yg salah (sisa bug offset lama). **Jangan menilai benar/salah dari pasangan SKU lama→baru saja; harus lihat teks variannya.**
+
+**KONSEKUENSI PENTING — LAZADA: 3.696 baris jadi SKU KEMBAR dalam 1 listing.** Ini melekat pada desain (1 formula = 1 SKU, sedangkan Lazada wajib SKU unik per listing). Varian2 tsb memang produk fisik SAMA. **User harus menggabung/menghapus varian tsb di Lazada** — daftar lengkap di sheet 'Lazada Perlu Digabung' pada `Hasil_SKU_Formula_2026-07-24.xlsx`. Belum ada aksi otomatis utk ini.
+
+**6 MODEL DITUNDA (belum diubah, nunggu jawaban user):**
+1. **Mini Cooper** — TF=2 tapi 5 tipe (Hatch/Clubman/Countryman/Roadster/Paceman); user bilang "logic menyusul".
+2. **Nissan Navara** — TF=2 tapi 4 grup generasi; grup mana berbagi formula belum jelas.
+3. **Nissan Livina X-Gear** — kolom Total Formula masih '?' di file.
+4. **Honda Civic Hatchback** — Total Formula masih '?'.
+5. **Daihatsu Gran Max** (polos, tanpa PU/MB) — ambigu maksudnya yg mana.
+6. **Mitsubishi Strada Triton** — duplikat Mitsubishi Triton (ditandai ungu user) → sengaja di-skip permanen, tidak perlu aksi.
+
+**Deliverable dikirim ke user**: `Hasil_SKU_Formula_2026-07-24.xlsx` (5 sheet: Ringkasan, Ringkasan per Model, Detail Perubahan 34.511 baris, Lazada Perlu Digabung, Model Ditunda) + master baru + 17 file listing.
 
 ## PRODUK MOTOR — rancangan SKU baru (2026-07-24, user minta "sekalian update SKU produk motor")
 
