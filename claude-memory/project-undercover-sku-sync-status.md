@@ -689,3 +689,38 @@ yg dipetakan di atas adalah label bodi di dalam produk "MINI Cooper".
   formula tapi belum bisa di-resolve**, 34 model ditunda, 9 motor, 4 karpet. Yg 4.101 ini gap nyata
   berikutnya (sebab: `no_gen` 11.403, `no_model` 10.902, `no_color` 1.035, `dual_skip` 406,
   `no_master_key` 285 saat pengisian).
+
+## 2026-07-28 (lanjutan) — KONVENSI KODE TOKO & RESET CONTAINER
+
+**Container sesi sempat direset ke keadaan 27 Juli**: seluruh scratchpad (skrip + hasil kerja)
+hilang, master lokal kembali ke versi 07-27, `master_lookup_*.json` kembali ke 14 Juli.
+File yg sudah dikirim ke user TIDAK terpengaruh (sudah terunggah sebelum reset). Mitigasi
+permanen: semua skrip pipeline sekarang disimpan di **`scripts/`** dalam repo ini, bukan
+cuma di scratchpad. Kalau scratchpad kosong: `cp scripts/*.py <scratchpad>/` lalu jalankan
+dari sana (skripnya memakai path relatif `BARU_FIX/`, `MASTER_from_drive_20260715.xlsx`).
+
+**KONVENSI KODE TOKO (segmen ke-3 SKU) — diukur dari data mentah, 100% konsisten:**
+
+| file listing | kode di SKU |
+|---|---|
+| Undercover Autocare | `UA` |
+| **Otonation** | **`UA`** (bukan OT) |
+| Smartprotection | `SP` |
+| **Otoprotection** | **`SP`** (bukan OP) |
+
+Satu-satunya penyimpangan bawaan: **1 baris di UA_Lazada berkode `OT`**.
+**BUG yg sempat dibuat & sudah diperbaiki:** `isi_sku_kosong.py` versi pertama menimpa segmen
+ini jadi `OT`/`OP` untuk toko OT/OP — sekitar 1.310 baris hasil isian jadi menyimpang dari
+baris lain di file yg sama. `resolve_sku()` sudah mengembalikan kode yg benar, jadi
+perbaikannya = jangan ditimpa sama sekali.
+
+**Mini Cooper "Hatch" — SELESAI.** User konfirmasi Hatch punya varian 3 pintu dan 5 pintu.
+16 baris master berlabel `Hatch` polos (Premium 8 / Exclusive 4 / Transparan 4, merata di 4 toko)
+dipecah: baris asli jadi `Hatch 3 Pintu` dgn segmen SKU `3P`, ditambah baris kembaran
+`Hatch 5 Pintu` dgn segmen `5P`. Kode SKU tetap HANYA `3P` & `5P` sesuai 2 formula —
+label bodi tidak pernah jadi segmen SKU. Aman dari kembar karena `Hatch 3/5 Pintu` sebelumnya
+cuma ada di kategori Reguler & Strip.
+
+**Motor Premium — SELESAI.** User konfirmasi warnanya abu-abu saja. Kolom varian listing Premium
+motor memang kosong (226 baris) atau literal `Default` (208 baris) = tidak ada pilihan warna;
+`build_motor_sku.color_code()` sudah memetakannya ke `("P","ABU")`, jadi SKU-nya `...-P-MTR-ABU`.
