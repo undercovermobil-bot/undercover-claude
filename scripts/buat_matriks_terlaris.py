@@ -662,7 +662,9 @@ def accumulate_formula_simple(rows, hidx, cols, simple_models):
     cur_gens = 0
 
     def flush():
-        if cur_model and cur_total == 1 and cur_gens >= 1:
+        # cuma berlaku kalau memang ada >1 baris Generasi yg DIGABUNG jadi 1 formula -
+        # kalau cuma 1 baris gen & total=1, tidak ada yg perlu disederhanakan
+        if cur_model and cur_total == 1 and cur_gens > 1:
             key = re.sub(r"\s+", " ", str(cur_model)).strip().lower()
             if key:
                 simple_models.add(key)
