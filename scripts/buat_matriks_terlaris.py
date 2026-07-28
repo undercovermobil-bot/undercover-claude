@@ -1110,12 +1110,32 @@ def build_output(agg, diag, out_path, root, period_days=None):
                    "Rata-rata/Hari = estimasi kecepatan jual, lihat 'Metodologi'.", S_SUB)])
     rows1.append([])
 
+    # setiap blok warna (Warna Polos, Strip, Premium, Exclusive) dapat struktur
+    # yang sama: qty per label -> Total -> % per label -> Rata-rata/Hari per label
+    def block_spec(raw_keys, disp_labels, cell_dict, tot_dict):
+        return {"raw": raw_keys, "disp": disp_labels, "cell": cell_dict, "tot": tot_dict,
+                "grand": sum(tot_dict.values())}
+
+    blocks = []
+    if fam_cols:
+        blocks.append(("WARNA POLOS (Reguler+Premium+Exclusive+Transparan, tanpa Strip)", "Warna Polos",
+                       block_spec(fam_cols, fam_cols, fam_cell, fam_tot)))
+    if strip_cols:
+        blocks.append(("DETAIL STRIP 1/2/3 (Epic=1,Elite=2,Warrior=3; di luar Warna Polos)", "Strip",
+                       block_spec(strip_cols, strip_cols, strip_cell, strip_tot)))
+    if prem_cols:
+        blocks.append(("DETAIL PREMIUM (subset dari Warna Polos)", "Premium",
+                       block_spec(prem_cols, ["Premium " + f for f in prem_cols], prem_cell, prem_tot)))
+    if excl_cols:
+        blocks.append(("DETAIL EXCLUSIVE (subset dari Warna Polos)", "Exclusive",
+                       block_spec(excl_cols, ["Exclusive " + f for f in excl_cols], excl_cell, excl_tot)))
+
     headers1 = ["No", "Nama Mobil", "Satuan", "Total Kuantitas", "% Kuantitas",
                 "Total Penjualan (Rp)", "% Nilai", "Jenis Cover Digabung", "Jumlah Varian/SKU",
                 "Rata-rata Terjual/Hari"]
-    headers1 += fam_cols + ["Total Warna Polos"] + ["% " + f for f in fam_cols]
-    headers1 += ["Rata-rata/Hari " + f for f in fam_cols]
-    headers1 += strip_cols + ["Premium " + f for f in prem_cols] + ["Exclusive " + f for f in excl_cols]
+    for _title, name, spec in blocks:
+        headers1 += spec["disp"] + ["Total " + name] + ["% " + d for d in spec["disp"]] \
+            + ["Rata-rata/Hari " + d for d in spec["disp"]]
 
     # baris grup (merged) di atas header kolom
     grouprow = [""] * len(headers1)
@@ -1127,18 +1147,13 @@ def build_output(agg, diag, out_path, root, period_days=None):
             merges.append((GROW, col, GROW, col + span - 1))
         return col + span
 
-    col = NBASE + 1  # 1-indexed kolom pertama blok warna polos (row grup = row 4, header = row 5)
+    col = NBASE + 1  # 1-indexed kolom pertama blok pertama (row grup = row 4, header = row 5)
     GROW = 4
     HROW = 5
-    if fam_cols:
-        span = len(fam_cols) + 1 + len(fam_cols) + len(fam_cols)  # qty + total + % + rata2/hari
-        col = add_group(col, "WARNA POLOS (Reguler+Premium+Exclusive+Transparan, tanpa Strip)", span)
-    if strip_cols:
-        col = add_group(col, "DETAIL STRIP/ELITE/EPIC/WARRIOR (di luar Warna Polos)", len(strip_cols))
-    if prem_cols:
-        col = add_group(col, "DETAIL PREMIUM (subset dari Warna Polos)", len(prem_cols))
-    if excl_cols:
-        col = add_group(col, "DETAIL EXCLUSIVE (subset dari Warna Polos)", len(excl_cols))
+    for title, _name, spec in blocks:
+        n = len(spec["raw"])
+        span = n + 1 + n + n  # qty + total + % + rata2/hari
+        col = add_group(col, title, span)
     rows1.append([(g, S_GHEAD) for g in grouprow])
     rows1.append([(h, S_HEAD) for h in headers1])
 
@@ -1154,25 +1169,17 @@ def build_output(agg, diag, out_path, root, period_days=None):
         ]
         v = velocity(model_qty[model])
         row.append((v if v is not None else "", S_DEC2))
-        qtys = [fam_cell.get((model, f), 0) for f in fam_cols]
-        rtot = sum(qtys)
-        for q in qtys:
-            row.append((q if q else "", S_CINT))
-        row.append((rtot, S_CINT))
-        for q in qtys:
-            row.append(((q / rtot) if rtot else 0, S_PCT))
-        for q in qtys:
-            vq = velocity(q)
-            row.append((vq if vq is not None else "", S_DEC2))
-        for l in strip_cols:
-            q = strip_cell.get((model, l), 0)
-            row.append((q if q else "", S_CINT))
-        for f in prem_cols:
-            q = prem_cell.get((model, f), 0)
-            row.append((q if q else "", S_CINT))
-        for f in excl_cols:
-            q = excl_cell.get((model, f), 0)
-            row.append((q if q else "", S_CINT))
+        for _title, _name, spec in blocks:
+            qtys = [spec["cell"].get((model, k), 0) for k in spec["raw"]]
+            rtot = sum(qtys)
+            for q in qtys:
+                row.append((q if q else "", S_CINT))
+            row.append((rtot, S_CINT))
+            for q in qtys:
+                row.append(((q / rtot) if rtot else 0, S_PCT))
+            for q in qtys:
+                vq = velocity(q)
+                row.append((vq if vq is not None else "", S_DEC2))
         rows1.append(row)
 
     # baris TOTAL
@@ -1184,25 +1191,22 @@ def build_output(agg, diag, out_path, root, period_days=None):
     ]
     vg = velocity(grand_qty)
     totrow.append((vg if vg is not None else "", S_TDEC2))
-    for f in fam_cols:
-        totrow.append((fam_tot[f], S_TINT))
-    totrow.append((grand_fam, S_TINT))
-    for f in fam_cols:
-        totrow.append(((fam_tot[f] / grand_fam) if grand_fam else 0, S_TPCT))
-    for f in fam_cols:
-        vf = velocity(fam_tot[f])
-        totrow.append((vf if vf is not None else "", S_TDEC2))
-    for l in strip_cols:
-        totrow.append((strip_tot[l], S_TINT))
-    for f in prem_cols:
-        totrow.append((prem_tot[f], S_TINT))
-    for f in excl_cols:
-        totrow.append((excl_tot[f], S_TINT))
+    for _title, _name, spec in blocks:
+        grand = spec["grand"]
+        for k in spec["raw"]:
+            totrow.append((spec["tot"][k], S_TINT))
+        totrow.append((grand, S_TINT))
+        for k in spec["raw"]:
+            totrow.append(((spec["tot"][k] / grand) if grand else 0, S_TPCT))
+        for k in spec["raw"]:
+            vf = velocity(spec["tot"][k])
+            totrow.append((vf if vf is not None else "", S_TDEC2))
     rows1.append(totrow)
 
-    widths1 = ([5, 26, 7, 15, 11, 20, 9, 34, 14, 12] + [10] * len(fam_cols) + [15]
-               + [10] * len(fam_cols) + [13] * len(fam_cols) + [12] * len(strip_cols)
-               + [14] * len(prem_cols) + [15] * len(excl_cols))
+    widths1 = [5, 26, 7, 15, 11, 20, 9, 34, 14, 12]
+    for _title, _name, spec in blocks:
+        n = len(spec["raw"])
+        widths1 += [11] * n + [13] + [10] * n + [13] * n
     sheets.append({"name": "Top 300 Mobil", "rows": rows1, "widths": widths1,
                    "freeze": (HROW + 1, 3), "merges": merges})
 
@@ -1272,12 +1276,16 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "- Sheet 'Top 300 Mobil' - blok 'DETAIL STRIP' (kolom Strip 1/2/3 <warna>): "
         "brand lama Elite/Epic/Warrior DISATUKAN ke skema Strip 1/2/3 (Epic=Strip 1, "
         "Elite=Strip 2, Warrior=Strip 3 - keduanya dipakai bergantian di data lama utk "
-        "tier yg sama). Qty per varian; TIDAK termasuk di 'Warna Polos' - jangan "
-        "dijumlahkan lagi dgn blok itu.",
-        "- Sheet 'Top 300 Mobil' - blok 'DETAIL PREMIUM' & 'DETAIL EXCLUSIVE': rincian qty "
-        "per warna KHUSUS tier Premium/Exclusive. Ini SUBSET dari 'Warna Polos' (sudah "
-        "ikut dihitung di sana) - disediakan cuma utk lihat kontribusi tier itu per warna, "
+        "tier yg sama). TIDAK termasuk di 'Warna Polos' - jangan dijumlahkan lagi dgn "
+        "blok itu.",
+        "- Sheet 'Top 300 Mobil' - blok 'DETAIL PREMIUM' & 'DETAIL EXCLUSIVE': rincian per "
+        "warna KHUSUS tier Premium/Exclusive. Ini SUBSET dari 'Warna Polos' (sudah ikut "
+        "dihitung di sana) - disediakan cuma utk lihat kontribusi tier itu per warna, "
         "bukan angka tambahan baru.",
+        "- Setiap blok warna (Warna Polos, Strip, Premium, Exclusive) punya struktur sama: "
+        "qty per label -> 'Total <blok>' -> '% <label>' -> 'Rata-rata/Hari <label>'. "
+        "% <label> di baris model = persen dari total blok itu KHUSUS model tsb; di baris "
+        "TOTAL = persen dari total blok itu di SELURUH model.",
         "- RATA-RATA TERJUAL/HARI = estimasi kecepatan jual = qty terjual / jumlah hari "
         "periode data (dideteksi otomatis dari tanggal order paling awal s/d paling akhir "
         "di file order; kalau tanggal tidak terbaca, kolom ini dikosongkan). Dihitung di "
