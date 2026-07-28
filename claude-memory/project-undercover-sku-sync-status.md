@@ -675,3 +675,17 @@ yg dipetakan di atas adalah label bodi di dalam produk "MINI Cooper".
   File formula cuma memuat ~211 model terlaris. SKU-nya dibiarkan apa adanya.
 - Gagal resolve saat pengisian: 11.403 `no_gen`, 10.902 `no_model`, 1.035 `no_color`,
   406 `dual_skip`, 285 `no_master_key`.
+
+### Jawaban cakupan (2026-07-28)
+
+- **File formula**: 207 model siap, 4 ditunda, **202 ketemu & diproses**. 5 sisanya (Honda City,
+  Mazda 2, Nissan XTrail, Suzuki APV, Toyota Hardtop / Land Cruiser) BUKAN gap — itu **entri
+  generik/duplikat** di file formula; barisnya tertangani entri yg lebih spesifik yg ada di file
+  yg sama: `Honda City Hatchback`/`Honda City Sedan`, `Mazda 2 Hatchback`/`Mazda 2 Sedan`,
+  `Suzuki APV Arena`/`Suzuki APV Luxury`, `Toyota Hardtop` + `Toyota Land Cruiser`, dan
+  `Nissan X-Trail` (typo X-Trail vs XTrail yg sudah user konfirmasi mobil sama).
+- **Motor**: 3.227 baris pakai `-MTR-`, sisa 5 = listing "Maxi" (diabaikan sesuai instruksi).
+- **SKU masih kosong: 14.427** — 10.279 model di luar file formula, **4.101 model ADA di file
+  formula tapi belum bisa di-resolve**, 34 model ditunda, 9 motor, 4 karpet. Yg 4.101 ini gap nyata
+  berikutnya (sebab: `no_gen` 11.403, `no_model` 10.902, `no_color` 1.035, `dual_skip` 406,
+  `no_master_key` 285 saat pengisian).
