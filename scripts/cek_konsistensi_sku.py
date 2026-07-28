@@ -149,6 +149,16 @@ def main():
         if len(kodes) > 1:
             temuan["6_kode_warna_beda"].append([list(key), {k: dict(v) for k, v in kodes.items()}])
 
+    # ---- 7: satu SKU dipakai oleh >1 PRODUK berbeda (tabrakan kode model)
+    #        Kembar dalam satu produk itu wajar (varian beda kolaps ke 1 formula),
+    #        tapi SKU yg sama dipakai dua produk berbeda = kode model bertabrakan.
+    per_sku = defaultdict(set)
+    for b in valid:
+        per_sku[b["sku"]].add(norm_nama(b["nama"]))
+    for sku, namas in per_sku.items():
+        if len(namas) > 1:
+            temuan["7_satu_sku_dipakai_beda_produk"].append([sku, sorted(namas)])
+
     print(f"total baris cover mobil ber-SKU: {len(baris)}   (bentuk 6 segmen: {len(valid)})")
     print()
     for k in sorted(temuan):
