@@ -156,6 +156,23 @@ def canon_strip_variant(w):
         return "(strip lain)"
     return "Strip %s" % canon_warna(color_part)
 
+
+def sort_strip_cols(strip_tot):
+    """Urutkan kolom Strip: kelompokkan per WARNA dulu (warna terlaris duluan),
+    di dalam tiap warna urut level 1/2/3 - supaya tidak keliatan acak."""
+    color_tot = defaultdict(int)
+    parsed = {}
+    for label, qty in strip_tot.items():
+        m = re.match(r"^Strip (\d+) (.*)$", label)
+        if m:
+            level, color = int(m.group(1)), m.group(2)
+        else:
+            level, color = 99, label
+        parsed[label] = (level, color)
+        color_tot[color] += qty
+    color_rank = {c: i for i, (c, _) in enumerate(sorted(color_tot.items(), key=lambda x: (-x[1], x[0])))}
+    return sorted(strip_tot.keys(), key=lambda l: (color_rank[parsed[l][1]], parsed[l][0]))
+
 # =====================================================================
 #  UTIL parsing angka / teks
 # =====================================================================
@@ -1092,7 +1109,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
         elif tipe == "Exclusive":
             excl_tot[fam] += rec["qty"]
             excl_cell[(model, fam)] += rec["qty"]
-    strip_cols = [l for l, _ in sorted(strip_tot.items(), key=lambda x: (-x[1], x[0]))]
+    strip_cols = sort_strip_cols(strip_tot)
     prem_cols = [f for f, _ in sorted(prem_tot.items(), key=lambda x: (-x[1], x[0]))]
     excl_cols = [f for f, _ in sorted(excl_tot.items(), key=lambda x: (-x[1], x[0]))]
 
