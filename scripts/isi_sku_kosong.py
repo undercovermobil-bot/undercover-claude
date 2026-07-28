@@ -56,10 +56,12 @@ def run(apply):
                 if len(contoh[st]) < 3:
                     contoh[st].append((f, r, str(nm)[:46], var[:34]))
                 continue
-            if store == "OT":
-                got = "-".join(["OT" if i == 2 else p for i, p in enumerate(got.split("-"))])
-            elif store == "OP":
-                got = "-".join(["OP" if i == 2 else p for i, p in enumerate(got.split("-"))])
+            # JANGAN menimpa segmen kode toko. Konvensi yg dipakai master & seluruh
+            # listing (dicek 2026-07-28, 100% konsisten di data mentah): toko Otonation
+            # memakai kode SKU **UA**, toko Otoprotection memakai kode **SP**. Versi
+            # sebelumnya menimpanya jadi OT/OP dan itu membuat ~1.310 baris hasil isian
+            # tidak cocok dgn baris lain di file yg sama. resolve_sku() sudah
+            # mengembalikan kode yg benar — biarkan apa adanya.
             if apply:
                 ws.cell(row=r, column=sc, value=got)
             touched = True
