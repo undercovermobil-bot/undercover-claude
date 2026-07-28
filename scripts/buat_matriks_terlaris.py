@@ -127,14 +127,34 @@ def color_family(w):
     return None
 
 
+STRIP_LEVEL_WORD = {"epic": 1, "elite": 2, "warrior": 3, "warior": 3}
+
+
 def canon_strip_variant(w):
-    """Label kanonik varian Strip apa adanya (mis. 'Elite Abu', 'Epic Merah',
-    'Strip 1 Abu'), cuma rapikan spasi/casing - tidak dipetakan ke warna polos."""
+    """Label kanonik varian Strip: satukan brand lama ke level Strip 1/2/3
+    (Epic=Strip 1, Elite=Strip 2, Warrior=Strip 3) - sudah dipakai bergantian
+    dgn label 'Strip N' di data lama, jadi digabung jadi satu skema. Warna
+    ekornya diseragamkan sama seperti warna polos (Abu -> Abu-abu, dst)."""
     s = re.sub(r"\s+", " ", str(w or "").strip())
     if not s:
         return "(strip lain)"
-    s = re.sub(r"\bwarior\b", "Warrior", s, flags=re.I)
-    return s.title()
+    m = re.match(r"^(epic|elite|warrior|warior)\b\s*(.*)$", s, re.I)
+    if m:
+        level = STRIP_LEVEL_WORD[m.group(1).lower()]
+        color_part = m.group(2).strip()
+    else:
+        m = re.match(r"^strip\b\s*(\d+)?\s*(.*)$", s, re.I)
+        if m:
+            level = int(m.group(1)) if m.group(1) else None
+            color_part = m.group(2).strip()
+        else:
+            level = None
+            color_part = s
+    if level is not None:
+        return "Strip %d %s" % (level, canon_warna(color_part))
+    if not color_part:
+        return "(strip lain)"
+    return "Strip %s" % canon_warna(color_part)
 
 # =====================================================================
 #  UTIL parsing angka / teks
@@ -1094,6 +1114,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
                 "Total Penjualan (Rp)", "% Nilai", "Jenis Cover Digabung", "Jumlah Varian/SKU",
                 "Rata-rata Terjual/Hari"]
     headers1 += fam_cols + ["Total Warna Polos"] + ["% " + f for f in fam_cols]
+    headers1 += ["Rata-rata/Hari " + f for f in fam_cols]
     headers1 += strip_cols + ["Premium " + f for f in prem_cols] + ["Exclusive " + f for f in excl_cols]
 
     # baris grup (merged) di atas header kolom
@@ -1110,7 +1131,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
     GROW = 4
     HROW = 5
     if fam_cols:
-        span = len(fam_cols) + 1 + len(fam_cols)  # qty + total + %
+        span = len(fam_cols) + 1 + len(fam_cols) + len(fam_cols)  # qty + total + % + rata2/hari
         col = add_group(col, "WARNA POLOS (Reguler+Premium+Exclusive+Transparan, tanpa Strip)", span)
     if strip_cols:
         col = add_group(col, "DETAIL STRIP/ELITE/EPIC/WARRIOR (di luar Warna Polos)", len(strip_cols))
@@ -1140,6 +1161,9 @@ def build_output(agg, diag, out_path, root, period_days=None):
         row.append((rtot, S_CINT))
         for q in qtys:
             row.append(((q / rtot) if rtot else 0, S_PCT))
+        for q in qtys:
+            vq = velocity(q)
+            row.append((vq if vq is not None else "", S_DEC2))
         for l in strip_cols:
             q = strip_cell.get((model, l), 0)
             row.append((q if q else "", S_CINT))
@@ -1165,6 +1189,9 @@ def build_output(agg, diag, out_path, root, period_days=None):
     totrow.append((grand_fam, S_TINT))
     for f in fam_cols:
         totrow.append(((fam_tot[f] / grand_fam) if grand_fam else 0, S_TPCT))
+    for f in fam_cols:
+        vf = velocity(fam_tot[f])
+        totrow.append((vf if vf is not None else "", S_TDEC2))
     for l in strip_cols:
         totrow.append((strip_tot[l], S_TINT))
     for f in prem_cols:
@@ -1174,7 +1201,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
     rows1.append(totrow)
 
     widths1 = ([5, 26, 7, 15, 11, 20, 9, 34, 14, 12] + [10] * len(fam_cols) + [15]
-               + [10] * len(fam_cols) + [12] * len(strip_cols)
+               + [10] * len(fam_cols) + [13] * len(fam_cols) + [12] * len(strip_cols)
                + [14] * len(prem_cols) + [15] * len(excl_cols))
     sheets.append({"name": "Top 300 Mobil", "rows": rows1, "widths": widths1,
                    "freeze": (HROW + 1, 3), "merges": merges})
@@ -1236,14 +1263,17 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "Strip/Elite/Epic/Warrior dikeluarkan; Premium/Exclusive/Transparan ikut "
         "(Silver=Premium). Warna gen-bocor/junk dibuang. Kolom diurut warna "
         "terlaris; ada blok jumlah + blok '% <warna>' (persen tiap warna dari total "
-        "warna polos model itu). Baris TOTAL: blok % = persen dari SELURUH warna polos.",
+        "warna polos model itu) + blok 'Rata-rata/Hari <warna>' (kecepatan jual warna "
+        "itu khusus). Baris TOTAL: blok % = persen dari SELURUH warna polos.",
         "- GEN disetarakan dgn list Undercover terkini bila ada file acuan "
         "mass-update (daftar varian) di folder: gen historis (Gen 1F/2F/tahun/dll) "
         "dipetakan ke gen listing Reguler Undercover (mis. Avanza -> Gen 1-2 / Gen 3) "
         "via kode SKU / tahun / nomor gen. Tanpa file acuan, gen dibiarkan apa adanya.",
-        "- Sheet 'Top 300 Mobil' - blok 'DETAIL STRIP' (kolom Elite/Epic/Warrior dst): "
-        "qty per varian Strip APA ADANYA (tidak digabung ke warna polos); TIDAK termasuk "
-        "di 'Warna Polos' - jangan dijumlahkan lagi dgn blok itu.",
+        "- Sheet 'Top 300 Mobil' - blok 'DETAIL STRIP' (kolom Strip 1/2/3 <warna>): "
+        "brand lama Elite/Epic/Warrior DISATUKAN ke skema Strip 1/2/3 (Epic=Strip 1, "
+        "Elite=Strip 2, Warrior=Strip 3 - keduanya dipakai bergantian di data lama utk "
+        "tier yg sama). Qty per varian; TIDAK termasuk di 'Warna Polos' - jangan "
+        "dijumlahkan lagi dgn blok itu.",
         "- Sheet 'Top 300 Mobil' - blok 'DETAIL PREMIUM' & 'DETAIL EXCLUSIVE': rincian qty "
         "per warna KHUSUS tier Premium/Exclusive. Ini SUBSET dari 'Warna Polos' (sudah "
         "ikut dihitung di sana) - disediakan cuma utk lihat kontribusi tier itu per warna, "
