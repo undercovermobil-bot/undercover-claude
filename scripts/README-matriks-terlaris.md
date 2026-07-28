@@ -74,13 +74,27 @@ Script otomatis mengenalinya (dari isinya, bukan nama file) dan:
 
 Tanpa file acuan, gen dibiarkan apa adanya (hanya dibersihkan tahunnya).
 
+## Kecepatan jual & estimasi stok (bukan inventory-turnover baku)
+
+Bisnis ini belum punya sistem stok tetap (produksi on-demand), jadi metrik
+yang dihitung bukan "inventory turnover" klasik (yang butuh data stok riil),
+tapi **kecepatan jual rata-rata**: qty terjual ÷ jumlah hari periode data.
+Periode dideteksi **otomatis** dari tanggal order paling awal s/d paling
+akhir di seluruh file (Shopee: Waktu Pesanan Dibuat, TikTok: Created Time,
+Lazada: createTime). Kalau tanggal tak terbaca, kolom kecepatan dikosongkan.
+
+Dari kecepatan jual itu dihitung **Estimasi Stok** = Rata-rata/Hari ×
+`BUFFER_DAYS` (default **7 hari**, ubah di bagian `KONFIGURASI` script kalau
+siklus restock/produksi berbeda) — rekomendasi kasar asumsi permintaan rata-
+rata konstan, bukan jaminan.
+
 ## Isi output (3 sheet)
 
 | Sheet | Isi |
 |---|---|
-| **Top 300 Mobil** | Ranking per model (No, Nama Mobil, Total Kuantitas, %, Total Penjualan, %, Jenis Cover Digabung, Jumlah Varian/SKU) **+ matriks warna polos terintegrasi**: blok jumlah per warna (diurut terlaris) + "Total Warna Polos" + **blok "% &lt;warna&gt;"** (persen tiap warna dari total warna polos model itu). Baris **TOTAL** menampilkan total + persen tiap warna dari seluruh penjualan warna polos. Strip/Elite/Epic/Warrior **dikeluarkan**; Premium/Exclusive/Transparan ikut (Silver = Premium) |
-| **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + **Gen (sudah disetarakan)** + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU |
-| **Metodologi** | Definisi, filter, dan **diagnostik** (jumlah baris terbaca per marketplace, jumlah file acuan, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
+| **Top 300 Mobil** | Ranking per model + **Rata-rata Terjual/Hari** + **matriks warna polos terintegrasi**: blok jumlah per warna (diurut terlaris) + "Total Warna Polos" + blok "% &lt;warna&gt;". Lalu 3 blok detail tambahan (header grup): **Detail Strip/Elite/Epic/Warrior** (qty per label apa adanya, mis. "Elite Abu" — di luar Warna Polos), **Detail Premium** & **Detail Exclusive** (qty per warna khusus tier itu — subset dari Warna Polos, jangan dijumlah dobel). Baris **TOTAL** di paling bawah |
+| **Detail Gen & Warna** | Tiap baris = Model + Jenis Cover + **Gen (sudah disetarakan)** + Warna, dengan Kuantitas, % dari model, Total Penjualan, Jumlah SKU, **Rata-rata/Hari, /Minggu, /Bulan**, dan **Estimasi Stok** |
+| **Metodologi** | Definisi, filter, periode data terdeteksi, dan **diagnostik** (jumlah baris terbaca per marketplace, jumlah file acuan, yang dilewati, dll) — **cek sheet ini dulu** untuk memastikan angka wajar |
 
 ## Definisi & asumsi (bisa diubah di bagian `KONFIGURASI` dalam script)
 
