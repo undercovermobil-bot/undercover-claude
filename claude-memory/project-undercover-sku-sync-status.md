@@ -724,3 +724,44 @@ cuma ada di kategori Reguler & Strip.
 **Motor Premium — SELESAI.** User konfirmasi warnanya abu-abu saja. Kolom varian listing Premium
 motor memang kosong (226 baris) atau literal `Default` (208 baris) = tidak ada pilihan warna;
 `build_motor_sku.color_code()` sudah memetakannya ke `("P","ABU")`, jadi SKU-nya `...-P-MTR-ABU`.
+
+## 2026-07-28 — DOUBLE-CHECK KONSISTENSI SKU ANTAR TOKO (permintaan user)
+
+Alat: **`scripts/cek_konsistensi_sku.py`** — 7 pemeriksaan atas isi sel file hasil.
+Hasil perbaikan otomatis: **`scripts/perbaiki_temuan.py`** (hanya kasus tak ambigu).
+
+**28 baris diperbaiki:**
+
+| jenis | jumlah | contoh |
+|---|---|---|
+| SKU berakhiran newline | 4 | `HYN-I20-UA-R-G1-BRU\n` (Hyundai Grand i20, UA Shopee 1) |
+| segmen generasi rusak | 1 | `NSN-NVP-SP-S-G$-S3A` -> `-G1-` |
+| kode toko menyimpang | 1 | `MBZ-GLC-OT-...` -> `MBZ-GLC-UA-...` (UA Lazada r15756) |
+| kategori tak cocok nama | 1 | baris yg sama: nama "Exclusive" tapi segmen `R` -> `E` |
+| kode warna tertukar | 3 | Taruna varian "Biru Benhur" berkode MRH; 2 baris Navara PRO-4X hijau<->merah |
+| tier Strip tertukar | 19 | Hyundai Matrix & Chevrolet Trooper: Epic<->Elite terbalik (Epic=S1x, Elite=S2x) |
+
+**Sengaja TIDAK diubah — ambigu, perlu keputusan user:**
+- **Chevrolet Captiva Premium (2 baris)**: varian tertulis `Abu-abu<TAB>Silver` (dua nama warna
+  dalam satu varian) berkode `SLV`. Aturan sekarang: kalau teks varian memuat >1 nama warna,
+  kode warna TIDAK dihitung ulang.
+- **Kode model beda antar toko (19 produk)** — sebagian memang desain, sebagian salah ketik:
+  - SENGAJA: `NSN-NVR` vs `NSN-NVP` (Navara vs Navara PRO-4X), `SZK-GVT/GVH/EVT` (Vitara),
+    `TYT-HAC/HAL` (HiAce vs HiAce Long) — pembedanya ada di teks varian, bukan nama produk.
+  - PERLU KEPUTUSAN: Honda City Hatchback `HND-JAZ` di OP (15 baris) vs `HND-CHB` (114);
+    Suzuki Carry Pickup `SZK-NCR` di OP/SP (89) vs `SZK-CAR` di UA/OT (309);
+    Mazda 3 Sedan `MZD-M3` (33) vs `MZD-3S` (312); Jeep Wrangler Rubicon `JEP-WR` (23) vs
+    `JEP-WRA` (296); Toyota Hilux `TYT-HLR` (119) vs `TYT-HLX` (476);
+    Nissan Serena `NSN-SRE` (17) vs `NSN-SRN` (653); Ford Ranger T6 `FRD-RAN` (4) vs `FRD-RT` (200);
+    Daihatsu Feroza Long `DHT-FRZ` (2) vs `DHT-FRL` (72); Mazda CX-30 `MZD-CX3` (1) vs `MZD-CX30` (111);
+    Suzuki Carry `SZK-CRF` di OP (2) vs `SZK-CAR` (212).
+
+**Cek 7 ("1 SKU dipakai 2 produk", 3.983 baris) HAMPIR SEMUANYA FALSE POSITIVE** — akibat
+normalisasi nama saya sendiri: pasangannya `X` vs `X semi`, `hilux` vs `toyotahilux`,
+`peugeot3008` vs `peugeot3008dan`. Itu produk sama dgn judul listing berbeda. Yang layak dicek
+manual cuma 3 pasangan: `suzukigrandvitara`/`suzukivitara`, `landroverdiscovery`/`discoverysport`,
+`toyotastarlet`/`starletkapsul`.
+
+**Cek 5 (segmen generasi beda dlm produk sama, 56 temuan)** terpusat di model yg TIDAK ada di
+file formula: Hyundai Elantra (18), Hyundai Sonata (16), Nissan Livina X-Gear (8), Jeep Cherokee (6).
+SKU-nya warisan lama, belum pernah disentuh skema formula — bukan regresi dari pekerjaan ini.
