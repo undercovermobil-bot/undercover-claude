@@ -624,6 +624,68 @@ def finalize_canonical(canon_reg, canon_all):
     return out
 
 
+# =====================================================================
+#  ACUAN FORMULA COVER (mobil beda gen tapi 1 formula/pola fisik yang sama)
+#  File referensi: "Nama Mobil | Generasi | Total Formula". Kalau Total
+#  Formula == 1 utk suatu model (walau ada >1 baris Generasi tercantum),
+#  gen model itu digabung jadi 1 - krn secara fisik memang 1 SKU/pola cover
+#  yang sama dipakai lintas gen tsb.
+# =====================================================================
+GEN_MERGE_LABEL = "Semua Gen (1 Formula)"
+
+
+def is_formula_header(row):
+    low = set(norm(c) for c in row)
+    return "nama mobil" in low and "total formula" in low and ("generasi" in low or "formula" in low)
+
+
+def formula_columns(row):
+    low = [norm(c) for c in row]
+
+    def idx(*names):
+        for n in names:
+            if n in low:
+                return low.index(n)
+        return None
+    return {"no": idx("no"), "nama": idx("nama mobil"), "gen": idx("generasi", "formula"),
+            "total": idx("total formula")}
+
+
+def accumulate_formula_simple(rows, hidx, cols, simple_models):
+    """Parse blok per-model (baris dgn 'No' terisi = mulai blok baru; baris
+    berikutnya tanpa 'No' masih bagian model yg sama). Kalau Total Formula==1
+    utk blok itu, tandai model tsb sbg gen-agnostic (>=1 baris Generasi)."""
+    if cols.get("nama") is None or cols.get("total") is None:
+        return
+    cur_model = None
+    cur_total = None
+    cur_gens = 0
+
+    def flush():
+        if cur_model and cur_total == 1 and cur_gens >= 1:
+            key = re.sub(r"\s+", " ", str(cur_model)).strip().lower()
+            if key:
+                simple_models.add(key)
+    for row in rows[hidx + 1:]:
+        no = get(row, cols.get("no"))
+        nama = get(row, cols["nama"])
+        gen = get(row, cols.get("gen"))
+        total = get(row, cols["total"])
+        if no not in (None, ""):
+            flush()
+            cur_model, cur_total, cur_gens = nama, None, 0
+        if cur_model is None:
+            continue
+        if total not in (None, ""):
+            try:
+                cur_total = int(float(total))
+            except (TypeError, ValueError):
+                pass
+        if gen not in (None, "", "-"):
+            cur_gens += 1
+    flush()
+
+
 def map_gen(model, gen_raw, sku, canonical):
     """Petakan gen historis -> gen kanonik Undercover (urut: kode SKU, kata khas,
     tahun, nomor gen, lalu fallback)."""
@@ -665,7 +727,7 @@ def map_gen(model, gen_raw, sku, canonical):
 #  PROSES 1 ITEM ORDER
 # =====================================================================
 def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_raw, sku,
-               date_raw, agg, diag, canonical, period):
+               date_raw, agg, diag, canonical, period, simple_models):
     diag["rows_%s" % market] += 1
     diag["rows_total"] += 1
     status = norm(status_raw)
@@ -690,6 +752,9 @@ def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_r
         gen_raw = gen_raw or g2
     warna = canon_warna(warna_raw)
     gen = map_gen(model, gen_raw, sku, canonical)      # <- disetarakan ke gen Undercover
+    if model.strip().lower() in simple_models:
+        gen = GEN_MERGE_LABEL                          # <- 1 formula fisik, gen tak dibedakan
+        diag["gen_merged"] += 1
     tipe = tier_w or tier_name or "Reguler"
 
     if market == "lazada":
@@ -722,9 +787,10 @@ def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_r
             period["max"] = d
 
 
-def scan_workbook(path, canon_reg, canon_all, order_items, diag):
-    """Baca 1 file. Kalau file acuan (mass-update) -> bangun gen kanonik.
-    Kalau file order -> kumpulkan item minimal ke order_items. Return 'ref'/'order'/None."""
+def scan_workbook(path, canon_reg, canon_all, simple_models, order_items, diag):
+    """Baca 1 file. Kalau file acuan mass-update -> bangun gen kanonik. Kalau
+    file acuan formula cover -> bangun simple_models. Kalau file order ->
+    kumpulkan item minimal ke order_items. Return 'ref'/'formula'/'order'/None."""
     try:
         sheets = read_xlsx_rows(path)
     except Exception as e:
@@ -738,11 +804,17 @@ def scan_workbook(path, canon_reg, canon_all, order_items, diag):
         market = None
         colmap = None
         refcols = None
+        formcols = None
         for i, row in enumerate(rows[:20]):
             if is_reference_header(row):
                 mode = "ref"
                 hidx = i
                 refcols = reference_columns(row)
+                break
+            if is_formula_header(row):
+                mode = "formula"
+                hidx = i
+                formcols = formula_columns(row)
                 break
             res = detect_market_and_columns(row)
             if res:
@@ -753,6 +825,9 @@ def scan_workbook(path, canon_reg, canon_all, order_items, diag):
         if mode == "ref":
             accumulate_canonical(rows, hidx, refcols, canon_reg, canon_all)
             kind = kind or "ref"
+        elif mode == "formula":
+            accumulate_formula_simple(rows, hidx, formcols, simple_models)
+            kind = kind or "formula"
         elif mode == "order":
             kind = "order"
             for row in rows[hidx + 1:]:
@@ -1298,6 +1373,12 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "mass-update (daftar varian) di folder: gen historis (Gen 1F/2F/tahun/dll) "
         "dipetakan ke gen listing Reguler Undercover (mis. Avanza -> Gen 1-2 / Gen 3) "
         "via kode SKU / tahun / nomor gen. Tanpa file acuan, gen dibiarkan apa adanya.",
+        "- GEN DIGABUNG jadi '%s' utk model yg secara fisik cuma pakai 1 formula/pola "
+        "cover walau listing-nya punya >1 pilihan gen (mis. Honda Brio Gen 1 & Gen 2 = "
+        "bentuk cover sama). Ini dari file acuan TERPISAH (\"Nama Mobil | Generasi | "
+        "Total Formula\", Total Formula==1 meski >1 baris Generasi tercantum -> gen "
+        "model itu digabung). Model dgn Total Formula>1 atau tak terdaftar di file itu "
+        "TIDAK diubah (tetap pakai gen kanonik biasa)." % GEN_MERGE_LABEL,
         "- Sheet 'Top 300 Mobil' - blok 'DETAIL STRIP' (kolom Strip 1/2/3 <warna>): "
         "brand lama Elite/Epic/Warrior DISATUKAN ke skema Strip 1/2/3 (Epic=Strip 1, "
         "Elite=Strip 2, Warrior=Strip 3 - keduanya dipakai bergantian di data lama utk "
@@ -1333,6 +1414,9 @@ def build_output(agg, diag, out_path, root, period_days=None):
     for t in [
         "- File acuan varian (mass-update) terbaca: {:,} | model punya gen kanonik: {:,}".format(
             diag.get("ref_files", 0), diag.get("ref_models", 0)),
+        "- File acuan formula cover terbaca: {:,} | model gen-agnostic (1 formula, gen "
+        "digabung): {:,} | baris order yg gennya digabung: {:,}".format(
+            diag.get("formula_files", 0), diag.get("formula_models", 0), diag.get("gen_merged", 0)),
         "- Periode data terdeteksi: {} s/d {} ({} hari) -> dipakai utk Rata-rata/Hari".format(
             diag.get("period_min", "-"), diag.get("period_max", "-"), diag.get("period_days", "-")),
         "- Total baris order terbaca: {:,}".format(diag.get("rows_total", 0)),
@@ -1387,21 +1471,29 @@ def main():
     #         kumpulkan item order.
     canon_reg = defaultdict(dict)
     canon_all = defaultdict(dict)
+    simple_models = set()
     order_items = []
     diag = Counter()
     nref = 0
+    nform = 0
     for i, (path, label) in enumerate(files, start=1):
         print("  [%d/%d] %s :: %s" % (i, len(files), label, os.path.basename(path)))
-        kind = scan_workbook(path, canon_reg, canon_all, order_items, diag)
+        kind = scan_workbook(path, canon_reg, canon_all, simple_models, order_items, diag)
         if kind == "ref":
             nref += 1
+        elif kind == "formula":
+            nform += 1
     canonical = finalize_canonical(canon_reg, canon_all)
     diag["ref_files"] = nref
     diag["ref_models"] = len(canonical)
+    diag["formula_files"] = nform
+    diag["formula_models"] = len(simple_models)
     if nref:
         print("File acuan varian: %d | model dgn gen kanonik: %d (gen disetarakan)" % (nref, len(canonical)))
     else:
         print("Tidak ada file acuan mass-update -> gen dibiarkan apa adanya.")
+    if nform:
+        print("File acuan formula cover: %d | model gen-agnostic (1 formula): %d" % (nform, len(simple_models)))
 
     # Fase 2: proses tiap item order (pakai acuan gen), sekaligus lacak
     # tanggal order paling awal/akhir utk hitung rata-rata terjual/hari.
@@ -1409,7 +1501,7 @@ def main():
     period = {}
     for it in order_items:
         count_item(it[0], it[1], it[2], it[3], it[4], it[5], it[6], it[7], it[8],
-                   agg, diag, canonical, period)
+                   agg, diag, canonical, period, simple_models)
 
     period_days = None
     if period.get("min") and period.get("max"):
