@@ -30,6 +30,11 @@ APPLY = "--apply" in sys.argv
 KODE_BENAR = {"UA": "UA", "OT": "UA", "SP": "SP", "OP": "SP"}
 WARNA = (("abu", "ABU"), ("hitam", "HTM"), ("merah", "MRH"),
          ("biru", "BRU"), ("hijau", "GRN"))
+# Kata warna lain yang TIDAK punya kode di WARNA. Kalau salah satunya ikut muncul di
+# teks varian, varian itu menyebut lebih dari satu warna (kasus nyata: Chevrolet
+# Captiva Premium bervarian "Abu-abu<TAB>Silver") sehingga kode warnanya tidak bisa
+# disimpulkan otomatis — biarkan, laporkan ke user.
+WARNA_LAIN = ("silver", "putih", "coklat", "gold", "krem", "kuning", "orange", "ungu")
 TIER_UA = {"epic": "P", "elite": "E", "warrior": "W"}
 TIER_SP = {"epic": "1", "elite": "2", "warrior": "3"}
 # "Strip N" (tulisan SP/OP) dan Epic/Elite/Warrior (tulisan UA/OT) itu tier yang sama
@@ -46,6 +51,8 @@ def warna_dasar(var):
     ada = [(low.index(k), k, c) for k, c in WARNA if k in low]
     if len(ada) != 1:          # 0 atau >1 nama warna -> ambigu, jangan disentuh
         return None, None
+    if any(w in low for w in WARNA_LAIN):
+        return None, None      # varian menyebut warna lain juga -> ambigu
     _, kata, kode = ada[0]
     tier = None
     for t in ("epic", "elite", "warrior", "strip 1", "strip 2", "strip 3"):
