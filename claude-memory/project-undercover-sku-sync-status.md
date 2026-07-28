@@ -627,3 +627,51 @@ nama produk tak berubah, dan tak ada SKU hilang.
 - **'Maxi'** = listing `Body Cover Motor / Sarung / Selimut Motor Maxi` di **UA TikTok saja**, 5 baris warna, **SKU-nya kosong semua**. Kemungkinan besar ini lini Yamaha Maxi (bukan model spesifik) — nunggu konfirmasi user.
 - **Premium motor**: 433 baris, teks variannya **227 KOSONG + 206 literal "Default"** — artinya listing Premium motor memang **tidak punya pilihan warna sama sekali** (produk tunggal). "Default" cuma placeholder marketplace, bukan nama warna. Jadi pertanyaan sebenarnya ke user: cover motor Premium itu fisiknya warna apa (biar segmen warna SKU-nya benar)?
 - **Daihatsu Gran Max polos (No. 126)** TERNYATA = baris yg di-highlight **ungu (FFFF00FF)** — sama seperti Mitsubishi Strada Triton. Jadi **duplikat → memang harus di-skip**, bukan model tersendiri. Cuma ada 2 baris ungu di seluruh Sheet2 dan dua-duanya sudah masuk daftar BLOCKED. **Pertanyaan "Gran Max polos" SELESAI — tidak perlu jawaban user lagi.** Yang nyata cuma Gran Max **PU** (pickup) & **MB** (minibus).
+
+## 2026-07-28 — PENERAPAN NYATA KE 19 FILE BARU (sebelumnya cuma DRY-RUN)
+
+**Kejadian yang harus diingat:** 19 file yang dikirim ke user 2026-07-27 sbg "siap upload" ternyata
+**belum berubah sama sekali**. Semua run `jalankan_semua_baru.py` berakhir DRY-RUN — dan karena
+penghitung statistiknya berada di luar blok `if apply:`, angka laporannya ("33.554 diubah",
+"3.227 siap") IDENTIK dgn mode APPLY. Baris `mode:` cuma dicetak di akhir output jadi terlewat.
+Diperparah oleh `cek_keutuhan.py` yg melaporkan "0/19 masalah" — itu dibaca sbg "integritas aman",
+padahal justru bukti tidak ada yg berubah. Pengaman yg sudah dipasang: mode dicetak di AWAL run,
+dan salinan pra-run disimpan di `BARU_PRISTINE/` sbg pembanding wajib.
+
+**Urutan pipeline final (jalankan persis urutan ini):**
+1. `jalankan_semua_baru.py --apply` — formula cover mobil + SKU motor MTR + akhiran `_` Lazada
+2. `isi_sku_kosong.py --apply` — isi SKU kosong / skema lama 3 segmen lewat `resolve_sku()`
+3. `step_formula(True)` sekali lagi — merapikan baris hasil isian yg segmennya beda dari formula
+4. `lazada_unik_final.py --apply` — pass keunikan Lazada yg idempoten (lihat SEMUA SKU, bukan cuma yg tanpa `_`)
+5. `formula_master_saja.py --apply` lalu `rebuild_lookup.py`
+
+**Prasyarat penting:** `master_lookup_*.json` itu CACHE. Yg lama (14 Juli) masih pra-formula
+(5.180 G1) sementara master sekarang 42.319 G1 — WAJIB `rebuild_lookup.py` dulu sebelum
+`isi_sku_kosong.py`, kalau tidak hasil isiannya bertentangan dgn baris yg sudah berskema formula.
+
+**Hasil terverifikasi (dibandingkan isi sel vs `BARU_PRISTINE/`, bukan dari laporan skrip):**
+- 46.711 sel SKU berubah di tahap 1-3, lalu 8.244 SKU kosong/skema-lama terisi
+- motor: 3.227 baris pakai `-MTR-`; sisa 5 = listing "Maxi" (memang diabaikan, `SKIP_MODELS`)
+- Lazada: 0 SKU kembar dalam satu listing (UA & SP); file non-Lazada 0 baris terkontaminasi `_`
+- konformansi skema formula: **61.708 sesuai, 1 tidak** — baris rusak `NSN-NVP-SP-S-G$-S3A`
+  (SP_Shopee_2 baris 1278) yg selalu lolos filter format karena `$`; sudah diperbaiki manual
+  jadi `NSN-NVP-SP-S-G1-S3A`
+
+**Master ikut disamakan** (376 baris di tiap file master, 5 model): Mini Cooper 480, Suzuki Forsa 192,
+BYD Atto 3 44, Daihatsu Taft GT 32, Mitsubishi Galant 4. Efek samping bagus: bug data lama di
+BYD Atto 3 & Daihatsu Taft GT (label generasi keliru terisi "Hijau") ikut sembuh jadi `G1`.
+
+**Mini Cooper — asumsi yg dipakai, minta konfirmasi user.** Listing SELALU menulis jumlah pintu
+(0 baris tanpa keterangan pintu, sudah dicek), jadi sisi listing tidak menebak sama sekali. Tapi
+MASTER menulis generasi Mini Cooper sbg nama bodi saja. Digolongkan per jumlah pintu bawaan:
+`Roadster/Paceman/Coupe/Cabrio/Convertible -> 3P`, `Clubman/Countryman -> 5P`.
+Label **"Hatch" polos (16 baris/master) SENGAJA tidak dipetakan** — MINI Hatch ada versi 3 & 5 pintu.
+Catatan: di master, "MINI Countryman" & "MINI Convertible" adalah PRODUK TERPISAH dari "MINI Cooper";
+yg dipetakan di atas adalah label bodi di dalam produk "MINI Cooper".
+
+**Baris yg memang tidak ikut diproses (bukan bug):**
+- ~40.621 baris = 1.437 nama produk yg TIDAK ADA di file formula (Hyundai Elantra, Toyota Crown,
+  Nissan Cedric, RAV4, Jeep Cherokee, VW Passat/Golf, Lexus ES/RX, BMW X3, Audi A4/A6, dst).
+  File formula cuma memuat ~211 model terlaris. SKU-nya dibiarkan apa adanya.
+- Gagal resolve saat pengisian: 11.403 `no_gen`, 10.902 `no_model`, 1.035 `no_color`,
+  406 `dual_skip`, 285 `no_master_key`.
