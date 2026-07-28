@@ -1058,6 +1058,9 @@ def build_output(agg, diag, out_path, root, period_days=None):
         fam = color_family(warna)
         if fam is None:
             continue
+        if fam == "Silver":
+            continue  # Silver = penanda tier Premium itu sendiri, bukan warna polos
+                      # yg tersedia lintas tier spt Abu-abu/Hitam/dll - lihat Detail Premium
         fam_tot[fam] += rec["qty"]
         fam_cell[(model, fam)] += rec["qty"]
     fam_cols = [f for f, _ in sorted(fam_tot.items(), key=lambda x: (-x[1], x[0]))]
@@ -1104,10 +1107,14 @@ def build_output(agg, diag, out_path, root, period_days=None):
     rows1.append([("MOBIL TERLARIS - Top %d Model (Detail Gen & Warna)" % TOP_N, S_TITLE)])
     rows1.append([("Sumber: order Shopee/TikTok/Lazada semua toko. Hanya pesanan sukses "
                    "(batal/belum bayar/refund dikeluarkan). Nilai = net setelah diskon. "
-                   "'Warna Polos' = Reguler+Premium+Exclusive+Transparan tanpa Strip (Silver=Premium). "
-                   "Blok 'Detail Premium/Exclusive' adalah RINCIAN yang sudah termasuk di Warna Polos "
-                   "(jangan dijumlahkan lagi); blok 'Detail Strip' terpisah (tidak masuk Warna Polos). "
-                   "Rata-rata/Hari = estimasi kecepatan jual, lihat 'Metodologi'.", S_SUB)])
+                   "'Warna Polos' = gabungan Reguler+Premium+Exclusive+Transparan tanpa Strip, "
+                   "TANPA Silver (Silver = penanda tier Premium itu sendiri, lihat Detail Premium). "
+                   "Blok 'Detail Premium/Exclusive' adalah RINCIAN yang sudah termasuk di Warna "
+                   "Polos (jangan dijumlahkan lagi, kecuali Silver yg memang di luar Warna Polos); "
+                   "blok 'Detail Strip' terpisah (tidak masuk Warna Polos). Semua '% <label>' "
+                   "dihitung dari TOTAL PENJUALAN MODEL ITU (semua tier & warna) - bukan dari "
+                   "total blok itu sendiri. Rata-rata/Hari = estimasi kecepatan jual, lihat "
+                   "'Metodologi'.", S_SUB)])
     rows1.append([])
 
     # setiap blok warna (Warna Polos, Strip, Premium, Exclusive) dapat struktur
@@ -1169,6 +1176,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
         ]
         v = velocity(model_qty[model])
         row.append((v if v is not None else "", S_DEC2))
+        mtot = model_qty[model]  # basis % = seluruh penjualan model ini (semua tier/warna)
         for _title, _name, spec in blocks:
             qtys = [spec["cell"].get((model, k), 0) for k in spec["raw"]]
             rtot = sum(qtys)
@@ -1176,7 +1184,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
                 row.append((q if q else "", S_CINT))
             row.append((rtot, S_CINT))
             for q in qtys:
-                row.append(((q / rtot) if rtot else 0, S_PCT))
+                row.append(((q / mtot) if mtot else 0, S_PCT))
             for q in qtys:
                 vq = velocity(q)
                 row.append((vq if vq is not None else "", S_DEC2))
@@ -1197,7 +1205,7 @@ def build_output(agg, diag, out_path, root, period_days=None):
             totrow.append((spec["tot"][k], S_TINT))
         totrow.append((grand, S_TINT))
         for k in spec["raw"]:
-            totrow.append(((spec["tot"][k] / grand) if grand else 0, S_TPCT))
+            totrow.append(((spec["tot"][k] / grand_qty) if grand_qty else 0, S_TPCT))
         for k in spec["raw"]:
             vf = velocity(spec["tot"][k])
             totrow.append((vf if vf is not None else "", S_TDEC2))
@@ -1264,11 +1272,11 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "- Tipe cover dari penanda warna (Elite/Warrior->Strip, Silver->Premium, "
         "Transparan->Transparan) lalu tier di nama produk.",
         "- Kolom warna di sheet 'Top 300 Mobil': hanya warna POLOS. "
-        "Strip/Elite/Epic/Warrior dikeluarkan; Premium/Exclusive/Transparan ikut "
-        "(Silver=Premium). Warna gen-bocor/junk dibuang. Kolom diurut warna "
-        "terlaris; ada blok jumlah + blok '% <warna>' (persen tiap warna dari total "
-        "warna polos model itu) + blok 'Rata-rata/Hari <warna>' (kecepatan jual warna "
-        "itu khusus). Baris TOTAL: blok % = persen dari SELURUH warna polos.",
+        "Strip/Elite/Epic/Warrior dikeluarkan; Premium/Exclusive/Transparan ikut, "
+        "TAPI Silver DIKELUARKAN dari Warna Polos (Silver = penanda tier Premium itu "
+        "sendiri, bukan warna yg tersedia lintas tier spt Abu-abu/Hitam/dll - lihat "
+        "Detail Premium). Warna gen-bocor/junk dibuang. Kolom diurut warna terlaris; "
+        "ada blok jumlah + blok '% <warna>' + blok 'Rata-rata/Hari <warna>'.",
         "- GEN disetarakan dgn list Undercover terkini bila ada file acuan "
         "mass-update (daftar varian) di folder: gen historis (Gen 1F/2F/tahun/dll) "
         "dipetakan ke gen listing Reguler Undercover (mis. Avanza -> Gen 1-2 / Gen 3) "
@@ -1283,9 +1291,12 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "dihitung di sana) - disediakan cuma utk lihat kontribusi tier itu per warna, "
         "bukan angka tambahan baru.",
         "- Setiap blok warna (Warna Polos, Strip, Premium, Exclusive) punya struktur sama: "
-        "qty per label -> 'Total <blok>' -> '% <label>' -> 'Rata-rata/Hari <label>'. "
-        "% <label> di baris model = persen dari total blok itu KHUSUS model tsb; di baris "
-        "TOTAL = persen dari total blok itu di SELURUH model.",
+        "qty per label -> 'Total <blok>' (jumlah blok itu saja) -> '% <label>' -> "
+        "'Rata-rata/Hari <label>'. PENTING: basis '% <label>' BUKAN total blok itu, tapi "
+        "TOTAL PENJUALAN MODEL ITU (semua tier & warna digabung) - jadi % Strip, % Premium, "
+        "% Exclusive, dan % warna polos semuanya bisa dibandingkan langsung krn basisnya "
+        "sama. Di baris model: qty label / Total Kuantitas model itu. Di baris TOTAL: "
+        "total label di semua model / grand total kuantitas semua model.",
         "- RATA-RATA TERJUAL/HARI = estimasi kecepatan jual = qty terjual / jumlah hari "
         "periode data (dideteksi otomatis dari tanggal order paling awal s/d paling akhir "
         "di file order; kalau tanggal tidak terbaca, kolom ini dikosongkan). Dihitung di "
