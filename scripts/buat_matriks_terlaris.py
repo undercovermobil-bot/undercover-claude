@@ -645,7 +645,9 @@ def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_r
             diag["_sample_no_model"].append(str(product)[:70])
         return
     warna_raw, gen_raw, tier_w = parse_variation(variation)
-    if warna_raw is None and gen_raw is None:
+    if warna_raw is None or gen_raw is None:
+        # fallback ke kode SKU utk sisi yg belum ketemu (mis. produk Exclusive:
+        # variasi cuma berisi Gen krn cuma 1 warna tetap, warnanya ada di ekor SKU)
         w2, g2 = warna_and_tier_from_sku(sku)
         warna_raw = warna_raw or w2
         gen_raw = gen_raw or g2
