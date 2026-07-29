@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T04:28:11.688Z
+  modified: 2026-07-29T04:54:04.206Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -76,6 +76,16 @@ Spot-check user ("kalau banyak generasi ditarik ke G1, apakah aman?") membongkar
 **TAPI stoknya TIDAK ikut pindah.** Big Seller tidak memindahkan stok otomatis saat SKU listing berganti kode generasi. Kondisi per ekspor 28 Juli: dari 20.640 SKU gudang yatim, **16.315 masih ber-stok > 0 (81.927 unit)**; **9.728 di antaranya punya SKU pengganti aktif di listing, menahan 48.781 unit**. Arah terbesar: `G2→G1` 2.647, `G3→G1` 1.800, `G4→G1` 1.238. Contoh: `HND-BRI-UA-R-G2-HTM` menahan 28 unit padahal listing sekarang memakai `HND-BRI-UA-R-G1-HTM`. Dari 9.728 SKU tujuan itu, **1.599 belum ada di Big Seller** — jadi urutannya wajib: impor SKU baru dulu, baru pindahkan stok.
 
 Daftar lengkapnya ada di sheet **"Stok Perlu Dipindahkan"** pada laporan 29 Juli.
+
+## Ekspor Big Seller baru 2026-07-29 (04:34) — file impor BELUM dijalankan
+
+User mengganti ekspor `SKU_Gudang`/`SKU_Match` ke tanggal 29 (file lama dihapus, tidak ada duplikat glob). Perubahan: **33.295 → 33.348 SKU (+53)**, 0 SKU hilang, pemetaan 86.915 → 86.989 (+74), stok turun di 220 SKU (−304 unit, penjualan normal), 0 stok naik.
+
+**Ke-53 SKU baru itu semuanya `CM####`** — tambalan motor dadakan lagi, bukan hasil impor. Jadi **file `SIAP IMPOR` (2.620 SKU) belum dijalankan**; angka "belum ada" tetap **3.614**. Yatim naik 20.640 → 20.693.
+
+**Masalah baru yang terungkap:** total `CM####` di Big Seller sekarang **181** (128 lama + 53 baru), dan **176 di antaranya produk yang sama persis dengan SKU MTR di file impor** — menahan **820 unit stok**. Kalau file impor dijalankan apa adanya, 176 SKU gudang jadi kembar untuk barang fisik yang sama. Hanya 5 yang tak punya padanan MTR (KTM Duke 390). Daftar lengkap di sheet **"Motor CM Tambalan vs MTR"**.
+
+**Jebakan parsing yang sempat menipu:** judul berformat `Model-Toko-Kategori-Warna-Gen` **tidak boleh dipecah dengan `split('-')`** — nama model bisa memuat tanda hubung (`Yamaha MT-25`, `Kawasaki Ninja ZX-6R`, `Nissan X-Trail`). Pakai `-<Nama Toko>-` sebagai pemisah tegas. Kesalahan ini sempat membuat pencocokan CM→MTR terbaca 102/181 padahal sebenarnya 176/181. Kosakata warna juga beda antara CM (`Hijau`, `Biru`) dan MTR (`Hijau Army`, `Biru Benhur`) — perlu kanonikalisasi.
 
 ## Sisa pekerjaan
 
