@@ -127,6 +127,22 @@ Tidak ada satu pun fitur data di file kami yang memisahkan 19 produk itu dari 84
 
 **Catatan teknis:** file "Unduh Entri yang Gagal" TikTok **tidak bisa langsung diunggah ulang** — formatnya 42 kolom dengan `err_info` di kolom 1, sedangkan template unggah 45 kolom tanpa kolom itu. Bangun file retry dengan memfilter file sumber asli berdasarkan `product_id` yang gagal.
 
+## Atribut Model (100177) TikTok — kegagalan 29 Juli setelah Bagian 2A/2B
+
+Unggahan 2A/2B menyisakan **317 produk gagal** dengan *"atribut produk is missing, ID:100177, nama: Model"* (1.475 baris), plus 6 produk `sku not allow add` dan 3 produk error rasio gambar.
+
+**Aturan atribut per kategori (dari sheet `HiddenStyle`):** Model **Mandatory** untuk `Kursi & Sarung Kursi (815120)` dan `Radiator… (813968)`, tapi **Optional** untuk `Cover & Shelter Mobil (931592)`. Mayoritas cover MOTOR ternyata berkategori "Kursi & Sarung Kursi" — itu sebabnya cuma produk motor yang kena.
+
+**KUNCI: Model boleh nilai kustom.** Instruksi resmi di baris 5 template: *"Pilih nilai dari menu menurun atau masukkan nilai kustom."* Daftar dropdown-nya (sheet `HiddenAttr`, pasangan kolom 3-4) berisi 1.851 nilai **tanpa nama merek** (`KLX 140`, bukan `Kawasaki KLX 140`) dan **tidak lengkap** — Vario, Scoopy, Soul GT, ZH2 tidak ada. Kalau dipaksa memakai daftar itu, cuma 92 dari 317 produk yang bisa dicocokkan. Karena nilai kustom diizinkan, dipakai instruksi user: **Model = `<Merek> <Tipe>` dari nama produk**.
+
+**`brand` (kolom 7) ditandai "Tidak dapat diedit" dan Opsional** — jadi pengisiannya kemungkinan diabaikan TikTok. Tetap diisi `Undercover Autocare (7398062051938748165)` (format harus menyertakan ID) pada 235 baris yang kosong, sesuai permintaan user; tidak berbahaya kalau diabaikan.
+
+**Jebakan indeks kolom:** file hasil TikTok punya `err_info` di kolom 1 sehingga seluruh kolom bergeser 1 dibanding template unggah (brand kol 8 vs 7, Model kol 34 vs 33). **Jangan hardcode indeks — ambil dari header** (`h1.index('brand')`).
+
+**Jebakan parsing nama produk:** nama seperti `Body Cover Motor / Sarung / Selimut Motor Vario` perlu pembuangan token pembuka berantai; token `/` menyusut jadi string kosong setelah `strip('/-')` sehingga loop berhenti terlalu dini kalau string kosong tidak ikut dibuang. 11 listing generik memang tidak memuat merek di namanya (Vario, Beat, NMAX, PCX, Scoopy, Aerox, Supra X, Vega, Maxi, CRF1100L Africa Twin) — Model-nya terisi tanpa merek, wajar.
+
+Hasil: `Retry TikTok UA - Model & brand diisi.xlsx` — 1.475 baris, 317 produk, 219 nilai Model unik, Model & brand terisi 100%.
+
 ## Sisa pekerjaan
 
 - 9.616 baris SKU listing perlu dibenahi (7.007 placeholder angka Lazada, sisanya skema lama `CVR####` + 239 baris ber-SKU literal `"SKU"`).
