@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T09:22:51.302Z
+  modified: 2026-07-29T09:53:04.786Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -108,6 +108,24 @@ User mengunggah perubahan SKU ke Shopee UA. File hasil `Result_shopee_mass_updat
 **Penanganan:** cukup unggah ulang baris yang gagal. File hasil Shopee **strukturnya identik dengan template unggah** (15 kolom, blok header baris 1–6), jadi tinggal disalin dengan kolom `Alasan Gagal` (kolom 15) dikosongkan — tidak perlu membangun ulang dari file listing. Sudah dibuatkan `Retry Upload Shopee UA - semua.xlsx` (529 baris) + versi dipecah 7 batch @≤2 listing supaya tidak memicu error yang sama.
 
 Catatan: 46 dari 529 baris memang ber-SKU kosong — itu varian generik ("Model Lain/Custom") sesuai aturan #4, bukan kesalahan.
+
+## Upload TikTok UA 2026-07-29: 19 produk gagal `sku not allow add` — SAMA modelnya dgn Shopee
+
+UA_TikTok_3 (23.445 baris) dipecah 3 untuk batas 10rb baris TikTok. Hasil: Bagian 1 = 392 sukses / 13 gagal, Bagian 3 = 457 sukses / 6 gagal, Bagian 2 (736 produk) tidak jalan sama sekali.
+
+**PELAJARAN PEMECAHAN FILE: TikTok memproses per PRODUK, bukan per baris.** Aku memecah berdasarkan jumlah baris (7.814/7.813/7.818 — nyaris identik), tapi jumlah produknya jadi timpang: **405 / 736 / 463**. Bagian 2 memuat 1,82× produk Bagian 1 (banyak produk kecil: 214 produk hanya 1 varian) sehingga jauh lebih lambat. **Lain kali seimbangkan berdasarkan jumlah product_id, bukan jumlah baris.**
+
+**Kegagalan bersifat PER MODEL, bukan per listing:** 8 model — Hyundai Atoz, Hyundai Santa Fe, Kia Sonet, Toyota Corona, Toyota Harrier, Mitsubishi Galant, Timor, Mercedes Benz C Class — dan untuk tiap model **SELURUH listingnya gagal** (Reguler + Premium + Exclusive), 0 yang lolos. **Model yang sama ini juga gagal di Shopee**, jadi diagnosis Shopee sebelumnya ("transien, cukup unggah ulang") kemungkinan besar KELIRU — penyebabnya spesifik ke listing itu, bukan antrean.
+
+**Tiga hipotesis diuji dan GUGUR** (jangan diulang):
+1. *SKU kembar di dalam satu produk* — 343 dari 361 produk ber-SKU kembar justru SUKSES.
+2. *Ukuran/jumlah varian* — dari 16 listing ber-98-varian, hanya 2 gagal.
+3. *SKU dipakai lintas produk* — cuma 1/19 gagal memakai SKU lintas-produk, sementara 57/849 sukses memakainya.
+Tidak ada satu pun fitur data di file kami yang memisahkan 19 produk itu dari 849 lainnya.
+
+**Dugaan tersisa (belum terbukti): sku_id/variation_id di file ekspor sudah basi** untuk listing-listing itu — kalau produknya diedit di platform setelah ekspor diambil, `sku_id` lama tak lagi cocok sehingga TikTok menganggapnya penambahan SKU baru (`sku not allow add`) dan Shopee menganggap item masih dalam proses. **Cara mengujinya: ekspor ulang 8 model itu langsung dari Seller Center, lalu terapkan ulang perubahan SKU di atas ekspor segar.**
+
+**Catatan teknis:** file "Unduh Entri yang Gagal" TikTok **tidak bisa langsung diunggah ulang** — formatnya 42 kolom dengan `err_info` di kolom 1, sedangkan template unggah 45 kolom tanpa kolom itu. Bangun file retry dengan memfilter file sumber asli berdasarkan `product_id` yang gagal.
 
 ## Sisa pekerjaan
 
