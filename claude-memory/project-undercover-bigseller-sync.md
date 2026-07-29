@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-28T08:32:14.950Z
+  modified: 2026-07-28T08:53:05.753Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -41,6 +41,19 @@ Input ada di `C:\Users\OWNER\Documents\Undercover\SKU Gudang Big Seller\` — **
 Dari 16.303 SKU listing layak-gudang: **12.689 sudah ada (77,8%), 3.614 belum ada (22,2%)** — 1.829 mobil + 1.785 motor (seluruh SKU motor skema baru memang belum ada). Yatim 20.606. Output di `…\SKU Gudang Big Seller\Hasil Sync 2026-07-28\`: `Impor SKU Gudang Baru.xlsx` (template 40 kolom, hanya kolom Nomor SKU + Judul diisi) dan `Laporan Sinkronisasi SKU Gudang 2026-07-28.xlsx` (7 sheet).
 
 **Urutan eksekusi yang disarankan ke user: impor SKU gudang dulu, baru upload listing ke marketplace.** 9.490 SKU Toko lama akan hilang saat listing di-upload → 33.332 baris pemetaan putus; kalau urutannya terbalik ada jendela waktu di mana pesanan masuk tanpa SKU gudang dan stok tidak terpotong.
+
+## Audit aturan formula (2026-07-28, dipicu spot-check user soal Brio)
+
+**File formula yang benar = `C:\Users\OWNER\Downloads\Data Mobil Lebih dari 1 Formula.xlsx` → SHEET2** (207 model, kolom `Nama Mobil` / `Generasi` / `Total Formula`). Sheet1 hanya memuat 13 model dan **bukan** acuan lengkap — sempat kupakai dan menghasilkan 85 "pelanggaran" palsu. Sebaran Total Formula: 195 model TF=1, 9 model TF=2, Baleno 3, Corolla 9, Civic 11.
+
+Aturan: **Total Formula = N berarti model itu hanya boleh memakai N kode generasi di SKU**, berapa pun jumlah generasi aslinya. Contoh user: Brio punya Gen 1 & Gen 2 tapi TF=1 → SKU-nya hanya `G1`, tidak ada `G2`. (Terverifikasi: `HND-BRI` memang hanya `G1`.)
+
+Hasil audit seluruh listing: **209 model sesuai, 5 melanggar, 135 model belum ada di file formula.**
+
+**5 model melanggar** (TF=1 tapi memakai 2 kode generasi) — kode yang benar `G1`, sisanya berlebih:
+`VLK-TIG` (+G2, 24 SKU gudang terlanjur dibuat), `HND-CRV` (+G4, 66), `HND-WRV` (+G2, 66), `TYT-FTN` (+G2, 66), `TYT-AGY` (+G2, 66). Total **288 SKU gudang terlanjur ada di Big Seller** untuk kode berlebih; hanya 20 baris listing yang masih memakainya. Perbaikan listing belum dilakukan.
+
+**Jebakan yang harus diingat:** 79 model di luar file formula masih multi-generasi. Membuat SKU gudang untuk model-model itu sekarang berisiko — kalau file formula nanti diperluas, SKU-nya berubah lagi dan SKU gudang yang baru dibuat langsung jadi yatim. Karena itu file impor **dipecah dua**: `SIAP IMPOR` (2.620) dan `TUNDA (model belum berformula)` (994).
 
 ## Sisa pekerjaan
 
