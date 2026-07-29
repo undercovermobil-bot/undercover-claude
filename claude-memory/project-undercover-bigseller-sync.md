@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-28T08:53:05.753Z
+  modified: 2026-07-29T04:14:29.974Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -54,6 +54,16 @@ Hasil audit seluruh listing: **209 model sesuai, 5 melanggar, 135 model belum ad
 `VLK-TIG` (+G2, 24 SKU gudang terlanjur dibuat), `HND-CRV` (+G4, 66), `HND-WRV` (+G2, 66), `TYT-FTN` (+G2, 66), `TYT-AGY` (+G2, 66). Total **288 SKU gudang terlanjur ada di Big Seller** untuk kode berlebih; hanya 20 baris listing yang masih memakainya. Perbaikan listing belum dilakukan.
 
 **Jebakan yang harus diingat:** 79 model di luar file formula masih multi-generasi. Membuat SKU gudang untuk model-model itu sekarang berisiko — kalau file formula nanti diperluas, SKU-nya berubah lagi dan SKU gudang yang baru dibuat langsung jadi yatim. Karena itu file impor **dipecah dua**: `SIAP IMPOR` (2.620) dan `TUNDA (model belum berformula)` (994).
+
+## Update listing 2026-07-29 (19 file diganti user)
+
+Jumlah baris identik (113.932), **1.371 sel SKU berubah**, 0 nama produk & 0 varian berubah. Isi perubahannya: 1.310 = koreksi segmen toko OT→UA / OP→SP (saran 07-28 dijalankan user di sumber), 34 = Nissan Livina X-Gear `G1`/`G2` → `5S`/`7S` (Total Formula-nya akhirnya ditentukan: 5-seater vs 7-seater), 18 = tukar tier Elite↔Epic di Hyundai Matrix & Chevrolet Trooper, 4 = placeholder angka Lazada Gran Max jadi `DHT-GMX`/`DHT-GMXP`, sisanya perbaikan warna tertukar (Navara, Hilux Rangga). Muncul juga `UA_TikTok_2.xlsx` (isinya kosong, 0 baris).
+
+**Dampak ke Big Seller: NOL.** Semua SKU yang berubah ternyata sudah ada di Big Seller, jadi daftar 3.614 yang perlu dibuat **identik** — file impor 07-28 masih valid (diverifikasi: 0 SKU beda, 0 judul beda). Yang bergeser hanya laporan: yatim 20.606→20.640 (+34 NSN-LXG `G1`/`G2` jadi yatim), sudah-ada 12.689→12.655, perlu-dibenahi 9.616→9.612, koreksi OT/OP 1.311→0.
+
+**5 pelanggaran formula BELUM dibetulkan** di update ini (Tiguan/CRV/WRV/Fortuner/Agya masih 2 kode generasi).
+
+**Pelajaran:** kalau user mengganti file listing, diff posisional per file (jumlah baris sama → bandingkan indeks) jauh lebih murah daripada memproses ulang dari nol, dan langsung menunjukkan apakah Big Seller benar-benar terpengaruh.
 
 ## Sisa pekerjaan
 
