@@ -811,3 +811,39 @@ Masih perlu jawaban user: Blindvan = bodi minibus (`DHT-GMX`) atau pickup (`DHT-
 **Container tereset UNTUK KEDUA KALINYA** (scratchpad + checkout git lokal mundur ke 27 Juli).
 Skrip selamat karena sudah di-push ke remote — pemulihan: `git reset --hard origin/<branch>`
 lalu `cp scripts/*.py <scratchpad>/`. File yang sudah dikirim ke user tidak terpengaruh.
+
+## 2026-07-29 (lanjutan) — KODE MODEL: TERNYATA TIDAK ADA YANG PERLU DISAMAKAN
+
+User menyetujui "samakan yang perlu disamakan". Sebelum dieksekusi, keempat sisa temuan
+dicek ke MASTER — dan ternyata **keempat-empatnya produk yang genuinely BERBEDA**, bukan
+salah ketik. Penyamaan DIBATALKAN karena justru akan menghapus pembedaan yang disengaja:
+
+| kode | nama di master | jumlah baris master |
+|---|---|---|
+| `SZK-CAR` | Suzuki Carry | 102 |
+| `SZK-CRF` | Suzuki Carry **Futura** | 66 |
+| `SZK-NCR` | Suzuki **New** Carry Pick-Up | 66 |
+| `JEP-WRA` | Jeep Wrangler | 248 |
+| `JEP-WR` | Jeep Wrangler **Rubicon** | 148 |
+| `NSN-SRN` | Nissan Serena | 396 |
+| `NSN-SRE` | Nissan Serena **e-POWER** | 66 |
+
+**Pelajaran (menguatkan entri lama soal detektor sbg TRIAGE):** nama produk di LISTING sering
+tidak memuat kata pembeda (listing cuma "Nissan Serena Premium", padahal masternya bisa Serena
+atau Serena e-POWER). Jadi "satu nama produk memakai 2 kode model" BUKAN bukti kesalahan —
+WAJIB dicocokkan dulu ke daftar nama model di master sebelum menyimpulkan, apalagi memperbaiki.
+Kalau ini dieksekusi tanpa cek master, 89 baris New Carry Pick-Up + 23 baris Wrangler Rubicon +
+17 baris Serena e-POWER akan tertimpa jadi model yang salah.
+
+**Satu pertanyaan baru yang muncul dari sini:** listing "Suzuki Carry Pickup" di UA/OT memakai
+`SZK-CAR` (kode Carry biasa, 309 baris) sementara SP/OP memakai `SZK-NCR` (New Carry Pick-Up,
+89 baris). Master punya keduanya. Jadi kemungkinan justru UA/OT yang keliru — perlu konfirmasi
+user, bukan diputuskan sendiri.
+
+**Gran Max Blindvan — SELESAI.** User konfirmasi masuk minibus, dan master ternyata sudah
+menamainya eksplisit "Daihatsu Gran Max Minibus / Blindvan". 4 baris di UA Lazada diisi lewat
+`scripts/isi_gran_max_lazada.py`:
+- pid 8664138934 (Premium): Blindvan -> `DHT-GMX-UA-P-G1-ABU`, Pickup -> `DHT-GMXP-UA-P-G1-ABU`
+- pid 8664142658 (Exclusive): Blindvan -> `DHT-GMX-UA-E-G1-ABU`, Pickup -> `DHT-GMXP-UA-E-G1-ABU`
+Varian `Model Lain / Custom` (2 baris) sengaja dibiarkan — bodinya tidak diketahui.
+Segmen warna `ABU` dipakai karena listing-nya tidak menawarkan pilihan warna sama sekali.
