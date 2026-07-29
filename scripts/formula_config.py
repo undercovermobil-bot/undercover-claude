@@ -34,9 +34,14 @@ NAMED_LABEL_CODE = {
 
 # Model yg BELUM bisa diproses (aturan belum lengkap) -> dilewati, dilaporkan ke user
 BLOCKED = {
-    "Nissan Livina X-Gear":   "Total Formula masih '?' di file",
     "Honda Civic Hatchback":  "Total Formula masih '?' di file",
     "Mitsubishi Strada Triton": "duplikat Mitsubishi Triton (ditandai ungu user)",
+}
+
+# Total Formula yang di file masih '?' tapi sudah dijawab user secara lisan.
+# Tanpa ini model-nya otomatis masuk BLOCKED ("Total Formula tidak terbaca").
+TF_OVERRIDE = {
+    "Nissan Livina X-Gear": 2,   # user 2026-07-29: dibagi 5 seater dan 7 seater
 }
 
 # Pengelompokan formula yang ditentukan user secara eksplisit, dipakai kalau daftar
@@ -69,6 +74,15 @@ MANUAL_GROUPS = {
         ("3P", ["3 pintu", "3pintu", "3-pintu",
                 "roadster", "paceman", "coupe", "coupé", "cabrio", "convertible"]),
         ("5P", ["5 pintu", "5pintu", "5-pintu", "clubman", "countryman"]),
+    ],
+    # Nissan Livina X-Gear (user 2026-07-29): "2 formula dibagi untuk 5 seater dan
+    # 7 seater". Teks varian di listing menuliskannya dgn dua gaya — "5 Seater :
+    # 2008-2012" (SP/OP) dan "5-Seater (2008-2012)" (UA/OT) — jadi kata kuncinya
+    # ditulis tanpa pemisah agar dua-duanya tertangkap.
+    # Kode 5S/7S mengikuti pola varian-bernama yg sudah dipakai (3P/5P, KTK/KPS).
+    "Nissan Livina X-Gear": [
+        ("5S", ["5 seater", "5-seater", "5seater"]),
+        ("7S", ["7 seater", "7-seater", "7seater"]),
     ],
 }
 
@@ -160,7 +174,7 @@ def load(path=FORMULA_XLSX):
         if nm in BLOCKED:
             blocked[nm] = BLOCKED[nm]
             continue
-        tf = _tfnum(m["tf"])
+        tf = TF_OVERRIDE.get(nm, _tfnum(m["tf"]))
         if tf is None:
             blocked[nm] = f"Total Formula tidak terbaca ({m['tf']!r})"
             continue
@@ -171,6 +185,13 @@ def load(path=FORMULA_XLSX):
             groups.append({"label": g, "nums": nums, "year": _year(g),
                            "code": f"G{nums[0]}" if nums else _named_code(g)})
         groups += EXTRA_GROUPS.get(nm, [])
+
+        # MANUAL_GROUPS didahulukan: pengelompokannya datang dari instruksi user,
+        # jadi tidak bergantung pada ada/tidaknya daftar generasi di file formula.
+        if nm in MANUAL_GROUPS:
+            config[nm] = {"tf": tf, "collapse": False, "code": None,
+                          "groups": groups, "manual": MANUAL_GROUPS[nm]}
+            continue
 
         if not groups:
             # TF=1 tanpa daftar generasi -> tetap collapse ke G1

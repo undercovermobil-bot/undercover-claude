@@ -765,3 +765,49 @@ manual cuma 3 pasangan: `suzukigrandvitara`/`suzukivitara`, `landroverdiscovery`
 **Cek 5 (segmen generasi beda dlm produk sama, 56 temuan)** terpusat di model yg TIDAK ada di
 file formula: Hyundai Elantra (18), Hyundai Sonata (16), Nissan Livina X-Gear (8), Jeep Cherokee (6).
 SKU-nya warisan lama, belum pernah disentuh skema formula — bukan regresi dari pekerjaan ini.
+
+## 2026-07-29 — JAWABAN USER & KOREKSI TEMUAN KODE MODEL
+
+**Nissan Livina X-Gear — SUDAH DIBUKA BLOKIRNYA.** User: "2 formula dibagi untuk 5 seater dan
+7 seater". Dipasang di `MANUAL_GROUPS` dgn kode **`5S`/`7S`** (mengikuti pola varian-bernama
+3P/5P, KTK/KPS). Karena Total Formula di file masih '?', ditambahkan mekanisme baru
+**`TF_OVERRIDE`** di `formula_config.py` supaya model tidak otomatis masuk BLOCKED.
+Juga diperbaiki: `MANUAL_GROUPS` sekarang dicek SEBELUM syarat "tidak ada data generasi",
+karena pengelompokan manual datang dari instruksi user, bukan dari file.
+Data listing: 296 baris di 10 file, kode model sudah seragam `NSN-LXG`. Varian ditulis dua gaya:
+`5 Seater : 2008-2012` (SP/OP) dan `5-Seater (2008-2012)` (UA/OT) — dua-duanya tertangkap.
+Sisa BLOCKED tinggal: Honda Civic Hatchback (TF masih '?'), Mitsubishi Strada Triton & Daihatsu
+Gran Max (dua-duanya duplikat bertanda ungu).
+
+**KOREKSI PENTING — tabel "kode model beda antar toko" yang dikirim 2026-07-28 OVER-REPORTED.**
+Detektor mengelompokkan lewat nama produk yang dinormalisasi, dan normalisasi itu membuang kata
+pembeda sehingga MOBIL BERBEDA tergabung jadi satu. Setelah dicek ke isi barisnya, 6 dari 9
+ternyata BENAR apa adanya:
+`DHT-FRL` (Feroza **Long**) vs `DHT-FRZ` (Feroza) · `FRD-RT` (Ranger **T6**) vs `FRD-RAN` (Ranger)
+· `HND-CHB` (City Hatchback) vs `HND-JAZ` (**Jazz**) · `MZD-CX30` vs `MZD-CX3` (**CX-3**, mobil lain)
+· `MZD-3S` (Mazda 3 **Sedan**) vs `MZD-M3` (Mazda 3) · `TYT-HLX` (Hilux) vs `TYT-HLR`
+(**Hilux Rangga** — pembedanya di TEKS VARIAN, bukan nama produk).
+**Pelajaran**: detektor berbasis nama-dinormalisasi WAJIB ditriase ke isi baris (nama lengkap +
+teks varian) sebelum dilaporkan sbg temuan, apalagi sebelum diperbaiki.
+
+**Sisa yang benar-benar tidak konsisten (4):**
+- Nissan Serena `NSN-SRE` (17 baris) vs `NSN-SRN` (723) — nama produk identik, jelas salah ketik
+- Suzuki Carry `SZK-CRF` (2 baris "Cover Mobil Transparan Suzuki Carry") vs `SZK-CAR` (493)
+- Suzuki Carry Pickup `SZK-CAR` di UA/OT (309) vs `SZK-NCR` di SP/OP (89) — beda antar toko
+- Jeep Wrangler `JEP-WRA` (484) vs `JEP-WR` (23) — tertunda sejak 2026-07-18
+
+**Kode toko — DIKONFIRMASI BERSIH.** Pemindaian seluruh SKU 19 file: `UA` 51.285, `SP` 27.147,
+`OT` 1, **`OP` 0**. Tidak ada SKU berkode OP sama sekali; Otoprotection memang sudah ikut SP.
+(Catatan penulisan: di laporan sebelumnya "di OP" berarti LOKASI FILE-nya, bukan isi SKU —
+sempat bikin user salah paham, jangan diulang.)
+
+**Blindvan — KETEMU, tapi bukan nama produk melainkan VARIAN** (itu sebabnya user tidak
+menemukannya). Cuma **2 baris**, dua-duanya di UA Lazada:
+- pid `8664138934` — "…Daihatsu Gran Max **Premium**", varian `Blindvan (2008-2024)`
+- pid `8664142658` — "…Daihatsu Gran Max **Exclusive**", varian `Blindvan (2008-2024)`
+Kedua listing itu punya varian `Blindvan`, `Pickup`, dan `Model Lain / Custom` sekaligus.
+Masih perlu jawaban user: Blindvan = bodi minibus (`DHT-GMX`) atau pickup (`DHT-GMXP`)?
+
+**Container tereset UNTUK KEDUA KALINYA** (scratchpad + checkout git lokal mundur ke 27 Juli).
+Skrip selamat karena sudah di-push ke remote — pemulihan: `git reset --hard origin/<branch>`
+lalu `cp scripts/*.py <scratchpad>/`. File yang sudah dikirim ke user tidak terpengaruh.
