@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T05:27:22.559Z
+  modified: 2026-07-29T09:22:51.302Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -98,6 +98,16 @@ User mengganti ekspor `SKU_Gudang`/`SKU_Match` ke tanggal 29 (file lama dihapus,
 Hasil akhir: dari 3.614 SKU impor, **750 mewarisi stok** (741 di SIAP IMPOR + 9 di TUNDA), 2.864 produk baru dapat 5. Yang berstok selain 5 cuma **74 SKU**. Jejaknya ada di sheet **"Asal Stok SKU Baru"**.
 
 **Template impor Big Seller: kolom yang benar-benar dipakai user cuma 4** — `*Nomor SKU` (1), `*Judul` (2), `Gudang` (5), `Stok` (6). Sisa 36 kolom dikosongkan. Baris contoh bawaan template (Masa Berlaku `Aktifkan`/90/10, Satuan Tambahan `Bungkus`/12, `Kotak`/6) itu **ilustrasi, bukan default** — jangan ikut disalin.
+
+## Upload Shopee UA 2026-07-29: 529 baris gagal — error transien, bukan data
+
+User mengunggah perubahan SKU ke Shopee UA. File hasil `Result_shopee_mass_update_sales_info_361186752_*.xlsx` memuat **529 baris gagal di 14 listing**, semuanya dengan **satu alasan sama**: *"Item masih dalam proses pembuatan. Tunggu 5 detik sebelum membuat variasi."*
+
+**Hipotesis yang diuji dan GUGUR: bukan karena SKU berulang dalam satu listing.** Peleburan generasi memang membuat satu SKU dipakai beberapa varian (mis. `MBZ-CC-UA-E-G1-ABU` di Gen 1–5). Tapi **541 dari 1.660 listing Shopee UA (32,6%) punya SKU berulang dan berhasil**; yang gagal cuma 14 (0,8%). Jumlah varian juga bukan sebabnya — dari 16 listing ber-98-varian, cuma 2 yang gagal. Jadi ini murni rate-limit/race condition di sisi Shopee.
+
+**Penanganan:** cukup unggah ulang baris yang gagal. File hasil Shopee **strukturnya identik dengan template unggah** (15 kolom, blok header baris 1–6), jadi tinggal disalin dengan kolom `Alasan Gagal` (kolom 15) dikosongkan — tidak perlu membangun ulang dari file listing. Sudah dibuatkan `Retry Upload Shopee UA - semua.xlsx` (529 baris) + versi dipecah 7 batch @≤2 listing supaya tidak memicu error yang sama.
+
+Catatan: 46 dari 529 baris memang ber-SKU kosong — itu varian generik ("Model Lain/Custom") sesuai aturan #4, bukan kesalahan.
 
 ## Sisa pekerjaan
 
