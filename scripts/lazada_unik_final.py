@@ -5,6 +5,12 @@ kembar baru di dalam satu listing. Beda dari step_lazada di pipeline: pass ini
 melihat SEMUA SKU dalam listing (termasuk yg sudah punya akhiran '_'), jadi aman
 dijalankan berulang (idempoten) dan tidak akan membuat tabrakan baru.
 
+URUTAN WAJIB: skrip ini harus jadi tahap TERAKHIR, sesudah `perbaiki_temuan.py`.
+Terbukti 2026-07-29: `perbaiki_temuan.py` dijalankan setelah skrip ini, dan koreksi
+kode toko pada satu baris (`MBZ-GLC-OT-R-...` -> `MBZ-GLC-UA-E-...`) membuatnya kembar
+dgn baris lain di listing yg sama (pid 8692366910, Mercedes GLC Gen 1 vs Gen 2).
+Setiap skrip yg MENGUBAH SKU di file Lazada wajib diikuti skrip ini lagi.
+
 Aturan Lazada: "Nilai SKU tidak dapat digandakan dalam bentuk keseluruhan" —
 kembar hanya dilarang di dalam SATU listing, antar listing boleh sama.
 Pemisah '_' dipilih supaya BigSeller bisa memotongnya lewat mode delimiter

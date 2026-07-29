@@ -847,3 +847,33 @@ menamainya eksplisit "Daihatsu Gran Max Minibus / Blindvan". 4 baris di UA Lazad
 - pid 8664142658 (Exclusive): Blindvan -> `DHT-GMX-UA-E-G1-ABU`, Pickup -> `DHT-GMXP-UA-E-G1-ABU`
 Varian `Model Lain / Custom` (2 baris) sengaja dibiarkan — bodinya tidak diketahui.
 Segmen warna `ABU` dipakai karena listing-nya tidak menawarkan pilihan warna sama sekali.
+
+## 2026-07-29 — RUN FINAL (Livina X-Gear + Gran Max Blindvan)
+
+**URUTAN TAHAP YANG BENAR (jangan diacak — sudah terbukti bermasalah kalau ditukar):**
+1. `pecah_mini_hatch.py --apply`      (master)
+2. `formula_master_saja.py --apply`   (master)
+3. `rebuild_lookup.py`                (WAJIB sesudah master berubah)
+4. `jalankan_semua_baru.py --apply`   (formula + motor + akhiran Lazada)
+5. `isi_gran_max_lazada.py --apply`
+6. `isi_sku_kosong.py --apply`
+7. `step_formula(True)` sekali lagi
+8. `perbaiki_temuan.py --apply`
+9. **`lazada_unik_final.py --apply` — HARUS PALING AKHIR**
+10. `verifikasi_hasil.py` + `cek_konsistensi_sku.py`
+
+**BUG URUTAN yang ketemu di run ini:** `lazada_unik_final.py` sempat dijalankan SEBELUM
+`perbaiki_temuan.py`. Koreksi kode toko pada 1 baris (`MBZ-GLC-OT-R-G1-ABU` ->
+`MBZ-GLC-UA-E-G1-ABU`, UA Lazada pid 8692366910) lalu membuatnya kembar dgn baris Gen 2 di
+listing yg sama. Ketahuan dari verifikasi ("SKU kembar dalam 1 listing: 1"), bukan dari laporan
+skrip. Diperbaiki dgn menjalankan ulang `lazada_unik_final.py` (idempoten) -> jadi
+`MBZ-GLC-UA-E-G1-ABU_G1`, kembar 0. **Aturan umum: setiap skrip yang mengubah SKU di file
+Lazada WAJIB diikuti `lazada_unik_final.py` lagi.**
+
+**Hasil terverifikasi (isi sel vs BARU_PRISTINE):**
+- 53.862 sel SKU berubah
+- Livina X-Gear: 296 baris terbagi **148 `5S` + 148 `7S`** (habis, tidak ada sisa)
+- Gran Max Lazada: Blindvan -> `DHT-GMX`, Pickup -> `DHT-GMXP` (Premium & Exclusive)
+- motor: 3.227 pakai `-MTR-`; sisa 5 = "Maxi" (memang diabaikan)
+- Lazada: **0 SKU kembar** di UA & SP; file non-Lazada 0 terkontaminasi `_`
+- format akhir: 89.908 baris 6 segmen
