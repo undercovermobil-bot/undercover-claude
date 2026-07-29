@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T04:54:04.206Z
+  modified: 2026-07-29T05:08:20.931Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -86,6 +86,13 @@ User mengganti ekspor `SKU_Gudang`/`SKU_Match` ke tanggal 29 (file lama dihapus,
 **Masalah baru yang terungkap:** total `CM####` di Big Seller sekarang **181** (128 lama + 53 baru), dan **176 di antaranya produk yang sama persis dengan SKU MTR di file impor** — menahan **820 unit stok**. Kalau file impor dijalankan apa adanya, 176 SKU gudang jadi kembar untuk barang fisik yang sama. Hanya 5 yang tak punya padanan MTR (KTM Duke 390). Daftar lengkap di sheet **"Motor CM Tambalan vs MTR"**.
 
 **Jebakan parsing yang sempat menipu:** judul berformat `Model-Toko-Kategori-Warna-Gen` **tidak boleh dipecah dengan `split('-')`** — nama model bisa memuat tanda hubung (`Yamaha MT-25`, `Kawasaki Ninja ZX-6R`, `Nissan X-Trail`). Pakai `-<Nama Toko>-` sebagai pemisah tegas. Kesalahan ini sempat membuat pencocokan CM→MTR terbaca 102/181 padahal sebenarnya 176/181. Kosakata warna juga beda antara CM (`Hijau`, `Biru`) dan MTR (`Hijau Army`, `Biru Benhur`) — perlu kanonikalisasi.
+
+## Keputusan user 2026-07-29 (lanjutan)
+
+6. **SKU motor `CM####` TIDAK di-rename.** User memilih membuat SKU `MTR` baru di Big Seller, lalu **membuat pemetaan sendiri setelah SKU di e-commerce diubah**. Jadi 181 CM#### dibiarkan; jangan buatkan file rename/edit SKU gudang.
+7. **File impor mengisi `Gudang` = `Default Warehouse` dan `Stok` = 5.** Ini mengikuti pola impor user sendiri yang terbukti jalan (`impor_untuk_membuat_sku_gudang_in (2).xlsx`, 29 Jul, dipakai membuat 53 SKU CM). Sebelumnya kedua kolom itu kukosongkan. **Catatan risiko yang sudah disampaikan & tetap dipilih user:** stok 5 bukan stok fisik, jadi 2.620 SKU lahir dengan angka default dan perlu disesuaikan setelah impor — bisa bertabrakan dengan pemindahan stok dari SKU yatim.
+
+**Template impor Big Seller: kolom yang benar-benar dipakai user cuma 4** — `*Nomor SKU` (1), `*Judul` (2), `Gudang` (5), `Stok` (6). Sisa 36 kolom dikosongkan. Baris contoh bawaan template (Masa Berlaku `Aktifkan`/90/10, Satuan Tambahan `Bungkus`/12, `Kotak`/6) itu **ilustrasi, bukan default** — jangan ikut disalin.
 
 ## Sisa pekerjaan
 
