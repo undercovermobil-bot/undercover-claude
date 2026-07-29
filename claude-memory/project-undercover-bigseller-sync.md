@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T04:14:29.974Z
+  modified: 2026-07-29T04:28:11.688Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -64,6 +64,18 @@ Jumlah baris identik (113.932), **1.371 sel SKU berubah**, 0 nama produk & 0 var
 **5 pelanggaran formula BELUM dibetulkan** di update ini (Tiguan/CRV/WRV/Fortuner/Agya masih 2 kode generasi).
 
 **Pelajaran:** kalau user mengganti file listing, diff posisional per file (jumlah baris sama → bandingkan indeks) jauh lebih murah daripada memproses ulang dari nol, dan langsung menunjukkan apakah Big Seller benar-benar terpengaruh.
+
+## RISIKO STOK akibat peleburan generasi (ditemukan 2026-07-29)
+
+Spot-check user ("kalau banyak generasi ditarik ke G1, apakah aman?") membongkar konsekuensi yang sebelumnya terlewat. Peleburan generasi memang aman dari sisi *kelengkapan SKU* — diuji 4 cara, 0 celah:
+1. Seluruh 113.932 baris listing jatuh ke tepat satu keranjang (76.794 sudah ada di BS / 13.117 masuk file impor / 9.609 perlu dibenahi / 14.412 tanpa SKU) — **0 baris lolos**.
+2. Ke-1.371 SKU yang berubah 29 Jul: 1.031 sudah ada di BS, 340 masuk file impor, 0 tak tercakup.
+3. Dari 8.387 SKU berkode `G1`: 7.513 sudah ada, **874 belum ada dan semuanya sudah masuk file impor**, 0 tak tercakup.
+4. 256 kombinasi model/toko/kategori non-motor punya kode generasi tanpa SKU gudang; semua SKU-nya sudah masuk file impor.
+
+**TAPI stoknya TIDAK ikut pindah.** Big Seller tidak memindahkan stok otomatis saat SKU listing berganti kode generasi. Kondisi per ekspor 28 Juli: dari 20.640 SKU gudang yatim, **16.315 masih ber-stok > 0 (81.927 unit)**; **9.728 di antaranya punya SKU pengganti aktif di listing, menahan 48.781 unit**. Arah terbesar: `G2→G1` 2.647, `G3→G1` 1.800, `G4→G1` 1.238. Contoh: `HND-BRI-UA-R-G2-HTM` menahan 28 unit padahal listing sekarang memakai `HND-BRI-UA-R-G1-HTM`. Dari 9.728 SKU tujuan itu, **1.599 belum ada di Big Seller** — jadi urutannya wajib: impor SKU baru dulu, baru pindahkan stok.
+
+Daftar lengkapnya ada di sheet **"Stok Perlu Dipindahkan"** pada laporan 29 Juli.
 
 ## Sisa pekerjaan
 
