@@ -140,6 +140,11 @@ def main():
     wb = Workbook()
     wb.remove(wb.active)
 
+    def pasang_filter(ws, ncol):
+        """dipanggil SETELAH semua baris terisi, supaya ref-nya lengkap dgn nomor baris"""
+        if ws.max_row >= 1:
+            ws.auto_filter.ref = f"A1:{get_column_letter(ncol)}{ws.max_row}"
+
     def head(ws, judul, lebar):
         ws.append(judul)
         for i, w in enumerate(lebar, start=1):
@@ -148,7 +153,10 @@ def main():
             ws.cell(row=1, column=c).fill = HDR_FILL
             ws.cell(row=1, column=c).font = HDR_FONT
         ws.freeze_panes = "A2"
-        ws.auto_filter.ref = f"A1:{get_column_letter(len(judul))}"
+        # CATATAN: auto_filter.ref WAJIB memuat nomor baris ("A1:F120"), bukan cuma
+        # kolom ("A1:F"). Tanpa nomor baris, xlsx-nya rusak dan Excel memunculkan
+        # "We found a problem with some content". Karena barisnya baru diisi setelah
+        # ini, filternya dipasang belakangan lewat `pasang_filter()`.
 
     ring = wb.create_sheet("RINGKASAN")
     head(ring, ["Brand", "Model di Master", "Sudah Tayang", "Belum Tayang", "% Tayang"],
@@ -178,6 +186,9 @@ def main():
         ws2.append(k)
         ws2.cell(row=ws2.max_row, column=5).fill = KUNING
 
+    pasang_filter(ring, 5)
+    pasang_filter(ws1, 6)
+    pasang_filter(ws2, 6)
     wb.save("Belum_Ada_Di_Listing.xlsx")
 
     print(f"model di master        : {tt}")
