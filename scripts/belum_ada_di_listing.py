@@ -107,9 +107,21 @@ def main():
         for p in e["prefix"]:
             toko_ada |= pref_listing.get(p, set())
         n = norm(produk)
-        if n:
+        # Pencocokan nama harus KETAT. Versi longgar (`n in k or k in n` tanpa syarat
+        # panjang pada k) salah besar: nama listing yang habis dibuang boilerplate-nya
+        # jadi string KOSONG, dan string kosong itu "ada di dalam" semua nama — sehingga
+        # SEMUA model terbaca sudah tayang. Nama pendek (mis. Zeekr "X" -> "zeekrx")
+        # juga gampang nyangkut ke nama lain. Syarat sekarang: dua-duanya >= 6 karakter,
+        # dan yang lebih pendek minimal 70% panjang yang lebih panjang.
+        if len(n) >= 6:
             for k in nama_keys:
-                if k == n or (len(n) >= 5 and (n in k or k in n)):
+                if len(k) < 6:
+                    continue
+                if k == n:
+                    toko_ada |= nama_listing[k]
+                    continue
+                pendek, panjang = (n, k) if len(n) <= len(k) else (k, n)
+                if pendek in panjang and len(pendek) >= 0.7 * len(panjang):
                     toko_ada |= nama_listing[k]
         per_brand[sheet][0] += 1
         gen = ", ".join(sorted(e["gen"]))
