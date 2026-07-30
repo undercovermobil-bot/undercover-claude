@@ -877,3 +877,20 @@ Lazada WAJIB diikuti `lazada_unik_final.py` lagi.**
 - motor: 3.227 pakai `-MTR-`; sisa 5 = "Maxi" (memang diabaikan)
 - Lazada: **0 SKU kembar** di UA & SP; file non-Lazada 0 terkontaminasi `_`
 - format akhir: 89.908 baris 6 segmen
+## 2026-07-29 — ANALISA BRAND YANG BELUM PUNYA LIST
+
+Alat: **`scripts/brand_belum_ada.py`** -> `Brand_Belum_Ada.xlsx`.
+Master punya **69 sheet brand**, tapi cuma **46 yang berisi produk**; **23 sheet KOSONG**
+(sudah dibuat, 0 baris). Jadi "belum punya brand X" sering berarti sheet-nya ADA tapi kosong —
+contoh persis: user menyangka VinFast belum ada, padahal sheet-nya sudah ada, cuma kosong.
+
+**7 brand yang benar-benar belum punya sheet** (semua pendatang 2025-2026, mayoritas EV):
+Aletra, BAW, Leapmotor, Polytron, Solarky, Xpeng, Zeekr.
+
+**23 sheet kosong**: Aston Martin, BAIC, Bentley, Changan, Deepal, Denza, Esemka, Fin Komodo,
+GWM, Genesis, Hongqi, Infiniti, Jaecoo, Jaguar, Jetour, Lepas, Lotus, Maxus, Neta,
+Pindad (Maung), Rolls-Royce, VinFast, iCAR.
+
+Acuan brand beredar di Indonesia: peserta GIIAS 2026 (43 merek mobil penumpang) + merek premium
+& legacy yang tidak ikut pameran. Kolom "Model Populer" di file itu titik mulai, **wajib
+diverifikasi ulang** — lineup merek Cina/EV berubah cepat.
