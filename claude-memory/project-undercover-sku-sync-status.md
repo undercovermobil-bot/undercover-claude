@@ -994,3 +994,35 @@ Pencocokan listing<->master memakai dua jalur (model dianggap tayang kalau salah
 prefix SKU `MEREK-MODEL`, dan nama produk ternormalisasi. Jalur nama wajib ada karena banyak
 listing yg SKU-nya masih kosong — kalau cuma pakai SKU, justru baris yg jadi target malah
 terbaca "belum tayang".
+
+## 2026-07-30 — SUB-MEREK GANDA: BYD Denza D9 (user memilih DNZ-D9)
+
+**Ketahuan dari user** saat memeriksa `Belum_Ada_Di_Listing.xlsx`: baris "BYD Denza D9"
+kategorinya cuma Premium, padahal model lain punya 4 kategori. Ternyata itu **entri LAMA
+di sheet BYD** (kode `BYD-DD`, 8 baris, cuma Premium Abu-abu+Silver, rentang tahun kosong)
+— bukan buatan skrip. Masalahnya: 2026-07-30 saya membuat sheet Denza dari riset pasar
+**tanpa memeriksa apakah modelnya sudah terselip di sheet merek INDUK**, sehingga satu mobil
+punya dua kode di dua sheet: `BYD-DD` (8 baris) vs `DNZ-D9` (68 baris, lengkap).
+
+**Keputusan user: pakai `DNZ-D9`.** 8 baris `BYD-DD` dihapus dari kedua file master (16 baris).
+Hasil akhir: sheet BYD = Atto 1, Atto 3, SEAL, M6 · sheet Denza = D9, Z9GT (68 baris masing2).
+
+**Pemindaian sub-merek lain: BERSIH.** Tidak ada Jaecoo/Lepas/iCAR di sheet Chery, tidak ada
+Zeekr/Lotus di Geely, tidak ada Genesis di Hyundai. Kasus ini satu-satunya.
+Alat: `scripts/rapikan_submerek.py`.
+
+**Pelajaran (2 bug pencocokan dalam sehari, pola yang sama):**
+1. Sebelum membuat sheet brand baru, **cek dulu apakah modelnya sudah ada di sheet merek
+   induknya** — sub-merek (Denza/BYD, Jaecoo/Chery, Zeekr/Geely, Genesis/Hyundai) sering
+   dicatat di bawah induknya.
+2. **Pencocokan kata kunci merek harus pakai batas kata (`\b`), bukan substring polos.**
+   Kata kunci "ora" (GWM Ora) kena di tengah "Proton Ex-ora-" -> false positive.
+   Ini bug ketiga dalam kategori yang sama hari ini (setelah string kosong di
+   `belum_ada_di_listing.py` dan autofilter tanpa nomor baris). Pola umumnya: **cek batas
+   dan syarat panjang pada SEMUA pencocokan berbasis teks.**
+
+**Bonus bug yang ditemukan user juga hari ini:** `Belum_Ada_Di_Listing.xlsx` sempat rusak
+("We found a problem with some content") karena `ws.auto_filter.ref` ditulis `"A1:F"` TANPA
+nomor baris — filter dipasang di fungsi header saat baris belum terisi. Perbaikan: pasang
+autofilter SETELAH semua baris masuk. Skrip lain (`gabung_cek_manual`, `brand_belum_ada`,
+`brand_perlu_master`) sudah benar sejak awal.
