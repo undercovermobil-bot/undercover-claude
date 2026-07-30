@@ -967,3 +967,30 @@ PND VFS ALT BAW LPM PLT SLK XPG ZKR.
 RISET PASAR (GIIAS 2026 + situs otomotif), BUKAN dari data internal — brand-brand ini memang
 belum punya listing e-commerce sama sekali. **Wajib diverifikasi sebelum dipakai produksi**;
 lineup merek Cina/EV berubah sangat cepat. Daftarnya ada di dalam skrip, mudah diedit.
+
+## 2026-07-30 — ANALISA: MODEL DI MASTER YANG BELUM TAYANG DI LISTING
+
+Alat: **`scripts/belum_ada_di_listing.py`** -> `Belum_Ada_Di_Listing.xlsx` (3 sheet:
+RINGKASAN, BELUM ADA DI LISTING, KURANG DI TOKO). Ini kebalikan `brand_belum_ada.py`:
+master = rencana produk, listing = realisasi.
+
+Hasil: **439 model di master, 358 sudah tayang, 81 BELUM tayang sama sekali,
+148 model kurang di sebagian toko.**
+Penyumbang terbesar yg belum tayang: Jaguar 7/7, VinFast 6/6, BAIC 4/4, Deepal 4/4,
+GWM 4/4, Hongqi 4/4, Jetour 4/4, Changan 3/3, Genesis 3/3, Jaecoo 3/3, Leapmotor 3/3,
+Lepas 3/3, Lotus 3/3, Xpeng 3/3, Zeekr 3/3 — semua brand yg baru diisi 2026-07-30 (wajar).
+Yang menarik justru brand lama yg ada gap: **Toyota 4/50, Honda 3/19, BYD 1/5, Peugeot 1/6.**
+
+**BUG PENCOCOKAN yang sempat bikin salah lapor (jangan diulang):** versi pertama memakai
+`n in k or k in n` tanpa syarat panjang pada sisi listing. Nama listing yg habis dibuang
+boilerplate-nya jadi STRING KOSONG, dan string kosong "ada di dalam" semua nama — akibatnya
+SEMUA model terbaca sudah tayang (laporan pertama: cuma 4 yg belum, padahal 60 model brand
+baru jelas belum punya listing sama sekali). Syarat sekarang: kedua nama >= 6 karakter DAN
+yg lebih pendek minimal 70% panjang yg lebih panjang. Pelajaran umum: **saat memakai
+substring matching, selalu beri syarat panjang minimum di KEDUA sisi** — dan curigai hasil
+yg terlalu bagus (0-4 gap dari 353 model itu tidak masuk akal setelah menambah 60 model baru).
+
+Pencocokan listing<->master memakai dua jalur (model dianggap tayang kalau salah satu kena):
+prefix SKU `MEREK-MODEL`, dan nama produk ternormalisasi. Jalur nama wajib ada karena banyak
+listing yg SKU-nya masih kosong — kalau cuma pakai SKU, justru baris yg jadi target malah
+terbaca "belum tayang".
