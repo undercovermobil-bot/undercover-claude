@@ -894,3 +894,46 @@ Pindad (Maung), Rolls-Royce, VinFast, iCAR.
 Acuan brand beredar di Indonesia: peserta GIIAS 2026 (43 merek mobil penumpang) + merek premium
 & legacy yang tidak ikut pameran. Kolom "Model Populer" di file itu titik mulai, **wajib
 diverifikasi ulang** — lineup merek Cina/EV berubah cepat.
+
+## 2026-07-30 — 7 BRAND "SHEET KOSONG" DIBUATKAN ENTRI MASTER
+
+**Temuan pemicu:** dari 23 sheet master yang kosong, **7 di antaranya SUDAH punya listing
+aktif di e-commerce** (semuanya toko Undercover Autocare, 1.938 baris) tapi **0 baris punya
+SKU** — karena masternya kosong, resolver tidak punya rujukan sama sekali. Ini penyumbang
+besar angka "SKU kosong" yang selama ini dilaporkan tanpa diketahui penyebabnya.
+
+Brand & jumlah baris listing: Bentley 612, Aston Martin 486, Rolls-Royce 357, Infiniti 250,
+Neta 117, Maxus 102, iCAR 14.
+16 sisanya benar-benar belum punya listing (BAIC, Changan, Deepal, Denza, Esemka, Fin Komodo,
+GWM, Genesis, Hongqi, Jaecoo, Jaguar, Jetour, Lepas, Lotus, Pindad, VinFast) + 7 brand yang
+belum punya sheet sama sekali (Aletra, BAW, Leapmotor, Polytron, Solarky, Xpeng, Zeekr).
+
+**Dikerjakan lewat `scripts/buat_master_brand_baru.py`** (instruksi user: "generasinya
+disamakan seperti di e-commerce aja"): **1.972 baris master baru, 16 model, 7 brand**.
+Kode merek baru (semua dicek bebas tabrakan): `BTL` `AST` `RRC` `INF` `NET` `MXS` `ICR`.
+
+**STRUKTUR BARIS MASTER (penting, dipakai lagi kalau menambah brand):**
+68 baris per (model x generasi) = 4 toko x 17 baris —
+Exclusive 1 (Abu-abu) · Premium 2 (Abu-abu, Silver) · Strip 9 · Reguler 5
+(Abu-abu, Biru Benhur, Hijau Army, Hitam, Merah).
+Warna Strip beda per keluarga toko: UA/OT = Elite/Epic/Warrior x Abu/Biru/Merah;
+SP/OP = Strip 1/2/3 x Abu/Biru/Merah. Kategori Transparan hanya dibuat kalau listing punya.
+
+**TIGA JEBAKAN TEKNIS yang ketemu saat mengerjakan ini:**
+1. **Header master memakai 2 baris yang di-MERGE** (B1:B2, C1:C2, dst) — jadi **DATA MULAI
+   BARIS 3**, bukan baris 2. Menulis ke baris 2 gagal dgn
+   `AttributeError: 'MergedCell' object attribute 'value' is read-only`.
+2. **SKU duplikat di master itu NORMAL** — Undercover Autocare & Otonation dua-duanya berkode
+   `UA`, Smartprotection & Otoprotection berkode `SP`. Cek keunikan HARUS pakai kunci alami
+   (Nama Produk, Toko, Kategori, Warna, Generasi), bukan kolom SKU. Sempat salah lapor
+   "986 SKU duplikat" padahal itu persis separuh dari 1.972 baris = pasangan UA/OT & SP/OP.
+3. **Varian yang isinya cuma warna** menghasilkan label generasi sintetis "Gen 1" tanpa tahun.
+   Itu harus DIGABUNG ke entri "Gen 1" yang bertahun, bukan dihitung sebagai bentrok label.
+
+**Bentrok label generasi NYATA (perlu perbaikan di listing, bukan di master):**
+Aston Martin Vanquish memakai label `Gen 1` untuk DUA rentang tahun — `2001-2007` (36 baris,
+dipakai) dan `2022-2024` (14 baris, DILEWATI). Vanquish 2022-2024 itu generasi baru; kalau
+label listing-nya dibetulkan jadi `Gen 3`, 14 baris itu ikut terisi di run berikutnya.
+
+**Hasil:** pengisian SKU listing naik dari 8.244 -> **9.660 baris** (+1.416). Lookup bertambah
++986 entri (UA 16.781->17.274, SP 13.848->14.341), 0 bentrok.
