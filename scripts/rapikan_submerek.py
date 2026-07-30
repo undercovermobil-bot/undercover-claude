@@ -14,7 +14,7 @@ Skrip ini:
      di sheet lain. Hanya dilaporkan, TIDAK dihapus otomatis — penggabungan merek itu
      keputusan bisnis.
 """
-import warnings, sys
+import warnings, sys, re
 warnings.filterwarnings("ignore")
 from openpyxl import load_workbook
 from collections import defaultdict
@@ -74,7 +74,10 @@ def main():
                 continue
             low = str(nm).lower()
             for kata, seharusnya in SUB_MEREK.items():
-                if kata in low and s != seharusnya:
+                # Cocokkan sbg KATA UTUH. Substring polos bikin false positive: kata
+                # kunci "ora" (GWM Ora) kena di tengah "Proton Ex-ora-", dan "tank"
+                # bisa kena nama lain. Batas kata mencegah itu.
+                if re.search(r'\b' + re.escape(kata) + r'\b', low) and s != seharusnya:
                     sku = ws.cell(row=r, column=9).value
                     laporan[(s, str(nm).strip(), seharusnya)].append(
                         "-".join(str(sku).split("-")[:2]) if sku else "")
