@@ -270,10 +270,10 @@ def main():
         wbm = load_workbook(mf)
         for sheet, rows in out.items():
             ws = wbm[sheet]
-            mulai = ws.max_row + 1
-            # sheet kosong: baris 1 header, baris 2 kosong -> mulai dari baris 2
-            if all(ws.cell(row=r, column=2).value is None for r in range(2, ws.max_row + 1)):
-                mulai = 2
+            # HEADER MASTER MEMAKAI 2 BARIS yang di-MERGE (B1:B2, C1:C2, dst), jadi
+            # DATA MULAI DI BARIS 3 — bukan baris 2. Menulis ke baris 2 akan gagal
+            # dgn "MergedCell object attribute 'value' is read-only".
+            mulai = max(ws.max_row + 1, 3)
             for i, row in enumerate(rows):
                 for c, v in enumerate(row, start=1):
                     ws.cell(row=mulai + i, column=c, value=v)
