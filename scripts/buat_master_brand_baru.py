@@ -92,7 +92,12 @@ def kode_model(model, dipakai):
         return "X"
     if len(kata) == 1:
         w = kata[0]
-        c = (w[:3] if len(w) <= 4 else re.sub(r'[AEIOUaeiou]', '', w)[:3] or w[:3]).upper()
+        # nama bermodel angka (DB11, QX80, V23) dipertahankan utuh — memotongnya
+        # bikin kode menyesatkan (QX80 -> QX8) dan rawan tabrakan
+        if any(ch.isdigit() for ch in w):
+            c = w[:4].upper()
+        else:
+            c = (w[:3] if len(w) <= 4 else re.sub(r'[AEIOUaeiou]', '', w)[:3] or w[:3]).upper()
     else:
         c = "".join(w[0] for w in kata)[:4].upper()
     base, i = c, 2
@@ -175,10 +180,20 @@ def bangun(data):
         for (label, th), (n, kats) in data[(brand, model)].items():
             per_label[label].append((n, th, kats))
         for label, kandidat in per_label.items():
-            kandidat.sort(reverse=True)
-            terpilih[label] = (kandidat[0][1], kandidat[0][2])
-            for n, th, _ in kandidat[1:]:
-                BENTROK_LABEL.append([brand, model, label, kandidat[0][1], th, n])
+            # Entri tanpa rentang tahun berasal dari varian yang isinya cuma warna
+            # (mis. "Abu-abu" saja). Itu BUKAN generasi lain — gabungkan ke entri
+            # berlabel sama yang punya tahun, jangan dihitung sebagai bentrok.
+            bertahun = [k for k in kandidat if k[1]]
+            tanpa = [k for k in kandidat if not k[1]]
+            if bertahun:
+                bertahun.sort(reverse=True)
+                kats = set().union(*[k[2] for k in kandidat])
+                terpilih[label] = (bertahun[0][1], kats)
+                # bentrok NYATA: satu label dipakai 2+ rentang tahun berbeda
+                for n, th, _ in bertahun[1:]:
+                    BENTROK_LABEL.append([brand, model, label, bertahun[0][1], th, n])
+            else:
+                terpilih[label] = ("", set().union(*[k[2] for k in tanpa]))
 
         for gen_label in sorted(terpilih):
             tahun, kats = terpilih[gen_label]
@@ -234,16 +249,21 @@ def main():
                 ada.add(v)
     baru = [r[8] for rows in out.values() for r in rows]
     bentrok = [s for s in baru if s in ada]
+    # SKU sengaja SAMA antara Undercover Autocare & Otonation (dua-duanya kode UA),
+    # begitu juga Smartprotection & Otoprotection (kode SP). Jadi duplikat SKU itu
+    # NORMAL — yang harus unik adalah kunci alami master:
+    # (Nama Produk, Toko, Kategori, Warna, Generasi).
+    kunci = [(r[1], r[2], r[3], r[4], r[5]) for rows in out.values() for r in rows]
     print(f"SKU bentrok dgn master lama : {len(bentrok)}")
-    print(f"SKU baru duplikat internal  : {len(baru) - len(set(baru))}")
+    print(f"baris duplikat (kunci alami): {len(kunci) - len(set(kunci))}")
     if bentrok:
         print("  contoh:", bentrok[:5])
 
     if not APPLY:
         print("\nmode: DRY-RUN (master TIDAK ditulis)")
         return
-    if bentrok or len(baru) != len(set(baru)):
-        print("\nDIBATALKAN: ada tabrakan SKU, perbaiki dulu.")
+    if bentrok or len(kunci) != len(set(kunci)):
+        print("\nDIBATALKAN: ada tabrakan SKU / baris kembar, perbaiki dulu.")
         return
 
     for mf in MASTERS:
