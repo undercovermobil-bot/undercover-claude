@@ -937,3 +937,33 @@ label listing-nya dibetulkan jadi `Gen 3`, 14 baris itu ikut terisi di run berik
 
 **Hasil:** pengisian SKU listing naik dari 8.244 -> **9.660 baris** (+1.416). Lookup bertambah
 +986 entri (UA 16.781->17.274, SP 13.848->14.341), 0 bentrok.
+
+## 2026-07-30 — BUG "GENERASI = NAMA WARNA" DIBERESKAN & MASTER LENGKAP 76 BRAND
+
+**1) Bug "Hijau" di kolom Generasi — SELESAI** (`scripts/bersihkan_gen_warna.py`).
+User menemukannya sendiri dari tampilan master. 38 baris: **BYD Atto 3 22** + **Daihatsu
+Taft GT 16**. Nilai warna masuk ke kolom Generasi (kemungkinan tergeser kolom saat input).
+Yang menyesatkan: skema formula SUDAH menormalkan segmen SKU-nya jadi `G1`, jadi kolom SKU
+terlihat benar sementara kolom Generasi masih "Hijau" — dan baris itu jadi KEMBARAN PERSIS
+baris Gen 1 yang sah. Penanganan dibedakan, jangan main hapus semua:
+  - punya kembaran Gen 1 sah (BYD Atto 3) -> baris warna DIHAPUS, 44 baris (2 file master)
+  - tidak punya kembaran (Daihatsu Taft GT) -> label DIPERBAIKI jadi Gen 1 + tahun disalin
+    dari saudara satu produk, 32 baris — kalau dihapus datanya hilang
+Sisa baris bergenerasi-warna sekarang **0** di kedua master.
+
+**2) Semua sheet brand kosong DIISI** (`scripts/isi_master_brand_indonesia.py`).
+User: "di isi sekalian jadi punya list mobil yg beredar di indonesia".
+**4.760 baris baru, 23 brand, 60 model.** Master sekarang **76 sheet, 0 kosong, 67.356 baris**
+(sebelumnya 69 sheet dgn 23 kosong).
+  - 16 sheet sudah ada tinggal diisi: BAIC, Changan, Deepal, Denza, Esemka, Fin Komodo, GWM,
+    Genesis, Hongqi, Jaecoo, Jaguar, Jetour, Lepas, Lotus, Pindad (Maung), VinFast
+  - 7 sheet DIBUAT BARU: Aletra, BAW, Leapmotor, Polytron, Solarky, Xpeng, Zeekr
+    (dibuat dgn `wb.copy_worksheet()` dari sheet Tesla lalu barisnya dikosongkan — cara ini
+    dipakai supaya header 2-baris-ter-merge ikut tersalin; membuat header manual repot)
+Kode merek baru (semua dicek bebas): BAI CGN DPL DNZ ESM FKM GWM GNS HGQ JCO JAG JTR LPS LTS
+PND VFS ALT BAW LPM PLT SLK XPG ZKR.
+
+**PERINGATAN penting soal data ini:** daftar model & rentang tahun 23 brand tsb berasal dari
+RISET PASAR (GIIAS 2026 + situs otomotif), BUKAN dari data internal — brand-brand ini memang
+belum punya listing e-commerce sama sekali. **Wajib diverifikasi sebelum dipakai produksi**;
+lineup merek Cina/EV berubah sangat cepat. Daftarnya ada di dalam skrip, mudah diedit.
