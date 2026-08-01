@@ -1026,3 +1026,23 @@ Alat: `scripts/rapikan_submerek.py`.
 nomor baris — filter dipasang di fungsi header saat baris belum terisi. Perbaikan: pasang
 autofilter SETELAH semua baris masuk. Skrip lain (`gabung_cek_manual`, `brand_belum_ada`,
 `brand_perlu_master`) sudah benar sejak awal.
+## 2026-07-30 — WULING DARION (permintaan mendesak user)
+
+Model baru; listing UA sudah tayang (Reguler/Premium/Exclusive, Product ID 40432746994 &
+51564321640) tapi belum ada di master sehingga SKU-nya kosong.
+Dibuat lewat **`scripts/tambah_wuling_darion.py`**: **66 baris di kedua master**,
+kode **`WLG-DRN`** (dicek bebas tabrakan), generasi **Gen 1 (2025-2026)** — diambil persis
+dari teks varian listing.
+
+**Cara yang dipakai: MENYALIN POLA `Wuling Alvez`, bukan menyusun daftar warna dari nol.**
+Penting karena struktur Wuling BEDA dari template umum (Tesla/GAC):
+  - Premium (Abu-abu, Silver) & Exclusive (Abu-abu) **hanya ada di UA & Otonation**
+  - SP/OP tidak punya Premium/Exclusive, tapi Reguler-nya **6 warna** (ada **Orange**,
+    kode `ORG`) + **Transparan**
+  - Reguler UA/OT cuma 5 warna (tanpa Orange)
+Total 66 baris (bukan 68 seperti template Tesla). Menyalin pola model sejenis dari sheet yang
+sama adalah cara paling aman menambah model baru — struktur per merek tidak seragam.
+
+**Sengaja dibuat LENGKAP** (termasuk Strip 18 SKU & Transparan 1 SKU) walau user cuma minta
+Reguler/Premium/Exclusive — pelajaran langsung dari BYD Denza D9 hari ini: entri master yang
+dibuat sebagian menimbulkan masalah belakangan dan harus dibereskan manual.
