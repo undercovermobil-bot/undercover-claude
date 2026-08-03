@@ -257,9 +257,10 @@ def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
     def tulis(a, b="", c="", tebal=False):
         nonlocal baris
         for kol, val in (("A", a), ("B", b), ("C", c)):
+            if val in ("", None):
+                continue  # sel kosong: jangan disentuh sama sekali (lihat catatan di README)
             sel = ws[f"{kol}{baris}"]
-            if val not in ("", None):
-                sel.value = val
+            sel.value = val
             sel.font = ARIAL_TEBAL if tebal else ARIAL
             sel.alignment = Alignment(wrap_text=True, vertical="top")
         baris += 1
