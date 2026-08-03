@@ -1,0 +1,1296 @@
+<title>Progress Sinkronisasi SKU — Katalog Cover Mobil</title>
+
+<style>
+  :root{
+    --ground:#F2F4F3;
+    --surface:#FFFFFF;
+    --surface-2:#F7F9F8;
+    --ink:#151A18;
+    --ink-2:#3F4946;
+    --ink-3:#6B7773;
+    --rule:#DCE2E0;
+    --rule-strong:#C2CCC8;
+    --accent:#0C5A52;
+    --accent-soft:#E4EFED;
+    --ok:#2F7D4F;
+    --fix:#1F6FB2;
+    --wait:#B4820C;
+    --block:#B02E26;
+    --bar-neutral:#7C8985;
+
+    --font-display:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+    --font-body:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+    --maxw:1120px;
+    --pad:clamp(18px,4vw,44px);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#101413;
+      --surface:#171C1A;
+      --surface-2:#1D2321;
+      --ink:#E9EEEC;
+      --ink-2:#B6C0BC;
+      --ink-3:#8A9591;
+      --rule:#2A312F;
+      --rule-strong:#3A423F;
+      --accent:#4FB3A5;
+      --accent-soft:#18302C;
+      --ok:#3E9463;
+      --fix:#4288CC;
+      --wait:#BC8C12;
+      --block:#D14C5E;
+      --bar-neutral:#6E7B77;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101413;
+    --surface:#171C1A;
+    --surface-2:#1D2321;
+    --ink:#E9EEEC;
+    --ink-2:#B6C0BC;
+    --ink-3:#8A9591;
+    --rule:#2A312F;
+    --rule-strong:#3A423F;
+    --accent:#4FB3A5;
+    --accent-soft:#18302C;
+    --ok:#3E9463;
+    --fix:#4288CC;
+    --wait:#BC8C12;
+    --block:#D14C5E;
+    --bar-neutral:#6E7B77;
+  }
+  :root[data-theme="light"]{
+    --ground:#F2F4F3;
+    --surface:#FFFFFF;
+    --surface-2:#F7F9F8;
+    --ink:#151A18;
+    --ink-2:#3F4946;
+    --ink-3:#6B7773;
+    --rule:#DCE2E0;
+    --rule-strong:#C2CCC8;
+    --accent:#0C5A52;
+    --accent-soft:#E4EFED;
+    --ok:#2F7D4F;
+    --fix:#1F6FB2;
+    --wait:#B4820C;
+    --block:#B02E26;
+    --bar-neutral:#7C8985;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad);}
+
+  /* ---------- nav ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:color-mix(in srgb,var(--ground) 88%,transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--rule);
+  }
+  .topbar-in{
+    max-width:var(--maxw);margin:0 auto;padding:9px var(--pad);
+    display:flex;align-items:center;gap:18px;
+  }
+  .brand{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);white-space:nowrap;font-weight:600;
+  }
+  .navlinks{
+    display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-left:auto;
+  }
+  .navlinks::-webkit-scrollbar{display:none;}
+  .navlinks a{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em;
+    color:var(--ink-3);text-decoration:none;white-space:nowrap;
+    padding:5px 9px;border-radius:5px;
+  }
+  .navlinks a:hover{color:var(--ink);background:var(--surface);}
+  .navlinks a:focus-visible,.tbtn:focus-visible,summary:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  .tbtn{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);
+    background:none;border:1px solid var(--rule);border-radius:5px;
+    padding:4px 9px;cursor:pointer;
+  }
+  .tbtn:hover{color:var(--ink);border-color:var(--rule-strong);}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:clamp(38px,7vw,76px) 0 clamp(26px,4vw,40px);}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 16px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-size:clamp(30px,5.4vw,54px);
+    line-height:1.04;letter-spacing:-.025em;font-weight:800;
+    margin:0 0 18px;text-wrap:balance;max-width:17ch;
+  }
+  .lead{
+    font-size:clamp(16px,1.9vw,19px);color:var(--ink-2);
+    max-width:62ch;margin:0 0 26px;
+  }
+  .stamps{display:flex;flex-wrap:wrap;gap:8px;}
+  .stamp{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);
+    background:var(--surface);border:1px solid var(--rule);
+    border-radius:100px;padding:5px 12px;
+  }
+  .stamp b{color:var(--ink);font-weight:600;}
+
+  /* ---------- kpi ---------- */
+  .kpis{
+    display:grid;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:10px;overflow:hidden;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    margin-top:clamp(28px,4vw,42px);
+  }
+  .kpi{background:var(--surface);padding:20px 20px 18px;}
+  .kpi .num{
+    font-family:var(--font-display);font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(30px,4vw,40px);line-height:1;
+    font-variant-numeric:tabular-nums;display:block;margin-bottom:9px;
+  }
+  .kpi .lbl{font-size:13.5px;color:var(--ink-2);line-height:1.4;display:block;}
+  .kpi .sub{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-3);margin-top:9px;display:block;
+  }
+
+  /* ---------- sections ---------- */
+  section{padding:clamp(40px,6vw,72px) 0;border-top:1px solid var(--rule);}
+  .sec-head{margin-bottom:clamp(22px,3vw,34px);}
+  h2{
+    font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(23px,3.3vw,34px);line-height:1.12;margin:0 0 12px;
+    text-wrap:balance;max-width:30ch;
+  }
+  .sec-head p{margin:0;color:var(--ink-2);max-width:66ch;font-size:15.5px;}
+  h3{
+    font-family:var(--font-display);font-size:17px;font-weight:700;
+    letter-spacing:-.01em;margin:0 0 10px;
+  }
+
+  .card{
+    background:var(--surface);border:1px solid var(--rule);
+    border-radius:10px;padding:clamp(16px,2.4vw,24px);
+  }
+  .grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+  .grid3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));}
+
+  .findings{list-style:none;margin:0;padding:0;display:grid;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:10px;overflow:hidden;}
+  .findings li{background:var(--surface);padding:18px 20px;display:flex;gap:14px;align-items:flex-start;}
+  .findings .mk{
+    flex:0 0 auto;width:9px;height:9px;border-radius:2px;margin-top:7px;
+  }
+  .findings p{margin:0;font-size:15px;color:var(--ink-2);}
+  .findings strong{color:var(--ink);font-weight:650;}
+
+  /* ---------- charts ---------- */
+  figure{margin:0;}
+  figcaption{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);margin-bottom:16px;
+  }
+  .chart{display:flex;flex-direction:column;gap:7px;}
+  .row{display:grid;grid-template-columns:minmax(96px,150px) 1fr auto;gap:12px;align-items:center;}
+  .row .name{
+    font-size:13px;color:var(--ink-2);line-height:1.25;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .row .name b{color:var(--ink);font-weight:600;display:block;}
+  .row .name .mono{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);}
+  .track{height:20px;display:flex;gap:2px;align-items:stretch;}
+  .seg{min-width:3px;}
+  .seg:first-child{border-radius:4px 0 0 4px;}
+  .seg:last-child{border-radius:0 4px 4px 0;}
+  .seg:only-child{border-radius:4px;}
+  .val{
+    font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;
+    color:var(--ink-2);white-space:nowrap;
+  }
+  .val .dim{color:var(--ink-3);}
+  .s-ok{background:var(--ok);}
+  .s-fix{background:var(--fix);}
+  .s-wait{background:var(--wait);}
+  .s-block{background:var(--block);}
+  .s-neutral{background:var(--bar-neutral);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);}
+  .legend span{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);}
+  .legend i{width:11px;height:11px;border-radius:3px;display:block;}
+
+  .chip{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 7px;border-radius:100px;white-space:nowrap;border:1px solid;
+  }
+  .chip-ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);}
+  .chip-wait{color:var(--wait);border-color:color-mix(in srgb,var(--wait) 45%,transparent);}
+  .chip-block{color:var(--block);border-color:color-mix(in srgb,var(--block) 45%,transparent);}
+
+  /* ---------- matrix ---------- */
+  .matrix{width:100%;border-collapse:collapse;font-size:14px;}
+  .matrix th,.matrix td{border:1px solid var(--rule);padding:11px 12px;text-align:left;}
+  .matrix thead th{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);font-weight:500;background:var(--surface-2);
+  }
+  .matrix tbody th{font-weight:650;font-size:14px;background:var(--surface-2);}
+  .cell{display:flex;align-items:center;gap:8px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .cell small{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);display:block;}
+
+  /* ---------- tables ---------- */
+  .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.data{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px;}
+  table.data th,table.data td{
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top;
+  }
+  table.data thead th{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);font-weight:500;
+  }
+  table.data td.n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  table.data tbody tr:last-child td{border-bottom:none;}
+  table.data .prod{font-weight:600;color:var(--ink);}
+  table.data .rank{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);}
+
+  details{margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;}
+  summary{
+    cursor:pointer;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);list-style:none;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"▸ ";}
+  details[open] summary::before{content:"▾ ";}
+  summary:hover{color:var(--ink);}
+
+  /* ---------- tiles ---------- */
+  .tiles{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    margin-bottom:18px;
+  }
+  .tile{
+    background:var(--surface);border:1px solid var(--rule);
+    border-left-width:3px;border-radius:8px;padding:16px 18px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .tile.t-block{border-left-color:var(--block);}
+  .tile.t-wait{border-left-color:var(--wait);}
+  .t-num{
+    font-family:var(--font-display);font-weight:800;font-size:26px;
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;
+  }
+  .t-num em{
+    font-family:var(--font-body);font-style:normal;font-weight:400;
+    font-size:13px;color:var(--ink-3);letter-spacing:0;margin-left:3px;
+  }
+  .t-tag{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-3);
+  }
+  .t-lbl{font-size:14.5px;color:var(--ink);line-height:1.35;}
+  .t-sub{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);line-height:1.45;}
+
+  /* ---------- blocker cards ---------- */
+  .blockers{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+    border-radius:10px;overflow:hidden;margin-top:20px;}
+  .bl{background:var(--surface);padding:20px;display:grid;gap:12px;
+    grid-template-columns:minmax(0,1fr);}
+  @media(min-width:760px){.bl{grid-template-columns:200px minmax(0,1fr);gap:24px;}}
+  .bl-h{display:flex;flex-direction:column;gap:8px;}
+  .bl-h .tag{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-3);}
+  .bl-h .size{font-family:var(--font-display);font-weight:800;font-size:24px;
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;}
+  .bl-h .size small{display:block;font-family:var(--font-body);font-size:12px;
+    font-weight:400;color:var(--ink-3);letter-spacing:0;margin-top:4px;}
+  .bl-b p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2);}
+  .bl-b p:last-child{margin-bottom:0;}
+  .bl-b .who{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);}
+  .bl-b code{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);
+    border:1px solid var(--rule);border-radius:4px;padding:1px 5px;color:var(--ink-2);}
+
+  /* ---------- steps ---------- */
+  ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:12px;}
+  ol.steps li{
+    counter-increment:s;background:var(--surface);border:1px solid var(--rule);
+    border-radius:10px;padding:18px 20px;display:grid;gap:14px;
+    grid-template-columns:auto minmax(0,1fr);align-items:start;
+  }
+  ol.steps li::before{
+    content:counter(s);font-family:var(--font-mono);font-size:12px;font-weight:600;
+    color:var(--accent);background:var(--accent-soft);
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  ol.steps h3{margin:0 0 5px;}
+  ol.steps p{margin:0;font-size:14.5px;color:var(--ink-2);}
+  ol.steps .impact{
+    font-family:var(--font-mono);font-size:11px;color:var(--ink-3);
+    margin-top:8px;display:block;
+  }
+
+  .note{
+    background:var(--surface-2);border:1px solid var(--rule);
+    border-left:3px solid var(--wait);border-radius:8px;
+    padding:16px 18px;font-size:14px;color:var(--ink-2);
+  }
+  .note strong{color:var(--ink);}
+
+  footer{
+    border-top:1px solid var(--rule);padding:32px 0 56px;
+    font-size:13px;color:var(--ink-3);
+  }
+  footer p{margin:0 0 8px;max-width:70ch;}
+
+  /* ---------- tooltip ---------- */
+  #tip{
+    position:fixed;z-index:60;pointer-events:none;opacity:0;
+    transform:translate(-50%,-120%);transition:opacity .12s ease;
+    background:var(--ink);color:var(--ground);
+    font-family:var(--font-mono);font-size:11.5px;line-height:1.5;
+    padding:7px 10px;border-radius:6px;max-width:260px;white-space:pre-line;
+  }
+  #tip.on{opacity:1;}
+  [data-tip]{cursor:default;}
+
+  @media (max-width:640px){
+    .row{
+      grid-template-columns:1fr auto;grid-template-areas:"name val" "bar bar";
+      row-gap:7px;padding-bottom:11px;border-bottom:1px solid var(--rule);
+    }
+    .row:last-child{padding-bottom:0;border-bottom:none;}
+    .row .name{grid-area:name;}
+    .row .track{grid-area:bar;}
+    .row .val{grid-area:val;text-align:right;}
+    .chart{gap:11px;}
+    .kpi .num{font-size:32px;}
+    .brand .date{display:none;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important;}
+  }
+  html{scroll-behavior:smooth;}
+  section{scroll-margin-top:56px;}
+</style>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand">SKU Sync<span class="date"> · 02 Agu 2026</span></span>
+    <nav class="navlinks">
+      <a href="#ringkasan">Ringkasan</a>
+      <a href="#cakupan">Cakupan</a>
+      <a href="#volume">Volume kerja</a>
+      <a href="#terlaris">Produk terlaris</a>
+      <a href="#blocker">Yang tertahan</a>
+      <a href="#prioritas">Prioritas</a>
+      <a href="#catatan">Catatan data</a>
+    </nav>
+    <button class="tbtn" id="themeBtn" type="button" aria-label="Ganti tema terang/gelap">Tema</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Laporan progress internal</p>
+    <h1>Sinkronisasi SKU Katalog Cover Mobil</h1>
+    <p class="lead">
+      Status penyeragaman SKU seluruh listing ke satu master, lintas 4 toko —
+      Undercover Autocare, Otonation, Otoprotection, Smartprotection — di Shopee, TikTok, dan Lazada.
+      Termasuk hitungan produk terlaris yang sudah tersinkron dan daftar yang masih tertahan beserta penyebabnya.
+    </p>
+    <div class="stamps">
+      <span class="stamp">Status kerja s/d <b>17 Juli 2026</b></span>
+      <span class="stamp">Ranking terlaris <b>Jan–Jun 2026</b> (181 hari)</span>
+      <span class="stamp">Export listing terbaru <b>27 Juli 2026</b> — belum di-scan</span>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <span class="num">14</span>
+        <span class="lbl">file operasional aktif sudah lewat minimal satu sweep penuh lawan master</span>
+        <span class="sub">tidak ada file yang belum tersentuh</span>
+      </div>
+      <div class="kpi">
+        <span class="num">±22.900</span>
+        <span class="lbl">baris SKU diperbaiki sepanjang 9–17 Juli</span>
+        <span class="sub">akumulasi laporan per sesi</span>
+      </div>
+      <div class="kpi">
+        <span class="num">33.329</span>
+        <span class="lbl">baris diverifikasi sudah benar saat sweep 15 Juli</span>
+        <span class="sub">9 file, lookup master 69 sheet</span>
+      </div>
+      <div class="kpi">
+        <span class="num">6</span>
+        <span class="lbl">kelompok blocker tersisa — hampir semua butuh keputusan, bukan skrip</span>
+        <span class="sub">rincian di bagian “Yang tertahan”</span>
+      </div>
+    </div>
+  </header>
+
+  <section id="ringkasan">
+    <div class="sec-head">
+      <h2>Ringkasan: mesinnya sudah selesai, sisanya keputusan</h2>
+      <p>
+        Empat temuan yang paling menentukan langkah berikutnya.
+      </p>
+    </div>
+
+    <ul class="findings">
+      <li>
+        <span class="mk s-ok"></span>
+        <p><strong>Semua kanal aktif sudah tersentuh.</strong> Per 15–17 Juli, keempat toko di Shopee, TikTok, dan Lazada
+        sudah di-sync memakai lookup master penuh (69 sheet brand). Sebelumnya ini cuma benar untuk Shopee Undercover saja —
+        koreksi 13 Juli membongkar bahwa Lazada &amp; TikTok tidak ikut ter-mirror.</p>
+      </li>
+      <li>
+        <span class="mk s-fix"></span>
+        <p><strong>Produk terlaris inti sudah aman.</strong> Toyota Avanza (#1), Honda Brio (#2), Toyota Innova (#3),
+        Honda Jazz (#4), dan Suzuki Ertiga (#5) SKU-nya sudah terisi benar di toko-toko yang dicek — kecuali satu celah
+        kategori Transparan di Honda Brio.</p>
+      </li>
+      <li>
+        <span class="mk s-wait"></span>
+        <p><strong>Sisa pekerjaan bergeser sifatnya.</strong> Yang tertinggal bukan lagi baris yang bisa diisi otomatis:
+        ±214 model tidak punya pilihan generasi di listing-nya, 610 SKU dipakai listing tapi belum ada di master, dan
+        ±1.000 baris per toko pakai kode chassis Eropa yang tidak aman ditebak.</p>
+      </li>
+      <li>
+        <span class="mk s-block"></span>
+        <p><strong>Angka di laporan ini snapshot 17 Juli.</strong> Di Drive sudah ada export listing baru per 27 Juli dan
+        ranking terlaris baru per 31 Juli (Top 300, bukan lagi 331) — keduanya belum pernah di-scan, jadi coverage riil
+        hari ini bisa berbeda.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="cakupan">
+    <div class="sec-head">
+      <h2>Cakupan: 14 file, 4 toko, 3 marketplace</h2>
+      <p>
+        Matriks file kerja yang ada di proyek. Otonation dan Otoprotection tidak punya file Lazada sama sekali —
+        “belum sync” dan “belum ada filenya” dua hal berbeda, dan ini yang kedua.
+      </p>
+    </div>
+
+    <div class="scroller">
+      <table class="matrix">
+        <thead>
+          <tr><th scope="col">Toko</th><th scope="col">Shopee</th><th scope="col">TikTok</th><th scope="col">Lazada</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Undercover Autocare</th>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>5 file</small></span></span></td>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>file 1; file 2–3 = motor/pouch</small></span></span></td>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>format-OK ±99%</small></span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Otonation</th>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>2 file aktif</small></span></span></td>
+            <td><span class="cell"><span class="dot s-neutral"></span><span>Tidak ada file <small>toko tidak jualan di kanal ini</small></span></span></td>
+            <td><span class="cell"><span class="dot s-neutral"></span><span>Tidak ada file <small>perlu konfirmasi</small></span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Otoprotection</th>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>1 file aktif</small></span></span></td>
+            <td><span class="cell"><span class="dot s-wait"></span><span>Sudah sweep <small>tapi skema SKU beda (CVR-OTP)</small></span></span></td>
+            <td><span class="cell"><span class="dot s-neutral"></span><span>Tidak ada file <small>perlu konfirmasi</small></span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Smartprotection</th>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>2 file</small></span></span></td>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>1 file</small></span></span></td>
+            <td><span class="cell"><span class="dot s-ok"></span><span>Sudah sweep <small>1 file</small></span></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend">
+      <span><i class="s-ok"></i> Sudah lewat sweep master penuh</span>
+      <span><i class="s-wait"></i> Sudah di-sweep tapi ada anomali skema</span>
+      <span><i class="s-neutral"></i> File belum pernah masuk proyek</span>
+    </div>
+  </section>
+
+  <section id="volume">
+    <div class="sec-head">
+      <h2>Volume kerja: hasil sweep 15 Juli per file</h2>
+      <p>
+        Sweep terakhir yang dijalankan seragam untuk semua toko. Batang menunjukkan jumlah baris varian yang diperiksa:
+        yang sudah benar dari awal, dan yang diperbaiki di sesi itu.
+      </p>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>Baris varian per file — sweep 15 Juli 2026</figcaption>
+        <div class="chart">
+
+          <div class="row">
+            <span class="name"><b>UA TikTok 1</b><span class="mono">Undercover</span></span>
+            <span class="track" style="width:100%">
+              <span class="seg s-ok" style="width:75.2%" data-tip="UA TikTok 1&#10;Sudah benar: 10.740 baris"></span>
+              <span class="seg s-fix" style="width:24.8%" data-tip="UA TikTok 1&#10;Diperbaiki: 3.551 baris"></span>
+            </span>
+            <span class="val">14.291 <span class="dim">/ 3.551 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>SP TikTok</b><span class="mono">Smartprotection</span></span>
+            <span class="track" style="width:26.5%">
+              <span class="seg s-ok" style="width:98.1%" data-tip="SP TikTok&#10;Sudah benar: 3.714 baris"></span>
+              <span class="seg s-fix" style="width:1.9%" data-tip="SP TikTok&#10;Diperbaiki: 71 baris"></span>
+            </span>
+            <span class="val">3.785 <span class="dim">/ 71 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>SP Lazada</b><span class="mono">Smartprotection</span></span>
+            <span class="track" style="width:26.4%">
+              <span class="seg s-ok" style="width:97.9%" data-tip="SP Lazada&#10;Sudah benar: 3.689 baris"></span>
+              <span class="seg s-fix" style="width:2.1%" data-tip="SP Lazada&#10;Diperbaiki: 78 baris"></span>
+            </span>
+            <span class="val">3.767 <span class="dim">/ 78 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>OP Shopee 1</b><span class="mono">Otoprotection</span></span>
+            <span class="track" style="width:25.2%">
+              <span class="seg s-ok" style="width:98.6%" data-tip="OP Shopee 1&#10;Sudah benar: 3.553 baris"></span>
+              <span class="seg s-fix" style="width:1.4%" data-tip="OP Shopee 1&#10;Diperbaiki: 51 baris"></span>
+            </span>
+            <span class="val">3.604 <span class="dim">/ 51 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>OP TikTok 1</b><span class="mono">Otoprotection</span></span>
+            <span class="track" style="width:25.2%">
+              <span class="seg s-ok" style="width:98.2%" data-tip="OP TikTok 1&#10;Sudah benar: 3.535 baris"></span>
+              <span class="seg s-fix" style="width:1.8%" data-tip="OP TikTok 1&#10;Diperbaiki: 66 baris"></span>
+            </span>
+            <span class="val">3.601 <span class="dim">/ 66 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>OT Shopee 1</b><span class="mono">Otonation</span></span>
+            <span class="track" style="width:22.1%">
+              <span class="seg s-ok" style="width:79.5%" data-tip="OT Shopee 1&#10;Sudah benar: 2.514 baris"></span>
+              <span class="seg s-fix" style="width:20.5%" data-tip="OT Shopee 1&#10;Diperbaiki: 647 baris"></span>
+            </span>
+            <span class="val">3.161 <span class="dim">/ 647 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>OT Shopee 2</b><span class="mono">Otonation</span></span>
+            <span class="track" style="width:17.5%">
+              <span class="seg s-ok" style="width:74.2%" data-tip="OT Shopee 2&#10;Sudah benar: 1.859 baris"></span>
+              <span class="seg s-fix" style="width:25.8%" data-tip="OT Shopee 2&#10;Diperbaiki: 645 baris"></span>
+            </span>
+            <span class="val">2.504 <span class="dim">/ 645 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>SP Shopee 1</b><span class="mono">Smartprotection</span></span>
+            <span class="track" style="width:16.7%">
+              <span class="seg s-ok" style="width:96.9%" data-tip="SP Shopee 1&#10;Sudah benar: 2.314 baris"></span>
+              <span class="seg s-fix" style="width:3.1%" data-tip="SP Shopee 1&#10;Diperbaiki: 73 baris"></span>
+            </span>
+            <span class="val">2.387 <span class="dim">/ 73 fix</span></span>
+          </div>
+
+          <div class="row">
+            <span class="name"><b>SP Shopee 2</b><span class="mono">Smartprotection</span></span>
+            <span class="track" style="width:10.0%">
+              <span class="seg s-ok" style="width:98.5%" data-tip="SP Shopee 2&#10;Sudah benar: 1.411 baris"></span>
+              <span class="seg s-fix" style="width:1.5%" data-tip="SP Shopee 2&#10;Diperbaiki: 22 baris"></span>
+            </span>
+            <span class="val">1.433 <span class="dim">/ 22 fix</span></span>
+          </div>
+
+        </div>
+
+        <div class="legend">
+          <span><i class="s-ok"></i> Sudah benar sebelum sweep</span>
+          <span><i class="s-fix"></i> Diperbaiki saat sweep</span>
+        </div>
+
+        <details>
+          <summary>Lihat tabel angka</summary>
+          <div class="scroller">
+            <table class="data">
+              <thead>
+                <tr><th>File</th><th>Toko</th><th>Sudah benar</th><th>Diperbaiki</th><th>Total diperiksa</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>TikTok 1</td><td>Undercover Autocare</td><td class="n">10.740</td><td class="n">3.551</td><td class="n">14.291</td></tr>
+                <tr><td>TikTok</td><td>Smartprotection</td><td class="n">3.714</td><td class="n">71</td><td class="n">3.785</td></tr>
+                <tr><td>Lazada</td><td>Smartprotection</td><td class="n">3.689</td><td class="n">78</td><td class="n">3.767</td></tr>
+                <tr><td>Shopee 1</td><td>Otoprotection</td><td class="n">3.553</td><td class="n">51</td><td class="n">3.604</td></tr>
+                <tr><td>TikTok 1</td><td>Otoprotection</td><td class="n">3.535</td><td class="n">66</td><td class="n">3.601</td></tr>
+                <tr><td>Shopee 1</td><td>Otonation</td><td class="n">2.514</td><td class="n">647</td><td class="n">3.161</td></tr>
+                <tr><td>Shopee 2</td><td>Otonation</td><td class="n">1.859</td><td class="n">645</td><td class="n">2.504</td></tr>
+                <tr><td>Shopee 1</td><td>Smartprotection</td><td class="n">2.314</td><td class="n">73</td><td class="n">2.387</td></tr>
+                <tr><td>Shopee 2</td><td>Smartprotection</td><td class="n">1.411</td><td class="n">22</td><td class="n">1.433</td></tr>
+                <tr><td><strong>Total</strong></td><td></td><td class="n"><strong>33.329</strong></td><td class="n"><strong>5.204</strong></td><td class="n"><strong>38.533</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </figure>
+    </div>
+
+    <div class="grid3" style="margin-top:16px;">
+      <div class="card">
+        <h3>Sebelum sweep 15 Juli</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          ±17.700 baris lain sudah diperbaiki di gelombang 9–13 Juli: Shopee Undercover ±4.700 baris
+          (62 produk lewat pipeline batch + Kategori A–D), Lazada Undercover 11.901 baris,
+          Otonation 513, Smartprotection 539, Otoprotection 32.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Pekerjaan di sisi master</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          ±560 baris master baru untuk 9 produk/varian bodi yang sebelumnya tidak ada
+          (Ford Fusion, Mercedes G Class, VW Passat, Suzuki Carry, Feroza Long, dll),
+          374 baris untuk Otonation, 98 baris restorasi EQE/G-Class/Carry, 26 baris Lexus Orange.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Kualitas hasil</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          Tiap batch diverifikasi ulang dengan membaca kembali file dari disk: 0 mismatch,
+          0 SKU duplikat per produk. Perubahan file dicek kolom-per-kolom supaya hanya kolom SKU yang berubah.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="terlaris">
+    <div class="sec-head">
+      <h2>Produk terlaris: 20 teratas dan status SKU-nya</h2>
+      <p>
+        Ranking dari penjualan Januari–Juni 2026 (181 hari): ±27.300 pcs senilai ±Rp 8,0 miliar dari 300 model teratas.
+        Status di bawah dibaca dari catatan pemeriksaan sampai 17 Juli — “tidak ada temuan” berarti belum pernah muncul
+        sebagai masalah, bukan hasil verifikasi ulang hari ini.
+      </p>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>Kuantitas terjual per model · Jan–Jun 2026 · Top 20</figcaption>
+        <div class="chart" id="chartTerlaris">
+
+          <div class="row">
+            <span class="name"><b>Toyota Avanza</b><span class="mono">#1 · 239 varian</span></span>
+            <span class="track" style="width:100%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Avanza&#10;2.372 pcs · Rp 705,9 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">2.372</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda Brio</b><span class="mono">#2 · 195 varian</span></span>
+            <span class="track" style="width:89.5%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Brio&#10;2.124 pcs · Rp 602,4 jt&#10;Status: celah kategori Transparan di Smartprotection"></span></span>
+            <span class="val">2.124 <span class="chip chip-block">Transparan</span></span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Innova</b><span class="mono">#3 · 338 varian</span></span>
+            <span class="track" style="width:76.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Innova&#10;1.814 pcs · Rp 551,8 jt&#10;Status: sudah benar; 1 listing Premium diarsipkan (di-skip)"></span></span>
+            <span class="val">1.814</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda Jazz</b><span class="mono">#4 · 186 varian</span></span>
+            <span class="track" style="width:50.3%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Jazz&#10;1.194 pcs · Rp 335,1 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">1.194</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Suzuki Ertiga</b><span class="mono">#5 · 113 varian</span></span>
+            <span class="track" style="width:43.8%"><span class="seg s-neutral" style="width:100%" data-tip="Suzuki Ertiga&#10;1.038 pcs · Rp 314,0 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">1.038</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda HR-V</b><span class="mono">#6 · 131 varian</span></span>
+            <span class="track" style="width:39.1%"><span class="seg s-neutral" style="width:100%" data-tip="Honda HR-V&#10;928 pcs · Rp 275,3 jt&#10;Status: beda ejaan nama sudah diperbaiki (HRV → HR-V / e:N1)"></span></span>
+            <span class="val">928</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Agya</b><span class="mono">#7 · 136 varian</span></span>
+            <span class="track" style="width:37.0%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Agya&#10;877 pcs · Rp 249,0 jt&#10;Status: tidak ada temuan (catatan: ada listing 'Suzuki Agya' salah brand di SP Lazada)"></span></span>
+            <span class="val">877</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Daihatsu Ayla</b><span class="mono">#8 · 105 varian</span></span>
+            <span class="track" style="width:31.7%"><span class="seg s-neutral" style="width:100%" data-tip="Daihatsu Ayla&#10;751 pcs · Rp 211,4 jt&#10;Status: bagian dari 132 SKU duplikat lama (1 SKU untuk 2 generasi) — belum diaudit"></span></span>
+            <span class="val">751 <span class="chip chip-wait">Duplikat</span></span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Daihatsu Xenia</b><span class="mono">#9 · 134 varian</span></span>
+            <span class="track" style="width:31.6%"><span class="seg s-neutral" style="width:100%" data-tip="Daihatsu Xenia&#10;749 pcs · Rp 233,1 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">749</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Nissan Grand Livina</b><span class="mono">#10 · 82 varian</span></span>
+            <span class="track" style="width:28.9%"><span class="seg s-neutral" style="width:100%" data-tip="Nissan Grand Livina&#10;685 pcs · Rp 204,4 jt&#10;Status: alias master sudah cocok; varian X-Gear masih ambigu (produk terpisah)"></span></span>
+            <span class="val">685</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Vios</b><span class="mono">#11 · 117 varian</span></span>
+            <span class="track" style="width:28.7%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Vios&#10;680 pcs · Rp 195,8 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">680</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Fortuner</b><span class="mono">#12 · 147 varian</span></span>
+            <span class="track" style="width:27.2%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Fortuner&#10;645 pcs · Rp 223,7 jt&#10;Status: tidak ada temuan (catatan: listing 'Honda Fortuner' salah brand di SP)"></span></span>
+            <span class="val">645</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda BR-V</b><span class="mono">#13 · 89 varian</span></span>
+            <span class="track" style="width:25.8%"><span class="seg s-neutral" style="width:100%" data-tip="Honda BR-V&#10;613 pcs · Rp 177,4 jt&#10;Status: beda ejaan nama sudah diperbaiki (BRV → BR-V)"></span></span>
+            <span class="val">613</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Calya</b><span class="mono">#14 · 92 varian</span></span>
+            <span class="track" style="width:25.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Calya&#10;606 pcs · Rp 174,8 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">606</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Rush</b><span class="mono">#15 · 96 varian</span></span>
+            <span class="track" style="width:23.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Rush&#10;558 pcs · Rp 171,6 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">558</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Yaris</b><span class="mono">#16 · 77 varian</span></span>
+            <span class="track" style="width:22.6%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Yaris&#10;536 pcs · Rp 164,8 jt&#10;Status: entri master sempat salah total; ±130 baris bermasalah di 4 toko"></span></span>
+            <span class="val">536 <span class="chip chip-wait">Sebagian</span></span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Toyota Kijang</b><span class="mono">#17 · 111 varian</span></span>
+            <span class="track" style="width:22.3%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Kijang&#10;530 pcs · Rp 135,0 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">530</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda CR-V</b><span class="mono">#18 · 98 varian</span></span>
+            <span class="track" style="width:18.4%"><span class="seg s-neutral" style="width:100%" data-tip="Honda CR-V&#10;437 pcs · Rp 116,3 jt&#10;Status: sempat ke-flag geser generasi — terbukti false positive (master grup Gen 4,5,6 → kode G4)"></span></span>
+            <span class="val">437</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda Mobilio</b><span class="mono">#19 · 54 varian</span></span>
+            <span class="track" style="width:18.0%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Mobilio&#10;426 pcs · Rp 127,9 jt&#10;Status: kategori Transparan — 1 SKU dipakai untuk semua generasi"></span></span>
+            <span class="val">426 <span class="chip chip-block">Transparan</span></span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Honda Civic</b><span class="mono">#20 · 132 varian</span></span>
+            <span class="track" style="width:14.7%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Civic&#10;349 pcs · Rp 101,9 jt&#10;Status: tidak ada temuan"></span></span>
+            <span class="val">349</span>
+          </div>
+
+        </div>
+
+        <div class="legend">
+          <span><i class="s-neutral"></i> Kuantitas terjual (pcs)</span>
+          <span class="chip chip-wait">Sebagian / perlu audit</span>
+          <span class="chip chip-block">Blocker terbuka</span>
+          <span style="color:var(--ink-3);">Tanpa label = belum pernah muncul sebagai temuan</span>
+        </div>
+      </figure>
+    </div>
+
+    <div class="note" style="margin-top:16px;">
+      <strong>Yang belum bisa dijawab dari data yang ada:</strong> satu angka tunggal “X dari 300 model terlaris sudah
+      sync di semua toko”. Pemeriksaan selama ini dilakukan per toko dengan hitungan per produk-listing (satu model bisa
+      punya beberapa listing), dan belum pernah direkonsiliasi jadi satu angka lintas toko. Untuk itu perlu satu kali
+      scan gabungan atas export 27 Juli — bisa dikerjakan begitu file-nya dibuka.
+    </div>
+  </section>
+
+  <section id="scope-toko">
+    <div class="sec-head">
+      <h2>Hasil pemeriksaan produk terlaris per toko</h2>
+      <p>
+        Angka dari pemeriksaan 10–11 Juli saat scope masih “331 terlaris dulu, semua toko”. Dihitung per produk-listing,
+        bukan per model, jadi jangan dijumlahkan antar toko.
+      </p>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>Produk terlaris per toko menurut hasil scan</figcaption>
+        <div class="chart">
+          <div class="row">
+            <span class="name"><b>Smartprotection</b><span class="mono">2 file Shopee</span></span>
+            <span class="track" style="width:98.1%">
+              <span class="seg s-ok" style="width:58.3%" data-tip="Smartprotection&#10;Sudah OK: 217 produk&#10;(144 benar dari awal + 73 diperbaiki)"></span>
+              <span class="seg s-wait" style="width:37.4%" data-tip="Smartprotection&#10;Butuh keputusan: 139 produk"></span>
+              <span class="seg s-block" style="width:4.3%" data-tip="Smartprotection&#10;Tidak ada di master: 16 produk (semua kategori Transparan)"></span>
+            </span>
+            <span class="val">372</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Otonation</b><span class="mono">2 file Shopee</span></span>
+            <span class="track" style="width:100%">
+              <span class="seg s-wait" style="width:89.2%" data-tip="Otonation&#10;Butuh keputusan: ±338 produk"></span>
+              <span class="seg s-block" style="width:10.8%" data-tip="Otonation&#10;Tidak ada di master: ±41 produk"></span>
+            </span>
+            <span class="val">379 <span class="dim">*</span></span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Otoprotection</b><span class="mono">1 file Shopee</span></span>
+            <span class="track" style="width:50.4%">
+              <span class="seg s-ok" style="width:34.6%" data-tip="Otoprotection&#10;Sudah OK: 66 produk (termasuk Avanza #1 dan Brio #2)"></span>
+              <span class="seg s-wait" style="width:64.4%" data-tip="Otoprotection&#10;Butuh keputusan: 123 produk"></span>
+              <span class="seg s-block" style="width:1.0%" data-tip="Otoprotection&#10;Tidak ada di master: 2 produk (Suzuki Carry Pickup, Mercedes G Class)"></span>
+            </span>
+            <span class="val">191</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>Undercover Autocare</b><span class="mono">5 file Shopee</span></span>
+            <span class="track" style="width:23.7%">
+              <span class="seg s-ok" style="width:100%" data-tip="Undercover Autocare&#10;Selesai: 90 produk&#10;(4 manual + 62 batch + 24 needs-decision yang sudah diputuskan)"></span>
+            </span>
+            <span class="val">90</span>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span><i class="s-ok"></i> Sudah OK / selesai diperbaiki</span>
+          <span><i class="s-wait"></i> Butuh keputusan</span>
+          <span><i class="s-block"></i> Tidak ada di master</span>
+          <span style="color:var(--ink-3);">* Otonation: porsi “sudah OK” tidak pernah dihitung terpisah</span>
+        </div>
+
+        <details>
+          <summary>Lihat tabel angka</summary>
+          <div class="scroller">
+            <table class="data">
+              <thead>
+                <tr><th>Toko</th><th>Sudah OK</th><th>Butuh keputusan</th><th>Tidak ada di master</th><th>Catatan</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="prod">Smartprotection</td><td class="n">217</td><td class="n">139</td><td class="n">16</td><td>16 gap semuanya kategori Transparan, termasuk Honda Brio</td></tr>
+                <tr><td class="prod">Otonation</td><td class="n">—</td><td class="n">±338</td><td class="n">±41</td><td>513 baris listing diperbaiki; porsi “sudah OK” tidak dihitung</td></tr>
+                <tr><td class="prod">Otoprotection</td><td class="n">66</td><td class="n">123</td><td class="n">2</td><td>32 baris diperbaiki; Avanza &amp; Brio sudah benar dari awal</td></tr>
+                <tr><td class="prod">Undercover Autocare</td><td class="n">90</td><td class="n">0</td><td class="n">0</td><td>Semua kasus needs-decision sudah diputuskan 10 Juli</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </figure>
+    </div>
+  </section>
+
+  <section id="blocker">
+    <div class="sec-head">
+      <h2>Yang belum sync — dan kenapa</h2>
+      <p>
+        Enam kelompok penyebab, dari A sampai F. Angka per kelompok memakai satuan yang berbeda —
+        model, produk, baris, atau SKU — karena memang begitu cara terhitungnya, jadi jangan dibandingkan langsung
+        satu sama lain.
+      </p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile t-block">
+        <span class="t-tag">A</span>
+        <span class="t-num">±214 <em>model</em></span>
+        <span class="t-lbl">Listing tanpa pilihan generasi</span>
+        <span class="t-sub">109 Otoprotection · 105 Smartprotection</span>
+      </div>
+      <div class="tile t-block">
+        <span class="t-tag">B</span>
+        <span class="t-num">201 <em>produk</em></span>
+        <span class="t-lbl">Kategori Transparan tanpa SKU master</span>
+        <span class="t-sub">643 baris · 96% masuk daftar terlaris</span>
+      </div>
+      <div class="tile t-wait">
+        <span class="t-tag">C</span>
+        <span class="t-num">610 <em>SKU</em></span>
+        <span class="t-lbl">Dipakai listing, belum ada di master</span>
+        <span class="t-sub">dari 6.957 total gap · yang masuk top-331</span>
+      </div>
+      <div class="tile t-block">
+        <span class="t-tag">D</span>
+        <span class="t-num">232 <em>model</em></span>
+        <span class="t-lbl">Tidak punya entri master sama sekali</span>
+        <span class="t-sub">3.952 baris · Lazada Undercover</span>
+      </div>
+      <div class="tile t-wait">
+        <span class="t-tag">E</span>
+        <span class="t-num">±1.000 <em>baris/toko</em></span>
+        <span class="t-lbl">Skema generasi tidak bisa dipetakan</span>
+        <span class="t-sub">kode chassis Eropa: W / E / F / G / B-code</span>
+      </div>
+      <div class="tile t-wait">
+        <span class="t-tag">F</span>
+        <span class="t-num">8 <em>kasus</em></span>
+        <span class="t-lbl">Bug data &amp; anomali skema</span>
+        <span class="t-sub">label generasi, prefix toko, salah brand</span>
+      </div>
+    </div>
+    <div class="legend" style="border-top:none;padding-top:0;">
+      <span><i class="s-block"></i> Blocker keras — tertahan di luar jangkauan skrip</span>
+      <span><i class="s-wait"></i> Butuh review/keputusan sebelum bisa dieksekusi</span>
+      <span style="color:var(--ink-3);">Satuan sengaja tidak disamakan — tiap kelompok memang terhitung berbeda</span>
+    </div>
+
+    <div class="blockers">
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · A</span>
+          <span class="size">±214 model<small>109 Otoprotection · 105 Smartprotection</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Listing tidak punya pilihan generasi</h3>
+          <p>Variannya cuma warna, tanpa pilihan tahun/generasi sama sekali — padahal master punya SKU berbeda per generasi.
+          SKU-nya sengaja dikosongkan, bukan ditebak, sesuai keputusan 11 Juli.</p>
+          <p class="who">Contoh terlaris: Mercedes Benz CLA Class (15 baris, OT Shopee) · Suzuki Carry Pickup ·
+          Mercedes Benz G Class · Suzuki Carry polos (43 baris, OP Shopee).</p>
+          <p><strong>Yang bisa membuka:</strong> tambah varian generasi di Seller Center dulu; setelah itu pengisian SKU otomatis.</p>
+        </div>
+      </div>
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · B</span>
+          <span class="size">201 produk<small>643 baris di Otonation</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Kategori Transparan belum punya SKU di master</h3>
+          <p>Master tidak menyediakan SKU untuk kategori Transparan pada banyak model. Akibatnya listing Transparan
+          memakai satu SKU untuk semua generasi sekaligus — pernah ditemukan sampai 11 rentang tahun berbagi satu SKU.</p>
+          <p class="who">185 produk di Otonation — <strong>178 di antaranya (96%) masuk daftar terlaris</strong>.
+          16 produk lagi di Smartprotection, termasuk <strong>Honda Brio</strong> (peringkat #2, 2.124 pcs).
+          Honda Mobilio (#19) juga kena pola ini.</p>
+          <p><strong>Yang bisa membuka:</strong> keputusan menambah baris kategori Transparan per generasi ke master.
+          Ini utang lama yang sempat ditunda, tapi isinya justru produk terlaris.</p>
+        </div>
+      </div>
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · C</span>
+          <span class="size">610 SKU<small>dipakai listing, tidak ada di master</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Master berbeda dari kenyataan di listing</h3>
+          <p>Dari seluruh baris terisi di listing Undercover, 6.957 SKU tidak ditemukan di master — 610 di antaranya
+          milik produk terlaris. Sebagian valid (master memang belum lengkap), sebagian data lama yang keliru.</p>
+          <p class="who">Contoh: <strong>Daihatsu Terios</strong> (#21, 343 pcs) — listing menjual Gen 2–3 (2006–2026),
+          master cuma punya Gen 1 (1997–2006), jadi <code>DHT-TRS-UA-R-G2-*</code> tidak punya rumah.
+          <strong>Toyota Hardtop</strong> — master memakai kode chassis <code>J40</code>, listing memakai <code>G4</code>.</p>
+          <p><strong>Yang bisa membuka:</strong> review daftar 610 SKU (file <code>Gap SKU Master - dari Listing UA</code>),
+          pisahkan yang valid dari yang typo, lalu tambahkan ke master.</p>
+        </div>
+      </div>
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · D</span>
+          <span class="size">232 model<small>3.952 baris di Lazada UA</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Produk dijual tapi tidak pernah punya entri master</h3>
+          <p>Bukan soal sinkronisasi — produk ini memang belum pernah masuk master sama sekali.
+          Dominan brand mewah, ditambah beberapa mainstream.</p>
+          <p class="who">Audi, Bentley, Ferrari, Porsche, Rolls Royce, Aston Martin, McLaren, Maserati, Tesla, Volvo,
+          Lexus · Kia Sorento &amp; EV6, Isuzu D-MAX &amp; MU-X, Jeep Renegade &amp; Gladiator, Nissan Latio,
+          Toyota FJ Cruiser, Hummer H3, Chevrolet Estate Magnum. Di TikTok tersisa 79 model dari pola yang sama.</p>
+          <p><strong>Yang bisa membuka:</strong> keputusan — mau dibuatkan master atau dibiarkan (sebagian brand ini
+          volumenya rendah, jadi belum tentu sepadan).</p>
+        </div>
+      </div>
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · E</span>
+          <span class="size">±1.000<small>baris per toko</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Skema generasi yang tidak bisa dipetakan otomatis</h3>
+          <p>Listing memakai kode chassis Eropa (Mercedes W-code, BMW E/F/G-code, VW B-code) sementara master
+          memakai skema “Gen N”. Tidak ada pemetaan otomatis yang aman — risiko salah tebak tinggi, jadi sengaja tidak di-auto-fix.</p>
+          <p class="who">Termasuk juga: MINI Hatch &amp; Clubman (listing punya Gen 1–4, master cuma satu label datar),
+          dan generasi sangat lawas seperti Toyota Corolla Gen 1–5 (1966–1987) yang belum pernah diriset.</p>
+          <p><strong>Yang bisa membuka:</strong> riset manual per model — dikerjakan bertahap, prioritas ikut ranking penjualan.</p>
+        </div>
+      </div>
+
+      <div class="bl">
+        <div class="bl-h">
+          <span class="tag">Blocker · F</span>
+          <span class="size">8 kasus<small>bug data &amp; anomali skema</small></span>
+        </div>
+        <div class="bl-b">
+          <h3>Perlu perbaikan di sisi data, bukan skrip</h3>
+          <p><strong>Label generasi salah input:</strong> BYD Atto 3 dan Daihatsu Taft GT punya “Hijau” terdaftar sebagai
+          label <em>generasi</em> di master (mestinya nama warna) — baris warna Hijau jadi tidak bisa dituju SKU manapun.</p>
+          <p><strong>Prefix toko tidak konsisten:</strong> produk hasil gap-fill (Mercedes G Class, EQE, Suzuki Carry)
+          memakai kode <code>UA</code> untuk semua toko, termasuk baris Otoprotection/Smartprotection yang mestinya <code>SP</code>.
+          Perlu dicek ke gudang/BigSeller sebelum diubah.</p>
+          <p><strong>Skema SKU beda antar kanal:</strong> Otoprotection TikTok masih memakai <code>CVR0117-OTP-*</code>
+          sementara Otoprotection Shopee sudah memakai skema master.</p>
+          <p><strong>Salah brand di listing:</strong> “Honda Fortuner”, “Suzuki Agya”, “Honda Fusion”, “Mitsubishi Lantis”.
+          <strong>Submodel ambigu:</strong> Honda City / Mazda 2 / Kia Rio polos (master punya versi Sedan &amp; Hatchback),
+          Nissan Livina X-Gear, serta Suzuki Vitara / Nissan Kicks / Honda City Hatchback (149 baris di TikTok UA).</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h3>Produk terlaris yang masih tertahan — daftar spesifik</h3>
+      <div class="scroller" style="margin-top:12px;">
+        <table class="data">
+          <thead>
+            <tr><th>Produk</th><th>Kanal terdampak</th><th>Penyebab</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="prod">Honda Brio</span><br><span class="rank">#2 · 2.124 pcs</span></td>
+              <td>Smartprotection Shopee</td>
+              <td>Listing “Honda Brio Transparan” tidak punya SKU di master</td>
+              <td><span class="chip chip-block">Blocker</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Daihatsu Ayla</span><br><span class="rank">#8 · 751 pcs</span></td>
+              <td>Master (semua toko)</td>
+              <td>Bagian dari 132 SKU duplikat lama — satu SKU sengaja dipakai untuk 2 generasi</td>
+              <td><span class="chip chip-wait">Perlu keputusan</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Toyota Yaris</span><br><span class="rank">#16 · 536 pcs</span></td>
+              <td>4 toko, ±130 baris</td>
+              <td>Entri master sempat salah total (Gen 1 tertulis 2023–2026); submodel Yaris &amp; Yaris Cross tercampur</td>
+              <td><span class="chip chip-wait">Master beres, listing sebagian</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Honda Mobilio</span><br><span class="rank">#19 · 426 pcs</span></td>
+              <td>Otonation, Smartprotection</td>
+              <td>Kategori Transparan: satu SKU dipakai untuk semua generasi</td>
+              <td><span class="chip chip-block">Blocker</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Daihatsu Terios</span><br><span class="rank">#21 · 343 pcs</span></td>
+              <td>Undercover, semua kanal</td>
+              <td>Listing menjual Gen 2–3 (2006–2026), master hanya punya Gen 1 (1997–2006)</td>
+              <td><span class="chip chip-wait">Perlu review gap SKU</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">BYD Atto 3</span><br><span class="rank">masuk top-331</span></td>
+              <td>Undercover Shopee &amp; TikTok</td>
+              <td>“Hijau” salah terdaftar sebagai label generasi di master</td>
+              <td><span class="chip chip-block">Bug master</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Daihatsu Taft GT</span><br><span class="rank">masuk top-331</span></td>
+              <td>Undercover Shopee &amp; TikTok</td>
+              <td>Pola sama dengan BYD Atto 3</td>
+              <td><span class="chip chip-block">Bug master</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Mercedes Benz CLA Class</span><br><span class="rank">#229 daftar lama</span></td>
+              <td>Otonation Shopee (15 baris)</td>
+              <td>Listing 1 dimensi — warna saja, tanpa pilihan generasi</td>
+              <td><span class="chip chip-block">Perlu tambah varian</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Suzuki Carry Pickup · Mercedes G Class</span><br><span class="rank">#69 · #167 daftar lama</span></td>
+              <td>Otoprotection Shopee (43 baris)</td>
+              <td>Listing 1 dimensi; SKU dikosongkan sesuai keputusan 11 Juli</td>
+              <td><span class="chip chip-block">Perlu tambah varian</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Suzuki Vitara · Nissan Kicks · Honda City Hatchback</span><br><span class="rank">masuk top-331</span></td>
+              <td>Undercover TikTok (149 baris)</td>
+              <td>Nama submodel ambigu — tidak ketemu padanannya di master</td>
+              <td><span class="chip chip-wait">Perlu keputusan</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">Toyota Hardtop</span><br><span class="rank">masuk top-331</span></td>
+              <td>Undercover</td>
+              <td>Master pakai kode chassis J40, listing pakai G4</td>
+              <td><span class="chip chip-wait">Perlu review gap SKU</span></td>
+            </tr>
+            <tr>
+              <td><span class="prod">178 produk Transparan Otonation</span><br><span class="rank">96% dari 185 produk</span></td>
+              <td>Otonation Shopee (643 baris)</td>
+              <td>Master tidak punya SKU kategori Transparan untuk Otonation</td>
+              <td><span class="chip chip-block">Blocker</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="prioritas">
+    <div class="sec-head">
+      <h2>Urutan yang disarankan</h2>
+      <p>
+        Diurutkan dari dampak penjualan terbesar per satuan usaha, mengikuti prinsip yang sudah dipakai sejak awal:
+        produk yang sering dibeli beres duluan.
+      </p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div>
+          <h3>Tutup gap kategori Transparan</h3>
+          <p>201 produk, dan 96% di antaranya produk terlaris — termasuk Honda Brio di peringkat #2.
+          Ini utang lama yang selama ini ditunda dengan asumsi “bukan produk laris”, dan asumsi itu ternyata keliru
+          saat dicek eksplisit pada 13 Juli.</p>
+          <span class="impact">Butuh: keputusan menambah baris Transparan per generasi ke master → sisanya otomatis</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Review 610 SKU gap top-331, lalu lengkapi master</h3>
+          <p>Daftarnya sudah jadi dan tersimpan. Yang perlu dilakukan: memisahkan yang valid (Terios Gen 2–3) dari
+          yang keliru sebelum ditambahkan — jangan ditelan bulat walau prinsipnya “master ikut e-commerce”.</p>
+          <span class="impact">Membuka: Daihatsu Terios (#21), Toyota Hardtop, dan sisa baris kosong di TikTok</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Perbaiki 2 bug label generasi di master</h3>
+          <p>BYD Atto 3 dan Daihatsu Taft GT: hapus “Hijau” dari kolom Generasi. Kecil, cepat, dan sudah dipastikan
+          hanya menyangkut dua model ini.</p>
+          <span class="impact">Effort paling kecil di daftar ini</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Ajukan penambahan varian generasi di Seller Center</h3>
+          <p>±214 model tidak akan pernah bisa diisi SKU-nya selama listing-nya cuma punya pilihan warna.
+          Ini pekerjaan di sisi toko, bukan di sisi data — bisa jalan paralel dengan yang lain.</p>
+          <span class="impact">Mulai dari model dengan ranking tertinggi, tidak perlu sekaligus 214</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Scan ulang export 27 Juli untuk angka terkini</h3>
+          <p>Semua angka di laporan ini berhenti di 17 Juli. Export baru sudah ada di Drive, dan ranking terlaris sudah
+          diperbarui jadi Top 300 per 31 Juli. Satu kali scan gabungan akan menghasilkan angka yang selama ini belum ada:
+          berapa model terlaris yang benar-benar sudah sync di semua toko sekaligus.</p>
+          <span class="impact">Output: satu angka coverage lintas toko + daftar sisa yang akurat</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="catatan">
+    <div class="sec-head">
+      <h2>Catatan data</h2>
+      <p>Dari mana angka-angka ini, dan di mana batasnya.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Sumber</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          Status pekerjaan: catatan memory proyek di repo <code>undercover-claude</code>, entri terakhir 17 Juli 2026.
+          Ranking &amp; kuantitas penjualan: <code>Mobil Terlaris.xlsx</code> (Top 300, diperbarui 31 Juli–1 Agustus 2026)
+          dari data pesanan Januari–Juni 2026, 181 hari.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Batas keakuratan</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          Angka “baris diperbaiki” adalah akumulasi laporan per sesi dan belum direkonsiliasi ulang lintas sesi —
+          pernah terjadi angka sesi dilaporkan lebih besar dari kenyataan ketika prioritas berpindah di tengah jalan.
+          Satu selisih yang belum terjelaskan: Otonation Shopee 2 tercatat 645 baris di catatan toko, 445 di catatan umum;
+          yang dipakai di sini angka catatan toko.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Yang tidak masuk hitungan</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          Varian catch-all (“Tahun Lain”, “Model Lain”, “Custom”) memang sengaja dikosongkan dan tidak dihitung
+          sebagai baris yang belum sync. Cover motor dan travel pouch di luar lingkup proyek cover mobil.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Belum diverifikasi ulang</h3>
+        <p style="margin:0;font-size:14.5px;color:var(--ink-2);">
+          Status “tidak ada temuan” pada produk terlaris berarti produk itu tidak pernah muncul di catatan masalah —
+          bukan hasil pemeriksaan baris-per-baris hari ini. Untuk kepastian, perlu scan atas export 27 Juli.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Laporan progress sinkronisasi SKU · disusun 2 Agustus 2026 · data pekerjaan s/d 17 Juli 2026, data penjualan Januari–Juni 2026.</p>
+    <p>Empat toko: Undercover Autocare, Otonation, Otoprotection, Smartprotection · tiga marketplace: Shopee, TikTok, Lazada.</p>
+  </footer>
+
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+  (function(){
+    var tip = document.getElementById('tip');
+    var current = null;
+
+    function show(el, x, y){
+      tip.textContent = el.getAttribute('data-tip');
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      tip.classList.add('on');
+    }
+    function hide(){ tip.classList.remove('on'); current = null; }
+
+    document.addEventListener('mousemove', function(e){
+      var el = e.target.closest ? e.target.closest('[data-tip]') : null;
+      if(el){
+        current = el;
+        show(el, e.clientX, e.clientY - 6);
+      } else if(current){
+        hide();
+      }
+    });
+    document.addEventListener('mouseleave', hide);
+    window.addEventListener('scroll', function(){ if(current) hide(); }, {passive:true});
+
+    document.querySelectorAll('[data-tip]').forEach(function(el){
+      el.setAttribute('tabindex','0');
+      el.setAttribute('role','img');
+      el.setAttribute('aria-label', el.getAttribute('data-tip').replace(/\n/g,'. '));
+      el.addEventListener('focus', function(){
+        var r = el.getBoundingClientRect();
+        current = el;
+        show(el, r.left + r.width/2, r.top - 2);
+      });
+      el.addEventListener('blur', hide);
+    });
+
+    var btn = document.getElementById('themeBtn');
+    btn.addEventListener('click', function(){
+      var root = document.documentElement;
+      var isDark = root.getAttribute('data-theme') === 'dark' ||
+        (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+  })();
+</script>
