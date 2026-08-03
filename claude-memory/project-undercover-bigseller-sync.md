@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-03T05:54:53.497Z
+  modified: 2026-08-03T07:05:11.292Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -184,6 +184,10 @@ Baris Cover Mobil dibandingkan ke gabungan target UA_TikTok_1..3 (23.462 entri) 
 **Bukan masalah nyata, cuma informasional**: Wuling Darion (3 tier, 17 baris) — SKU live sudah correctly-formatted (`WLG-DRN-UA-*-G1-*`) tapi target/master belum punya entri model ini sama sekali (kosong) — pola SAMA PERSIS dgn temuan di Shopee hari ini (lihat di atas). Vinfast VF3 (17 baris, semua kosong total) & 2 baris Timor Premium (SKU-nya sudah benar) — `sku_id`-nya tidak ada di file target sama sekali (0 match), konsisten dgn temuan Shopee: model terlalu baru / target belum di-generate ulang sejak snapshot 07-29, bukan bug.
 
 File koreksi sudah disiapkan: `Cek gagal upload\Retry Upload TikTok UA - 20 produk formula belum diterapkan (2026-08-03).xlsx` (494 baris = full product block dari 20 listing itu, termasuk baris yang sudah benar supaya tiap listing lengkap saat diupload — TikTok proses per-produk; 432 SKU diganti ke target, sisanya dibiarkan). **Belum diupload, nunggu keputusan user.**
+
+**Jebakan format file koreksi TikTok — WAJIB pertahankan seluruh struktur workbook asli, bukan cuma sheet `Template`.** Percobaan pertama bikin file retry dgn `openpyxl.Workbook()` baru (cuma 1 sheet) — user tegur "samakan format dgn yang siap upload". File TikTok asli punya 8 sheet (`Template, Instruction, HiddenStyle, HiddenAttr, SpecialProductListingType, TemplateConfig, Brand, SalePlatform`) dan `Template` sendiri 45 kolom termasuk kolom atribut kategori (`Model` di kolom 33, dst) — sheet2 (Instruction/HiddenAttr/dll) menyimpan validasi dropdown yg kemungkinan dibutuhkan importer TikTok. **Pola yang benar**: `load_workbook(path)` PENUH (bukan bikin baru), snapshot baris yang mau disimpan (value+style per sel), `ws.delete_rows(6, max_row-5)` sekali (hapus SEMUA baris data dalam 1 panggilan, jauh lebih cepat dari hapus satu-satu), lalu tulis ulang baris yang disimpan mulai row 6 dgn SKU di-override sesuai target. File final tetap 8 sheet, `Template` 45 kolom, cuma baris datanya yang diringkas ke 494 + SKU yang benar.
+
+**Ketemu residual dari bug lama 07-17 saat verifikasi file ini**: 5 baris BYD Atto 3 Reguler (warna polos Abu-abu/Hitam/Biru/Merah/Hijau, TANPA info generasi) tetap tidak ter-override (masih placeholder literal `"SKU"`) karena target-nya sendiri kosong — ini KONSISTEN dgn bug master `master_gens_by_model.json` yang py entri palsu `'Hijau'` sbg label generasi utk BYD Atto 3 (lihat [[feedback-undercover-sku-sync-lessons]] 2026-07-17), BUKAN bug baru. Sengaja DIBIARKAN apa adanya (tidak ditebak) krn butuh perbaikan di sisi master, bukan di file listing.
 
 ## Sisa pekerjaan
 
