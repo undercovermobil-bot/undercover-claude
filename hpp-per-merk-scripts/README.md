@@ -87,9 +87,10 @@ python3 verify.py
 memuat file xlsx apa pun, termasuk file uji 3 sel. Gantinya `verify.py` membaca formula apa
 adanya dari workbook hasil lalu mengevaluasinya sendiri:
 
-1. Skenario C kosong → memastikan tidak ada `#DIV/0!` dan D/G/Y/Z/AC benar-benar kosong.
-2. Cek silang tiap baris berharga: `W` harus 33,45% dari J, `X = J-W`, `AB = J*1,1`.
-3. Uji silang ke angka yang sudah diketahui: baris `Toyota Avanza` diisi C=5 & J=295.000
+1. `CATATAN` sheet tidak boleh punya elemen `<f>` (formula) sama sekali — lihat bug di bawah.
+2. Skenario C kosong → memastikan tidak ada `#DIV/0!` dan D/G/Y/Z/AC benar-benar kosong.
+3. Cek silang tiap baris berharga: `W` harus 33,45% dari J, `X = J-W`, `AB = J*1,1`.
+4. Uji silang ke angka yang sudah diketahui: baris `Toyota Avanza` diisi C=5 & J=295.000
    harus menghasilkan angka identik dengan baris `Avanza Reguler` Sheet3
    (HPP 179.500, Cair MP 196.322,5, Margin Bersih 28.322,5).
 
@@ -97,3 +98,31 @@ Status terakhir: 453 baris, 369 berharga, semua lolos.
 
 Karena openpyxl menulis formula tanpa cached value, angka baru muncul saat file dibuka di
 Excel/Google Sheets (langsung dihitung ulang otomatis).
+
+## Bug yang pernah bikin Excel minta "repair" (sudah diperbaiki)
+
+Dua versi awal file ini memicu dialog Excel "We found a problem with some content... do you
+want us to recover". Log perbaikan Excel (`Removed Records: Formula from
+/xl/worksheets/sheet1.xml part` — sheet1 = `CATATAN`) memastikan penyebab sebenarnya:
+
+Di sheet `CATATAN`, teks dokumentasi seperti `=IFERROR(B/C,"")` dan `=IF(D="","",SUM(D:F))`
+ditulis apa adanya sebagai penjelasan formula. Tapi openpyxl **otomatis** menganggap string
+manapun yang diawali `=` sebagai formula sungguhan (`Cell._bind_value`,
+`value.startswith("=")` → `data_type='f'`), lalu menulisnya sebagai elemen `<f>` di XML.
+Karena "B/C" dan "D:F" di situ bukan referensi sel yang valid (tanpa nomor baris — itu cuma
+teks penjelasan generik, bukan formula per-baris), Excel mendeteksinya sebagai formula cacat
+dan membuangnya saat "repair".
+
+Fix (di `tulis_catatan()`):
+1. Teks dokumentasi diganti jadi `"Formula: IFERROR(...)"` dst — tidak lagi diawali `=`.
+2. Sebagai jaring pengaman, `tulis()` sekarang mengecek: kalau suatu value string diawali
+   `=`, paksa `sel.data_type = "s"` setelah assignment supaya openpyxl tidak pernah
+   menganggapnya formula, apapun isinya.
+3. `verify.py` menambahkan `cek_catatan_tanpa_formula()` yang membongkar XML mentah
+   `CATATAN` dan gagal kalau ada elemen `<f>` di situ — supaya regresi serupa ketahuan
+   otomatis, bukan nunggu laporan "file rusak" dari user lagi.
+
+(Ada juga satu bug lebih kecil di iterasi pertama: sel kosong di `CATATAN` sempat ditulis
+dengan `value=""`, yang oleh openpyxl diserialisasi sebagai `<c t="inlineStr" />` tanpa child
+`<is>` — melanggar skema OOXML. Sudah ikut diperbaiki di `tulis()`: sel yang isinya kosong
+sekarang dilewati total, tidak disentuh sama sekali.)

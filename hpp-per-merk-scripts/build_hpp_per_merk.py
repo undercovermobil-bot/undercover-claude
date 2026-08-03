@@ -261,6 +261,10 @@ def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
                 continue  # sel kosong: jangan disentuh sama sekali (lihat catatan di README)
             sel = ws[f"{kol}{baris}"]
             sel.value = val
+            if isinstance(val, str) and val.startswith("="):
+                # openpyxl otomatis anggap string berawalan "=" sebagai formula sungguhan
+                # (lihat Cell._bind_value) - sel ini isinya teks dokumentasi, paksa balik ke teks
+                sel.data_type = "s"
             sel.font = ARIAL_TEBAL if tebal else ARIAL
             sel.alignment = Alignment(wrap_text=True, vertical="top")
         baris += 1
@@ -294,12 +298,12 @@ def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
     tulis("")
 
     tulis("PENYESUAIAN FORMULA", "", "", tebal=True)
-    tulis("D", '=IFERROR(B/C,"")',
+    tulis("D", 'Formula: IFERROR(B/C,"")',
           "Aslinya =B/C. Karena C dikosongkan, formula asli akan menampilkan #DIV/0! di semua baris.")
-    tulis("G", '=IF(D="","",SUM(D:F))',
+    tulis("G", 'Formula: IF(D="","",SUM(D:F))',
           "Aslinya =SUM(D:F). Tanpa penjagaan, HPP akan tampil 36.500 (cuma SDM + tali rit) "
           "seolah-olah angka benar.")
-    tulis("Y / Z / AC", '=IF(...="","",...)',
+    tulis("Y / Z / AC", 'Formula: IF(...="","",...)',
           "Ikut dijaga karena rantainya berasal dari G. Isi perhitungannya tidak diubah.")
     tulis("Kolom lain", "Sama persis dengan Sheet3",
           "L=J*K, N=M*J, P=J*O, R=Q*J, T=J*S, V=U*J, W=L+N+P+R+T+V, X=J-W, AA=J*10%, AB=J+AA.")

@@ -12,6 +12,7 @@ termasuk xlsx 3 sel), jadi recalc.py tidak bisa dipakai. Gantinya:
 """
 import re
 import sys
+import zipfile
 
 import openpyxl
 
@@ -118,7 +119,25 @@ def hitung_baris(ws, baris, isi_c=None):
     return nilai
 
 
+def cek_catatan_tanpa_formula():
+    """CATATAN cuma berisi teks/angka dokumentasi - kalau ada string yang diawali '='
+    (mis. deskripsi formula sebagai teks), openpyxl bisa salah anggap itu formula
+    sungguhan (Cell._bind_value: value.startswith("=") -> data_type='f') dan
+    menulis elemen <f> yang cacat (karena bukan referensi sel valid). Excel lalu
+    membuang elemen itu saat 'repair'. Ini kejadian nyata sekali - cek eksplisit."""
+    wb_formula = openpyxl.load_workbook(WB)  # tanpa data_only: value asli string formula terlihat
+    idx = wb_formula.sheetnames.index("CATATAN")
+    z = zipfile.ZipFile(WB)
+    sheet_xml = z.read(f"xl/worksheets/sheet{idx + 1}.xml").decode()
+    n_formula = sheet_xml.count("<f>") + sheet_xml.count("<f ")
+    if n_formula:
+        raise AssertionError(
+            f"CATATAN (sheet{idx + 1}.xml) punya {n_formula} elemen <f> (formula) - "
+            "seharusnya nol, sheet ini cuma teks/angka dokumentasi")
+
+
 def main():
+    cek_catatan_tanpa_formula()
     wb = openpyxl.load_workbook(WB)
     sheets = [s for s in wb.sheetnames if s != "CATATAN"]
     print(f"sheet merk: {len(sheets)}")
