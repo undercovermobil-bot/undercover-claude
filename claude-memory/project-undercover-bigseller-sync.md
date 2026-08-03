@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-07-29T09:53:04.786Z
+  modified: 2026-08-03T00:00:00.000Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -142,6 +142,34 @@ Unggahan 2A/2B menyisakan **317 produk gagal** dengan *"atribut produk is missin
 **Jebakan parsing nama produk:** nama seperti `Body Cover Motor / Sarung / Selimut Motor Vario` perlu pembuangan token pembuka berantai; token `/` menyusut jadi string kosong setelah `strip('/-')` sehingga loop berhenti terlalu dini kalau string kosong tidak ikut dibuang. 11 listing generik memang tidak memuat merek di namanya (Vario, Beat, NMAX, PCX, Scoopy, Aerox, Supra X, Vega, Maxi, CRF1100L Africa Twin) — Model-nya terisi tanpa merek, wajar.
 
 Hasil: `Retry TikTok UA - Model & brand diisi.xlsx` — 1.475 baris, 317 produk, 219 nilai Model unik, Model & brand terisi 100%.
+
+## Status Shopee UA per ekspor segar 2026-07-31 — tinggal 11 listing / 182 baris
+
+Ekspor live Shopee UA 31 Jul (`Documents\Undercover\Cek gagal upload\1..5.xlsx`, 23.268 baris / 1.663 listing) dibandingkan ke file target `SKU Gudang Big Seller\UA_Shopee_1..5.xlsx`: **hanya 182 baris di 11 listing yang SKU-nya masih beda**. Retry 30–31 Juli sudah menuntaskan 18 dari 29 listing yang gagal.
+
+**Keempat file `Result_*` 29 Juli ternyata SALING LEPAS**, bukan retry beruntun: 529/93/61/19 baris di 14/8/5/2 listing, irisan NOL — totalnya **702 baris di 29 listing**, bukan 529 di 14 listing seperti tercatat di bagian atas. Digabung jadi `Error Upload\UC\Retry Upload Shopee UA - Gabungan.xlsx`.
+
+Sisa 11 listing itu **seluruhnya subset dari 29 yang gagal** (0 listing bermasalah di luar daftar itu) dan **semuanya produk terlaris** — 5 model saja: Toyota Corona (111 baris), Toyota Harrier (34), Hyundai Atoz (17), Mitsubishi L300 Pickup (14), Hyundai Santa Fe (6). Karena ranking model-model ini 96–166, hasilnya sama saja mau pakai batas top-215, top-217, atau top-331.
+
+**10 dari 11 beralasan transien** ("Item masih dalam proses pembuatan") → cukup unggah ulang. **1 listing tidak akan pernah lolos lewat unggah ulang**: pid `27755059717` Mitsubishi L300 Pickup Reguler — *"Jumlah gambar produk harus antara 3 dan 9"*, harus dibetulkan dulu di Seller Center.
+
+**Pola membangun file unggah yang benar (dipakai 31 Jul):** ambil baris dari **ekspor LIVE**, lalu timpa **hanya kolom SKU** dengan nilai dari file target. Jangan pakai baris file target apa adanya — `sales_info` juga menulis Harga & Stok (dua-duanya "Wajib"), dan file target 29 Jul sudah basi (terbukti 3 baris stoknya beda dari live). Salin pula `_style` per sel dari baris sumber supaya format Shopee ikut terbawa (header r3 fill `FFED7D31` teks putih tebal, r4–r6 `FFD9D9D9`, font teal `FF00BFA5` di kolom SKU Induk/SKU, `freeze_panes=A5`, lebar kolom 20, number_format `@` untuk kolom teks dan `0` untuk Kode Produk). Hasil: `Cek gagal upload\Upload Shopee UA - SKU Terlaris Belum Terupdate.xlsx`.
+
+**KOREKSI catatan 28 Juli — 5 model pelanggar formula sudah beres.** `VLK-TIG`, `HND-CRV`, `HND-WRV`, `TYT-FTN`, `TYT-AGY` di ekspor live 31 Juli **semuanya tinggal kode `G1`** (32–34 baris per model, 0 kode berlebih). Catatan "5 pelanggaran formula BELUM dibetulkan" di bagian atas file ini sudah tidak berlaku.
+
+**Ekspor Shopee kena DUA bug baca sekaligus** — `activePane="bottom_left"` (invalid, bikin `load_workbook` melempar `ValueError`) DAN dimension palsu. Obatnya: rewrite atribut `activePane` di `xl/worksheets/*.xml` jadi `topLeft`, lalu muat dengan `read_only=False`. Ekspor `Result_*` tidak kena bug ini, ekspor listing biasa kena.
+
+**Terbuka, belum ditelusuri:** 239 varian ada di file target tapi **tidak ada di ekspor live**, tersebar di 42 listing (paling banyak 14 varian/listing — Corona, Atoz, Avega Hatchback, Harrier, Range Rover, Timor, Grandis, Kia Sonet). Perlu dipastikan apakah varian itu memang dihapus dari Shopee atau `variation_id`-nya berubah.
+
+## Status Shopee UA per ekspor segar 2026-08-03 — cek scope 215 terlaris, tinggal 1 listing / 14 baris
+
+User pindahkan lokasi ekspor ke subfolder baru `Cek gagal upload\Shopee\` (sebelumnya langsung di `Cek gagal upload\`) — sejalan dengan munculnya subfolder `TikTok\` juga. Ekspor live 5 file (23.164 baris cover-mobil berhasil dicocokkan via `Kode Variasi`, 0 duplikat/tabrakan) dibandingkan ke target `SKU Gudang Big Seller\UA_Shopee_1..5.xlsx` (masih snapshot 07-29, belum ada yang lebih baru) DAN difilter ke ranking **top-215** dari `C:\Users\OWNER\Documents\Undercover\MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx` (di luar repo, sheet "Top 300 Mobil", kolom `No`=rank, data row 6-222, dibuat 07-29, rank tertinggi 217) — file inilah sumber definisi "top-215/217" yang disebut di catatan 31 Juli di atas.
+
+**Hasil: dari 9.789 baris varian / 584 listing / 201 model yang cocok ke top-215, cuma 14 baris di 1 listing yang masih SKU lama** — Mitsubishi L300 Pickup Reguler (pid `27755059717`, rank #166), semua 14 varian masih literal `"SKU"` (placeholder, tak pernah diisi). **Listing ini SAMA PERSIS dengan yang diflag 31 Juli tak akan lolos re-upload biasa** ("Jumlah gambar produk harus antara 3 dan 9") — terkonfirmasi 3 hari kemudian masih persis sama, artinya foto produknya memang belum dibetulkan di Seller Center. SKU target sudah dihitung (`MTB-LP-UA-{R/S}-G1-{warna}`) & disiapkan di `Cek gagal upload\Retry Upload Shopee UA - Mitsubishi L300 Pickup (2026-08-03).xlsx`, TAPI upload-nya akan gagal lagi dengan alasan sama sampai jumlah foto produk dibetulkan dulu di Seller Center (bukan sesuatu yang bisa diperbaiki lewat file SKU).
+
+**Di luar top-215 (FYI, bukan fokus permintaan user kali ini)**: Ferrari 488 Spider & Wuling Darion juga masih ada baris SKU lama/kosong, tapi keduanya tidak masuk 300 model terlaris sama sekali. Vinfast VF3 (produk baru) 0 SKU di semua 17 varian (Reguler/Premium/Exclusive) — juga belum masuk ranking (kemungkinan terlalu baru, penjualannya belum sempat ke-capture saat ranking dibuat 07-29). 2 baris Timor Premium (Silver/Abu-abu) tidak ada pembanding di file target (variasi ditambahkan setelah snapshot 07-29) tapi SKU-nya sudah berformat benar `TIM-TIM-UA-P-G1-*` — bukan masalah, cuma gap referensi.
+
+**Jebakan baru untuk sesi depan**: ranking "Top 300 Mobil" nyelip 4 baris produk BUKAN model mobil (Headlamp Restorer #65, Glass Polish Magic #69, Black Trim Reborn #82, Snow Wash Active Foam #114) — skip kalau memfilter "N model mobil terlaris". Nama model plain di ranking kadang tak match 1:1 ke nama produk Shopee karena Shopee split per bodystyle yang tak dipisah di ranking (Suzuki APV→Arena/Luxury, Honda City→Hatchback/Sedan, Mazda 2→Hatchback/Sedan, Kia Rio→Hatchback/Sedan, Suzuki Aerio→Hatchback/Sedan, Daihatsu Gran Max→Minibus/Pick Up, ranking "Toyota Hardtop / Land Cruiser" gabungan→2 listing terpisah di Shopee) — semua sudah dicek manual sesi ini, 0 gap tersembunyi, tapi kalau nama tak ketemu match langsung, jangan simpulkan "belum dicek" sebelum cek submodel/bodystyle-nya. Peugeot 206 (#169) genuinely tidak ada listingnya sama sekali di UA Shopee (yang ada cuma 2008/3008/5008) — bukan alias miss.
 
 ## Sisa pekerjaan
 
