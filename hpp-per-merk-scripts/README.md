@@ -57,19 +57,47 @@ Kolom lain sama persis: `L=J*K`, `N=M*J`, `P=J*O`, `R=Q*J`, `T=J*S`, `V=U*J`,
 
 ## Pencocokan nama model
 
-334 dari 453 model namanya identik dengan listing Shopee. Sisanya beda penulisan.
+Sebagian besar model namanya identik dengan listing Shopee. Sisanya beda penulisan.
 Sesuai keputusan user: **cocokkan yang jelas saja**, yang meragukan dikosongkan.
 
 - Dicocokkan (lihat `ALIAS` di script): `Honda BR-V` → `Honda BRV`,
-  `Daihatsu All New Ayla` → `Daihatsu Ayla`, `Mitsubishi Mitsubishi Kuda` → `Mitsubishi Kuda`,
+  `Mitsubishi Mitsubishi Kuda` → `Mitsubishi Kuda`,
   `Mazda CX5` → `Mazda CX-5`, `Nissan Kicks e-POWER` → `Nissan Kicks`,
-  `Toyota Kijang Buaya/Doyok/Super/Kapsul` → `Toyota Kijang`, dll.
+  `Toyota Kijang Buaya/Doyok/Super/Kapsul` → `Toyota Kijang`,
+  `Isuzu Mux` ↔ `Isuzu MU-X`, `Nissan Livina X-Gear` ↔ `Nissan Livina XGear`, dll.
 - Sengaja **tidak** dicocokkan (lihat `MERAGUKAN`): `Toyota Corolla Altis`,
-  `Suzuki Grand Vitara` (+ Hybrid, e VITARA), `Suzuki Carry Futura`, `Kia Sedona`,
-  `Nissan Livina (All New)`.
+  `Suzuki Grand Vitara` (+ Hybrid, e VITARA — beda dari `Suzuki Vitara`, lihat di bawah),
+  `Suzuki Carry Futura`, `Kia Sedona`, `Nissan Livina (All New)`.
 
-Hasil akhir: **369 model dapat harga, 84 dikosongkan.** Daftar lengkap yang dikosongkan
-ada di sheet `CATATAN` dalam workbook.
+Daftar lengkap model tanpa harga ada di sheet `CATATAN` dalam workbook.
+
+## Model tambahan dari Shopee (tidak ada di file master SKU tracker)
+
+User bertanya "yang dari list produk ecommerce sudah ada semua disitu?" — audit balik
+2026-08-03 menjawab: **belum**. Dari 414 model Reguler unik di listing Shopee toko
+Undercover Autocare, 63 di antaranya tidak ketemu padanan apapun di file master SKU
+tracker (bukan salah cocok nama — modelnya memang tidak ada baris sama sekali).
+
+- **2 ternyata cuma beda penulisan** → dicocokkan lewat `ALIAS` ke baris yang sudah ada
+  (`Isuzu Mux`/`MU-X`, `Nissan Livina X-Gear`/`XGear`), bukan baris baru.
+- **61 genuinely belum tercatat di master** → atas persetujuan user, ditambahkan sebagai
+  baris baru lewat `MODEL_TAMBAHAN_DARI_SHOPEE`. Nama & harga baris ini **sepenuhnya dari
+  Shopee**, bukan dari SKU tracker (mis. Audi cuma tercatat A4/A8 di master, padahal
+  Shopee sudah jual A3/A5/A6/A7/Q3/Q5/Q7/Q8/R8/RS4 Avant/RS5/TT Coupe juga; pola sama di
+  Mercedes-Benz varian EQA/EQB/EQE/EQS/AMG GT, Porsche Macan/718 Cayman, Jeep
+  Gladiator/Renegade, Kia Cerato/EV6/Sorento, dll — daftar lengkap 24 brand di
+  `MODEL_TAMBAHAN_DARI_SHOPEE`).
+- Ditandai visual di tiap sheet: **kolom A miring + fill kuning**, supaya kelihatan
+  langsung baris mana yang provenance-nya beda dari baris master lain. Daftar lengkap +
+  harga juga ada di section "MODEL TAMBAHAN DARI SHOPEE" di sheet `CATATAN`.
+
+Perhatikan `Volkswagen Beetle` vs `Volkswagen New Beetle` — kelihatannya mirip pola
+Daihatsu (nama beda per era), tapi **sengaja TIDAK digabung**: keduanya mobil beda bentuk
+bodi (New Beetle = desain retro 1997+, beda total dari Beetle klasik), dan Shopee sendiri
+menjualnya sebagai 2 listing terpisah dengan harga beda (290rb vs 292rb — bukan identik
+seperti kasus Daihatsu yang harganya sama persis di kedua nama).
+
+Total baris naik dari 449 → **510** (61 baris baru). Yang dapat harga naik dari 365 → 426.
 
 ## Menjalankan ulang
 
@@ -87,14 +115,17 @@ python3 verify.py
 memuat file xlsx apa pun, termasuk file uji 3 sel. Gantinya `verify.py` membaca formula apa
 adanya dari workbook hasil lalu mengevaluasinya sendiri:
 
-1. `CATATAN` sheet tidak boleh punya elemen `<f>` (formula) sama sekali — lihat bug di bawah.
-2. Skenario C kosong → memastikan tidak ada `#DIV/0!` dan D/G/Y/Z/AC benar-benar kosong.
-3. Cek silang tiap baris berharga: `W` harus 33,45% dari J, `X = J-W`, `AB = J*1,1`.
-4. Uji silang ke angka yang sudah diketahui: baris `Toyota Avanza` diisi C=5 & J=295.000
+1. Tidak boleh ada 2 nama produk di sheet yang sama yang keliatan model yang sama
+   (`cek_tidak_ada_duplikat_generasi` — lihat kasus Daihatsu di bawah; ada allowlist
+   eksplisit utk pasangan yang mirip pola tapi terbukti beda produk, mis. VW Beetle/New Beetle).
+2. `CATATAN` sheet tidak boleh punya elemen `<f>` (formula) sama sekali — lihat bug di bawah.
+3. Skenario C kosong → memastikan tidak ada `#DIV/0!` dan D/G/Y/Z/AC benar-benar kosong.
+4. Cek silang tiap baris berharga: `W` harus 33,45% dari J, `X = J-W`, `AB = J*1,1`.
+5. Uji silang ke angka yang sudah diketahui: baris `Toyota Avanza` diisi C=5 & J=295.000
    harus menghasilkan angka identik dengan baris `Avanza Reguler` Sheet3
    (HPP 179.500, Cair MP 196.322,5, Margin Bersih 28.322,5).
 
-Status terakhir: 453 baris, 369 berharga, semua lolos.
+Status terakhir: 510 baris, 426 berharga, semua lolos.
 
 Karena openpyxl menulis formula tanpa cached value, angka baru muncul saat file dibuka di
 Excel/Google Sheets (langsung dihitung ulang otomatis).

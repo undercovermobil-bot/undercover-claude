@@ -18,7 +18,7 @@ import pickle
 import re
 
 import openpyxl
-from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 SKU_SRC = "/root/.claude/uploads/15bc0cbc-d42f-5138-97d0-080caf164dfc/5337f5dd-SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx"
@@ -65,6 +65,45 @@ DEDUP_MERGE = {
     },
 }
 
+# Model yang HANYA ada di listing Shopee, TIDAK tercatat sama sekali di file master SKU
+# tracker. Ditemukan lewat audit balik 2026-08-03: dari 414 model Reguler di Shopee toko
+# Undercover Autocare, 63 di antaranya tidak ketemu padanan apapun di SKU tracker. 2 di
+# antaranya ternyata cuma beda penulisan (masuk ALIAS, bukan di sini - lihat "Isuzu Mux"
+# & "Nissan Livina X-Gear"), sisanya 61 memang genuinely belum tercatat di master. Atas
+# persetujuan user, 61 model ini ditambahkan sebagai baris baru - nama & harga SEPENUHNYA
+# dari Shopee (bukan dari SKU tracker), jadi row-nya ditandai lewat MODEL_DARI_SHOPEE.
+MODEL_TAMBAHAN_DARI_SHOPEE = {
+    "Audi": ["Audi A3", "Audi A5", "Audi A6", "Audi A7", "Audi Q3", "Audi Q5",
+             "Audi Q7", "Audi Q8", "Audi R8", "Audi RS4 Avant", "Audi RS5", "Audi TT Coupe"],
+    "Chery": ["Chery EQ1"],
+    "Chevrolet": ["Chevrolet Colorado"],
+    "Citroen": ["Citroen C4", "Citroen C5 Aircross"],
+    "DFSK": ["DFSK Glory E3", "DFSK Mini EV"],
+    "Ferrari": ["Ferrari 488 GTB", "Ferrari 488 Pista", "Ferrari 812 Superfast",
+                "Ferrari F8 Tributo", "Ferrari Portofino"],
+    "Honda": ["Honda Civic FD Custom"],
+    "Hyundai": ["Hyundai Grand i20", "Hyundai Ioniq 6"],
+    "Isuzu": ["Isuzu D-MAX"],
+    "Jeep": ["Jeep Gladiator", "Jeep Renegade"],
+    "Kia": ["Kia Cerato", "Kia EV 6", "Kia Sorento"],
+    "Land Rover": ["Land Rover Discovery Sport", "Range Rover Sport", "Range Rover Velar"],
+    "MG (Morris Garages)": ["MG ZS"],
+    "MINI": ["MINI Clubman", "MINI Hatch"],
+    "McLaren": ["Mclaren 720S", "Mclaren 720S Spider"],
+    "Mercedes-Benz": ["Mercedes Benz AMG GT", "Mercedes Benz EQA", "Mercedes Benz EQB",
+                      "Mercedes Benz EQE", "Mercedes Benz EQS", "Mercedes Benz V Class"],
+    "Nissan": ["Nissan Grand Livina Custom Roofbox", "Nissan Latio", "Nissan Z Proto"],
+    "Peugeot": ["Peugeot 2008", "Peugeot 5008"],
+    "Porsche": ["Porsche 718 Cayman", "Porsche Macan"],
+    "Proton": ["Proton Suprima S"],
+    "Renault": ["Renault Duster", "Renault Kiger"],
+    "Subaru": ["Subaru WRX"],
+    "Suzuki": ["Suzuki Vitara"],
+    "Toyota": ["Toyota Vios Custom"],
+    "Volkswagen": ["Volkswagen New Beetle", "Volkswagen T-Cross"],
+}
+MODEL_DARI_SHOPEE = {m for models in MODEL_TAMBAHAN_DARI_SHOPEE.values() for m in models}
+
 
 # ---------------------------------------------------------------- 2. daftar model
 def baca_model_per_merk():
@@ -87,6 +126,10 @@ def baca_model_per_merk():
         buang = DEDUP_MERGE.get(ws.title, {})
         if buang:
             urut = [m for m in urut if m not in buang]
+        for tambahan in MODEL_TAMBAHAN_DARI_SHOPEE.get(ws.title, []):
+            if tambahan not in sudah:
+                urut.append(tambahan)
+                sudah.add(tambahan)
         hasil[ws.title] = urut
     wb.close()
     return hasil
@@ -134,6 +177,9 @@ ALIAS = {
     "Toyota HiAce Long": "Toyota HiAce",
     # Jeep — Rubicon = trim dari Wrangler
     "Jeep Wrangler Rubicon": "Jeep Wrangler",
+    # Isuzu & Nissan — beda penulisan doang (ditemukan lewat audit balik 63 model Shopee)
+    "Isuzu Mux": "Isuzu MU-X",
+    "Nissan Livina X-Gear": "Nissan Livina XGear",
 }
 
 # Sengaja TIDAK dicocokkan: nama mirip tapi bisa jadi model yang berbeda.
@@ -192,10 +238,12 @@ KONST = {
 
 ARIAL = Font(name="Arial", size=10)
 ARIAL_TEBAL = Font(name="Arial", size=10, bold=True)
+ARIAL_MIRING = Font(name="Arial", size=10, italic=True)
 MED = Side(style="medium")
 BINGKAI = Border(left=MED, right=MED, top=MED, bottom=MED)
 KIRI_ATAS = Alignment(wrap_text=True, vertical="bottom")
 KANAN = Alignment(wrap_text=True, horizontal="right", vertical="bottom")
+KUNING = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
 
 LEBAR = {"A": 17.85546875, "F": 12.28515625, "J": 8.140625, "S": 14.0,
          "W": 13.7109375, "X": 13.7109375, "AC": 13.7109375}
@@ -247,6 +295,9 @@ def tulis_sheet(ws, model_list, harga_map):
 
             if kol == "A":
                 c.value = model
+                if model in MODEL_DARI_SHOPEE:
+                    c.font = ARIAL_MIRING
+                    c.fill = KUNING
             elif kol in KONST:
                 c.value = KONST[kol]
             elif kol == "J":
@@ -261,7 +312,7 @@ def tulis_sheet(ws, model_list, harga_map):
         ws.column_dimensions[kol].width = w
 
 
-def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
+def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda, model_dari_shopee):
     ws.column_dimensions["A"].width = 26
     ws.column_dimensions["B"].width = 34
     ws.column_dimensions["C"].width = 72
@@ -337,6 +388,18 @@ def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
     tulis("Model", "Harga ditemukan", "Yang dipakai (harga terbanyak) — mohon dicek", tebal=True)
     for model, detail, dipakai in harga_ganda:
         tulis(model, detail, dipakai)
+    tulis("")
+
+    tulis("MODEL TAMBAHAN DARI SHOPEE (tidak ada di file master SKU tracker)", "", "", tebal=True)
+    tulis("", "Ditandai kuning + miring di kolom A tiap sheet merk. Audit balik 2026-08-03: "
+              "dari 414 model Reguler di listing Shopee toko Undercover Autocare, 63 tidak "
+              "ketemu padanan di SKU tracker. 2 ternyata cuma beda penulisan (Isuzu Mux/MU-X, "
+              "Nissan Livina X-Gear/XGear - sudah dicocokkan lewat ALIAS, bukan baris baru). "
+              "Sisanya 61 memang belum tercatat di master, ditambahkan atas persetujuan user "
+              "sebagai baris baru - nama & harga SEPENUHNYA dari Shopee.")
+    tulis("Merk", "Model", "Harga Jual ACTUAL", tebal=True)
+    for merk, model, harga in model_dari_shopee:
+        tulis(merk, model, f"Rp{harga:,}".replace(",", "."))
 
 
 def main():
@@ -349,6 +412,7 @@ def main():
     ws_catatan = wb.create_sheet("CATATAN")
 
     tanpa_harga = []
+    model_dari_shopee = []
     n_model = n_ketemu = 0
     model_terpakai = set()
 
@@ -363,6 +427,8 @@ def main():
                 peta[m] = harga_modus
                 model_terpakai.add(kunci_shopee)
                 n_ketemu += 1
+                if m in MODEL_DARI_SHOPEE:
+                    model_dari_shopee.append((merk, m, harga_modus))
             else:
                 alasan = MERAGUKAN.get(
                     m, "Tidak ada listing 'Reguler' untuk model ini di Shopee Undercover Autocare")
@@ -384,8 +450,9 @@ def main():
         ("Model dapat harga Shopee", n_ketemu),
         ("Model tanpa harga (J kosong)", n_model - n_ketemu),
         ("Listing Reguler Shopee terbaca", len(harga_shopee)),
+        ("  ..di antaranya baris baru (tidak ada di SKU tracker)", len(model_dari_shopee)),
     ]
-    tulis_catatan(ws_catatan, ringkas, tanpa_harga, harga_ganda)
+    tulis_catatan(ws_catatan, ringkas, tanpa_harga, harga_ganda, model_dari_shopee)
 
     wb.save(OUT)
     print("tersimpan:", OUT)

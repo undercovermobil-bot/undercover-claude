@@ -141,9 +141,15 @@ def cek_tidak_ada_duplikat_generasi():
     terpisah padahal model yang sama (sumbernya menulis nama beda per era generasi).
     Deteksi generik: buang kata 'all new'/'new'/'facelift', kalau 2 nama produk di
     sheet yang sama jadi identik setelah itu -> berarti masih ada duplikat yang
-    kelolosan (mis. sumber data berubah / ada brand lain kena pola sama)."""
+    kelolosan (mis. sumber data berubah / ada brand lain kena pola sama).
+
+    Kecuali PENGECUALIAN eksplisit: 'Volkswagen Beetle' vs 'Volkswagen New Beetle' kena
+    pola yang sama tapi TERBUKTI 2 mobil beda bentuk bodi (New Beetle = desain retro 1997+,
+    beda total dari Beetle klasik) - Shopee sendiri jual sebagai 2 listing terpisah dengan
+    harga beda (290rb vs 292rb, bukan identik seperti kasus Daihatsu). Jangan digabung."""
     import re as _re
     filler = _re.compile(r"\b(all new|new|facelift)\b", _re.I)
+    PENGECUALIAN = {("Volkswagen", "volkswagen beetle", "volkswagen new beetle")}
 
     def core(merk, s):
         s2 = filler.sub("", s)
@@ -165,6 +171,10 @@ def cek_tidak_ada_duplikat_generasi():
                 continue
             k = core(nama, v)
             if k in grup:
+                pasangan = tuple(sorted([grup[k].lower(), v.lower()]))
+                if (nama, *pasangan) in PENGECUALIAN:
+                    grup[k] = v
+                    continue
                 galat.append(f"{nama}: {grup[k]!r} & {v!r} kemungkinan model yang sama")
             grup[k] = v
     if galat:
