@@ -1082,3 +1082,26 @@ kedua file **identik sempurna** (0 sheet berbeda baris, sheetnames sama).
 **Pelajaran**: kalau ada 2 file yg "harusnya sama" tapi berasal dari sumber/skrip berbeda,
 JANGAN asumsikan identik dari nama filenya — bandingkan isinya (sheet, baris, sel) secara
 eksplisit sebelum salah satu dipakai sbg SATU-SATUNYA sumber baca oleh skrip analisa.
+
+## 2026-07-30 (lanjutan) — DAMPAK REKONSILIASI: PIPELINE LISTING SEMPAT TERLEWAT
+
+**Kesalahan proses yg ketahuan sendiri**: setelah rekonsiliasi Master+Tracking (1.862 baris),
+saya cuma menjalankan `isi_sku_kosong.py` + `step_formula` ulang, TANPA menjalankan
+`jalankan_semua_baru.py` (yg juga menulis MOTOR & tahap awal Lazada). Ketahuan dari angka
+`step_formula` yg janggal (diubah=33.657, mendekati angka PERTAMA KALI ~33.554, bukan angka
+konvergen ~69 yg biasa muncul di run susulan) — pola serupa `diubah` gede juga terlihat di
+lazada. Verifikasi langsung: **motor 0% pakai `-MTR-`, semua masih format lama**. Penyebab:
+sejak reset container sebelumnya, listing (`BARU_FIX/`) belum pernah diproses pipeline PENUH
+di kontainer ini — saya loncat ke pekerjaan model spesifik (Darion/488 Spider/Kwid) tanpa
+menjalankan `jalankan_semua_baru.py --apply` dulu. **Pelajaran: angka "diubah" yg jauh lebih
+besar dari run sebelumnya WAJIB dicurigai sbg tanda ada tahap yg terlewat/urutan salah,
+bukan cuma diterima sbg "makin banyak makin bagus".**
+
+**Sudah dijalankan urutan lengkap & benar**: motor sekarang 3.227 pakai `-MTR-` (0 sisa CM lama),
+Lazada 0 kembar, format akhir 91.816 baris 6 segmen.
+
+**Laporan gap dikoreksi**: `Belum_Ada_Di_Listing.xlsx` (454 model, 376 tayang, **78 belum
+tayang** [turun dari 81], **164 kurang di toko** [naik dari 148]). Ke-13 model dari 5 brand hasil
+rekonsiliasi (Huracan, Model 3/X, 6 Volvo, LC/LS/UX, Ghibli) **semuanya masuk kategori "kurang
+di toko"** — sudah tayang di UA, tinggal direplikasi ke OT/OP/SP. Bukan tercatat "belum ada"
+sama sekali, jadi listingnya real & sekarang terhubung ke SKU yg benar.
