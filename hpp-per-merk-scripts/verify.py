@@ -136,7 +136,43 @@ def cek_catatan_tanpa_formula():
             "seharusnya nol, sheet ini cuma teks/angka dokumentasi")
 
 
+def cek_tidak_ada_duplikat_generasi():
+    """User pernah menemukan 'Daihatsu Ayla' & 'Daihatsu All New Ayla' sebagai 2 baris
+    terpisah padahal model yang sama (sumbernya menulis nama beda per era generasi).
+    Deteksi generik: buang kata 'all new'/'new'/'facelift', kalau 2 nama produk di
+    sheet yang sama jadi identik setelah itu -> berarti masih ada duplikat yang
+    kelolosan (mis. sumber data berubah / ada brand lain kena pola sama)."""
+    import re as _re
+    filler = _re.compile(r"\b(all new|new|facelift)\b", _re.I)
+
+    def core(merk, s):
+        s2 = filler.sub("", s)
+        s2 = _re.sub(r"\s+", " ", s2).strip()
+        parts = [p.strip() for p in _re.split(r"\s*/\s*", s2) if p.strip()]
+        fixed = [p if p.lower().startswith(merk.lower()) else f"{merk} {p}" for p in parts]
+        return tuple(sorted(dict.fromkeys(p.lower() for p in fixed)))
+
+    wb = openpyxl.load_workbook(WB)
+    galat = []
+    for nama in wb.sheetnames:
+        if nama == "CATATAN":
+            continue
+        ws = wb[nama]
+        grup = {}
+        for baris in range(2, ws.max_row + 1):
+            v = ws.cell(baris, 1).value
+            if v is None:
+                continue
+            k = core(nama, v)
+            if k in grup:
+                galat.append(f"{nama}: {grup[k]!r} & {v!r} kemungkinan model yang sama")
+            grup[k] = v
+    if galat:
+        raise AssertionError("kemungkinan duplikat model:\n  " + "\n  ".join(galat))
+
+
 def main():
+    cek_tidak_ada_duplikat_generasi()
     cek_catatan_tanpa_formula()
     wb = openpyxl.load_workbook(WB)
     sheets = [s for s in wb.sheetnames if s != "CATATAN"]

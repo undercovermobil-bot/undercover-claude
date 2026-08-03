@@ -52,6 +52,20 @@ def baca_harga_shopee():
     return {m: (c.most_common(1)[0][0], dict(c)) for m, c in hitung.items()}
 
 
+# Model yang sama tapi ditulis 2x di file sumber dengan nama beda per era generasi
+# (mis. "Daihatsu Ayla" utk Gen 1/1F1/1F2/2, DAN "Daihatsu All New Ayla" utk Gen 2 (A350) -
+# generasi/tahun yang sama, cuma penamaan beda -> harga Shopee-nya pun identik).
+# key = nama yang DIBUANG, value = nama kanonik yang dipertahankan sebagai satu baris.
+DEDUP_MERGE = {
+    "Daihatsu": {
+        "Daihatsu All New Ayla": "Daihatsu Ayla",
+        "Daihatsu New Sirion": "Daihatsu Sirion",
+        "Daihatsu All New Xenia": "Daihatsu Xenia",
+        "Daihatsu Terios / New Terios": "Daihatsu Terios",
+    },
+}
+
+
 # ---------------------------------------------------------------- 2. daftar model
 def baca_model_per_merk():
     wb = openpyxl.load_workbook(SKU_SRC, data_only=True, read_only=True)
@@ -70,6 +84,9 @@ def baca_model_per_merk():
             if n not in sudah:
                 sudah.add(n)
                 urut.append(n)
+        buang = DEDUP_MERGE.get(ws.title, {})
+        if buang:
+            urut = [m for m in urut if m not in buang]
         hasil[ws.title] = urut
     wb.close()
     return hasil
@@ -78,11 +95,7 @@ def baca_model_per_merk():
 # ---------------------------------------------------------------- 3. pencocokan nama
 # Hanya padanan yang jelas. Yang meragukan sengaja dikosongkan (lihat MERAGUKAN).
 ALIAS = {
-    # Daihatsu — imbuhan "All New"/"New" & gabungan varian bodi
-    "Daihatsu All New Ayla": "Daihatsu Ayla",
-    "Daihatsu New Sirion": "Daihatsu Sirion",
-    "Daihatsu All New Xenia": "Daihatsu Xenia",
-    "Daihatsu Terios / New Terios": "Daihatsu Terios",
+    # Daihatsu — gabungan varian bodi (Minibus/Blind Van 1 listing Shopee)
     "Daihatsu Gran Max Minibus / Blind Van": "Daihatsu Gran Max Minibus",
     # Honda — beda penulisan tanda hubung & embel-embel trim
     "Honda Brio Satya / RS": "Honda Brio",
