@@ -258,7 +258,8 @@ def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda):
         nonlocal baris
         for kol, val in (("A", a), ("B", b), ("C", c)):
             sel = ws[f"{kol}{baris}"]
-            sel.value = val
+            if val not in ("", None):
+                sel.value = val
             sel.font = ARIAL_TEBAL if tebal else ARIAL
             sel.alignment = Alignment(wrap_text=True, vertical="top")
         baris += 1
