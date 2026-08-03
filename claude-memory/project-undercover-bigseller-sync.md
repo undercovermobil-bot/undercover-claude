@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-03T00:00:00.000Z
+  modified: 2026-08-03T05:54:53.497Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -170,6 +170,20 @@ User pindahkan lokasi ekspor ke subfolder baru `Cek gagal upload\Shopee\` (sebel
 **Di luar top-215 (FYI, bukan fokus permintaan user kali ini)**: Ferrari 488 Spider & Wuling Darion juga masih ada baris SKU lama/kosong, tapi keduanya tidak masuk 300 model terlaris sama sekali. Vinfast VF3 (produk baru) 0 SKU di semua 17 varian (Reguler/Premium/Exclusive) — juga belum masuk ranking (kemungkinan terlalu baru, penjualannya belum sempat ke-capture saat ranking dibuat 07-29). 2 baris Timor Premium (Silver/Abu-abu) tidak ada pembanding di file target (variasi ditambahkan setelah snapshot 07-29) tapi SKU-nya sudah berformat benar `TIM-TIM-UA-P-G1-*` — bukan masalah, cuma gap referensi.
 
 **Jebakan baru untuk sesi depan**: ranking "Top 300 Mobil" nyelip 4 baris produk BUKAN model mobil (Headlamp Restorer #65, Glass Polish Magic #69, Black Trim Reborn #82, Snow Wash Active Foam #114) — skip kalau memfilter "N model mobil terlaris". Nama model plain di ranking kadang tak match 1:1 ke nama produk Shopee karena Shopee split per bodystyle yang tak dipisah di ranking (Suzuki APV→Arena/Luxury, Honda City→Hatchback/Sedan, Mazda 2→Hatchback/Sedan, Kia Rio→Hatchback/Sedan, Suzuki Aerio→Hatchback/Sedan, Daihatsu Gran Max→Minibus/Pick Up, ranking "Toyota Hardtop / Land Cruiser" gabungan→2 listing terpisah di Shopee) — semua sudah dicek manual sesi ini, 0 gap tersembunyi, tapi kalau nama tak ketemu match langsung, jangan simpulkan "belum dicek" sebelum cek submodel/bodystyle-nya. Peugeot 206 (#169) genuinely tidak ada listingnya sama sekali di UA Shopee (yang ada cuma 2008/3008/5008) — bukan alias miss.
+
+## Cek formula TikTok UA 2026-08-03 (fresh export `Cek gagal upload\TikTok\...template_1/2/3.xlsx`)
+
+User upload ulang ekspor TikTok UA. **Nomor file BEDA urutan dari target** — fresh `_1`=Travel Pouch (20 baris), `_2`=Cover Mobil (23.001 baris, kategori "Cover & Shelter Mobil (931592)" dominan), `_3`=Cover Motor; sedangkan target `SKU Gudang Big Seller\UA_TikTok_1/2/3.xlsx` urutannya `_1`=Motor, `_2`=Pouch, `_3`=Cover Mobil. **Jangan asumsikan file-index sama antara ekspor & target — selalu match by `sku_id` (kolom D/4, ID variasi TikTok), bukan posisi file/baris.** Sheet `Template`, data mulai row 6, `seller_sku` kolom K(11) — konsisten dgn catatan lama.
+
+Baris Cover Mobil dibandingkan ke gabungan target UA_TikTok_1..3 (23.462 entri) by sku_id: 22.977 cocok, **432 baris di 20 listing masih SKU lama (98,1% dari yang cocok sudah benar)**.
+
+**20 listing itu pecah 2 pola:**
+1. **6 model "belum dilebur ke formula G1"** (409 baris) — SKU masih pakai kode generasi lama per-tahun (G2..G10, G1F) padahal targetnya sudah collapse ke `G1` semua: Mitsubishi Galant (108: 84 Reguler+16 Premium+8 Exclusive), Hyundai Santa Fe (85), Toyota Corona (97), Mercedes Benz C Class (68 — tier Premium-nya pakai nama alternatif "Body Cover Mobil Mercedes Benz C Class Premium", tanpa suffix "- Undercover Autocare"), Toyota Harrier (34), Hyundai Atoz (17). **INI 6 DARI 8 MODEL YANG SAMA PERSIS gagal upload TikTok 29 Juli** dgn error `sku not allow add` (lihat catatan di atas) — Kia Sonet & Timor dari 8 model itu TIDAK muncul lagi di daftar sekarang (kemungkinan sudah beres di listing, belum diverifikasi eksplisit). Dugaan lama "sku_id sudah basi" di catatan 29 Juli sekarang bisa diuji ulang: **ekspor 08-03 ini PERSIS "re-ekspor segar dari Seller Center" yang disarankan saat itu** — retry upload di atas data ini (bukan di atas ekspor lama) punya peluang lebih besar berhasil.
+2. **2 listing kosong total** (23 baris) — BYD Atto 3 Reguler (9 baris, placeholder literal `"SKU"`) & Peugeot 405 Reguler (14 baris, placeholder `"SKu"`/`"SKU"`), belum pernah diisi SKU sama sekali.
+
+**Bukan masalah nyata, cuma informasional**: Wuling Darion (3 tier, 17 baris) — SKU live sudah correctly-formatted (`WLG-DRN-UA-*-G1-*`) tapi target/master belum punya entri model ini sama sekali (kosong) — pola SAMA PERSIS dgn temuan di Shopee hari ini (lihat di atas). Vinfast VF3 (17 baris, semua kosong total) & 2 baris Timor Premium (SKU-nya sudah benar) — `sku_id`-nya tidak ada di file target sama sekali (0 match), konsisten dgn temuan Shopee: model terlalu baru / target belum di-generate ulang sejak snapshot 07-29, bukan bug.
+
+File koreksi sudah disiapkan: `Cek gagal upload\Retry Upload TikTok UA - 20 produk formula belum diterapkan (2026-08-03).xlsx` (494 baris = full product block dari 20 listing itu, termasuk baris yang sudah benar supaya tiap listing lengkap saat diupload — TikTok proses per-produk; 432 SKU diganti ke target, sisanya dibiarkan). **Belum diupload, nunggu keputusan user.**
 
 ## Sisa pekerjaan
 
