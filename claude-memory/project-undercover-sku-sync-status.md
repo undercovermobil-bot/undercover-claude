@@ -1046,3 +1046,39 @@ sama adalah cara paling aman menambah model baru — struktur per merek tidak se
 **Sengaja dibuat LENGKAP** (termasuk Strip 18 SKU & Transparan 1 SKU) walau user cuma minta
 Reguler/Premium/Exclusive — pelajaran langsung dari BYD Denza D9 hari ini: entri master yang
 dibuat sebagian menimbulkan masalah belakangan dan harus dibereskan manual.
+
+## 2026-07-30 — REKONSILIASI: TRACKING DIJADIKAN ACUAN, MASTER DISAMAKAN
+
+Ketahuan dari user (bandingkan file yang saya kirim): `MASTER_from_drive_20260715.xlsx` dan
+`SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx` **tidak identik** — bukan dari pekerjaan sesi ini
+(sepanjang sesi ini kedua file selalu ditulis identik lewat `MASTERS = [both]`), tapi perbedaan
+LAMA yg pernah diflag 2026-07-21 ("PERLU DIRAPIKAN") dan tidak pernah dibereskan.
+
+**Perbedaan sebelum rekonsiliasi**: 0 sel berbeda di baris yg sama-sama ada di kedua file, tapi
+file **Tracking punya 1.862 baris LEBIH BANYAK** di 5 brand — Lamborghini Huracan, Tesla Model
+3 & Model X, Volvo (740 GLE/S60/S90/V40/XC60/XC90 — 6 model!), Lexus (LC/LS/UX), Maserati Ghibli.
+
+**Risiko tersembunyi yg baru ketahuan**: `rebuild_lookup.py`, `belum_ada_di_listing.py`,
+`brand_belum_ada.py` HANYA membaca `MASTER_from_drive_20260715.xlsx` (hardcoded, bukan Tracking).
+Jadi SEMUA lookup & analisa gap yg dibuat sesi ini (termasuk `Belum_Ada_Di_Listing.xlsx`)
+kemungkinan tidak lengkap utk 5 brand itu — listing Volvo/Lexus/Tesla/Lamborghini/Maserati yg
+sebenarnya sudah punya SKU di master (via Tracking) bisa saja salah terbaca "belum tayang" atau
+gagal di-resolve saat `isi_sku_kosong.py`.
+
+**User memutuskan: file Tracking dijadikan acuan/patokan.** Ditangani dgn
+**`scripts/samakan_master_tracking.py`** — BUKAN mengganti nama file di tiap skrip (banyak &
+rawan kelewat satu), tapi menyamakan ISI kedua file jadi identik lewat kunci alami
+(Nama Produk, Toko, Kategori, Warna, Generasi), dua arah. Hasil: 1.862 baris disalin dari
+Tracking ke Master, **0 baris sebaliknya, 0 kunci dgn SKU bentrok**. Setelah rekonsiliasi:
+kedua file **identik sempurna** (0 sheet berbeda baris, sheetnames sama).
+
+**TINDAK LANJUT WAJIB sesudah rekonsiliasi ini** (belum tentu sudah dikerjakan — cek dulu):
+1. `rebuild_lookup.py` ulang (otomatis ikut lengkap krn Master sudah superset)
+2. `isi_sku_kosong.py` ulang — mungkin ada listing Volvo/Lexus/Tesla/Lamborghini/Maserati yg
+   sekarang baru bisa ke-resolve
+3. `belum_ada_di_listing.py` ulang — angka 81 "belum tayang" & 148 "kurang di toko" yg dilaporkan
+   2026-07-30 PERLU DIKOREKSI utk 5 brand ini
+
+**Pelajaran**: kalau ada 2 file yg "harusnya sama" tapi berasal dari sumber/skrip berbeda,
+JANGAN asumsikan identik dari nama filenya — bandingkan isinya (sheet, baris, sel) secara
+eksplisit sebelum salah satu dipakai sbg SATU-SATUNYA sumber baca oleh skrip analisa.
