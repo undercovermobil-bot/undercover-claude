@@ -81,7 +81,6 @@ MODEL_TAMBAHAN_DARI_SHOPEE = {
     "DFSK": ["DFSK Glory E3", "DFSK Mini EV"],
     "Ferrari": ["Ferrari 488 GTB", "Ferrari 488 Pista", "Ferrari 812 Superfast",
                 "Ferrari F8 Tributo", "Ferrari Portofino"],
-    "Honda": ["Honda Civic FD Custom"],
     "Hyundai": ["Hyundai Grand i20", "Hyundai Ioniq 6"],
     "Isuzu": ["Isuzu D-MAX"],
     "Jeep": ["Jeep Gladiator", "Jeep Renegade"],
@@ -92,16 +91,25 @@ MODEL_TAMBAHAN_DARI_SHOPEE = {
     "McLaren": ["Mclaren 720S", "Mclaren 720S Spider"],
     "Mercedes-Benz": ["Mercedes Benz AMG GT", "Mercedes Benz EQA", "Mercedes Benz EQB",
                       "Mercedes Benz EQE", "Mercedes Benz EQS", "Mercedes Benz V Class"],
-    "Nissan": ["Nissan Grand Livina Custom Roofbox", "Nissan Latio", "Nissan Z Proto"],
+    "Nissan": ["Nissan Latio", "Nissan Z Proto"],
     "Peugeot": ["Peugeot 2008", "Peugeot 5008"],
     "Porsche": ["Porsche 718 Cayman", "Porsche Macan"],
     "Proton": ["Proton Suprima S"],
     "Renault": ["Renault Duster", "Renault Kiger"],
     "Subaru": ["Subaru WRX"],
-    "Toyota": ["Toyota Vios Custom"],
     "Volkswagen": ["Volkswagen New Beetle", "Volkswagen T-Cross"],
 }
 MODEL_DARI_SHOPEE = {m for models in MODEL_TAMBAHAN_DARI_SHOPEE.values() for m in models}
+
+# Produk "Custom" = pesanan khusus, bukan model katalog reguler. Instruksi user
+# 2026-08-03: "semua yang custom tidak usah di include". Sejalan juga dgn aturan
+# bisnis #4 (varian Custom -> SKU jangan ditebak) & #6 (produk luar-scope dikecualikan),
+# dan dgn keputusan sebelumnya utk tidak menambahkannya ke file master.
+# Berbasis POLA NAMA, bukan daftar manual, supaya listing Custom baru ikut tersaring.
+# Yang kena saat ini: Honda Civic FD Custom, Nissan Grand Livina Custom Roofbox,
+# Toyota Vios Custom. Master sendiri tidak punya model bernama "Custom" (sudah dicek),
+# jadi filter ini cuma menyaring calon baris tambahan dari Shopee.
+POLA_CUSTOM = re.compile(r"\bcustom\b", re.I)
 
 
 # ---------------------------------------------------------------- 2. daftar model
@@ -129,7 +137,7 @@ def baca_model_per_merk():
             if tambahan not in sudah:
                 urut.append(tambahan)
                 sudah.add(tambahan)
-        hasil[ws.title] = urut
+        hasil[ws.title] = [m for m in urut if not POLA_CUSTOM.search(m)]
     wb.close()
     return hasil
 

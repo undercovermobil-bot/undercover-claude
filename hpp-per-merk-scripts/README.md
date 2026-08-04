@@ -97,7 +97,7 @@ bodi (New Beetle = desain retro 1997+, beda total dari Beetle klasik), dan Shope
 menjualnya sebagai 2 listing terpisah dengan harga beda (290rb vs 292rb — bukan identik
 seperti kasus Daihatsu yang harganya sama persis di kedua nama).
 
-Total baris naik dari 449 → **509** (60 baris baru). Yang dapat harga naik dari 365 → 426.
+Total baris naik dari 449 → **506** (57 baris baru). Yang dapat harga naik dari 365 → 423.
 
 ## Menambahkan model itu ke file master (`tambah_model_ke_master.py`)
 
@@ -114,13 +114,23 @@ mengubah hasilnya:
 
 Hasil akhir: **57 model ditambahkan, 7.572 baris baru** (69.480 → 77.052).
 
-### Yang sengaja TIDAK ditambahkan
+### Produk "Custom" dikecualikan
 
-| Model | Alasan |
-|---|---|
-| Honda Civic FD Custom | Listing "Custom" = pesanan khusus. Aturan bisnis #4 (varian generik/Custom → SKU jangan ditebak) & #6 (produk luar-scope dikecualikan). |
-| Nissan Grand Livina Custom Roofbox | idem |
-| Toyota Vios Custom | idem |
+Instruksi user 2026-08-03: *"semua yang custom tidak usah di include"* — berlaku untuk
+workbook HPP **dan** file master. Sejalan dengan aturan bisnis #4 (varian Custom → SKU
+jangan ditebak) & #6 (produk luar-scope dikecualikan).
+
+Yang kena: `Honda Civic FD Custom`, `Nissan Grand Livina Custom Roofbox`,
+`Toyota Vios Custom`. Filternya berbasis **pola nama** (`\bcustom\b`, case-insensitive),
+bukan daftar manual, supaya listing Custom baru ikut tersaring otomatis.
+
+Master aslinya sudah dicek: tidak punya model bernama "Custom" sama sekali, jadi filter
+ini cuma menyaring calon baris tambahan dari Shopee — tidak ada data master yang dibuang.
+
+Listing Shopee lain yang mengandung kata "Custom" (`Toyota Calya Reguler Custom`,
+`Maserati GranTurismo Reguler CUSTOM SPOILER`, `Toyota Triton Reguler CUSTOM Bumper...`)
+memang tidak pernah terbaca sebagai model sejak awal — judulnya tidak berakhir dengan
+kata tier, jadi tidak lolos parser.
 
 ### Label generasi yang ditolak (data listing Shopee-nya yang perlu dibetulkan)
 

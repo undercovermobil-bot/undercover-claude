@@ -212,9 +212,30 @@ def cek_nama_produk_tidak_terpotong():
         raise AssertionError("nama produk berisiko tampil terpotong:\n  " + "\n  ".join(galat))
 
 
+def cek_tidak_ada_produk_custom():
+    """Instruksi user 2026-08-03: "semua yang custom tidak usah di include".
+
+    Produk "Custom" = pesanan khusus, bukan model katalog reguler (sejalan dgn aturan
+    bisnis #4 & #6, dan dgn keputusan tidak menambahkannya ke file master).
+    """
+    wb = openpyxl.load_workbook(WB)
+    galat = []
+    for nama in wb.sheetnames:
+        if nama == "CATATAN":
+            continue
+        ws = wb[nama]
+        for baris in range(2, ws.max_row + 1):
+            v = ws.cell(baris, 1).value
+            if v and re.search(r"\bcustom\b", str(v), re.I):
+                galat.append(f"{nama}!A{baris}: {v!r}")
+    if galat:
+        raise AssertionError("masih ada produk Custom:\n  " + "\n  ".join(galat))
+
+
 def main():
     cek_tidak_ada_duplikat_generasi()
     cek_nama_produk_tidak_terpotong()
+    cek_tidak_ada_produk_custom()
     cek_catatan_tanpa_formula()
     wb = openpyxl.load_workbook(WB)
     sheets = [s for s in wb.sheetnames if s != "CATATAN"]
