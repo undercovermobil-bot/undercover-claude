@@ -245,10 +245,20 @@ MED = Side(style="medium")
 BINGKAI = Border(left=MED, right=MED, top=MED, bottom=MED)
 KIRI_ATAS = Alignment(wrap_text=True, vertical="bottom")
 KANAN = Alignment(wrap_text=True, horizontal="right", vertical="bottom")
+# kolom A data: JANGAN wrap - lihat catatan di LEBAR soal nama yang tampil terpotong
+NAMA_PRODUK = Alignment(wrap_text=False, vertical="bottom")
 KUNING = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
 
-LEBAR = {"A": 17.85546875, "F": 12.28515625, "J": 8.140625, "S": 14.0,
+# Sheet3 aslinya pakai lebar kolom A 17.86 + wrap_text, tapi nama produknya pendek
+# ("Avanza Reguler"). Di sini nama produk bisa 37 karakter ("Daihatsu Gran Max Minibus /
+# Blind Van"), jadi dgn lebar itu teksnya ter-wrap; karena tinggi baris dikunci 15.75
+# (muat 1 baris) DAN rata vertikalnya "bottom", Excel cuma menampilkan potongan
+# TERAKHIR - "Honda Civic Sedan / RS" tampil sebagai "/ RS", semua Mercedes tampil
+# "Class". Kena 100 nama di 40+ merk. Karena itu kolom A: wrap dimatikan & lebarnya
+# mengikuti nama terpanjang di sheet ybs.
+LEBAR = {"F": 12.28515625, "J": 8.140625, "S": 14.0,
          "W": 13.7109375, "X": 13.7109375, "AC": 13.7109375}
+LEBAR_A_MIN = 17.85546875
 
 
 def formula(kolom, n):
@@ -289,7 +299,7 @@ def tulis_sheet(ws, model_list, harga_map):
             kol = get_column_letter(i)
             c = ws.cell(baris, i)
             c.font = ARIAL
-            c.alignment = KIRI_ATAS if kol == "A" else KANAN
+            c.alignment = NAMA_PRODUK if kol == "A" else KANAN
             if kol not in TANPA_BINGKAI:
                 c.border = BINGKAI
             if kol in FMT:
@@ -312,6 +322,9 @@ def tulis_sheet(ws, model_list, harga_map):
 
     for kol, w in LEBAR.items():
         ws.column_dimensions[kol].width = w
+    # lebar kolom A ikut nama terpanjang di sheet ini supaya tidak ada yang terpotong
+    panjang = max((len(m) for m in model_list), default=0)
+    ws.column_dimensions["A"].width = max(LEBAR_A_MIN, panjang + 2.5)
 
 
 def tulis_catatan(ws, ringkas, tanpa_harga, harga_ganda, model_dari_shopee):

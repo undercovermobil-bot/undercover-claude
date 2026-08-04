@@ -206,7 +206,9 @@ python3 verify.py
 memuat file xlsx apa pun, termasuk file uji 3 sel. Gantinya `verify.py` membaca formula apa
 adanya dari workbook hasil lalu mengevaluasinya sendiri:
 
-1. Tidak boleh ada 2 nama produk di sheet yang sama yang keliatan model yang sama
+1. Nama produk tidak boleh berisiko tampil terpotong di Excel
+   (`cek_nama_produk_tidak_terpotong` — lihat bug tampilan di bawah).
+2. Tidak boleh ada 2 nama produk di sheet yang sama yang keliatan model yang sama
    (`cek_tidak_ada_duplikat_generasi` — lihat kasus Daihatsu di bawah; ada allowlist
    eksplisit utk pasangan yang mirip pola tapi terbukti beda produk, mis. VW Beetle/New Beetle).
 2. `CATATAN` sheet tidak boleh punya elemen `<f>` (formula) sama sekali — lihat bug di bawah.
@@ -220,6 +222,32 @@ Status terakhir: 510 baris, 426 berharga, semua lolos.
 
 Karena openpyxl menulis formula tanpa cached value, angka baru muncul saat file dibuka di
 Excel/Google Sheets (langsung dihitung ulang otomatis).
+
+## Bug tampilan: nama produk kepotong jadi "RS" / "(Hybrid)" (sudah diperbaiki)
+
+User melaporkan sheet Honda punya baris bernama `RS` dan `(Hybrid)` — kelihatan seperti
+data rusak / nama merk hilang. **Datanya sebenarnya benar** (`Honda Civic Sedan / RS`,
+`Honda Prelude (Hybrid)`); yang salah cara Excel menampilkannya.
+
+Penyebabnya kombinasi 4 hal yang diwarisi dari format Sheet3:
+
+1. Kolom A lebarnya 17.86 karakter (Sheet3 aslinya isinya nama pendek, "Avanza Reguler")
+2. `wrap_text=True` → nama panjang dipecah jadi 2 baris teks
+3. Tinggi baris dikunci 15.75 → cuma muat 1 baris
+4. Rata vertikal `bottom` → yang tampil justru potongan **TERAKHIR**
+
+Jadi `Honda Civic Sedan / RS` tampil sebagai `/ RS`. Kena **100 nama di 40+ merk** —
+semua Mercedes tampil `Class`, `Toyota Corolla Altis` → `Altis`, `Daihatsu Gran Max
+Minibus / Blind Van` → `Van`.
+
+Fix: kolom A `wrap_text` dimatikan dan lebarnya mengikuti nama terpanjang di sheet ybs
+(min 17.86). `verify.py` menambahkan `cek_nama_produk_tidak_terpotong()` yang gagal
+kalau wrap aktif lagi atau ada nama lebih panjang dari lebar kolomnya.
+
+Catatan: 4 model di sheet Land Rover memang tidak memuat kata "Land Rover"
+(`Range Rover`, `Range Rover Evoque/Sport/Velar`) — itu penamaan asli di master dan
+Range Rover memang sub-merk Land Rover, jadi sengaja tidak diubah (mengubahnya akan
+memutus kaitan ke master).
 
 ## Bug yang pernah bikin Excel minta "repair" (sudah diperbaiki)
 

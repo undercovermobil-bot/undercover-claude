@@ -181,8 +181,40 @@ def cek_tidak_ada_duplikat_generasi():
         raise AssertionError("kemungkinan duplikat model:\n  " + "\n  ".join(galat))
 
 
+def cek_nama_produk_tidak_terpotong():
+    """User melaporkan melihat baris bernama 'RS' dan '(Hybrid)' di sheet Honda.
+
+    Datanya sebenarnya benar ('Honda Civic Sedan / RS', 'Honda Prelude (Hybrid)') -
+    yang salah tampilannya: kolom A sempit + wrap_text + tinggi baris dikunci 1 baris
+    + rata vertikal 'bottom', jadi Excel cuma menampilkan potongan TERAKHIR. Kena 100
+    nama di 40+ merk (semua Mercedes tampil 'Class', 'Toyota Corolla Altis' -> 'Altis').
+    Cek ini menjaga agar nama produk selalu tampil utuh.
+    """
+    wb = openpyxl.load_workbook(WB)
+    galat = []
+    for nama in wb.sheetnames:
+        if nama == "CATATAN":
+            continue
+        ws = wb[nama]
+        lebar = ws.column_dimensions["A"].width or 8.43
+        for baris in range(2, ws.max_row + 1):
+            sel = ws.cell(baris, 1)
+            if sel.value is None:
+                continue
+            if sel.alignment.wrap_text:
+                galat.append(f"{nama}!A{baris}: wrap_text masih aktif di kolom nama produk")
+                break
+            if len(str(sel.value)) > lebar:
+                galat.append(f"{nama}!A{baris}: {sel.value!r} ({len(str(sel.value))} kar) "
+                             f"lebih panjang dari lebar kolom A ({lebar:.1f})")
+                break
+    if galat:
+        raise AssertionError("nama produk berisiko tampil terpotong:\n  " + "\n  ".join(galat))
+
+
 def main():
     cek_tidak_ada_duplikat_generasi()
+    cek_nama_produk_tidak_terpotong()
     cek_catatan_tanpa_formula()
     wb = openpyxl.load_workbook(WB)
     sheets = [s for s in wb.sheetnames if s != "CATATAN"]
