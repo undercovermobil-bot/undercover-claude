@@ -97,7 +97,98 @@ bodi (New Beetle = desain retro 1997+, beda total dari Beetle klasik), dan Shope
 menjualnya sebagai 2 listing terpisah dengan harga beda (290rb vs 292rb — bukan identik
 seperti kasus Daihatsu yang harganya sama persis di kedua nama).
 
-Total baris naik dari 449 → **510** (61 baris baru). Yang dapat harga naik dari 365 → 426.
+Total baris naik dari 449 → **509** (60 baris baru). Yang dapat harga naik dari 365 → 426.
+
+## Menambahkan model itu ke file master (`tambah_model_ke_master.py`)
+
+User minta model-model itu dimasukkan sekalian ke master. Sebelum menulis apa pun,
+daftar "hilang" **diaudit ulang memakai KODE SKU, bukan nama produk** — dan itu
+mengubah hasilnya:
+
+- Listing Shopee **"Suzuki Vitara" ternyata = master "Suzuki Grand Vitara"** (SKU-nya
+  `SZK-GVT`, dan `GVT` memang kode master untuk Grand Vitara). Secara nama kelihatan
+  seperti 2 model berbeda; tanpa cek SKU ini akan jadi entri master duplikat sekaligus
+  meninggalkan Grand Vitara tanpa harga. Sekarang masuk `ALIAS`, bukan model baru.
+- `Honda City Hatchback` & `Mazda 323 Interplay` sempat keflag "hilang" oleh script
+  audit karena script itu tidak tahu `ALIAS` — keduanya sudah tercakup.
+
+Hasil akhir: **57 model ditambahkan, 7.572 baris baru** (69.480 → 77.052).
+
+### Yang sengaja TIDAK ditambahkan
+
+| Model | Alasan |
+|---|---|
+| Honda Civic FD Custom | Listing "Custom" = pesanan khusus. Aturan bisnis #4 (varian generik/Custom → SKU jangan ditebak) & #6 (produk luar-scope dikecualikan). |
+| Nissan Grand Livina Custom Roofbox | idem |
+| Toyota Vios Custom | idem |
+
+### Label generasi yang ditolak (data listing Shopee-nya yang perlu dibetulkan)
+
+| Model | Label di listing | Masalah |
+|---|---|---|
+| Isuzu D-MAX | `Gen Gen 2F 1 (2015-2` | Teksnya rusak/kepotong |
+| Mercedes Benz EQA | `Gen 1F (2017-2022)` | EQA baru rilis 2021 |
+| Mercedes Benz EQB | `Gen 1F (2017-2022)` | EQB baru rilis 2021 |
+| Porsche Macan | `Gen 4 (2016-2024)` | Macan tidak punya Gen 4; rentangnya sama persis dengan 718 Cayman |
+
+Ditolak supaya data keliru tidak menular ke master. Generasi lain dari model yang sama
+tetap masuk.
+
+### Struktur baris yang dibuat
+
+Mengikuti pola **saudara sesheet** (bukan pola global) — komposisi kategori/warna
+beda-beda antar merk. Contoh Audi A3 (mengikuti Audi A4/A8), per generasi:
+
+| Toko | Strip | Reguler | Premium | Exclusive |
+|---|---|---|---|---|
+| Undercover Autocare | 9 | 5 | 2 | 1 |
+| Otonation | 9 | 5 | 2 | 1 |
+| Smartprotection | 9 | 5 | 2 | 1 |
+| Otoprotection | 9 | 5 | 2 | 1 |
+
+Aturan bisnis #1 (konsolidasi toko) diterapkan: baris Otonation memakai kode SKU `-UA-`,
+baris Otoprotection memakai `-SP-`. Aturan #7 tetap dipatuhi — 4 baris toko terpisah,
+tidak di-dedupe.
+
+### Kode SKU — perlu direview
+
+Master sendiri **tidak konsisten** soal kode model (`MBZ-ECL` untuk E Class tapi
+`MBZ-CC` untuk C Class; `PEU-M206` pakai awalan M tapi `FER-488S` tidak). Jadi kode
+untuk model baru digenerate dengan aturan deterministik + tabel override `KODE_MANUAL`
+yang mengikuti tetangga sesheet, misalnya:
+
+- `HYN-I20` (Grand i20) mengikuti `HYN-I10` (Grand i10)
+- `HYN-IQ6` (Ioniq 6) mengikuti `HYN-IQ5` (Ioniq 5)
+- `LDR-RRS` / `LDR-RRV` (Range Rover Sport/Velar) mengikuti `LDR-RR` / `LDR-RRE`
+- `MBZ-VCL` (V Class) mengikuti `MBZ-BCL` / `MBZ-ECL` / `MBZ-GCL`
+- `MCL-720` (720S) mengikuti `MCL-570` (570S)
+- Ferrari tanpa awalan M (`FER-488G`) mengikuti `FER-488S`
+
+Kode ini jadi identitas operasional permanen (dipakai BigSeller & listing 4 toko),
+jadi **wajib direview user sebelum dipromosikan ke master asli.**
+
+### Verifikasi (`verify_master.py`)
+
+Dibaca ULANG dari disk — wajib, karena openpyxl bisa `save()` sukses tanpa error tapi
+diam-diam tidak menulis yang diminta (lihat pelajaran bug `ws.cell(value=None)`).
+
+1. Semua baris lama utuh, isi & urutannya tidak berubah.
+2. Baris tambahan persis milik model baru, jumlahnya cocok dengan laporan.
+3. Tidak ada baris identik ganda (proses multi-pass wajib dicek duplikasi).
+4. Prefix SKU baru tidak menabrak model lama mana pun.
+5. Kode toko & kategori di tiap SKU sesuai aturan konsolidasi.
+6. Dalam 1 model+generasi, tiap (toko, kategori, warna) hanya muncul sekali.
+7. Pasangan konsolidasi UA↔OT dan SP↔OP punya SKU identik.
+
+Status: semua lolos.
+
+### Catatan: master yang diberikan kehilangan Mercedes Benz EQE
+
+Memory proyek mencatat EQE sudah dibuatkan di master 2026-07-11, tapi di file master
+yang dipakai sesi ini EQE **tidak ada**. Fix lain dari 07-17 (BYD Atto 3, Geely EX2)
+justru ada, jadi file ini memang versi terbaru — EQE-nya yang hilang entah di
+regenerasi mana. Kebetulan EQE termasuk 57 model yang ditambahkan sekarang, jadi
+gap-nya ikut tertutup. Perlu dicek apakah ada hasil kerja 07-11 lain yang ikut hilang.
 
 ## Menjalankan ulang
 

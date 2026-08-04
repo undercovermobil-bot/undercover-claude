@@ -98,7 +98,6 @@ MODEL_TAMBAHAN_DARI_SHOPEE = {
     "Proton": ["Proton Suprima S"],
     "Renault": ["Renault Duster", "Renault Kiger"],
     "Subaru": ["Subaru WRX"],
-    "Suzuki": ["Suzuki Vitara"],
     "Toyota": ["Toyota Vios Custom"],
     "Volkswagen": ["Volkswagen New Beetle", "Volkswagen T-Cross"],
 }
@@ -180,14 +179,17 @@ ALIAS = {
     # Isuzu & Nissan — beda penulisan doang (ditemukan lewat audit balik 63 model Shopee)
     "Isuzu Mux": "Isuzu MU-X",
     "Nissan Livina X-Gear": "Nissan Livina XGear",
+    # Terbukti lewat SKU listing (SZK-GVT = kode master "Suzuki Grand Vitara"), bukan
+    # lewat cocok-nama: listing Shopee "Suzuki Vitara" ITU model Grand Vitara. Tanpa
+    # cek SKU, ini kelihatan seperti 2 model berbeda dan sempat salah ditangani.
+    "Suzuki Grand Vitara": "Suzuki Vitara",
 }
 
 # Sengaja TIDAK dicocokkan: nama mirip tapi bisa jadi model yang berbeda.
 MERAGUKAN = {
     "Toyota Corolla Altis": "Shopee cuma punya 'Toyota Corolla' — beda nameplate",
-    "Suzuki Grand Vitara": "Shopee cuma punya 'Suzuki Vitara' — beda model",
-    "Suzuki Grand Vitara Hybrid": "Shopee cuma punya 'Suzuki Vitara' — beda model",
-    "Suzuki e VITARA": "Shopee cuma punya 'Suzuki Vitara' — beda model",
+    "Suzuki Grand Vitara Hybrid": "Tidak ada listing Shopee yang SKU-nya menunjuk ke model ini",
+    "Suzuki e VITARA": "Tidak ada listing Shopee yang SKU-nya menunjuk ke model ini",
     "Suzuki Carry Futura": "Shopee punya 'Suzuki Carry' & 'Suzuki Carry Pickup' — Futura tidak spesifik",
     "Kia Sedona": "Shopee cuma punya 'Kia Grand Sedona' — beda generasi",
     "Nissan Livina (All New)": "Shopee punya 'Nissan Grand Livina' & 'Nissan Livina X-Gear' — tidak spesifik",
