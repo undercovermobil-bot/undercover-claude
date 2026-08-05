@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-03T07:29:00.012Z
+  modified: 2026-08-05T02:03:33.029Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -194,6 +194,20 @@ File koreksi sudah disiapkan: `Cek gagal upload\Retry Upload TikTok UA - 19 prod
 **Pola pembuatan file retry yang benar (hasil akhir)**: `load_workbook(path)` PENUH (bukan bikin baru) → snapshot baris yang mau disimpan (value+style per sel) → `ws.delete_rows(6, max_row-5)` SEKALI (hapus semua baris data dalam 1 panggilan, jauh lebih cepat dari hapus satu-satu) → tulis ulang baris yang disimpan mulai row 6 dgn SKU di-override sesuai target → **`ws.data_validations.dataValidation = []`** → save. Efek samping bagus: ukuran file turun dari ~50MB ke ~300KB (sheet1.xml openpyxl nulis SEMUA string sbg `inlineStr` bukan shared-string table by default — perilaku openpyxl yg konsisten, bukan bug, tapi bikin file besar kalau tidak dipangkas). **How to apply**: kapan pun bikin file retry TikTok/Big-Seller dgn cara "load full workbook asli lalu pangkas baris", WAJIB (1) pertahankan semua sheet asli DAN (2) strip data validations sebelum save.
 
 Ke-5 baris BYD Atto 3 warna-polos (Abu-abu/Hitam/Biru/Merah/Hijau) yang sempat kelihatan sbg "residual bug 07-17 tak terselesaikan" TERNYATA seluruhnya ada di pid arsip di atas — sudah ikut ter-exclude begitu pid itu dibuang dari file, bukan perlu ditangani terpisah.
+
+## Cek formula TikTok UA 2026-08-05 — SEMUA fix 08-03 sudah live, top-215 100% bersih
+
+User upload ekspor TikTok baru lagi (`Cek gagal upload\TikTok\...20260805_..._1/2/3.xlsx` — nomor file GESER LAGI, kali ini `_1`=Cover Mobil 22.915 baris, `_2`=Cover Motor, `_3`=Travel Pouch; pola pergeseran nomor file ini konsisten tiap ekspor, jangan pernah asumsikan berdasar nomor, selalu cek isi/kategori dulu).
+
+**Jebakan kolom baru**: header `quantity` HILANG dari ekspor kali ini (dibanding 08-03) — `seller_sku` geser dari kolom **11 ke kolom 10**. File target `UA_TikTok_1/2/3.xlsx` tetap kolom 11 (tidak berubah, snapshot lama). **WAJIB selalu ambil index kolom dari header row 1 (`header.index('seller_sku')`), jangan hardcode 11** — ini persis pola yang sudah diperingatkan di catatan lama (kolom TikTok suka geser), sekarang kejadian beneran.
+
+**Hasil scan penuh + filter top-215** (pakai ranking file yang sama, `MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx`): dari 9.669 baris / 563 listing / 189 model yang termasuk top-215, **100% OK, 0 NEEDS_UPDATE.** Semua 19 listing yang diperbaiki 08-03 (Mitsubishi Galant, Hyundai Santa Fe, Toyota Corona, Mercedes Benz C Class, Toyota Harrier, Hyundai Atoz, Peugeot 405) sudah live dgn benar — retry file yang dibuat 08-03 berhasil diupload.
+
+Sisa gap (17 baris) SAMA PERSIS dgn temuan 08-03: cuma Wuling Darion (3 tier), target masih kosong krn model belum ada di master — bukan bug, tinggal tunggu master dilengkapi. Vinfast VF3 (17 baris kosong total) & 2 baris Timor juga konsisten (sku_id tidak ada di target).
+
+**Konfirmasi tambahan berguna**: listing **"Mitsubishi L300" di TikTok** (beda nama dari Shopee yg "Mitsubishi L300 Pickup") **sudah 100% OK/benar** — independen dari listing Shopee-nya yang masih terblokir validasi jumlah foto. Jadi blocker L300 itu spesifik ke Shopee, tidak mempengaruhi TikTok.
+
+**27 nama ranking top-215 gagal exact-match ke nama produk TikTok, sudah dicek satu-satu**: mayoritas pola sama seperti Shopee (Shopee split bodystyle: APV Arena/Luxury, Honda City Hatchback/Sedan, Mazda 2/3 Hatchback/Sedan, Kia Rio Hatchback/Sedan, Suzuki Aerio Hatchback/Sedan, Gran Max Minibus/Pick Up, Pajero→Pajero Sport, Hardtop/Land Cruiser terpisah, Wrangler tanpa "Rubicon", Tiggo 8 dgn suffix "Pro") — semua confirmed OK, 0 gap tersembunyi. **8 nama genuinely TIDAK ADA listing Cover Mobil-nya sama sekali di TikTok** (beda dari "ada tapi salah nama"): Mitsubishi Strada Triton (cuma ada "Mitsubishi Triton" biasa), Daihatsu Taft GT, Hyundai Getz, BYD Seal, Geely EX2, Mercedes Benz SLK Class, Daihatsu Ceria, Volvo 850 Sedan — belum pernah dibuatkan listing TikTok utk model2 ini (bukan soal SKU, soal listing belum ada).
 
 ## Sisa pekerjaan
 
