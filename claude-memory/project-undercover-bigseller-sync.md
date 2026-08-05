@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T08:30:22.416Z
+  modified: 2026-08-05T08:51:25.042Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -315,6 +315,26 @@ User taruh ekspor baru di `Cek gagal upload\SP\Shopee\1.xlsx` & `2.xlsx` (shop i
 File retry: `Cek gagal upload\Retry Upload Smartprotection - SKU belum sesuai (2026-08-05).xlsx` (118 baris = full block 8 listing, 82 SKU diganti). **Belum diupload.**
 
 **FYI belum ditindak**: 71 baris "no_target" (varid tidak ada di target sama sekali) — mayoritas (30) Hyundai Atoz, SKU-nya blank total di listing DAN tidak ada entri target-nya (genuinely belum pernah di-assign SKU, beda kasus dari revisi Santa Fe/Mazda3, butuh kerja terpisah kalau mau diisi).
+
+## KOREKSI PENTING 2026-08-05: cek SP Shopee kelewat Mazda 3 sama sekali — pola ini WAJIB dicek eksplisit di toko manapun
+
+User tegur via screenshot: Mazda 3 Sedan & Hatchback di SP Shopee SAMA-SAMA masih pakai `MZD-M3-SP-...` (belum kena revisi 3S/3H). **Root cause: target file `SP_Shopee_1/2.xlsx` JUGA masih py `MZD-M3` utk kedua listing itu** (belum pernah direvisi krn target dibuat sebelum revisi hari ini) — jadi diff current-vs-target NGGAK KELUAR sbg mismatch (current==target, sama2 salah). **Pola bug ini SAMA PERSIS dgn yg sudah ditemukan utk Santa Fe di semua toko** (OT, SP Shopee) — tapi kemarin cuma diterapkan eksplisit ke Santa Fe, LUPA diterapkan ke Mazda 3 juga. **How to apply ke depan (WAJIB, bukan opsional): setiap cek toko baru (OP dst), SELALU cek Mazda 3 Sedan/Hatchback DAN Santa Fe secara eksplisit dgn cari pid-nya langsung, JANGAN cuma andalkan diff-vs-target — target bisa saja "salah dgn konsisten" sehingga diff tidak mendeteksi apa-apa.**
+
+**Fix SP Shopee (patch retroactive)**: 61 baris tambahan ditemukan (4 listing: Mazda 3 Sedan/Sedan Transparan/Hatchback/Hatchback Transparan) — digabung ke retry sebelumnya, total sekarang **143 baris / 12 listing** (naik dari 82/8). Target `SP_Shopee_1.xlsx` diupdate lagi (+61). File retry ditimpa ulang.
+
+**Struktur file direorganisasi user**: folder sekarang `Cek gagal upload\{UA,SP,OT,OP}\{Shopee,TikTok,Lazada}\`, output-nya JUGA ditaruh per-toko di folder yg sama (bukan `Cek gagal upload\` root lagi).
+
+## Cek TikTok & Lazada Smartprotection (SP) 2026-08-05
+
+**TikTok SP** (`Cek gagal upload\SP\TikTok\...xlsx`, target `SP_TikTok.xlsx`): diff standar 0 mismatch (SEMUA sama krn target ikut basi juga) — dicek eksplisit Mazda3+SantaFe spt pelajaran di atas, ketemu **38 baris**: 24 Mazda3 (5 Hatchback legacy CVR + 3 Hatchback Transparan + 2 Sedan Transparan legacy + 14 Sedan Reguler yg TOTAL KOSONG dari awal) + 14 Santa Fe (listing utama masih 100% kode legacy `CVR0089-STP-...`, TANPA split generasi sama sekali di listing ini — beda dari "Santa Fe Transparan" yg sudah py kode modern `HYN-SFE-SP-T-G1-TRP` seragam tapi TIDAK dipecah G1/G2 krn cuma 1 kode utk semua rentang tahun, sengaja dibiarkan krn bukan bug baru). Target `SP_TikTok.xlsx` diupdate (24/38 — 14 baris Santa Fe tak py entri target sama sekali, wajar krn baru migrasi dari legacy). File: `Cek gagal upload\SP\Retry Upload Smartprotection TikTok - SKU belum sesuai (2026-08-05).xlsx` (52 baris, 38 diganti).
+
+**Lazada SP** (`Cek gagal upload\SP\Lazada\...xlsx`, target `SP_Lazada.xlsx`): diff standar dapat 167 baris (7 model bug formula lama: Toyota Harrier, BMW Seri 5, Mitsubishi Galant, Mercedes Benz C Class, Timor, Kia Sonet, Suzuki Agya Transparan — target-nya SUDAH py suffix disambiguasi Lazada yg benar, verified 0 duplikat, langsung pakai apa adanya + 28 baris Santa Fe). **Santa Fe di toko ini TERNYATA STRUKTURNYA SIMPEL — cuma 2 baris per warna (satu G3/masuk grup baru G1, satu G4F/masuk grup baru G2), TIDAK ADA tabrakan sama sekali** krn tiap grup cuma py 1 anggota (beda dari kasus UA Lazada yg 6 generasi jadi 1 SKU dgn potensi tabrakan besar) — reklasifikasi G3→G1/G4F→G2 langsung dari segmen SKU aman tanpa suffix tambahan. **Santa Fe Transparan (4 baris terpisah, placeholder Lazada murni)** perlu disambiguasi baru krn 3 dari 4 tahun jatuh ke grup G1 yg sama (dibikin `_G2`/`_G3` ordinal).
+
+**Mazda 3 di Lazada JUGA kena pola sama seperti Shopee/TikTok (target basi + banyak baris placeholder murni)**: 43 baris fill (Hatchback 20 + Sedan 20 + Hatchback Transparan 3 + Sedan Transparan... — lihat detail di script). **Ditemukan pola suffix historis SP Lazada utk Mazda3 SANGAT tidak konsisten**: sebagian pakai suffix nama-warna spt `_MERA`(Merah)/`_BIRU`(Biru Benhur)/`_HITA`(Hitam)/`_HIJA`(Hijau Army), dan slot mana yg "bare" vs "suffixed" antar-warna TIDAK KONSISTEN (kadang tahun lama bare, kadang tahun baru bare) — **jangan coba tebak/samakan pola lama ini, cukup pastikan fill baru UNIK thd yg sudah ada** (dipakai skema ordinal `_G2`/`_G3` sendiri utk baris yg genuinely kosong, tidak menyentuh yg sudah ada). **Verifikasi akhir: 0 duplikat di 253/253 baris final file, semua 13 listing** (dicek ulang penuh dari file output, bukan cuma dari rencana perubahan).
+
+File: `Cek gagal upload\SP\Retry Upload Smartprotection Lazada - SKU belum sesuai (2026-08-05).xlsx` (253 baris, 214 diganti). Target `SP_Lazada.xlsx` diupdate (203/214 — 11 baris genuinely tak py entri target).
+
+**Ringkasan SP semua channel**: Shopee 143 baris/12 listing, TikTok 38/5, Lazada 214/13. **Belum ada yang diupload user.**
 
 ## Sisa pekerjaan
 
