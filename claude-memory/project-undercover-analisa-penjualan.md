@@ -194,7 +194,36 @@ dari Januari ke Juni. Perlu diselidiki: masalah listing, stok, harga, atau iklan
 Perhatikan juga SKU terisi OP 96,9% dan SP 88,2% jauh lebih baik dari UA 26,7% —
 UA punya listing paling banyak & paling lama, jadi paling banyak order lama tanpa SKU.
 
+### Penyelarasan format Gen & Warna (permintaan user 2026-08-05)
+
+User minta nama mobil tetap seperti sheet `Top 300 Mobil` dan **generasi disesuaikan
+dengan format sheet `Detail Gen & Warna`**. Kosakata Gen laporan (92 label unik):
+
+- `Semua Gen (1 Formula)` — 1.208 baris, dipakai model yang cuma punya 1 formula
+- `Model/Tahun Lain` — 162 baris, fallback
+- `Gen N (YYYY-YYYY)` — mis. `Gen 1-2 (2003-2020)`, `Gen 3 (2021-2026)`
+- gen bernama: `Gen 2 (Reborn)`, `Gen 3 (Zenix)`
+
+Kosakata Warna (255 label): `Abu-abu`, `Hitam`, `Hijau Army`, `Merah`, `Biru Benhur`,
+`Silver`, `Orange`, plus warna strip `Elite/Epic/Warrior + Abu/Merah/Biru` dan
+`Strip 1/2/3 + warna`. Kosong ditulis literal `(tanpa warna)` / `(tanpa gen)`.
+
+Modul `scripts/selaras_gen.py` memetakan label mentah -> label baku **per model**, urutan:
+1. cocok persis
+2. gen bernama (reborn/zenix/venturer/facelift)
+3. **irisan tahun terbesar** — `Gen 3F (2016-2022)` -> label baku yang rentang tahunnya
+   paling banyak beririsan
+4. nomor gen sama
+5. gagal -> `Model/Tahun Lain`
+
+Kalau model cuma punya 1 label baku (mis. Honda BRV = `Semua Gen (1 Formula)`), **semua**
+varian jatuh ke situ. Hasil: 94,9% unit dapat label baku, 5,1% jadi `Model/Tahun Lain`.
+
 ### File hasil
+
+`MOBIL_TERLARIS_v4_final.xlsx` (menggantikan v2 & v3) — Gen & Warna sudah selaras
+dgn laporan, 561 baris berlabel `Model/Tahun Lain`, 0 warna kosong.
+Struktur sheet sama dgn v3 di bawah ini.
 
 `MOBIL_TERLARIS_v3_TikTok_3toko.xlsx` — **file BARU**, file asli tidak disentuh.
 4 sheet: `Top Model Gabungan` (321 model; kolom unit dipisah Shopee+Lazada vs TikTok,
@@ -209,11 +238,42 @@ Estimasi berbasis ukuran file ternyata cukup akurat: prediksi OP ~1.072 (aktual 
 SP ~1.016 (aktual 1.122). Metode "unit per MB file mentah" layak dipakai lagi
 untuk menaksir lubang data.
 
+### KOREKSI 2026-08-05 — klaim "UC Shopee Maret belum masuk" itu KELIRU
+
+**Ini kesalahanku, dan polanya penting untuk diingat.** Aku menyimpulkan Maret belum
+terhitung karena file di **Google Drive** berekstensi `.zip`. Padahal Metodologi jelas
+menyebut script jalan dari folder **LOKAL** `C:\Users\OWNER\Downloads\Sales`. Isi folder
+lokal tidak bisa disimpulkan dari isi Drive — user meng-upload zip ke Drive, tapi di lokal
+sudah ter-extract jadi `.xlsx`. **Ekstensi file di Drive bukan bukti tentang apa yang dibaca script.**
+
+User mengirim file Maret aslinya (2 part, 5.881 baris, 4.479 unit mobil, Rp 1.401.748.230).
+Empat uji dijalankan, semuanya menyimpulkan **Maret SUDAH termasuk di v1**:
+
+1. **Uji (model)**: 0 dari 151 model punya kuantitas Maret melebihi total v1.
+2. **Uji (model, warna)**: 0 pelanggaran nyata (2 temuan ternyata artefak parsing
+   kolom `Nama Variasi` yang urutannya beda).
+3. **Uji musiman** (acuan: musiman TikTok UC yang datanya lengkap 6 bulan —
+   Maret = 24,3% dari 6 bulan, memang bulan puncak/Lebaran):
+   porsi Maret aktual 16,4% dari v1. Prediksi hipotesis "sudah termasuk" meleset 13,7%,
+   hipotesis "belum termasuk" meleset 32,5%. **"Sudah termasuk" menang telak.**
+4. **Uji silang baris motor & batal**: Maret punya 140 baris motor -> ekstrapolasi 6 bulan
+   = 577 vs 767 tercatat di diagnostik (konsisten). Maret 1.058 baris batal ->
+   ekstrapolasi = 5.655 vs 5.184 tercatat (meleset 9%, konsisten).
+
+**Jangan tambahkan Maret ke laporan — itu akan menghitung ganda.**
+Angka final tetap **36.290 unit / 200,5 per hari**, bukan 223.
+
+**Pelajaran umum**: uji granular (model, gen, warna) TIDAK BISA dipakai membandingkan
+laporan vs data mentah, karena label Gen di laporan sudah dinormalisasi
+("Gen sudah disetarakan dgn list Undercover terkini") sehingga tidak pernah cocok dengan
+label mentah. Yang bisa dibandingkan: nama model dan warna.
+
 ### Lubang tersisa
 
-- UC Shopee Maret masih `.zip` (~4.160 unit) -> kalau masuk, ~223 unit/hari
 - Lazada Otonation & Otoprotection: folder tidak ada di Drive
 - TikTok Otonation: folder tidak ada di Drive
+- Lazada umumnya cuma 160 baris — kemungkinan export belum lengkap
+- (UC Shopee Maret **BUKAN** lubang — sudah termasuk)
 
 ## Skrip
 
