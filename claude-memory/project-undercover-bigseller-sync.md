@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T05:12:40.000Z
+  modified: 2026-08-05T08:30:22.416Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -301,6 +301,20 @@ Sesuai rencana perluasan (lihat catatan revisi di atas), sesi ini mulai cek OT (
 File retry: `Cek gagal upload\Retry Upload Otonation - SKU belum sesuai (2026-08-05).xlsx` (123 baris = full block 8 listing, 118 SKU diganti). **Belum diupload.**
 
 **Catatan metodologi utk sesi SP/OP berikutnya**: SELALU cek dulu apakah model yg kena revisi terbaru (Santa Fe/Mazda3) ada di toko itu — kalau ada, jangan percaya target file store tsb scr mentah (bisa jadi masih versi rule lama krn belum ikut ter-update sesi ini), hitung ulang pakai fungsi `santafe_new_sku`/`mazda3_new_sku` dari live data langsung.
+
+## Cek formula Smartprotection (SP) 2026-08-05 — toko ke-2 dari perluasan, 82 baris/8 listing
+
+User taruh ekspor baru di `Cek gagal upload\SP\Shopee\1.xlsx` & `2.xlsx` (shop id 473932094). Target: `SKU Gudang Big Seller\SP_Shopee_1.xlsx` & `_2.xlsx` — **SP pakai prefix SKU sendiri `SP`** (beda dari OT yg pakai `UA` — sesuai aturan konsolidasi: OP=SP secara fisik, bukan UA). Tier warna Strip pakai kode singkat `S1A/S2A/S3A` dst (S1=Epic,S2=Elite,S3=Warrior + A/B/M=Abu/Biru/Merah) — beda dari UA/OT yg pakai `EAB/PAB/WAB`-style, tapi ini otomatis aman krn cuma nyalin dari SKU yg sudah ada, tidak perlu diterjemahkan ulang.
+
+**Jebakan baru ditemukan sesi ini**: **teks varian SP untuk Santa Fe SAMA SEKALI TIDAK py kata "Gen"** — cuma rentang tahun polos (`"Warior Abu,2012-2018"`, `"2005-2012"`). Fungsi `santafe_new_sku()` yg parse `vname` cari pola "Gen N" GAGAL TOTAL di sini (regex tidak ketemu, fallback ke "tidak berubah" — nyaris ke-skip diam-diam tanpa terdeteksi kalau tidak dicek ulang manual). **Fix: baca nomor generasi dari SEGMEN KE-5 SKU SAAT INI sendiri** (`G1/G2/G3/G4/G4F/G5` — sudah pasti ada krn listing lama SP genuinely pakai kode per-generasi asli spt OT/Lazada UA, bukan dari teks varian) — jauh lebih robust, tidak bergantung pola teks yg beda2 per toko. **How to apply: mulai sesi depan (OP dst), JANGAN pakai `santafe_new_sku(current_sku, vname)` — pakai versi yg baca generasi dari `current_sku` sendiri, karena vname formatnya sudah terbukti beda2 tiap toko** (UA="Gen N (tahun)", OT="Gen N (tahun)", SP="tahun polos tanpa kata Gen").
+
+**Hasil: 7.782 baris cocok, 82 baris/8 listing belum sesuai** — 2 penyebab:
+1. **51 baris — bug formula lama** (Mitsubishi Galant 14 + Galant Transparan 5 legacy CVR-code, Mercedes Benz C Class 28 pakai kode aneh `GB19821993`-style + C Class Transparan 1, Toyota Corona Transparan 2, Mitsubishi Grandis Transparan 1) — target SP sudah benar dari dulu, tinggal apply.
+2. **31 baris — Hyundai Santa Fe** (28 non-Transparan + 3 Transparan) kena revisi baru — dihitung ulang & target `SP_Shopee_1.xlsx` diupdate (backup `.bak_20260805` dibuat), Mazda 3 di SP TIDAK bermasalah (tidak ada di daftar NEEDS_UPDATE — kemungkinan sudah OK atau belum ada listingnya, ada 2 baris "no_target" utk Mazda 3 Sedan/Hatchback masing2, kemungkinan varian baru/belum di-generate targetnya, bukan salah).
+
+File retry: `Cek gagal upload\Retry Upload Smartprotection - SKU belum sesuai (2026-08-05).xlsx` (118 baris = full block 8 listing, 82 SKU diganti). **Belum diupload.**
+
+**FYI belum ditindak**: 71 baris "no_target" (varid tidak ada di target sama sekali) — mayoritas (30) Hyundai Atoz, SKU-nya blank total di listing DAN tidak ada entri target-nya (genuinely belum pernah di-assign SKU, beda kasus dari revisi Santa Fe/Mazda3, butuh kerja terpisah kalau mau diisi).
 
 ## Sisa pekerjaan
 
