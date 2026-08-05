@@ -151,18 +151,69 @@ di luar periode** — jadi pembagi 181 hari benar untuk TikTok juga.
 6. 86 model TikTok tidak ada di Top 300 v1 (194 unit) — memang bagian "ekor panjang"
    446 model, wajar.
 
+### UPDATE lanjutan — TikTok Otoprotection & Smartprotection ikut masuk (2026-08-05)
+
+User upload 2 file lagi: `...14_02_Otopro.xlsx` (1.472 baris) dan `...14_04_Smartpro.xlsx`
+(1.390 baris). Struktur identik (sheet `OrderSKUList`, 65 kolom).
+**Tapi pola nama produknya BEDA** — `Cover Mobil / Selimut Mobil Suzuki Jimny`,
+**tanpa nama toko sama sekali**. Jadi deteksi toko harus per-file, bukan dari nama produk.
+Pola prefix ini ditambahkan ke `nama_tiktok.py`.
+
+| Toko (TikTok) | Unit | Nilai | /hari | SKU terisi |
+|---|---|---|---|---|
+| Undercover | 6.896 | Rp 2.075.884.551 | 38,10 | 26,7% |
+| Otoprotection | 1.210 | Rp 279.972.702 | 6,69 | **96,9%** |
+| Smartprotection | 1.122 | Rp 238.328.892 | 6,20 | **88,2%** |
+| **TikTok total** | **9.228** | **Rp 2.594.186.145** | **50,98** | |
+
+### ANGKA FINAL v3
+
+| | unit | nilai | /hari |
+|---|---|---|---|
+| v1 (Shopee+Lazada) | 27.062 tampil / 27.229 total | Rp 8,02 M | 150,4 |
+| TikTok 3 toko | 9.228 | Rp 2,59 M | 51,0 |
+| **GABUNGAN v3** | **36.290** | **Rp 10.569.361.081** | **200,50** |
+
+**200,5 unit/hari — klaim user "rata-rata produksi 200/hari" TERKONFIRMASI hampir persis.**
+Padahal UC Shopee Maret (~4.160 unit) masih belum masuk, jadi angka sebenarnya masih di atas ini.
+
+### Sinyal bisnis: penjualan OP & SP anjlok Mei–Juni
+
+Unit per bulan (TikTok):
+
+| Toko | Jan | Feb | Mar | Apr | Mei | Jun |
+|---|---|---|---|---|---|---|
+| Undercover | 1.053 | 1.056 | 1.673 | 1.168 | 1.004 | 942 |
+| Otoprotection | 238 | 202 | 287 | 245 | **137** | **101** |
+| Smartprotection | 220 | 189 | 323 | 247 | **107** | **36** |
+
+Undercover stabil, tapi **SP turun 84% (220 -> 36)** dan **OP turun 58% (238 -> 101)**
+dari Januari ke Juni. Perlu diselidiki: masalah listing, stok, harga, atau iklan?
+(Catatan: analisis iklan = proyek Digital Marketing terpisah, jangan dicampur ke repo ini.)
+
+Perhatikan juga SKU terisi OP 96,9% dan SP 88,2% jauh lebih baik dari UA 26,7% —
+UA punya listing paling banyak & paling lama, jadi paling banyak order lama tanpa SKU.
+
 ### File hasil
 
-`MOBIL_TERLARIS_v2_plus_TikTok.xlsx` — **file BARU**, file asli tidak disentuh.
-3 sheet: `Top Model Gabungan` (303 model, kolom unit dipisah Shopee+Lazada vs TikTok),
-`Detail TikTok` (2.562 baris), `Ringkasan & Catatan`. Sudah diverifikasi: zip utuh,
-0 rumus menyimpang, autofilter dipasang setelah baris terisi.
+`MOBIL_TERLARIS_v3_TikTok_3toko.xlsx` — **file BARU**, file asli tidak disentuh.
+4 sheet: `Top Model Gabungan` (321 model; kolom unit dipisah Shopee+Lazada vs TikTok,
+plus rincian TikTok UA/OP/SP), `Detail TikTok` (3.754 baris), `Ringkasan per Toko`,
+`Ringkasan & Catatan`. Diverifikasi: zip utuh, 0 rumus menyimpang, kolom per-toko
+jumlahnya konsisten dgn kolom TikTok, autofilter dipasang setelah baris terisi.
+(v2 `MOBIL_TERLARIS_v2_plus_TikTok.xlsx` = versi Undercover saja, sudah digantikan v3.)
 
-### Proyeksi setelah TikTok masuk
+### Akurasi estimasi sebelumnya
 
-Sisa lubang: TikTok Otoprotection + Smartprotection (4 file di Drive), UC Shopee Maret (.zip),
-Lazada OT/OP. Estimasi TikTok OP ~1.072 + SP ~1.016 + UC Maret ~4.160
--> **~40.400 unit -> ~223 unit/hari**. Klaim 200/hari **makin terkonfirmasi masuk akal**.
+Estimasi berbasis ukuran file ternyata cukup akurat: prediksi OP ~1.072 (aktual 1.210),
+SP ~1.016 (aktual 1.122). Metode "unit per MB file mentah" layak dipakai lagi
+untuk menaksir lubang data.
+
+### Lubang tersisa
+
+- UC Shopee Maret masih `.zip` (~4.160 unit) -> kalau masuk, ~223 unit/hari
+- Lazada Otonation & Otoprotection: folder tidak ada di Drive
+- TikTok Otonation: folder tidak ada di Drive
 
 ## Skrip
 

@@ -13,4 +13,4 @@
 - [Pelajaran SKU Sync](feedback-undercover-sku-sync-lessons.md) — pola berulang, termasuk instruksi 07-10 "prioritaskan 331 terlaris dulu, semua toko"
 - [Alur folder "Update via Claude"](feedback-undercover-update-folder-workflow.md) — mulai 07-10, edit ke folder terpisah, jangan overwrite file asli
 - [Audit Foto Produk](project-undercover-photo-shopee-audit.md) — selesai 2026-07-06, 45 produk, keterbatasan metode dimensi-foto
-- [Analisa Data Penjualan (Mobil Terlaris)](project-undercover-analisa-penjualan.md) — mulai 2026-08-05, verifikasi file MOBIL_TERLARIS: rumus 100% benar tapi **TikTok kebaca 0 baris** + UC Shopee Maret masih .zip; **UPDATE 08-05: TikTok sudah masuk** -> 33.958 unit / 187,6 per hari; Tokopedia ternyata ikut di TikTok Seller Center
+- [Analisa Data Penjualan (Mobil Terlaris)](project-undercover-analisa-penjualan.md) — mulai 2026-08-05, verifikasi file MOBIL_TERLARIS: rumus 100% benar tapi **TikTok kebaca 0 baris** + UC Shopee Maret masih .zip; **UPDATE 08-05: TikTok 3 toko masuk** -> 36.290 unit / **200,5 per hari** (klaim 200/hari terkonfirmasi); Tokopedia ternyata ikut di TikTok Seller Center

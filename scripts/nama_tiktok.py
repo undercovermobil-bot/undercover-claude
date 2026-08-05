@@ -12,6 +12,9 @@ TIER_KATA = [("Exclusive", r"ex+clusive"), ("Premium", r"premium"), ("Reguler", 
 PREFIX = [
     r"body\s*cover\s*mobil\s*/\s*sarung\s*/\s*selimut\s*mobil",
     r"cover\s*mobil\s*/\s*sarung\s*/\s*selimut\s*mobil",
+    # pola Otopro/Smartpro: "Cover Mobil / Selimut Mobil <model>" (tanpa 'Sarung')
+    r"cover\s*mobil\s*/\s*selimut\s*mobil",
+    r"body\s*cover\s*mobil\s*/\s*selimut\s*mobil",
     r"sarung\s*/\s*selimut\s*mobil",
     r"body\s*cover\s*mobil", r"cover\s*mobil", r"selimut\s*mobil", r"sarung\s*mobil",
     r"car\s*cover",
