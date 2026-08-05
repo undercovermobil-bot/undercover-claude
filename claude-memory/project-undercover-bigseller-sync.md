@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T02:03:33.029Z
+  modified: 2026-08-05T02:30:20.184Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -208,6 +208,20 @@ Sisa gap (17 baris) SAMA PERSIS dgn temuan 08-03: cuma Wuling Darion (3 tier), t
 **Konfirmasi tambahan berguna**: listing **"Mitsubishi L300" di TikTok** (beda nama dari Shopee yg "Mitsubishi L300 Pickup") **sudah 100% OK/benar** — independen dari listing Shopee-nya yang masih terblokir validasi jumlah foto. Jadi blocker L300 itu spesifik ke Shopee, tidak mempengaruhi TikTok.
 
 **27 nama ranking top-215 gagal exact-match ke nama produk TikTok, sudah dicek satu-satu**: mayoritas pola sama seperti Shopee (Shopee split bodystyle: APV Arena/Luxury, Honda City Hatchback/Sedan, Mazda 2/3 Hatchback/Sedan, Kia Rio Hatchback/Sedan, Suzuki Aerio Hatchback/Sedan, Gran Max Minibus/Pick Up, Pajero→Pajero Sport, Hardtop/Land Cruiser terpisah, Wrangler tanpa "Rubicon", Tiggo 8 dgn suffix "Pro") — semua confirmed OK, 0 gap tersembunyi. **8 nama genuinely TIDAK ADA listing Cover Mobil-nya sama sekali di TikTok** (beda dari "ada tapi salah nama"): Mitsubishi Strada Triton (cuma ada "Mitsubishi Triton" biasa), Daihatsu Taft GT, Hyundai Getz, BYD Seal, Geely EX2, Mercedes Benz SLK Class, Daihatsu Ceria, Volvo 850 Sedan — belum pernah dibuatkan listing TikTok utk model2 ini (bukan soal SKU, soal listing belum ada).
+
+## Cek formula Lazada UA 2026-08-05 — 566 baris/21 listing/8 model belum dilebur, SEMUA masuk top-215
+
+User upload ekspor Lazada baru: `Cek gagal upload\Lazada\pricestock403342000257export1785895181356_0805-09-59-41.xlsx`. Struktur: sheet `template` (+ `template_hide`, `Hasil  Proses`, `global_hide`), kolom by-header (bukan hardcode) — `sku.skuId` (5) = ID variasi stabil utk matching, `Seller SKU` (13) = SKU kita, `status` (6) = active/inactive, data mulai row 5. Sama seperti Shopee/TikTok, `UA_Lazada.xlsx` (21.869 baris) dipakai sbg target, di-match by `sku.skuId` (bukan posisi baris).
+
+**Hasil: 21.441 baris cocok, 566 masih SKU lama (97,4% sudah benar). SEMUA 566 baris itu ada di dalam top-215** (rank 96–125, 0 baris di luar) — 8 model: Toyota Corona (168: 138 R+20 P+10 E), Mitsubishi Galant (151: 126+16+9), Mercedes Benz C Class (77: 64+8+5), Hyundai Santa Fe (100: 83+11+6), Toyota Harrier (34: 28+4+2), Hyundai Atoz (19: 15+2+2), Mitsubishi Grandis (11, cuma Reguler), Kia Sonet (6: 4+2).
+
+**Pola sama persis dgn yang sudah difix di Shopee (31 Jul) & TikTok (03 Agu): SKU masih pakai kode generasi lama per-tahun (G2..G10) padahal harusnya `G1` semua** (mis. `TYT-COR-UA-S-G4-EBR` → seharusnya `TYT-COR-UA-S-G1-EBR`; Lazada py suffix disambiguasi `_G6`/`_G9` dst utk generasi yg secara fisik sama tapi perlu SKU unik per listing Lazada — target file SUDAH benar termasuk suffix ini, jadi perbandingan langsung tetap akurat). **6 dari 8 model ini (Corona/Galant/C Class/Santa Fe/Harrier/Atoz) SAMA PERSIS dengan yang gagal TikTok 29 Juli & sudah dibetulkan di TikTok+Shopee** — artinya **fix formula-G1 itu TIDAK PERNAH dipropagasi ke Lazada sama sekali**, channel ini kelewat dari semua retry sebelumnya. **Kia Sonet** juga bagian dari 8-model gagal TikTok 29 Juli asli, tapi entah kenapa tidak muncul lagi di scan TikTok 08-03/08-05 (kemungkinan sudah kebetulan benar di TikTok, TIDAK diverifikasi eksplisit) — di Lazada masih rusak. **Mitsubishi Grandis BARU, belum pernah muncul di temuan Shopee/TikTok sebelumnya** — kemungkinan Grandis di channel lain sudah benar (scan-scan sebelumnya full-catalog, harusnya kena kalau rusak di sana), tapi belum di-cross-check eksplisit.
+
+Semua 566 baris di listing berstatus `active` (0 di listing `inactive`) — beda dari kasus BYD Atto 3 TikTok, di sini tidak ada isu duplikat-arsip.
+
+**Bukan masalah, cuma informasional**: Vinfast VF3 (17 baris) — `sku.skuId`-nya tidak ada di target sama sekali, SKU-nya masih ID auto-generate Lazada (pola `{pid}-{skuid}-{n}`, bukan SKU kita) — konsisten dgn temuan 2 channel lain: model terlalu baru, master belum py entri.
+
+File koreksi disiapkan: `Cek gagal upload\Retry Upload Lazada UA - 21 listing formula belum diterapkan (2026-08-05).xlsx` (608 baris = full block 21 listing, 566 SKU diganti, sisanya dibiarkan). Dibangun pakai pola yang sama & sudah terbukti aman dari kasus TikTok 08-03: load workbook PENUH (4 sheet dipertahankan), snapshot+delete_rows sekali+tulis ulang, **strip data validations sebelum save** (Lazada cuma py 6 dataValidation, jauh di bawah kasus TikTok yg 183rb, tapi tetap distrip demi konsisten & aman) — 0 masalah XML terverifikasi. **Belum diupload, nunggu keputusan user.**
 
 ## Sisa pekerjaan
 
