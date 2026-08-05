@@ -219,9 +219,65 @@ Modul `scripts/selaras_gen.py` memetakan label mentah -> label baku **per model*
 Kalau model cuma punya 1 label baku (mis. Honda BRV = `Semua Gen (1 Formula)`), **semua**
 varian jatuh ke situ. Hasil: 94,9% unit dapat label baku, 5,1% jadi `Model/Tahun Lain`.
 
+### LAPORAN v5 — struktur sama persis dgn file asli, angka gabungan (2026-08-05)
+
+User minta: hitung langsung gabungan (tanpa kolom terpisah per marketplace), dan buatkan
+sheet `Detail Gen & Warna` seperti file asli. Hasil: `MOBIL_TERLARIS_GABUNGAN_v5.xlsx`.
+
+**Struktur sheet `Top 300 Mobil` = 66 kolom, 4 blok** (merged cell di baris 4 persis
+seperti aslinya: `I4:AA4`, `AB4:BC4`, `BD4:BJ4`, `BK4:BN4`):
+
+| Blok | Kolom | Isi |
+|---|---|---|
+| dasar | 1–8 | No, Nama Mobil, Total Kuantitas, % Kuantitas, Total Penjualan, % Nilai, Jenis Cover Digabung, Rata-rata Terjual/Hari |
+| WARNA POLOS | 9–27 | 6 warna + Total + 6 % + 6 rata/hari (19 kolom) |
+| DETAIL STRIP | 28–55 | 9 kombinasi + Total + 9 % + 9 rata/hari (28 kolom) |
+| DETAIL PREMIUM | 56–62 | Abu-abu, Silver + Total + 2 % + 2 rata (7 kolom) |
+| DETAIL EXCLUSIVE | 63–66 | Abu-abu + Total + % + rata (4 kolom) |
+
+Aturan yang diverifikasi ulang dari file asli (berhasil merekonstruksi Avanza v1 persis):
+- `Total Warna Polos` = jumlah **6 kolom warna yg ditampilkan saja** — Silver dll TIDAK masuk
+- semua `%` dibagi **Total Kuantitas model ybs**, bukan grand total
+- `Strip 1/2/3` = **Epic/Elite/Warrior** berturut-turut
+- blok Premium/Exclusive adalah **subset** dari Warna Polos, blok Strip **di luar** Warna Polos
+
+### BUG PENTING: urutan penentuan jenis cover
+
+Metodologi v1 menulis: *"Tipe cover dari penanda WARNA (Elite/Warrior->Strip, Silver->Premium,
+Transparan->Transparan) **lalu** tier di nama produk."* — **warna dulu, baru nama produk.**
+Script-ku semula membaca tier dari nama produk saja, akibatnya **1.362 unit salah tier**.
+
+Penyebabnya nyata di listing: banyak produk **dinamai "Reguler" tapi variannya warna Strip**, mis.
+`Cover Mobil Suzuki Ertiga Reguler` varian `Epic Abu` (239 unit),
+`Cover Mobil Honda Civic Reguler` varian `Epic Merah` (151 unit),
+`Cover Mobil Toyota Calya Reguler` varian `Elite Abu` (245 unit).
+Bahkan **tidak ada satu pun** produk TikTok yang namanya mengandung kata Strip/Elite/Epic/Warrior —
+100% penanda tier ada di warna. Efeknya: Total Strip 3.315 -> **4.677**.
+
+Fungsi `jenis_cover(nama, warna, tier_nama)` di `scripts/laporan_v5.py` sekarang menerapkan
+urutan yang benar. Juga ada `rapikan_warna_strip()`: `Elite Abu-abu` -> `Elite Abu`,
+`Strip 1 Abu-abu` -> `Strip 1 Abu` (konvensi laporan pakai nama warna pendek).
+
+### Angka final v5
+
+| | unit | nilai |
+|---|---|---|
+| model dirinci (321 model) | 36.290 | Rp 10.569.361.081 |
+| ekor panjang v1 tak dirinci | 167 | Rp 47.335.792 |
+| **GRAND TOTAL** | **36.457** | **Rp 10.616.696.873** |
+
+**201,42 unit/hari** · 1.410/minggu · 6.043/bulan · harga rata-rata Rp 291.212/unit.
+
+Komposisi: Reguler 30.345 · Strip 4.677 · Premium 520 · Exclusive 429 · Transparan 319.
+
 ### File hasil
 
-`MOBIL_TERLARIS_v4_final.xlsx` (menggantikan v2 & v3) — Gen & Warna sudah selaras
+`MOBIL_TERLARIS_GABUNGAN_v5.xlsx` — **FILE PATOKAN**, menggantikan v2/v3/v4.
+3 sheet meniru file asli: `Top 300 Mobil` (321 model x 66 kolom), `Detail Gen & Warna`
+(3.330 baris), `Metodologi`. Diverifikasi: zip utuh, 0 kesalahan konsistensi
+(Total Warna Polos, Total Strip, %, rata-rata/hari), 0 rumus menyimpang.
+
+`MOBIL_TERLARIS_v4_final.xlsx` (versi lama, kolom masih dipisah per marketplace) — Gen & Warna sudah selaras
 dgn laporan, 561 baris berlabel `Model/Tahun Lain`, 0 warna kosong.
 Struktur sheet sama dgn v3 di bawah ini.
 
