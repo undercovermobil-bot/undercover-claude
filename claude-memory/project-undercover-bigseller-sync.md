@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T02:56:38.614Z
+  modified: 2026-08-05T03:46:16.283Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -232,6 +232,46 @@ User kasih 2 file dari Seller Center: (1) `Unduh berkas Excel` ternyata cuma fil
 2. **744 baris / 22 listing — error genuinely: `F_IC_SCENE_EDIT_092: Duplicate input sku ID`.** 22 listing ini PERSIS SAMA dgn 8 model yg ditemukan masih rusak di Lazada 05 Agustus (Toyota Corona, Mitsubishi Galant, Hyundai Santa Fe, Mercedes Benz C Class, Toyota Harrier, Hyundai Atoz, Mitsubishi Grandis, Kia Sonet — pecah per tier R/P/E). **Ditelusuri sampai baris spesifik**: skuId yg disebut "conflict" di pesan error SEMUANYA adalah varian **"Model/Tahun Lain" (catch-all)** — varian yg per aturan #4 memang sengaja TIDAK diberi SKU asli (Seller SKU-nya tetap placeholder auto-generate Lazada `{pid}-{timestamp}-{n}`, bukan salah kita). Dugaan kuat (belum 100% confirmed cara kerja internal Lazada): saat SEMUA ~14 baris catch-all 1 produk (5 warna Reguler + 9 tier Strip) diupload BERSAMAAN dalam 1 request sbg bagian dari batch raksasa 21.865 baris, sistem Lazada gagal generate/validasi SKU auto-placeholder-nya scr bersamaan dan menganggapnya "duplicate", **menjatuhkan SELURUH PRODUK (semua variannya, bukan cuma yg catch-all) — itulah kenapa polanya selalu "SELURUH listing gagal", bukan cuma baris tertentu.**
 
 **Kenapa retry 608-baris tadi (05 Agustus) sukses 100% padahal produk yg sama**: (a) dibangun dari ekspor LIVE paling baru (bukan target basi) → harga/stok kemungkinan sudah beda dari 07-29 shg Lazada beneran memproses, bukan skip; (b) batch JAUH lebih kecil (608 vs 21.865 baris sekaligus) → kemungkinan mengurangi/menghindari kondisi race/collision yg memicu "duplicate input sku ID" pada baris catch-all. **How to apply ke depan: kalau mau upload ULANG SELURUH katalog Lazada (bukan cuma listing yg kepetakan bermasalah), JANGAN kirim >20rb baris sekaligus — pecah per batch lebih kecil (ratusan-ribuan baris), dan selalu dari ekspor live terbaru.**
+
+## Revisi aturan 2026-08-05: Hyundai Santa Fe pecah 2 formula, Mazda 3 dapat kode bodystyle
+
+**Keputusan user (revisi dari status sebelumnya, JANGAN didesain ulang tanpa instruksi baru):**
+1. **Hyundai Santa Fe**: sebelumnya Total Formula=1 (semua generasi → `G1`). SEKARANG **Total Formula=2**: **Gen 1, 2, 3 (2001-2018) → `G1`**, **Gen 4, 4 Facelift, 5 (2019-2024) → `G2`**. Sudah ditambahkan ke `C:\Users\OWNER\Downloads\Data Mobil Lebih dari 1 Formula.xlsx` Sheet2 sbg entri No. 214 (row 532-533), backup file lama disimpan `.bak_20260805` di folder sama.
+2. **Mazda 3**: bukan soal Total Formula (bukan peleburan generasi), tapi **kode model di segmen SKU ke-2 dibedakan per bodystyle**: **`3S` untuk Sedan**, **`3H` untuk Hatchback**. Dicek dari listing Shopee: Sedan sudah kebetulan pakai `MZD-3S-...` (tidak perlu diubah), Hatchback masih pakai `MZD-M3-...` (perlu diganti ke `MZD-3H-...`) — TAPI harus diverifikasi ulang di semua channel/kombinasi, jangan asumsikan cuma Hatchback yg salah.
+
+**Konteks untuk sesi depan**: pengecekan "produk mana yang belum sesuai 215 terlaris" yang sedang dikerjakan di UA (Undercover Autocare) ini **akan diperluas ke toko Smartprotection, Otoprotection, dan Otonation juga** — bukan permintaan sekarang, tapi rencana lanjutan yang sudah dikonfirmasi user, catat supaya sesi depan tidak kaget/tidak perlu tanya ulang scope-nya.
+
+## Eksekusi revisi Santa Fe & Mazda 3 di UA — 2026-08-05
+
+Revisi dari section di atas SUDAH DIEKSEKUSI penuh: target file diupdate + file upload dibuat, utk Undercover (UA) di 3 channel. **Belum diupload user, cuma disiapkan.**
+
+**Struktur listing yang ditemukan (penting utk sesi depan):**
+- **Mazda 3 punya 2 grup listing per channel** (Sedan & Hatchback), tapi **penamaannya TIDAK seragam antar channel**: TikTok & Lazada sudah eksplisit "Mazda 3 Sedan .../Mazda 3 Hatchback ..." di nama produk. **Shopee TIDAK** — grup Hatchback di Shopee namanya cuma "Mazda 3 {Reguler/Premium/Exclusive}" polos (tanpa kata "Hatchback" sama sekali), harus dibedakan dari Sedan lewat SKU prefix yg sudah ada (`3S` vs `M3`) atau pid, BUKAN dari nama produk. Jangan tertukar dgn "Mazda Mazda 323 Interplay" (produk beda total, kode `M3I`).
+- Pid per channel (dicatat supaya sesi depan tak perlu re-derive): **Shopee** Sedan={8715979977 R, 20969563464 P, 20844907627 E}, Hatchback={28513184519 R, 40054813684 P, 29913185141 E}. **TikTok** Sedan={1729570012014151706 R, 1729599009893615642 P, 1729576405019035674 E}, Hatchback={1730234696329036826 R, 1730234729038578714 P, 1730234737554261018 E}. **Lazada** Sedan={8674018839 R, 8674022602 P, 8674030182 E}, Hatchback={8674024581 R, 8674024578 P, 8674018854 E}.
+
+**Temuan bonus (bug lama, di luar scope revisi tapi langsung ketemu & sekalian dibetulkan krn di listing yg sama):**
+1. **TikTok Mazda 3 Sedan Reguler**: 5 baris (warna "Warrior Biru", semua 5 generasi) masih salah pakai kode Hatchback `MZD-M3-...` — seharusnya `MZD-3S-...` dari dulu, independen dari revisi baru ini.
+2. **Shopee Mazda 3 Hatchback Exclusive**: 5 baris (Gen1/2/3/3F/4) SKU-nya kosong total (belum pernah diisi) — bukan catch-all "Model Lain", genuinely gap generasi asli.
+3. **Lazada Mazda 3 Hatchback**: 20 baris (2 Exclusive + 18 Reguler-tier-Strip, semua Gen3/3F) masih placeholder auto-generate Lazada, sama sekali belum py SKU asli.
+Ketiganya sudah dihitung SKU yang benar (color-code parser: Abu-abu→ABU, Hitam→HTM, Biru Benhur→BRU, Merah→MRH, Hijau Army→GRN, Silver→SLV; Strip {Elite/Epic/Warrior}+{Abu/Biru/Merah}→{E/P/W}+{AB/BR/MR}; kategori dari kata di nama produk, TAPI baris Reguler dgn warna Strip-tier pakai kode kategori `S` bukan `R`) & masuk file upload.
+
+**Hasil akhir per channel** (baris berubah dari total baris full-block yg disiapkan, biar listing lengkap saat diupload):
+| Channel | Baris berubah | Total baris disiapkan | Listing tersentuh |
+|---|---|---|---|
+| Shopee | 136 | 204 | 6 (Santa Fe R/P/E + Mazda3 Hatchback R/P/E) |
+| TikTok | 141 | 257 | 7 (+ Mazda3 Sedan Reguler utk fix bug lama #1) |
+| Lazada | 170 | 187 | 6 |
+
+**File target reference SUDAH diupdate** (backup `.bak_20260805` dibuat dulu utk semua): `UA_Shopee_1.xlsx` (+45), `UA_Shopee_2.xlsx` (+86), `UA_Shopee_4.xlsx` (+5), `UA_TikTok_3.xlsx` (+141), `UA_Lazada.xlsx` (+170) — semua 447 baris (136+141+170) berhasil di-match & diupdate (0 gagal match), termasuk baris-baris gapfill di atas krn ternyata entri targetnya sudah ada, cuma nilainya salah/kosong.
+
+**File upload siap disiapkan di `Cek gagal upload\`**:
+- `Retry Upload Shopee UA - Santa Fe & Mazda 3 revisi (2026-08-05).xlsx` (204 baris, format `sales_info` biasa)
+- `Retry Upload TikTok UA - Santa Fe & Mazda 3 revisi (2026-08-05).xlsx` (257 baris, 8-sheet dipertahankan + dataValidations di-strip, sama pola yg terbukti aman)
+- `Retry Upload Lazada UA - Santa Fe & Mazda 3 revisi (2026-08-05).xlsx` (187 baris, 4-sheet dipertahankan + dataValidations di-strip)
+
+**Juga diupdate**: `Data Mobil Lebih dari 1 Formula.xlsx` Sheet2 — entri baru No.214 Hyundai Santa Fe (Gen1-3=G1, Gen4-5=G2), backup `.bak_20260805` di folder Downloads yang sama. Mazda 3 SENGAJA TIDAK ditambahkan ke file ini krn bukan kasus Total Formula (bukan peleburan generasi), tapi keputusan kode-model per-bodystyle.
+
+**Belum dikerjakan**: OT/OP/SP belum disentuh sama sekali utk revisi ini (scope eksplisit user cuma UA "sekarang" — perluasan ke 3 toko lain itu rencana terpisah, lihat catatan revisi di atas).
 
 ## Sisa pekerjaan
 
