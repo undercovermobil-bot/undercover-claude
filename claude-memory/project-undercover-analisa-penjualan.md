@@ -346,3 +346,39 @@ label mentah. Yang bisa dibandingkan: nama model dan warna.
 - Lengkapi export Lazada + TikTok untuk Otonation, Lazada untuk Otopro.
 - Kalau mau angka **produksi** (bukan penjualan): masukkan motor + produk non-cover +
   order luar marketplace.
+
+
+## BUG DITEMUKAN 2026-08-05 (sore) — "warna" berupa tahun (mis. "2023") sudah ADA DI FILE ASLI
+
+User spot-check di sheet `Detail Gen & Warna` v5, Honda Brio: kolom Warna berisi nilai
+aneh spt `2023`, `2018-2023`, `2012-2016`, `2016-2018`, `Gen 2F (2023)` — bukan nama warna.
+
+**Dikonfirmasi dgn bukti, BUKAN dugaan**: dibuka file `Mobil_Terlaris.xlsx` versi 23 Juli
+(satu-satunya salinan lama yg masih ada di disk setelah container reset) — sheet
+`Detail Gen & Warna`-nya **SUDAH** berisi 327 baris dgn pola sama di SELURUH model, termasuk
+PERSIS baris Honda Brio yg sama dgn screenshot user: `2023` (qty 4), `Gen 2F (2023)` (qty 5),
+`2012-2016` (qty 1), `2016-2018` (qty 1), `2018-2023` (qty 1), dll.
+
+**Kesimpulan: ini bug di PIPELINE ASLI milik user** (script yg jalan dari folder lokal
+`C:\Users\OWNER\Downloads\Sales`, dibuat 2026-07-22 16:59) — **bukan sesuatu yg
+diperkenalkan Claude**. Untuk sebagian order (kemungkinan varian yg cuma py1 axis: warna
+ATAU tahun, tanpa "Gen" sbg prefix — sering terjadi pada Transparan yg memang tidak
+punya opsi warna), kolom Warna di pipeline asli itu keisi teks tahun/generasi.
+
+**Tapi Claude IKUT ANDIL**: `scripts/selaras_gen.py` (`Penyelaras.warna_baku`) membangun
+kosakata warna "valid" dgn men-scan kolom Warna sheet Detail v1 apa adanya — termasuk
+nilai buggy ini — jadi saat TikTok dimerge, nilai serupa (mis. varian TikTok yg juga cuma
+berisi tahun) ikut lolos tanpa divalidasi. **Seharusnya divalidasi**: kalau isi kolom Warna
+cocok pola tahun murni (`^\d{4}$`) / rentang tahun (`^\d{4}\s*-\s*\d{4}$`) / diawali
+"Gen", itu BUKAN warna — harus ditandai `(tanpa warna)`.
+
+### Perbaikan yang perlu dilakukan di `selaras_gen.py` / `laporan_v5.py`
+Tambah validasi: kalau nilai Warna hasil parsing cocok pola tahun/gen, paksa jadi
+`(tanpa warna)` (dan kalau itu memang info generasi yg berguna, arahkan ke kolom Gen
+lewat `SEL.gen()`, bukan dibiarkan nyasar ke kolom Warna).
+
+### Container reset lagi (2026-08-05 sore)
+Local git checkout & folder upload sesi ini kereset ke state 27 Juli — file2 upload hari
+ini (MOBIL_TERLARIS asli fbc7083b, 3 file TikTok, 2 file Maret) HILANG dari disk. Scripts
+aman (sudah di git, dipulihkan via `git reset --hard origin/<branch>`). Perbaikan v5 di
+atas BELUM dieksekusi ulang — perlu user upload ulang file2 sumber dulu.
