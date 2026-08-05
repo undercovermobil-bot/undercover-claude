@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T02:30:20.184Z
+  modified: 2026-08-05T02:56:38.614Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -222,6 +222,16 @@ Semua 566 baris di listing berstatus `active` (0 di listing `inactive`) — beda
 **Bukan masalah, cuma informasional**: Vinfast VF3 (17 baris) — `sku.skuId`-nya tidak ada di target sama sekali, SKU-nya masih ID auto-generate Lazada (pola `{pid}-{skuid}-{n}`, bukan SKU kita) — konsisten dgn temuan 2 channel lain: model terlalu baru, master belum py entri.
 
 File koreksi disiapkan: `Cek gagal upload\Retry Upload Lazada UA - 21 listing formula belum diterapkan (2026-08-05).xlsx` (608 baris = full block 21 listing, 566 SKU diganti, sisanya dibiarkan). Dibangun pakai pola yang sama & sudah terbukti aman dari kasus TikTok 08-03: load workbook PENUH (4 sheet dipertahankan), snapshot+delete_rows sekali+tulis ulang, **strip data validations sebelum save** (Lazada cuma py 6 dataValidation, jauh di bawah kasus TikTok yg 183rb, tapi tetap distrip demi konsisten & aman) — 0 masalah XML terverifikasi. **Belum diupload, nunggu keputusan user.**
+
+## Root cause upload Lazada 29 Juli gagal sebagian (10.587/21.865) — dianalisis dari laporan "Failed Product" asli
+
+User kasih 2 file dari Seller Center: (1) `Unduh berkas Excel` ternyata cuma file yang diupload lagi (21.865 baris, bukan laporan gagal — jangan salah pakai file ini lain kali), (2) `Download Failed Product` (`pricestock..._0729-17-23-17.xlsx`, sheet `Hasil  Proses` + `template`) — INI yang py detail sebenarnya. Dipecah jadi 2 penyebab, dihitung persis dari isi log:
+
+1. **10.534 dari ~11.278 baris "tidak sukses" BUKAN kegagalan — pesan `Hasil Proses`-nya literal "Data no change in file,not update."** Lazada bandingkan baris upload ke data live-nya; kalau menurut Lazada tidak ada yg berubah (kemungkinan besar krn cuma bandingkan Harga/Stok — endpoint-nya sendiri namanya "pricestock" — bukan SKU), baris itu DILEWATI SELURUHNYA, termasuk kolom SKU yg sebenarnya beda. **Ini persis pola yang sudah diketahui dari Shopee 31 Juli** ("file target 29 Jul sudah basi, 3 baris stoknya beda dari live") — tapi utk Lazada dampaknya lebih parah: bukan cuma stok yg salah ke-skip, SKU-nya pun ikut tidak ter-apply kalau harga/stok kebetulan sama persis dgn yg sudah live. **How to apply: SELALU generate file upload Lazada dari ekspor LIVE PALING BARU (bukan target/master lama) supaya harga/stok pasti beda dikit dari yg live dan Lazada beneran memproses barisnya** — sama seperti pola "ambil baris dari ekspor LIVE" yg sudah dipakai utk Shopee.
+
+2. **744 baris / 22 listing — error genuinely: `F_IC_SCENE_EDIT_092: Duplicate input sku ID`.** 22 listing ini PERSIS SAMA dgn 8 model yg ditemukan masih rusak di Lazada 05 Agustus (Toyota Corona, Mitsubishi Galant, Hyundai Santa Fe, Mercedes Benz C Class, Toyota Harrier, Hyundai Atoz, Mitsubishi Grandis, Kia Sonet — pecah per tier R/P/E). **Ditelusuri sampai baris spesifik**: skuId yg disebut "conflict" di pesan error SEMUANYA adalah varian **"Model/Tahun Lain" (catch-all)** — varian yg per aturan #4 memang sengaja TIDAK diberi SKU asli (Seller SKU-nya tetap placeholder auto-generate Lazada `{pid}-{timestamp}-{n}`, bukan salah kita). Dugaan kuat (belum 100% confirmed cara kerja internal Lazada): saat SEMUA ~14 baris catch-all 1 produk (5 warna Reguler + 9 tier Strip) diupload BERSAMAAN dalam 1 request sbg bagian dari batch raksasa 21.865 baris, sistem Lazada gagal generate/validasi SKU auto-placeholder-nya scr bersamaan dan menganggapnya "duplicate", **menjatuhkan SELURUH PRODUK (semua variannya, bukan cuma yg catch-all) — itulah kenapa polanya selalu "SELURUH listing gagal", bukan cuma baris tertentu.**
+
+**Kenapa retry 608-baris tadi (05 Agustus) sukses 100% padahal produk yg sama**: (a) dibangun dari ekspor LIVE paling baru (bukan target basi) → harga/stok kemungkinan sudah beda dari 07-29 shg Lazada beneran memproses, bukan skip; (b) batch JAUH lebih kecil (608 vs 21.865 baris sekaligus) → kemungkinan mengurangi/menghindari kondisi race/collision yg memicu "duplicate input sku ID" pada baris catch-all. **How to apply ke depan: kalau mau upload ULANG SELURUH katalog Lazada (bukan cuma listing yg kepetakan bermasalah), JANGAN kirim >20rb baris sekaligus — pecah per batch lebih kecil (ratusan-ribuan baris), dan selalu dari ekspor live terbaru.**
 
 ## Sisa pekerjaan
 
