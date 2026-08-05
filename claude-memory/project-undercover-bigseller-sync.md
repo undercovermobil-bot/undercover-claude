@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T04:15:12.292Z
+  modified: 2026-08-05T04:20:35.628Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -285,6 +285,8 @@ User upload retry Lazada pertama, hasilnya **181 dari 187 baris gagal** dgn erro
 - File target `UA_Lazada.xlsx` & file retry `Retry Upload Lazada UA - Santa Fe & Mazda 3 revisi (2026-08-05).xlsx` SUDAH ditimpa ulang dgn nilai yg benar. **Shopee & TikTok TIDAK terpengaruh bug ini** (platform itu boleh SKU kembar, tidak butuh suffix).
 
 **How to apply ke depan — WAJIB dicek setiap kali bikin/ubah SKU utk Lazada**: (1) SKU Lazada harus unik PER LISTING, tidak cukup benar secara formula/master; (2) kalau >1 baris dalam 1 listing bakal punya SKU dasar yg sama (peleburan generasi), WAJIB kasih suffix `_G{nomor generasi asli baris itu}` ke semua kecuali satu (biasanya generasi terendah); (3) SEBELUM membangun file upload, jalankan self-check: group baris per (Product ID, Seller SKU final), pastikan tidak ada grup >1 baris; (4) **jangan asumsikan status konsolidasi listing dari file target/master** — selalu verifikasi ke ekspor LIVE listing itu sendiri, karena bisa saja (spt Santa Fe ini) listing live belum pernah benar² disinkronkan walau targetnya sudah lama dihitung.
+
+**(2026-08-05 lanjutan) Upload Shopee UA Santa Fe & Mazda 3: 102 baris gagal transien, semuanya Mazda 3 Hatchback.** `Result_shopee_mass_update_sales_info_361186752_20260805115939.xlsx` — semua 102 baris (Reguler 84, Premium 12, Exclusive 6) satu alasan sama: *"Item masih dalam proses pembuatan. Tunggu 5 detik sebelum membuat variasi."* — pola transien yg sudah dikenal sejak 29 Juli, SKU-nya sendiri sudah benar (`MZD-3H-UA-...`), Santa Fe di file yg sama SEMUA sukses. Retry dibuat langsung dari file `Result_*` (salin 15 kolom + blok header 1-6, kosongkan kolom `Alasan Gagal`) → `Cek gagal upload\Retry Upload Shopee UA - Mazda 3 Hatchback (2026-08-05).xlsx`, 102 baris. Belum diupload ulang.
 
 ## Sisa pekerjaan
 
