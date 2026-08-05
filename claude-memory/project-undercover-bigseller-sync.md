@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T03:46:16.283Z
+  modified: 2026-08-05T04:15:12.292Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -272,6 +272,19 @@ Ketiganya sudah dihitung SKU yang benar (color-code parser: Abu-abu→ABU, Hitam
 **Juga diupdate**: `Data Mobil Lebih dari 1 Formula.xlsx` Sheet2 — entri baru No.214 Hyundai Santa Fe (Gen1-3=G1, Gen4-5=G2), backup `.bak_20260805` di folder Downloads yang sama. Mazda 3 SENGAJA TIDAK ditambahkan ke file ini krn bukan kasus Total Formula (bukan peleburan generasi), tapi keputusan kode-model per-bodystyle.
 
 **Belum dikerjakan**: OT/OP/SP belum disentuh sama sekali utk revisi ini (scope eksplisit user cuma UA "sekarang" — perluasan ke 3 toko lain itu rencana terpisah, lihat catatan revisi di atas).
+
+## KOREKSI KRITIS 2026-08-05: fix Lazada di atas awalnya CACAT — lupa keunikan SKU per listing
+
+User upload retry Lazada pertama, hasilnya **181 dari 187 baris gagal** dgn error `BIZ_CHECK_SELLER_SKU_DUPLICATE: SKU Penjual yang Anda masukkan sama`. Root cause: **Lazada mewajibkan `Seller SKU` unik per baris DALAM SATU listing** (beda dari Shopee/TikTok yg justru sengaja membolehkan >1 varian berbagi 1 SKU — itu esensi "formula" konsolidasi). Fix pertama cuma nge-swap kode generasi (G1→G2 dst) tanpa cek apakah hasilnya bentrok dgn baris lain di listing yg sama — jadi banyak baris jatuh ke SKU identik.
+
+**Temuan lebih dalam saat investigasi**: **Hyundai Santa Fe di LAZADA ternyata TIDAK PERNAH benar² dikonsolidasi ke formula sejak awal** — beda dari Shopee/TikTok. Data live sebelum disentuh sesi ini masih pakai kode PER-GENERASI ASLI yg genuinely unik (`G1,G2,G3,G4,G4F,G5` masing2 beda), BUKAN skema "semua→G1 + suffix `_Gn`" yg dipakai listing lain (mis. Toyota Corona, Honda Jazz) atau yg tersimpan di file target lama. File target `UA_Lazada.xlsx` (snapshot lama) MEMANG sudah py rencana skema konsolidasi+suffix utk Santa Fe, tapi listing live-nya sendiri tidak pernah disinkronkan ke situ. **Mazda 3 Hatchback SEBALIKNYA sudah lama pakai skema konsolidasi+suffix yg benar** (`MZD-M3-UA-S-G1-EAB_G1`, dst) — cuma 2 baris gap (Gen3/Gen3F) yg perlu suffix baru, bukan re-derive total.
+
+**Fix final (verified 0 duplikat di 187/187 baris, semua 6 listing)**:
+- **Santa Fe**: DIHITUNG ULANG TOTAL dari live data asli (bukan dari json hasil fix pertama yg sudah kadung salah) — dikelompokkan per (pid, kategori, warna), dipecah ke grup G1 (Gen1/2/3) & G2 (Gen4/4F/5), dalam tiap grup **anggota gen TERENDAH jadi kode polos (bare), sisanya disuffix `_G{nomor gen asli}`** (mis. `_G2`, `_G3`, `_G4F`, `_G5`). 85 baris berubah (naik dari klaim awal yg jg 85 tapi nilainya salah).
+- **Mazda 3 gapfill (Lazada)**: 2 baris gap (Gen3/Gen3F) per warna di-suffix `_G32`/`_G3` (ikut pola literal yg sudah ada di listing yg sama utk warna lain, spt "Merah" yg py `_G32`=Gen3 & `_G3`=Gen3F — bukan pola yg saya karang sendiri).
+- File target `UA_Lazada.xlsx` & file retry `Retry Upload Lazada UA - Santa Fe & Mazda 3 revisi (2026-08-05).xlsx` SUDAH ditimpa ulang dgn nilai yg benar. **Shopee & TikTok TIDAK terpengaruh bug ini** (platform itu boleh SKU kembar, tidak butuh suffix).
+
+**How to apply ke depan — WAJIB dicek setiap kali bikin/ubah SKU utk Lazada**: (1) SKU Lazada harus unik PER LISTING, tidak cukup benar secara formula/master; (2) kalau >1 baris dalam 1 listing bakal punya SKU dasar yg sama (peleburan generasi), WAJIB kasih suffix `_G{nomor generasi asli baris itu}` ke semua kecuali satu (biasanya generasi terendah); (3) SEBELUM membangun file upload, jalankan self-check: group baris per (Product ID, Seller SKU final), pastikan tidak ada grup >1 baris; (4) **jangan asumsikan status konsolidasi listing dari file target/master** — selalu verifikasi ke ekspor LIVE listing itu sendiri, karena bisa saja (spt Santa Fe ini) listing live belum pernah benar² disinkronkan walau targetnya sudah lama dihitung.
 
 ## Sisa pekerjaan
 
