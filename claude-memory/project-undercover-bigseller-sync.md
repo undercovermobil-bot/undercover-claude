@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T04:20:35.628Z
+  modified: 2026-08-05T05:12:40.000Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -287,6 +287,20 @@ User upload retry Lazada pertama, hasilnya **181 dari 187 baris gagal** dgn erro
 **How to apply ke depan — WAJIB dicek setiap kali bikin/ubah SKU utk Lazada**: (1) SKU Lazada harus unik PER LISTING, tidak cukup benar secara formula/master; (2) kalau >1 baris dalam 1 listing bakal punya SKU dasar yg sama (peleburan generasi), WAJIB kasih suffix `_G{nomor generasi asli baris itu}` ke semua kecuali satu (biasanya generasi terendah); (3) SEBELUM membangun file upload, jalankan self-check: group baris per (Product ID, Seller SKU final), pastikan tidak ada grup >1 baris; (4) **jangan asumsikan status konsolidasi listing dari file target/master** — selalu verifikasi ke ekspor LIVE listing itu sendiri, karena bisa saja (spt Santa Fe ini) listing live belum pernah benar² disinkronkan walau targetnya sudah lama dihitung.
 
 **(2026-08-05 lanjutan) Upload Shopee UA Santa Fe & Mazda 3: 102 baris gagal transien, semuanya Mazda 3 Hatchback.** `Result_shopee_mass_update_sales_info_361186752_20260805115939.xlsx` — semua 102 baris (Reguler 84, Premium 12, Exclusive 6) satu alasan sama: *"Item masih dalam proses pembuatan. Tunggu 5 detik sebelum membuat variasi."* — pola transien yg sudah dikenal sejak 29 Juli, SKU-nya sendiri sudah benar (`MZD-3H-UA-...`), Santa Fe di file yg sama SEMUA sukses. Retry dibuat langsung dari file `Result_*` (salin 15 kolom + blok header 1-6, kosongkan kolom `Alasan Gagal`) → `Cek gagal upload\Retry Upload Shopee UA - Mazda 3 Hatchback (2026-08-05).xlsx`, 102 baris. Belum diupload ulang.
+
+## Cek formula Otonation (OT) 2026-08-05 — perluasan pertama ke toko non-UA, 118 baris/8 listing belum sesuai
+
+Sesuai rencana perluasan (lihat catatan revisi di atas), sesi ini mulai cek OT (toko pertama dari 3 yg direncanakan: SP/OP/OT). User taruh ekspor baru di `Cek gagal upload\OT\1.xlsx` & `2.xlsx` (Shopee sales_info, shop id 407202910, folder direorganisasi — UA sekarang di `Cek gagal upload\UA\{Shopee,TikTok,Lazada}\`, bukan langsung di `Cek gagal upload\` lagi). Target reference: `SKU Gudang Big Seller\OT_Shopee_1.xlsx` & `_2.xlsx` (sudah ada dari sesi lama, format identik UA_Shopee) — **konsisten dgn aturan konsolidasi #1: OT pakai prefix `UA` di SKU-nya sendiri** (fisik gudang sama dgn UA), match by `Kode Variasi` sama seperti UA.
+
+**Struktur nama produk OT beda dari UA**: `Cover Mobil / Sarung Mobil {Model}` (polos) atau `Cover Mobil / Sarung Mobil {Model} {Semi Outdoor|Extreme Outdoor|Outdoor}` — bukan Reguler/Premium/Exclusive spt UA. "Outdoor" bertingkat 3 (polos/Semi/Extreme) kemungkinan analog Reguler/Premium/Exclusive tapi belum dikonfirmasi user. Tier warna Strip pakai teks **"Strip 1/2/3"** (bukan "Elite/Epic/Warrior" spt UA) — tapi ini cuma soal teks nama varian, SKU target sudah benar duluan (Strip1→P/Epic, dst — sudah ter-encode di target file, tidak perlu diterjemahkan ulang).
+
+**Hasil: 9.251 baris cocok, 118 baris/8 listing belum sesuai** — pecah 2 penyebab:
+1. **84 baris — Toyota Corona (3 listing) & Mitsubishi Galant (2 listing)**: bug formula-G1 LAMA yg sama persis dgn yg sudah dibetulkan di UA (kode generasi lama G2..G11 blm dilebur ke G1). Target file OT sudah benar dari dulu, tinggal apply.
+2. **34 baris — Hyundai Santa Fe (2 listing) & Mazda 3 Hatchback (1 listing)**: kena revisi BARU hari ini (G1/G2 split utk Santa Fe, `3H` utk Mazda3 Hatchback) — **target file OT_Shopee LAMA masih py rule lama (G1 semua utk Santa Fe, `M3` utk Mazda3)**, jadi dihitung ulang pakai rule baru (bukan dipercaya dari target lama) & target file-nya SUDAH diupdate juga (34 baris, backup `.bak_20260805` dibuat dulu).
+
+File retry: `Cek gagal upload\Retry Upload Otonation - SKU belum sesuai (2026-08-05).xlsx` (123 baris = full block 8 listing, 118 SKU diganti). **Belum diupload.**
+
+**Catatan metodologi utk sesi SP/OP berikutnya**: SELALU cek dulu apakah model yg kena revisi terbaru (Santa Fe/Mazda3) ada di toko itu — kalau ada, jangan percaya target file store tsb scr mentah (bisa jadi masih versi rule lama krn belum ikut ter-update sesi ini), hitung ulang pakai fungsi `santafe_new_sku`/`mazda3_new_sku` dari live data langsung.
 
 ## Sisa pekerjaan
 
