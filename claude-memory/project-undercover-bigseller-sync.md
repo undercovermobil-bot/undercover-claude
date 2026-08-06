@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9235e50b-3311-43ed-a15e-4665c26b7c5e
-  modified: 2026-08-05T08:51:25.042Z
+  modified: 2026-08-06T01:55:20.193Z
 ---
 
 Sub-proyek **Sync SKU Gudang Big Seller**, mulai 2026-07-28. Beda dari [[project-undercover-sku-sync-status]] (yang menyamakan SKU antar listing) dan [[project-undercover-stock-sync-status]] (yang sync kuantitas): ini menyamakan **daftar SKU listing → SKU Gudang di Big Seller**.
@@ -335,6 +335,25 @@ User tegur via screenshot: Mazda 3 Sedan & Hatchback di SP Shopee SAMA-SAMA masi
 File: `Cek gagal upload\SP\Retry Upload Smartprotection Lazada - SKU belum sesuai (2026-08-05).xlsx` (253 baris, 214 diganti). Target `SP_Lazada.xlsx` diupdate (203/214 — 11 baris genuinely tak py entri target).
 
 **Ringkasan SP semua channel**: Shopee 143 baris/12 listing, TikTok 38/5, Lazada 214/13. **Belum ada yang diupload user.**
+
+## Cek formula Otoprotection (OP) 2026-08-06 — toko ke-4/terakhir dari perluasan awal, 107 baris/2 channel
+
+`Cek gagal upload\OP\{Shopee,TikTok}\` (shop id Shopee 476733837). Target: `OP_Shopee_1/2.xlsx`, `OP_TikTok_1/2.xlsx` — **OP pakai prefix SKU `SP`** (konsisten dgn aturan konsolidasi OP=SP). Metodologi penuh dari pelajaran sebelumnya diterapkan sejak awal: diff standar + cek eksplisit Santa Fe/Mazda3 + verifikasi model formula-lama lain (Corona/Galant/Harrier/dst) via cek langsung segmen generasi (bukan cuma percaya diff).
+
+**OP Shopee: 65 baris/9 listing.** Diff standar cuma nangkep Santa Fe 14 baris (krn target OP jg masih formula lama utk Santa Fe — pola sama spt toko lain). Setelah investigasi manual: **Santa Fe 30 baris** (listing ini cuma py 2 rentang tahun "2018-2023"/"2023-sekarang", KEDUANYA masuk grup G2 baru — G1 TIDAK ADA anggota di listing ini sama sekali, jadi seluruh listing jadi G2 semua, aman krn Shopee ga perlu unique), **Mazda 3: 13 baris** (Hatchback 6 legacy + Sedan 6 legacy + Hatchback Transparan 1 blank total), **3 model formula-lama lain ditemukan via cek manual** (Toyota Harrier 6 baris, Timor 1 baris, **BMW Seri 5 SEMUA 15 baris masih legacy CVR0087-OTP total** — tidak pernah dimigrasi sama sekali).
+
+**OP TikTok: 42 baris/9 listing** (relatif jauh lebih bersih dari channel lain sesi ini — diff standar cuma 4 baris Mercedes Transparan legacy). Setelah cek eksplisit: **Santa Fe 15 baris** (listing ini TIDAK PUNYA info generasi SAMA SEKALI di teks varian — cuma warna polos, beda dari versi Shopee-nya yg py rentang tahun — di-default ke G1 krn tak ada info utk nentuin grup mana, konsisten dgn cara OT TikTok ditangani sebelumnya), **Mazda3 23 baris** (Hatchback: 13 baris SEMUA masih `MZD-M3` blm pernah di-3H-kan + 2 legacy; Sedan: 6 legacy; Transparan Hatchback: 1 masih `MZD-M3`).
+
+**Jebakan teknis baru ditemukan & diperbaiki sesi ini**:
+1. **Regex tier-warna sempat salah arah**: nulis `stir?p` (maksudnya toleransi typo "Stirp") tapi pola itu JUSTRU gagal cocok dgn ejaan BENAR "Strip" (krn "st"+opsional-r+"p" tidak match "st"+"r"+"i"+"p") — 12 dari 14 baris Strip-tier OP Shopee Santa Fe nyaris ke-skip diam2 sebelum ketahuan dari angka hasil yg janggal (14 bukan 30). **Fix: pakai `(?:strip|stirp)` eksplisit, bukan optional-letter trick.** How to apply: kalau bikin regex toleransi typo, TES dulu against ejaan BENAR juga, jangan asumsikan optional-char otomatis mencakup kedua kasus.
+2. Typo warna baru ditemukan: "Biru Binhur" (bukan cuma "Biru Benhur") di listing Mazda3 Sedan OP TikTok — ditambahkan ke color-map.
+3. **Verifikasi model formula-lama TIDAK CUKUP cuma cari kata kunci `-G(\d+)-` via regex bebas** — sempat false-positive nangkep "GAL"(dari kode brand MTB-GAL) sbg "generasi AL". **Fix: split SKU by `-` dan ambil index [4] scr eksplisit** (posisi segmen generasi yg pasti), baru simpulkan bug/tidak.
+
+File retry: `Cek gagal upload\OP\Retry Upload Otoprotection Shopee - SKU belum sesuai (2026-08-06).xlsx` (106 baris, 65 diganti), `Cek gagal upload\OP\Retry Upload Otoprotection TikTok - SKU belum sesuai (2026-08-06).xlsx` (52 baris, 42 diganti). Target `OP_Shopee_1/2.xlsx` & `OP_TikTok_1/2.xlsx` diupdate (backup `.bak_20260806`). **Belum diupload.**
+
+**Perluasan cek 215-terlaris ke 4 toko (UA/OT/SP/OP) kini SELESAI first-pass.** Ringkasan lengkap semua toko (baris blm sesuai / channel dicek): UA (semua channel sudah diupload user & terverifikasi 08-05), OT Shopee 118, SP Shopee 143 + TikTok 81(msh proses cek no_target lanjutan) + Lazada 214, OP Shopee 65 + TikTok 42. **Belum dicek**: Lazada utk OT & OP (perlu tanya user apakah toko ini py channel Lazada).
+
+**Utang dari sesi ini (belum selesai)**: janji ke user utk lanjutkan investigasi mendalam no_target bucket SP Shopee & SP Lazada (nyari pola Corona/Grandis-style spt yg ketemu di SP TikTok) — sempat mulai (breakdown no_target sudah ditarik) tapi terpotong pindah ke OP. Lanjutkan sesi depan kalau user tanya lagi/minta lanjut.
 
 ## Sisa pekerjaan
 
