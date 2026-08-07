@@ -355,8 +355,70 @@ File retry: `Cek gagal upload\OP\Retry Upload Otoprotection Shopee - SKU belum s
 
 **Utang dari sesi ini (belum selesai)**: janji ke user utk lanjutkan investigasi mendalam no_target bucket SP Shopee & SP Lazada (nyari pola Corona/Grandis-style spt yg ketemu di SP TikTok) — sempat mulai (breakdown no_target sudah ditarik) tapi terpotong pindah ke OP. Lanjutkan sesi depan kalau user tanya lagi/minta lanjut.
 
-## Sisa pekerjaan
+## KOREKSI BESAR 2026-08-06: full-sweep cek 215-terlaris ke SEMUA 4 toko — klaim "SELESAI first-pass" kemarin TERNYATA jauh dari lengkap
+
+User tanya ulang (2x, dgn kata2 beda): "Sudah itu aja yg belum sesuai? SKU nya sudah sesuai dengan list produk 215 produk terlaris?" lalu "Ke empat toko sudah terupdate semua ya sku produk di 215 terlarisnya?" — trigger utk verifikasi menyeluruh, bukan percaya hasil kemarin.
+
+**Metodologi baru (jauh lebih ketat dari sebelumnya)**: bukan lagi diff current-vs-target-file, dan bukan lagi cuma cek model2 tertentu yg "kelihatannya" bermasalah (Santa Fe/Mazda3/segelintir legacy model). Sebagai gantinya: **full positional-format sweep** ke SEMUA baris di SEMUA file sumber (live export toko, bukan file target) — tiap SKU displit by `-`, diklasifikasi BLANK (kosong total) / NOT6PART (belum py format 6-segmen, msh `CVR####` dll) / BADGEN (sudah 6 segmen tapi segmen ke-5/generasi bukan pola `G\d+`, msh kode custom lama spt `5S`,`J40`,`XOV`,`COM`,`3P`,`KTK`,`YJ`) / OK. Lalu tiap baris non-OK di-crossref ke 2 sumber: (a) ranking `MOBIL_TERLARIS_DETAIL_Gen_Warna.xlsx` utk filter cuma yg No<=215, (b) `Data Mobil Lebih dari 1 Formula.xlsx` Sheet2 utk pastikan modelnya memang SUDAH py formula resmi (bukan model long-tail yg emang belum pernah masuk proyek).
+
+**Root cause kenapa hasil kemarin jauh meleset**: metode diff-vs-target KEBOBOLAN sistemik kalau target file (`SKU Gudang Big Seller/*.xlsx`) itu SENDIRI juga belum pernah diupdate ke formula baru — current==target (sama2 salah/kosong) jadi diff bilang "OK" padahal keduanya salah. Pola ini sudah ketemu berkali-kali di level PER-MODEL sepanjang sesi (Mazda3 SP Shopee, Corona/Grandis SP TikTok, dll — lihat entry2 di atas) tapi baru sekarang ketahuan ini bukan beberapa kasus terisolasi, melainkan **pola sistemik yg mempengaruhi ribuan baris di SEMUA toko**.
+
+**Angka final per toko** (baris SKU belum sesuai format formula baru, TERBATAS ke 215 model terlaris + model yg sudah py formula resmi — bukan seluruh katalog):
+
+| Toko | Baris blm sesuai | Listing/produk terdampak |
+|---|---|---|
+| UA | 2.588 | 213 |
+| OT | 863 | 120 |
+| SP | 2.602 | 112 |
+| OP | 1.576 | 128 |
+| **TOTAL** | **7.629** | — |
+
+**Jawaban jujur ke pertanyaan user: BELUM, keempat toko BELUM terupdate semua utk 215 produk terlaris.** Yang sudah difix & (sebagian) diupload sepanjang sesi 08-03 s/d 08-06 (UA semua channel, OT Shopee 118, SP Shopee 143+TikTok 81+Lazada 214, OP Shopee 65+TikTok 42) cuma **sebagian kecil** dari total riil 7.629 — karena yg kemarin ditemukan lewat diff-vs-target atau cek manual per-model, sementara mayoritas gap yg baru ketemu ini justru row yg target-nya SENDIRI belum pernah disentuh (banyak yg BLANK total atau msh kode `CVR####` legacy, bukan "kelupaan apply revisi" spt Santa Fe/Mazda3 kemarin).
+
+**Contoh model besar yg baru ketahuan dari full-sweep ini** (blm pernah masuk radar sesi2 sebelumnya krn target filenya jg blank/legacy sejak awal): Toyota Land Cruiser (BADGEN besar2an di 4 toko), Jeep Wrangler Rubicon (BADGEN, ratusan baris terutama OT/OP), Toyota HiAce/Hardtop/Starlet/Suzuki SX4/Jimny/Nissan Livina X-Gear (semua msh py kode custom lama spt `5S`/`J40`/`COM`/`XOV`/`3P` di posisi segmen generasi — bukan `CVR` legacy, tapi format LAMA formula yg belum dikonversi ke `G1/G2`), Hyundai Atoz/Avega/Stargazer/Kia Carens/Rio (banyak BLANK total, kemungkinan variant yg baru dibuatkan listing tapi SKU-nya belum pernah diisi sejak awal).
+
+**Belum dikerjakan (next step)**: baris2 ini baru DIKLASIFIKASI status & di-crossref ke ranking+formula — **SKU tujuan yg benar utk masing2 baris BELUM dihitung**, target file belum diupdate, retry file belum dibuat. Mengingat skalanya (7.629 baris, 573 listing produk, 4 toko × sampai 3 channel), user perlu kasih arahan prioritas dulu sebelum eksekusi masal (per toko? per channel? by rank tertinggi dulu?) — jangan main comot semua sekaligus tanpa checkpoint spt sesi2 sebelumnya (resiko kesalahan besar tanpa terkontrol, apalagi ada kasus BLANK yg mungkin sengaja/variant nonaktif, perlu diverifikasi bukan asumsi semua harus diisi).
+
+**Script/file kunci utk lanjutan** (di scratchpad, path session-specific tapi pola bisa dipakai ulang):
+- `formula_ref.py` — loader `Data Mobil Lebih dari 1 Formula.xlsx` Sheet2 jadi dict `norm(nama)->{no,name,tf}`, dipakai sbg filter "model ini sudah resmi py formula belum".
+- `full_audit.py` — sweep SEMUA baris SEMUA toko/channel (111.934 baris total) dari file SUMBER LANGSUNG (bukan target), classify format, crossref ranking+formula, simpan `full_audit_all_rows.json`.
+- `full_audit_summary.py` — filter `full_audit_all_rows.json` ke status!=OK + rank<=215 + formula_no ada, hasil di `full_audit_violations.json` (7.629 baris) — ini sumber angka tabel di atas.
+- Fungsi `extract_model()` di `full_audit.py` — strip prefix ("Undercover Autocare -", "(Body )?Cover Mobil( / Selimut( Mobil)?)?", "Cover Mobil Transparan") + strip trailing kata tier/kategori (Reguler/Premium/Exclusive/Outdoor variants/Sedan/Hatchback/dst) scr iteratif sampai stabil, baru dicocokkan ke ranking/formula by normalized-name. Tervalidasi: bucket "tidak match" isinya cuma non-model (Cover Motor, Travel Pouch, dll) — bukan model asli yg kelewat.
+
+**Catatan penting**: baris "Sisa pekerjaan" versi lama di bawah (9.616 + 14.412 baris) adalah angka SELURUH katalog dari checkpoint lama (sebelum perluasan 215-terlaris) — BEDA scope dari 7.629 di atas (yg khusus 215 terlaris + model berformula resmi). Jangan digabung/dibandingkan langsung, keduanya legitimate tapi berbeda ruang lingkup dan sumber hitung.
+
+## Sisa pekerjaan (angka lama, seluruh katalog — checkpoint sebelum perluasan 215-terlaris)
 
 - 9.616 baris SKU listing perlu dibenahi (7.007 placeholder angka Lazada, sisanya skema lama `CVR####` + 239 baris ber-SKU literal `"SKU"`).
 - 14.412 baris listing masih tanpa SKU sama sekali.
 - Typo `Warior` (seharusnya `Warrior`) di teks varian listing SP/OP — dinormalkan di judul, tapi **sumbernya di listing belum diperbaiki**.
+
+## 2026-08-07: audit ulang 4 toko — angka 08-06 KURANG HITUNG, ini yang final
+
+User spot-check 2 produk (Vellfire di OP TikTok SKU kosong; Harrier di SP TikTok masih `CVR0083-STP-RPA`), lalu tanya "Ke empat toko sudah terupdate semua ya sku produk di 215 terlarisnya?". Keduanya terkonfirmasi persis seperti dilaporkan user — sekali lagi membuktikan pola di [[user-undercover-profile]]: spot-check user hampir selalu menunjuk bug sistemik.
+
+**Angka FINAL (ganti tabel 08-06 yang 7.629):**
+
+| Toko | Baris blm sesuai | (08-06 lama) |
+|---|---|---|
+| UA | 3.757 | 2.588 |
+| OT | 872 | 863 |
+| SP | 2.602 | 2.602 ✔ |
+| OP | 1.546 | 1.576 |
+| **TOTAL** | **8.777** | 7.629 |
+
+Dari 63.364 baris top-215 di 9 kombinasi toko×channel: **86,1% sudah sesuai, 8.777 belum**. Terdampak 741 listing, 113 model dari 215. Kepatuhan per channel rata: 83–88% (terendah SP/Lazada 83,4%, tertinggi UA/TikTok 88,3%) — jadi **tidak ada satu channel pun yang selesai**.
+
+**Kenapa 08-06 kurang hitung — bug extractor nama produk.** UA punya 2 pola penamaan: `Undercover Autocare - Cover Mobil X Reguler` DAN pola terbalik `Cover Mobil X Reguler - Undercover Autocare`. `extract_model()` versi 08-06 cuma strip prefix, tidak strip sufiks `- Undercover Autocare`, jadi **1.149 baris UA TikTok + 6 UA Shopee gagal dicocokkan ke ranking dan hilang diam-diam** dari hitungan. Bukan false positive baru — ini baris asli yang kelewat. SP cocok persis (2.602) karena penamaannya seragam.
+
+**Pelajaran metodologi pencocokan nama model → ranking (jangan diulang salahnya):**
+- **Substring matching SALAH** (dicoba dulu, ditolak): "Range Rover Sport/Velar/Evoque" ikut terhitung sbg "Range Rover" #132, "Ford Ranger T6" ikut "Ford Ranger" — menggelembungkan UA jadi 4.051 palsu. Sub-model beda itu model beda.
+- **Exact matching juga SALAH** (terlalu ketat): "Kia Rio Sedan" & "Mazda 3 Sedan" terbuang padahal induknya (#100, #152) top-215.
+- **Yang BENAR = dua tahap**: cocokkan nama utuh dulu ke ranking; hanya kalau gagal, lepas sufiks bodystyle (`Sedan/Hatchback/Pickup/Car/Kapsul`) lalu cocokkan lagi. Ini menjaga "Hyundai Avega Sedan" (#135) dan "Hyundai Avega Hatchback" (#140) tetap terpisah — keduanya entri ranking sendiri — sekaligus menangkap "Kia Rio Sedan"→"Kia Rio".
+- **Wajib sanity-check**: setelah matching, pastikan bucket "tidak match" tidak mengandung nama yang sebenarnya ADA di top-215 (di run final: 0, bersih). Tanpa cek ini bug 08-06 tidak akan ketahuan.
+
+**Deliverable**: `Cek gagal upload/REKAP SKU 215 Terlaris - 4 Toko (2026-08-07).xlsx` — sheet RINGKASAN (tabel per toko×channel), sheet per toko (UA/OT/SP/OP, tiap baris: rank, model, channel, nama produk, varian, SKU sekarang, jenis masalah, nomor baris, file sumber), sheet PER MODEL (113 model × sebaran 4 toko).
+
+**Script final** (scratchpad): `all_stores_sweep.py` (sweep 111.935 baris semua toko/channel dari file sumber live → `all_stores_sweep.json`), `all_stores_top215_v3.py` (matching 2-tahap + crossref ranking & formula → `top215_bad_v3.json`), `build_report_v3.py` (bangun xlsx rekap). Versi v1/v2 sengaja ditinggal sbg bukti kedua metode matching yang salah.
+
+**Status: masih tahap DIAGNOSIS.** SKU tujuan per baris belum dihitung, target file belum diupdate, retry file belum dibuat. Skala 8.777 baris/741 listing terlalu besar untuk dikerjakan sekaligus tanpa checkpoint — perlu arahan prioritas user dulu (per toko? per channel? rank tertinggi dulu?). Khusus baris **SKU kosong** (2.782 baris) jangan diasumsikan semua harus diisi — perlu dipastikan dulu bukan varian nonaktif/sengaja.
