@@ -72,3 +72,22 @@ Lihat [[project-undercover-sku-sync-rules]] untuk aturan bisnis final yang jadi 
 **Data validation**: TikTok WAJIB dikosongkan (`ws.data_validations.dataValidation = []`) — 182.732 aturan per-baris jadi basi setelah `delete_rows` dan bikin Excel minta "repair". Lazada JANGAN dikosongkan — cuma 6 aturan dan cakupannya se-kolom (`M5:M32768`), aman disalin balik pakai `copy(dv)`. Validasi Lazada kolom M bahkan menegakkan keunikan Seller SKU (`COUNTIF(M:M,M5)=1`), berguna sbg cek mandiri.
 
 **Selalu verifikasi hasil lawan file asli** sebelum lapor selesai: bandingkan `sheetnames`, header baris 1, `max_column`, `freeze_panes`, dan parse semua part XML. Kalau salah satu beda, formatnya belum sama.
+
+## TikTok: file upload WAJIB memuat SELURUH SKU tiap produk terdampak (bukan cuma baris berubah)
+
+Terbukti 2026-08-07. Upload TikTok berisi 645 baris yang berubah saja → **614 baris gagal, semuanya error `sku not allow delete`, di 117 produk**. Yang berhasil cuma 3 produk — tepat 3 produk yang kebetulan SELURUH SKU-nya ikut terkirim.
+
+**Sebabnya**: batch-edit TikTok memperlakukan daftar baris yang diunggah sebagai **daftar SKU lengkap** produk itu. SKU yang tidak ikut dikirim dianggap permintaan hapus, dan TikTok menolaknya.
+
+**Aturannya**: kalau satu SKU dari produk X perlu diubah, **semua SKU produk X harus ikut** di file. Untuk UA 08-07: 645 SKU berubah tersebar di 120 produk → file final 2.545 baris.
+
+**Beda per channel** (jangan disamaratakan):
+| Channel | Boleh kirim baris berubah saja? |
+|---|---|
+| Shopee (`sales_info`) | **Ya** — update per Kode Variasi |
+| TikTok (batch edit) | **TIDAK** — wajib lengkap per `product_id` |
+| Lazada (price/stock) | Ya — baris yang tidak dikirim tidak disentuh |
+
+Cara verifikasi sebelum kirim: bandingkan himpunan `sku_id` per `product_id` di file upload vs file sumber; harus identik untuk setiap produk. Kalau ada yang kurang, pasti kena `sku not allow delete`.
+
+**Catatan**: permintaan user "isinya produk yg memang perlu perubahan aja" tetap terpenuhi — yang difilter adalah **produk**-nya (120 dari ~1.900 produk), bukan barisnya. Jangan tafsirkan sebagai filter per-baris untuk TikTok.
