@@ -481,3 +481,19 @@ User menjawab 6 pertanyaan; hasilnya sebagian besar "listing sudah benar, master
 - `CATATAN UA - perlu keputusan (2026-08-07).xlsx` — 2 sheet: SUDAH DIPERBAIKI (1.220) & PERLU KEPUTUSAN (609)
 
 Total 1.220 baris diperbaiki, 609 menunggu keputusan (mayoritas: Santa Fe 153 & Corolla 113 & Xenia 51 = master yang perlu ditambah, bukan listing salah).
+
+### REVISI ATURAN #4 (user 2026-08-07, sore) — varian generik formula-tunggal DIISI
+
+Instruksi user: *"Yang varian seperti tahun lainnya kalau di formulanya cuma ada 1 tetap di isi kode skunya aja, kalau formulanya lebih dari 1 baru di kosongkan saja."* Aturan #4 di [[project-undercover-sku-sync-rules]] sudah diperbarui.
+
+Logikanya: kalau model cuma punya 1 formula, varian "Model/Tahun Lain" tidak ambigu — pasti SKU itu. Baru kalau >1 formula, tidak boleh ditebak generasinya.
+
+**Cara hitung jumlah formula** (dipakai di `ua_generic_rule.py`): `max(` jumlah kode generasi berbeda di MASTER utk model+toko, jumlah kode generasi berbeda di LISTING pada SKU well-formed `)`. Pakai max karena master & listing sama-sama bisa tertinggal — Corolla contohnya: master 5 kode, listing 9 kode, yang benar 9.
+
+**Dampak ke UA**: dari 2.495 baris varian generik → **1.810 DIISI** (formula tunggal), **17 dikosongkan** (formula >1, semuanya Honda Civic Hatchback yang punya 6 formula), 608 sudah benar, 26 gagal dipastikan. Ini membalik pekerjaan sebelumnya: versi sebelum revisi mengosongkan 847 baris, sekarang justru mayoritas diisi.
+
+**Total perbaikan UA jadi 2.200 baris** (dari 1.220): Shopee 751, TikTok 645, Lazada 804. Rincian sumber: 1.810 aturan #4 revisi, 252 dari master, 73 dari baris sejenis, 48 aturan Stargazer, 17 dikosongkan.
+
+**Catatan Lazada**: 684 baris generik dapat sufiks keunikan `_G2` otomatis karena SKU-nya bentrok dengan baris "Gen 1" di listing yang sama (mis. `HND-CTR-UA-S-G1-EAB` → `HND-CTR-UA-S-G1-EAB_G2`). Sesuai konvensi historis Lazada. Terverifikasi 0 duplikat. Baris dikosongkan turun drastis dari 614 → 17, jadi risiko "Lazada tolak SKU kosong" yang dicatat sebelumnya hampir hilang.
+
+**File final** (`Cek gagal upload/UA/`): `Upload {Shopee|TikTok|Lazada} UA - hanya baris berubah (2026-08-07).xlsx` + `CATATAN UA - perlu keputusan (2026-08-07) rev2.xlsx` (nama "rev2" karena file versi pertama sedang dibuka user di Excel → PermissionError saat ditimpa; kalau ketemu 2 file catatan, **yang rev2 yang benar**). Sisa 635 baris perlu keputusan.
