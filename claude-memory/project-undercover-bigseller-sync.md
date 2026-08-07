@@ -460,3 +460,24 @@ Angka 8.777 di atas **terlalu tinggi** — klasifikasi `BADGEN` (segmen ke-5 buk
 **Catatan risiko belum terjawab**: 614 baris Lazada dikosongkan SKU-nya sesuai aturan #4 — belum pernah diuji apakah Lazada menerima Seller SKU kosong. Kalau upload menolak, kembalikan nilai lama untuk baris tsb.
 
 **Script** (scratchpad): `master_index.py` (loader+index master), `ua_check_vs_master.py` (klasifikasi 7 status), `ua_resolve.py` (penyelesai SKU + guard), `ua_build_uploads.py` (3 file upload + cek duplikat Lazada), `ua_build_decisions.py`. Urutan toko berikutnya per instruksi user: UA dulu (ini), lalu user kirim listing OT/SP/OP satu per satu.
+
+### Update 2026-08-07 sore: jawaban user + file final UA (hanya baris berubah)
+
+User menjawab 6 pertanyaan; hasilnya sebagian besar "listing sudah benar, master yang tertinggal":
+- **Corolla SUDAH BENAR 100%** — tervalidasi lawan screenshot user: Gen 1&2→G1, 3→G3, 4→G4, 5→G5, 6→G6, 7→G7, 8→G8, Gen 9&10&12→G9, Gen 11→G11 = tepat 9 tipe SKU sesuai TF=9. Master cuma punya 5 dari 9 (kurang G1/G3/G4/G5).
+- **Veloz 51 = Xenia Gen 3 (2021-2026)**; semua 148 baris di 4 toko sudah konsisten `G3`. Master Xenia baru punya G1.
+- **Stargazer → 2 formula** (keputusan baru user). Gen 2 (2025-2026) belum berkode di SEMUA toko (148 baris). UA-nya sudah difix jadi `HYN-SGZ-UA-{R|S|P|E}-G2-{warna}`.
+- **HiAce Premio**: listing sebenarnya SUDAH membedakan lewat kode model — Commuter=`TYT-HAC`, Premio=`TYT-HAL` — tapi keduanya pakai segmen generasi `COM`. 148 baris konsisten di 4 toko. Master cuma punya TYT-HAC. **Menunggu keputusan user**: Premio tetap `COM` atau dapat kode generasi sendiri.
+- **Mini Cooper**: 368 baris di 4 toko; `3P`/`5P` sudah dipakai di UA Shopee/OT/SP/OP, yang kosong cuma UA TikTok & UA Lazada. Master belum punya Mini Cooper sama sekali.
+
+**Jebakan baru: Mini Cooper TIDAK boleh di-auto-fix.** Teks variannya punya DUA token (sub-model Clubman/Roadster/Paceman + jumlah pintu), dan parser varian menukarnya — hasil deriviasi ngawur ("Roadster,5 Pintu"→`3P`, "Clubman,3 Pintu"→`5P`). Sudah dikecualikan eksplisit di `ua_resolve2.py`.
+
+**Jebakan peta "sibling"**: sumbernya harus SEMUA baris ber-SKU well-formed (6 segmen, bukan placeholder/CVR), **bukan** cuma yang cocok master — kalau difilter ke status OK saja, model yang listing-nya benar tapi belum masuk master (Corolla Gen 1-5) tidak ikut jadi rujukan dan 72 baris gagal diperbaiki.
+
+**File final UA** (`Cek gagal upload/UA/`, isi HANYA baris yang berubah sesuai permintaan user; versi "Retry Upload …" yang memuat listing utuh sudah dihapus):
+- `Upload Shopee UA - hanya baris berubah (2026-08-07).xlsx` — 350 baris
+- `Upload TikTok UA - hanya baris berubah (2026-08-07).xlsx` — 65 baris (8 sheet asli utuh)
+- `Upload Lazada UA - hanya baris berubah (2026-08-07).xlsx` — 805 baris, 0 duplikat Seller SKU, 614 di antaranya **dikosongkan** (aturan #4)
+- `CATATAN UA - perlu keputusan (2026-08-07).xlsx` — 2 sheet: SUDAH DIPERBAIKI (1.220) & PERLU KEPUTUSAN (609)
+
+Total 1.220 baris diperbaiki, 609 menunggu keputusan (mayoritas: Santa Fe 153 & Corolla 113 & Xenia 51 = master yang perlu ditambah, bukan listing salah).
