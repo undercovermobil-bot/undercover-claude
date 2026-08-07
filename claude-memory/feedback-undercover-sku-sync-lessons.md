@@ -53,3 +53,22 @@ metadata:
 - **(2026-07-17) Warna bentuk pendek vs bentuk panjang bisa beda antara listing & master utk SEBAGIAN model, TAPI JANGAN blind-expand tanpa cek tabrakan dulu.** "Biru" (listing, singkat) vs "Biru Benhur" (master, sebagian model) dan "Hijau" vs "Hijau Army" — kalau expand semua "Biru"→"Biru Benhur" tanpa cek, berisiko salah utk model yg justru py KEDUA bentuk sbg warna BERBEDA yg valid (dicek eksplisit ke seluruh master: ternyata 0 model py kasus begini, jadi expand fallback aman dilakukan). How to apply: sebelum bikin alias/ekspansi warna bentuk-pendek→panjang scr global, WAJIB scan dulu apakah ada (model,kategori) yg py KEDUA bentuk sbg entri berbeda di master — kalau ada, itu tanda ekspansi blind akan salah, harus per-model bukan global.
 
 Lihat [[project-undercover-sku-sync-rules]] untuk aturan bisnis final yang jadi konteks di balik pelajaran-pelajaran ini.
+
+## File upload WAJIB dibangun dari file asli e-commerce (user menolak 2x: 2026-08-03 & 2026-08-07)
+
+**Jangan pernah** membuat file upload dengan `openpyxl.Workbook()` kosong lalu menyalin header seadanya. User menolak ini dua kali dengan kata-kata hampir sama: *"sama formatnya dibuat persis seperti upload ke shopee, termasuk layoutnya"* (08-03) dan *"formatnya tidak sesuai, samakan persis seperti upload ke masing masing ecommerce"* (08-07).
+
+**Pola yang benar** (dipakai di `ua_build_shopee_v3.py`): buka file ASLI hasil download → snapshot baris yang mau dipertahankan (nilai + style lengkap semua kolom) → `ws.delete_rows()` sekali → tulis ulang dari baris awal data → simpan. Semua sheet, kolom, header tersembunyi, dan freeze pane ikut terbawa otomatis.
+
+**Yang hilang kalau bikin workbook baru** (kasus nyata Shopee 08-07): nama sheet jadi `Sheet` bukan `Sheet1`; kolom cuma 6 dari **15** (Harga & GTIN hilang — padahal Harga bertanda "Wajib"); `freeze_panes` A5 hilang; baris 4-6 (label "Wajib" + teks instruksi) jadi kosong.
+
+**Struktur asli tiap channel** (verifikasi ulang tiap sesi, bisa berubah):
+| Channel | Sheet | Jml sheet | Kolom | Baris data mulai | Freeze |
+|---|---|---|---|---|---|
+| Shopee | `Sheet1` | 1 | 15 | 7 | A5 |
+| TikTok | `Template` | 8 | 44 | 6 | A6 |
+| Lazada | `template` | 4 | 15 | 5 | A5 |
+
+**Data validation**: TikTok WAJIB dikosongkan (`ws.data_validations.dataValidation = []`) — 182.732 aturan per-baris jadi basi setelah `delete_rows` dan bikin Excel minta "repair". Lazada JANGAN dikosongkan — cuma 6 aturan dan cakupannya se-kolom (`M5:M32768`), aman disalin balik pakai `copy(dv)`. Validasi Lazada kolom M bahkan menegakkan keunikan Seller SKU (`COUNTIF(M:M,M5)=1`), berguna sbg cek mandiri.
+
+**Selalu verifikasi hasil lawan file asli** sebelum lapor selesai: bandingkan `sheetnames`, header baris 1, `max_column`, `freeze_panes`, dan parse semua part XML. Kalau salah satu beda, formatnya belum sama.
