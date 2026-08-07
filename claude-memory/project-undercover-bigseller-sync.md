@@ -422,3 +422,41 @@ Dari 63.364 baris top-215 di 9 kombinasi toko×channel: **86,1% sudah sesuai, 8.
 **Script final** (scratchpad): `all_stores_sweep.py` (sweep 111.935 baris semua toko/channel dari file sumber live → `all_stores_sweep.json`), `all_stores_top215_v3.py` (matching 2-tahap + crossref ranking & formula → `top215_bad_v3.json`), `build_report_v3.py` (bangun xlsx rekap). Versi v1/v2 sengaja ditinggal sbg bukti kedua metode matching yang salah.
 
 **Status: masih tahap DIAGNOSIS.** SKU tujuan per baris belum dihitung, target file belum diupdate, retry file belum dibuat. Skala 8.777 baris/741 listing terlalu besar untuk dikerjakan sekaligus tanpa checkpoint — perlu arahan prioritas user dulu (per toko? per channel? rank tertinggi dulu?). Khusus baris **SKU kosong** (2.782 baris) jangan diasumsikan semua harus diisi — perlu dipastikan dulu bukan varian nonaktif/sengaja.
+
+## KOREKSI METODOLOGI 2026-08-07 (kedua kali dalam sehari): cek format regex SALAH, harus lawan MASTER
+
+Angka 8.777 di atas **terlalu tinggi** — klasifikasi `BADGEN` (segmen ke-5 bukan pola `G\d+`) ternyata **false positive besar-besaran**. Master `SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx` memang **sengaja** memakai kode generasi non-`G#` untuk mobil yang generasinya tidak bernomor: `COM` (HiAce Commuter), `J40`/`J60`/`J100` (Hardtop, Land Cruiser), `3P`/`5P` (Jimny), `5S`/`7S` (Livina X-Gear), `KPS`/`KTK` (Starlet Kapsul/Kotak), `XOV` (SX4 X-Over), `YJ`/`TJ`/`JK`/`JL` (Wrangler). Dari 18.997 baris master UA, **2.077 memang non-`G#` by design**. Jadi ~3.343 baris "BADGEN" lintas 4 toko itu sebagian besar SUDAH BENAR.
+
+**Aturan baru: jangan pernah menilai kepatuhan SKU dari pola regex.** Uji yang benar = **SKU baris ini harus salah satu SKU sah model tsb di master** (`sku_by_model[norm(model)]`). Master = sumber kebenaran, punya kolom Nama Produk/Toko/Kategori/Warna/Generasi/SKU, 69.480 baris, 76 sheet merek, 4 toko (UA 18.997 / OT 18.385 / SP 16.049 / OP 16.049).
+
+**Hasil UA dengan metode master** (file listing terbaru user 2026-08-07, 67.300 baris, 29.591 masuk top-215):
+
+| Status | Baris | Arti |
+|---|---|---|
+| OK | 25.234 | cocok master |
+| NO_MASTER | 1.505 | model belum ada di master sama sekali |
+| SENGAJA_KOSONG | 1.023 | varian generik, aturan #4 — benar kosong |
+| PLACEHOLDER_ANGKA | 846 | SKU angka auto-Lazada |
+| TIDAK_ADA_DI_MASTER | 636 | |
+| GENERIK_BER_SKU | 233 | varian generik tapi ada SKU — harusnya kosong |
+| KOSONG | 114 | kosong padahal bukan generik |
+
+→ **1.829 baris perlu perhatian** (bukan 3.757). Dari situ **1.099 bisa diperbaiki otomatis** (252 isi-dari-master + 847 dikosongkan sesuai aturan #4), **730 perlu keputusan user**.
+
+**Dua jebakan matching yang ketemu & wajib diingat:**
+1. **Sufiks keunikan Lazada** (`_G3`, `_MERA`) harus di-strip sebelum dibandingkan ke master — kalau tidak, 5.183 baris Lazada salah divonis "tidak ada di master".
+2. **Urutan lookup master harus dari yang PALING SPESIFIK**: teks model utuh dari judul (`"Mazda 3 Sedan"`) DULU, baru nama ranking (`"Mazda 3"`). Master punya entri terpisah `Mazda 3 Sedan`(MZD-3S), `Mazda 3 Hatchback`(MZD-3H), DAN legacy `Mazda 3`(MZD-M3). Pakai nama ranking duluan → 430 baris Mazda 3 salah divonis.
+
+**JEBAKAN PALING BERBAHAYA — resolver hampir membatalkan revisi user.** Saat generasi baris tidak ada di master, pool kandidat menyusut jadi 1 SKU lalu **diterima diam-diam**. Efeknya hampir: Santa Fe `G2`→`G1` (membatalkan revisi user 05-08!), Xenia `G3`→`G1`, HiAce Premio→Commuter, Hilux Rangga→Hilux biasa, Navara PRO-4X→Navara biasa, dan **4 generasi Jeep Wrangler (JK/JL/TJ/YJ) diruntuhkan jadi YJ semua**. Perbaikan: **generasi WAJIB cocok persis; kalau master tidak punya, JANGAN tebak — masukkan ke daftar keputusan.** Plus daftar `MASTER_TERTINGGAL` (sekarang berisi Hyundai Santa Fe) untuk model yang listing-nya lebih baru dari master.
+
+**Master ternyata juga punya lubang** (bukan cuma listing yang salah): Santa Fe belum dipecah G1/G2; Corolla master mulai dari Gen 6 padahal listing punya Gen 1-5 (185 baris); Mini Cooper **tidak ada sama sekali** di master (88 baris); Xenia Gen 3/Veloz belum jadi formula terpisah; Stargazer Gen 2 (2025-2026) belum ada; HiAce "Premio", Hilux "Rangga", Navara "PRO-4X" belum ada. **Arah perbaikannya ke master, bukan ke listing.**
+
+**Deliverable UA 2026-08-07** (di `Cek gagal upload/UA/`, semua BELUM diupload):
+- `Retry Upload Shopee UA - SKU belum sesuai master (2026-08-07).xlsx` — 1.080 baris, 334 SKU diubah
+- `Retry Upload TikTok UA - SKU belum sesuai master (2026-08-07).xlsx` — 45 baris, 40 diubah (8 sheet asli utuh)
+- `Retry Upload Lazada UA - SKU belum sesuai master (2026-08-07).xlsx` — 2.869 baris, 725 diubah, **0 duplikat Seller SKU terverifikasi**
+- `CATATAN UA - perlu keputusan (2026-08-07).xlsx` — 3 sheet: PERLU KEPUTUSAN (ringkas per kelompok + usulan), DETAIL (730 baris), SUDAH DIPERBAIKI (1.099 baris, lama→baru)
+
+**Catatan risiko belum terjawab**: 614 baris Lazada dikosongkan SKU-nya sesuai aturan #4 — belum pernah diuji apakah Lazada menerima Seller SKU kosong. Kalau upload menolak, kembalikan nilai lama untuk baris tsb.
+
+**Script** (scratchpad): `master_index.py` (loader+index master), `ua_check_vs_master.py` (klasifikasi 7 status), `ua_resolve.py` (penyelesai SKU + guard), `ua_build_uploads.py` (3 file upload + cek duplikat Lazada), `ua_build_decisions.py`. Urutan toko berikutnya per instruksi user: UA dulu (ini), lalu user kirim listing OT/SP/OP satu per satu.
