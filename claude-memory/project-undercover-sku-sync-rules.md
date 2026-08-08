@@ -30,3 +30,11 @@ How to apply: kalau butuh evidence "SKU ini beneran real/terpakai" (bukan cuma v
 - **Hyundai Stargazer → 2 formula** (user 2026-08-07): Gen 1 (2022-2024) dan Gen 2 (2025-2026) dipisah. Gen 1 sudah pakai `HYN-SGZ-UA-R-G1-*`; **Gen 2 belum punya SKU baru di SEMUA toko** (148 baris: UA Shopee masih `CVR0033-UC-RPA`/kosong, UA TikTok kosong, UA Lazada format lama, OT/SP/OP kosong atau format lama). Master juga belum punya Gen 2.
 
 **Catatan penting soal segmen generasi**: nomor `G#` **mengikuti nomor generasi asli mobil, bukan indeks grup** — grup berbagi kode dari generasi terendah di grup itu. Contoh tervalidasi Toyota Corolla (TF=9, listing UA sudah 100% benar): Gen 1&2→`G1`, Gen 3→`G3`, Gen 4→`G4`, Gen 5→`G5`, Gen 6→`G6`, Gen 7→`G7`, Gen 8→`G8`, Gen 9&10&12→`G9`, Gen 11→`G11`. Santa Fe (G1/G2) adalah **pengecualian eksplisit dari user**, bukan pola umum — jangan digeneralisasi.
+
+## Mazda 2 → kode model per bodystyle (user 2026-08-07, sama pola dengan Mazda 3)
+
+**Hatchback** → `-2H-`, **Sedan** → `-2S-`. Berlaku SEMUA toko (instruksi eksplisit user: "simpan memory ini untuk nanti di toko lain juga"). Bukan perubahan Total-Formula, cuma kode-nama model — persis pola Mazda 3 (`-3S-`/`-3H-`).
+
+Status saat ditemukan (UA, master): Sedan **sudah benar** (`MZD-2S`), Hatchback **masih kode lama** `MZD-MZ2` — konversi cuma ganti segmen model (segmen 2), segmen lain (kategori/generasi/warna) tetap sama persis. Pola cek untuk toko lain: kalau listing masih `MZD-MZ2-...`, itu Hatchback yang belum dikonversi.
+
+**Pola umum yang mulai terlihat**: Mazda sepertinya menomori bodystyle dengan kode `{angka}{S|H}` (3→3S/3H, 2→2S/2H). Kalau ketemu Mazda model lain dengan bodystyle ganda di toko lain, cek dulu ke user sebelum menyamaratakan pola ini — jangan diasumsikan otomatis berlaku ke semua model Mazda.
