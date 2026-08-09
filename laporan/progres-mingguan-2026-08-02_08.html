@@ -225,6 +225,34 @@ code,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .bar-row .vl{font-family:var(--font-mono);font-size:13px;font-weight:600;white-space:nowrap}
 .bar-row .cx{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
 
+/* ── BATANG HORIZONTAL — PENJUALAN ───────────────────────── */
+.hbs{display:flex;flex-direction:column;gap:2px}
+.hb{display:grid;grid-template-columns:20px minmax(96px,1.3fr) minmax(0,2.3fr) 58px 40px;gap:10px;align-items:center;padding:6px 8px;border-radius:4px}
+.hb:hover{background:var(--surface-2)}
+.hb-n{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);text-align:right}
+.hb-l{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px;min-width:0}
+.hb-t{display:block;background:var(--surface-3);border-radius:3px;height:9px;overflow:hidden;min-width:24px}
+.hb-t i{display:block;height:100%;border-radius:3px;background:var(--marine)}
+.hb-v{font-family:var(--font-mono);font-size:12px;font-weight:600;text-align:right;white-space:nowrap}
+.hb-x{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-align:right;white-space:nowrap}
+.hb.sm{grid-template-columns:82px minmax(0,1fr) 48px}
+.hb.sm .hb-t{height:8px}
+.hb.sm .hb-t i.t1{background:#86b6ef}
+.hb.sm .hb-t i.t2{background:#3987e5}
+.hb.sm .hb-t i.t3{background:#256abf}
+.hb.sm .hb-t i.t4{background:#184f95}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .hb.sm .hb-t i.t1{background:#2a78d6}
+  :root:not([data-theme="light"]) .hb.sm .hb-t i.t2{background:#5598e7}
+  :root:not([data-theme="light"]) .hb.sm .hb-t i.t3{background:#9ec5f4}
+  :root:not([data-theme="light"]) .hb.sm .hb-t i.t4{background:#cde2fb}
+}
+:root[data-theme="dark"] .hb.sm .hb-t i.t1{background:#2a78d6}
+:root[data-theme="dark"] .hb.sm .hb-t i.t2{background:#5598e7}
+:root[data-theme="dark"] .hb.sm .hb-t i.t3{background:#9ec5f4}
+:root[data-theme="dark"] .hb.sm .hb-t i.t4{background:#cde2fb}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;flex:0 0 auto;border:1px solid rgba(11,11,11,.14)}
+
 /* ── TABEL ────────────────────────────────────────────────── */
 .tw{overflow-x:auto;border:1px solid var(--rule);border-radius:5px;background:var(--surface)}
 table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
@@ -329,7 +357,7 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 <section class="slide cover" id="s1">
   <p class="kicker">Undercover · Laporan Internal</p>
   <h1>Progres Mingguan Katalog &amp; Toko</h1>
-  <p class="lede">Perbandingan dua periode tujuh-harian: apa yang dikerjakan, seberapa jauh perbaikan SKU 215 produk terlaris berjalan di empat toko, dan mana yang masih menunggu keputusan.</p>
+  <p class="lede">Perbandingan dua periode tujuh-harian: penjualan kumulatif yang berhasil ditarik dari ekspor Big Seller, apa yang dikerjakan, seberapa jauh perbaikan SKU 215 produk terlaris berjalan di empat toko, dan mana yang masih menunggu keputusan.</p>
 
   <div class="periods">
     <div class="period a">
@@ -352,8 +380,153 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 02 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s2" data-period="ini">
-  <div class="rail"><span class="num">02</span><span>Ringkasan Eksekutif</span><span class="tag tag-ini">2–8 Agustus</span></div>
+<section class="slide" id="s2" data-period="lalu">
+  <div class="rail"><span class="num">02</span><span>Penjualan</span><span class="tag tag-lalu">Snapshot Kumulatif</span></div>
+  <h2 class="wide">27.229 unit cover mobil terjual, Rp 8,02 miliar — dari seluruh histori pesanan yang berhasil terekam</h2>
+  <p class="lede">Sumbernya bukan Big Seller langsung — sesi ini tidak punya koneksi browser ke sana untuk menariknya live. Angkanya diambil dari <strong>Mobil Terlaris.xlsx</strong> di Google Drive Anda (akun under.covermobil, terakhir diperbarui 7 Agustus): rekap kumulatif seluruh pesanan sukses yang sempat diekspor — bukan angka khusus 2–8 Agustus.</p>
+
+  <div class="body-grid">
+    <div class="kpis">
+      <div class="kpi">
+        <div class="k-lbl">Total unit terjual</div>
+        <div class="k-val">27.229</div>
+        <div class="k-sub">446 model unik</div>
+      </div>
+      <div class="kpi good">
+        <div class="k-lbl">Total penjualan (net)</div>
+        <div class="k-val">Rp 8,02 M</div>
+        <div class="k-sub">setelah diskon &amp; retur</div>
+      </div>
+      <div class="kpi">
+        <div class="k-lbl">Harga rata-rata per unit</div>
+        <div class="k-val">Rp 294.631</div>
+        <div class="k-sub">seluruh tier digabung</div>
+      </div>
+      <div class="kpi">
+        <div class="k-lbl">Cakupan scope kerja SKU</div>
+        <div class="k-val">99,4%</div>
+        <div class="k-sub">top-215 = unit &amp; nilai</div>
+      </div>
+      <div class="kpi warn">
+        <div class="k-lbl">Baris order dikeluarkan</div>
+        <div class="k-val">15,5%</div>
+        <div class="k-sub">batal/retur/belum bayar</div>
+      </div>
+      <div class="kpi warn">
+        <div class="k-lbl">Baris order dari TikTok</div>
+        <div class="k-val">0</div>
+        <div class="k-sub">dari 33.529 — lihat catatan</div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Batasan yang harus dibaca sebelum memakai angka ini:</strong> ini rekap <em>kumulatif</em> (bukan per-minggu) dan <em>gabungan 4 toko</em> (bukan dipecah UA/OT/SP/OP). Dari 33.529 baris order yang terbaca, <strong>33.369 dari Shopee, 160 dari Lazada, dan 0 dari TikTok</strong> — jadi angka ini pada dasarnya potret Shopee, bukan potret tiga channel yang merata. Belum ada iklan, ROAS, atau rating toko di sini; itu masih genuinely tidak tersedia — lihat slide 16.</div>
+  </div>
+</section>
+
+<!-- 03 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s3" data-period="lalu">
+  <div class="rail"><span class="num">03</span><span>Penjualan</span><span class="tag tag-lalu">Snapshot Kumulatif</span></div>
+  <h2 class="wide">Sepuluh model menyumbang 46% dari seluruh unit yang pernah terjual</h2>
+  <p class="lede">Peringkat kuantitas dari 217 model yang tercakup daftar ini. Porsi nilai (Rp) mengikuti pola yang hampir sama dengan porsi unit di tiap model — tanda harga antar model cukup konsisten.</p>
+
+  <div class="body-grid cols-2">
+    <div class="hbs">
+        <div class="hb" title="Toyota Avanza — 2.372 unit (8.7%), Rp 705.981.724, 239 SKU"><span class="hb-n">1</span><span class="hb-l">Toyota Avanza</span><span class="hb-t"><i style="width:100.0%"></i></span><b class="hb-v">2.372</b><span class="hb-x">8.7%</span></div>
+        <div class="hb" title="Honda Brio — 2.124 unit (7.8%), Rp 602.371.027, 195 SKU"><span class="hb-n">2</span><span class="hb-l">Honda Brio</span><span class="hb-t"><i style="width:89.5%"></i></span><b class="hb-v">2.124</b><span class="hb-x">7.8%</span></div>
+        <div class="hb" title="Toyota Innova — 1.814 unit (6.7%), Rp 551.823.716, 338 SKU"><span class="hb-n">3</span><span class="hb-l">Toyota Innova</span><span class="hb-t"><i style="width:76.5%"></i></span><b class="hb-v">1.814</b><span class="hb-x">6.7%</span></div>
+        <div class="hb" title="Honda Jazz — 1.194 unit (4.4%), Rp 335.074.627, 186 SKU"><span class="hb-n">4</span><span class="hb-l">Honda Jazz</span><span class="hb-t"><i style="width:50.3%"></i></span><b class="hb-v">1.194</b><span class="hb-x">4.4%</span></div>
+        <div class="hb" title="Suzuki Ertiga — 1.038 unit (3.8%), Rp 313.954.902, 113 SKU"><span class="hb-n">5</span><span class="hb-l">Suzuki Ertiga</span><span class="hb-t"><i style="width:43.8%"></i></span><b class="hb-v">1.038</b><span class="hb-x">3.8%</span></div>
+        <div class="hb" title="Honda HRV — 928 unit (3.4%), Rp 275.288.382, 131 SKU"><span class="hb-n">6</span><span class="hb-l">Honda HRV</span><span class="hb-t"><i style="width:39.1%"></i></span><b class="hb-v">928</b><span class="hb-x">3.4%</span></div>
+        <div class="hb" title="Toyota Agya — 877 unit (3.2%), Rp 248.985.760, 136 SKU"><span class="hb-n">7</span><span class="hb-l">Toyota Agya</span><span class="hb-t"><i style="width:37.0%"></i></span><b class="hb-v">877</b><span class="hb-x">3.2%</span></div>
+        <div class="hb" title="Daihatsu Ayla — 751 unit (2.8%), Rp 211.401.400, 105 SKU"><span class="hb-n">8</span><span class="hb-l">Daihatsu Ayla</span><span class="hb-t"><i style="width:31.7%"></i></span><b class="hb-v">751</b><span class="hb-x">2.8%</span></div>
+        <div class="hb" title="Daihatsu Xenia — 749 unit (2.8%), Rp 233.076.220, 134 SKU"><span class="hb-n">9</span><span class="hb-l">Daihatsu Xenia</span><span class="hb-t"><i style="width:31.6%"></i></span><b class="hb-v">749</b><span class="hb-x">2.8%</span></div>
+        <div class="hb" title="Nissan Grand Livina — 685 unit (2.5%), Rp 204.447.297, 82 SKU"><span class="hb-n">10</span><span class="hb-l">Nissan Grand Livina</span><span class="hb-t"><i style="width:28.9%"></i></span><b class="hb-v">685</b><span class="hb-x">2.5%</span></div>
+        <div class="hb" title="Toyota Vios — 680 unit (2.5%), Rp 195.787.397, 117 SKU"><span class="hb-n">11</span><span class="hb-l">Toyota Vios</span><span class="hb-t"><i style="width:28.7%"></i></span><b class="hb-v">680</b><span class="hb-x">2.5%</span></div>
+        <div class="hb" title="Toyota Fortuner — 645 unit (2.4%), Rp 223.669.795, 147 SKU"><span class="hb-n">12</span><span class="hb-l">Toyota Fortuner</span><span class="hb-t"><i style="width:27.2%"></i></span><b class="hb-v">645</b><span class="hb-x">2.4%</span></div>
+        <div class="hb" title="Honda BRV — 613 unit (2.3%), Rp 177.359.452, 89 SKU"><span class="hb-n">13</span><span class="hb-l">Honda BRV</span><span class="hb-t"><i style="width:25.8%"></i></span><b class="hb-v">613</b><span class="hb-x">2.3%</span></div>
+        <div class="hb" title="Toyota Calya — 606 unit (2.2%), Rp 174.836.430, 92 SKU"><span class="hb-n">14</span><span class="hb-l">Toyota Calya</span><span class="hb-t"><i style="width:25.5%"></i></span><b class="hb-v">606</b><span class="hb-x">2.2%</span></div>
+        <div class="hb" title="Toyota Rush — 558 unit (2.0%), Rp 171.641.946, 96 SKU"><span class="hb-n">15</span><span class="hb-l">Toyota Rush</span><span class="hb-t"><i style="width:23.5%"></i></span><b class="hb-v">558</b><span class="hb-x">2.0%</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        <div class="kpi"><div class="k-lbl">Top 5 model</div><div class="k-val">31%</div><div class="k-sub">8.542 unit</div></div>
+        <div class="kpi"><div class="k-lbl">Top 10 model</div><div class="k-val">46%</div><div class="k-sub">12.532 unit</div></div>
+        <div class="kpi"><div class="k-lbl">Top 20 model</div><div class="k-val">66%</div><div class="k-sub">17.912 unit</div></div>
+        <div class="kpi"><div class="k-lbl">Top 50 model</div><div class="k-val">88%</div><div class="k-sub">23.887 unit</div></div>
+      </div>
+      <div class="card">
+        <div class="cap">Cara membaca</div>
+        <p>Angka besar (kolom kanan) = unit terjual, persentase = porsi dari total 27.229 unit. Arahkan kursor ke satu baris untuk melihat nilai rupiah dan jumlah SKU aktif model itu.</p>
+      </div>
+      <div class="card">
+        <div class="cap">Konsentrasi</div>
+        <p>Top-50 model (dari 446 total) sudah menutup <strong>88% unit dan 88% nilai</strong>. Ekor panjangnya sangat panjang — 396 model sisanya berbagi 12%.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s4" data-period="lalu">
+  <div class="rail"><span class="num">04</span><span>Penjualan</span><span class="tag tag-lalu">Snapshot Kumulatif</span></div>
+  <h2 class="wide">Reguler menang volume, tapi Exclusive terjual 4× lebih mahal per unit</h2>
+  <p class="lede">Empat tingkatan cover dan sebaran warna polos, dari seluruh model tergabung.</p>
+
+  <div class="body-grid cols-2">
+    <div class="card">
+      <div class="cap">Porsi tier — kuantitas</div>
+      <div class="hbs">
+          <div class="hb sm" title="Reguler — 23.165 unit (85.6%)"><span class="hb-l">Reguler</span><span class="hb-t"><i class="t1" style="width:100.0%"></i></span><b class="hb-v">85.6%</b></div>
+          <div class="hb sm" title="Strip — 3.315 unit (12.2%)"><span class="hb-l">Strip</span><span class="hb-t"><i class="t2" style="width:14.3%"></i></span><b class="hb-v">12.2%</b></div>
+          <div class="hb sm" title="Premium — 336 unit (1.2%)"><span class="hb-l">Premium</span><span class="hb-t"><i class="t3" style="width:1.5%"></i></span><b class="hb-v">1.2%</b></div>
+          <div class="hb sm" title="Exclusive — 246 unit (0.9%)"><span class="hb-l">Exclusive</span><span class="hb-t"><i class="t4" style="width:1.1%"></i></span><b class="hb-v">0.9%</b></div>
+      </div>
+      <div class="cap" style="margin-top:16px">Porsi tier — nilai (Rp)</div>
+      <div class="hbs">
+          <div class="hb sm" title="Reguler — Rp 6.365.692.501 (79.8%)"><span class="hb-l">Reguler</span><span class="hb-t"><i class="t1" style="width:100.0%"></i></span><b class="hb-v">79.8%</b></div>
+          <div class="hb sm" title="Strip — Rp 1.087.461.946 (13.6%)"><span class="hb-l">Strip</span><span class="hb-t"><i class="t2" style="width:17.1%"></i></span><b class="hb-v">13.6%</b></div>
+          <div class="hb sm" title="Premium — Rp 248.032.608 (3.1%)"><span class="hb-l">Premium</span><span class="hb-t"><i class="t3" style="width:3.9%"></i></span><b class="hb-v">3.1%</b></div>
+          <div class="hb sm" title="Exclusive — Rp 273.987.881 (3.4%)"><span class="hb-l">Exclusive</span><span class="hb-t"><i class="t4" style="width:4.3%"></i></span><b class="hb-v">3.4%</b></div>
+      </div>
+      <p class="cmp-cap">Gradasi warna gelap = tier lebih tinggi. Exclusive cuma 0,9% unit tapi 3,4% nilai — ASP Rp 1.113.772, dibanding Rp 274.798 di Reguler (4,1×).</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="cap">Warna polos — 22.249 dari 27.229 unit</div>
+        <div class="hbs">
+            <div class="hb sm" title="Abu-abu — 10.417 unit (46.8% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#9AA0A6"></em>Abu-abu</span><span class="hb-t"><i style="width:100.0%"></i></span><b class="hb-v">46.8%</b></div>
+          <div class="hb sm" title="Hitam — 6.536 unit (29.4% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#2B2B2B"></em>Hitam</span><span class="hb-t"><i style="width:62.7%"></i></span><b class="hb-v">29.4%</b></div>
+          <div class="hb sm" title="Hijau — 2.038 unit (9.2% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#3F6B4A"></em>Hijau</span><span class="hb-t"><i style="width:19.6%"></i></span><b class="hb-v">9.2%</b></div>
+          <div class="hb sm" title="Merah — 1.629 unit (7.3% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#A6383A"></em>Merah</span><span class="hb-t"><i style="width:15.6%"></i></span><b class="hb-v">7.3%</b></div>
+          <div class="hb sm" title="Biru — 1.493 unit (6.7% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#33567F"></em>Biru</span><span class="hb-t"><i style="width:14.3%"></i></span><b class="hb-v">6.7%</b></div>
+          <div class="hb sm" title="Silver — 83 unit (0.4% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#C7CAD1"></em>Silver</span><span class="hb-t"><i style="width:0.8%"></i></span><b class="hb-v">0.4%</b></div>
+          <div class="hb sm" title="Orange — 53 unit (0.2% dari warna polos)"><span class="hb-l"><em class="sw" style="background:#C2712C"></em>Orange</span><span class="hb-t"><i style="width:0.5%"></i></span><b class="hb-v">0.2%</b></div>
+        </div>
+        <p class="cmp-cap">Sisanya (4.980 unit, 18,3%) varian strip/motif — tidak digolongkan satu warna polos. Abu-abu sendiri hampir separuh (46,8%) dari semua unit warna polos.</p>
+      </div>
+      <div class="card">
+        <div class="cap">Harga rata-rata per tier</div>
+        <div class="tw" style="border:0">
+          <table style="min-width:0">
+            <thead><tr><th>Tier</th><th class="num">Unit</th><th class="num">% Unit</th><th class="num">Nilai (Rp)</th><th class="num">% Nilai</th><th class="num">ASP</th></tr></thead>
+            <tbody>
+              <tr><td>Reguler</td><td class="num">23.165</td><td class="num">85.6%</td><td class="num">6.365.692.501</td><td class="num">79.8%</td><td class="num">274.798</td></tr>
+            <tr><td>Strip</td><td class="num">3.315</td><td class="num">12.2%</td><td class="num">1.087.461.946</td><td class="num">13.6%</td><td class="num">328.043</td></tr>
+            <tr><td>Premium</td><td class="num">336</td><td class="num">1.2%</td><td class="num">248.032.608</td><td class="num">3.1%</td><td class="num">738.192</td></tr>
+            <tr><td>Exclusive</td><td class="num">246</td><td class="num">0.9%</td><td class="num">273.987.881</td><td class="num">3.4%</td><td class="num">1.113.772</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02-OLD-BECOMES-05 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s5" data-period="ini">
+  <div class="rail"><span class="num">05</span><span>Ringkasan Eksekutif</span><span class="tag tag-ini">2–8 Agustus</span></div>
   <h2 class="wide">Minggu tersibuk sejak proyek dimulai — dan minggu paling banyak koreksi</h2>
   <p class="lede">Cakupan melompat dari satu toko ke empat toko. Bersamaan dengan itu, dua koreksi metodologi membongkar bahwa angka "selesai" minggu-minggu sebelumnya terlalu optimistis.</p>
 
@@ -391,13 +564,13 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
       </div>
     </div>
 
-    <div class="note"><strong>Yang belum bisa dilaporkan:</strong> penjualan, penjualan dari iklan, ROAS, dan rating toko tidak tersedia di sesi ini — Big Seller tidak bisa diakses dari lingkungan kerja ini dan tidak ada file ekspornya. Slide 13 &amp; 14 menjelaskan kerangka metriknya dan cara mengambil datanya, supaya bagian itu bisa langsung diisi begitu ekspornya tersedia.</div>
+    <div class="note neutral"><strong>Soal penjualan:</strong> tersedia sebagai rekap kumulatif gabungan 4 toko (lihat slide 2–4) — bukan live dari Big Seller (tidak ada koneksi browser ke sana di sesi ini), diambil dari ekspor yang sudah ada di Drive. Yang masih genuinely belum bisa dilaporkan: pemisahan per toko &amp; per periode, penjualan dari iklan, ROAS, dan rating toko. Slide 16 &amp; 17 menjelaskan kerangkanya dan cara melengkapinya.</div>
   </div>
 </section>
 
 <!-- 03 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s3">
-  <div class="rail"><span class="num">03</span><span>Perbandingan Aktivitas</span></div>
+<section class="slide" id="s6">
+  <div class="rail"><span class="num">06</span><span>Perbandingan Aktivitas</span></div>
   <h2 class="wide">Volume kerja naik di semua ukuran</h2>
   <p class="lede">Setiap baris dibandingkan pada skalanya sendiri, dan kedua nilainya dilabeli langsung.</p>
 
@@ -471,8 +644,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 04 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s4" data-period="lalu">
-  <div class="rail"><span class="num">04</span><span>Linimasa</span><span class="tag tag-lalu">26 Juli – 1 Agustus</span></div>
+<section class="slide" id="s7" data-period="lalu">
+  <div class="rail"><span class="num">07</span><span>Linimasa</span><span class="tag tag-lalu">26 Juli – 1 Agustus</span></div>
   <h2 class="wide">Fondasi: memetakan gudang Big Seller dan membongkar risiko stok</h2>
 
   <div class="body-grid">
@@ -521,7 +694,7 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
         <div class="tl-date">1 Agu<small>Sabtu</small></div>
         <div class="tl-body">
           <h4>Audit foto produk dijalankan ulang dengan metode baru</h4>
-          <p>Tanggal unggah tiap foto bisa didekode langsung dari URL-nya tanpa mengunduh gambar. Setelah itu 1.012 foto sampul diunduh dan diperiksa visual dengan pemilah otomatis. Rinciannya di slide 10.</p>
+          <p>Tanggal unggah tiap foto bisa didekode langsung dari URL-nya tanpa mengunduh gambar. Setelah itu 1.012 foto sampul diunduh dan diperiksa visual dengan pemilah otomatis. Rinciannya di slide 13.</p>
           <div class="tl-figs">
             <span class="fig"><b>9.896</b> URL foto dibaca</span>
             <span class="fig"><b>1.012</b> sampul diperiksa visual</span>
@@ -534,8 +707,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 05 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s5" data-period="ini">
-  <div class="rail"><span class="num">05</span><span>Linimasa</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
+<section class="slide" id="s8" data-period="ini">
+  <div class="rail"><span class="num">08</span><span>Linimasa</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
   <h2 class="wide">Perluasan ke empat toko, lalu dua koreksi besar</h2>
 
   <div class="body-grid">
@@ -579,7 +752,7 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
         <div class="tl-date">7 Agu<small>Jumat</small></div>
         <div class="tl-body">
           <h4>Spot-check Anda memicu dua koreksi metodologi dalam satu hari</h4>
-          <p>Vellfire di Otoprotection TikTok dan Harrier di Smartprotection TikTok terkonfirmasi persis seperti yang Anda laporkan. Audit ulang menaikkan angka ke 8.777, lalu koreksi kedua menurunkannya lagi karena pengujian format ternyata salah dasar. Rinciannya di slide 7.</p>
+          <p>Vellfire di Otoprotection TikTok dan Harrier di Smartprotection TikTok terkonfirmasi persis seperti yang Anda laporkan. Audit ulang menaikkan angka ke 8.777, lalu koreksi kedua menurunkannya lagi karena pengujian format ternyata salah dasar. Rinciannya di slide 10.</p>
           <div class="tl-figs">
             <span class="fig">Audit ulang <b>8.777</b> baris</span>
             <span class="fig">UA lawan master <b>1.829</b> perlu perhatian</span>
@@ -600,8 +773,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 06 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s6" data-period="ini">
-  <div class="rail"><span class="num">06</span><span>Capaian per Toko</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
+<section class="slide" id="s9" data-period="ini">
+  <div class="rail"><span class="num">09</span><span>Capaian per Toko</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
   <h2 class="wide">2.820 baris SKU sudah dihitung dan dikemas jadi file siap unggah</h2>
   <p class="lede">Undercover Autocare sudah melewati tiga channel penuh dengan metode terbaru. Tiga toko lain baru melewati pemeriksaan tahap pertama.</p>
 
@@ -663,8 +836,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 07 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s7" data-period="risiko">
-  <div class="rail"><span class="num">07</span><span>Koreksi Metodologi</span><span class="tag tag-risiko">Temuan Utama</span></div>
+<section class="slide" id="s10" data-period="risiko">
+  <div class="rail"><span class="num">10</span><span>Koreksi Metodologi</span><span class="tag tag-risiko">Temuan Utama</span></div>
   <h2 class="wide">Angka berubah tiga kali minggu ini — karena alat ukurnya yang diperbaiki</h2>
   <p class="lede">Ini bagian terpenting laporan ini. Angka yang naik-turun bukan tanda pekerjaan bertambah atau berkurang, tapi tanda cara mengukurnya jadi makin benar.</p>
 
@@ -701,8 +874,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 08 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s8">
-  <div class="rail"><span class="num">08</span><span>Kepatuhan SKU</span><span>215 Produk Terlaris</span></div>
+<section class="slide" id="s11">
+  <div class="rail"><span class="num">11</span><span>Kepatuhan SKU</span><span>215 Produk Terlaris</span></div>
   <h2 class="wide">86,1% baris sudah sesuai — tidak ada satu channel pun yang tuntas</h2>
   <p class="lede">Dari 63.364 baris varian yang masuk daftar 215 model terlaris, di sembilan kombinasi toko × channel.</p>
 
@@ -766,8 +939,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 09 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s9" data-period="ini">
-  <div class="rail"><span class="num">09</span><span>Aturan Bisnis</span><span class="tag tag-ini">Baru &amp; Direvisi</span></div>
+<section class="slide" id="s12" data-period="ini">
+  <div class="rail"><span class="num">12</span><span>Aturan Bisnis</span><span class="tag tag-ini">Baru &amp; Direvisi</span></div>
   <h2 class="wide">Lima keputusan aturan diambil minggu ini</h2>
   <p class="lede">Semuanya sudah dicatat permanen supaya tidak dirancang ulang di sesi berikutnya.</p>
 
@@ -817,8 +990,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 10 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s10" data-period="lalu">
-  <div class="rail"><span class="num">10</span><span>Audit Foto Produk</span><span class="tag tag-lalu">1 Agustus</span></div>
+<section class="slide" id="s13" data-period="lalu">
+  <div class="rail"><span class="num">13</span><span>Audit Foto Produk</span><span class="tag tag-lalu">1 Agustus</span></div>
   <h2 class="wide">29 produk masih memakai foto sampul mobil polos tanpa desain toko</h2>
   <p class="lede">Audit ini dijalankan ulang dengan metode yang jauh lebih murah, lalu diverifikasi secara visual — bukan lagi menebak dari metadata.</p>
 
@@ -867,8 +1040,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 11 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s11" data-period="risiko">
-  <div class="rail"><span class="num">11</span><span>Kesehatan Toko</span><span class="tag tag-risiko">Komplain &amp; Rating</span></div>
+<section class="slide" id="s14" data-period="risiko">
+  <div class="rail"><span class="num">14</span><span>Kesehatan Toko</span><span class="tag tag-risiko">Komplain &amp; Rating</span></div>
   <h2 class="wide">Empat dari tujuh komplain menunjuk satu sebab yang sama: warna abu</h2>
   <p class="lede">Dari catatan komplain <em>Report</em> milik akun toko, periode 18–30 Juli. Rata-rata bintang 1,9.</p>
 
@@ -899,7 +1072,7 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
         </ul>
       </div>
       <div class="card">
-        <div class="cap">Kaitan langsung dengan slide 10</div>
+        <div class="cap">Kaitan langsung dengan slide 13</div>
         <p>Keluhan "abu terlihat seperti hitam/dongker" adalah masalah <em>representasi foto</em>, bukan mutu barang. Ini bersinggungan persis dengan audit foto: selama foto sampul dan galeri tidak merepresentasikan warna abu dengan benar, komplain jenis ini akan terus berulang dan menekan rating.</p>
       </div>
       <div class="note" style="margin-top:0"><strong>Batas data:</strong> catatan komplain hanya sampai 30 Juli. Tidak ada entri untuk 2–8 Agustus, jadi tren minggu ini belum bisa dibandingkan. Rating toko resmi tiap marketplace juga belum tersedia di sini.</div>
@@ -908,10 +1081,10 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 12 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s12">
-  <div class="rail"><span class="num">12</span><span>Produk Terlaris</span></div>
+<section class="slide" id="s15">
+  <div class="rail"><span class="num">15</span><span>Produk Terlaris</span></div>
   <h2 class="wide">Yang tersedia baru peringkat, bukan penjualan mingguan</h2>
-  <p class="lede">Acuan yang dipakai proyek ini adalah daftar peringkat 300 model terlaris yang dibuat 29 Juli — potret kumulatif, bukan penjualan per periode.</p>
+  <p class="lede">Acuan yang dipakai proyek ini adalah daftar peringkat 300 model terlaris yang dibuat 29 Juli — sudah jadi dasar angka penjualan di slide 2–4. Bagian ini fokus ke masalah SKU yang menempel di model-model terlaris itu.</p>
 
   <div class="body-grid cols-2">
     <div style="display:flex;flex-direction:column;gap:14px">
@@ -939,28 +1112,38 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
           </tbody>
         </table>
       </div>
-      <p class="cmp-cap" style="margin-top:14px">Daftar produk terlaris untuk periode 2–8 Agustus dan pembandingnya belum bisa disusun — butuh ekspor penjualan per produk dari Big Seller.</p>
+      <p class="cmp-cap" style="margin-top:14px">Daftar produk terlaris <strong>khusus periode 2–8 Agustus</strong> dan pembandingnya masih belum bisa disusun — file yang ada bersifat kumulatif (semua histori tergabung), bukan per-tanggal. Butuh ekspor Big Seller dengan rentang tanggal spesifik untuk itu (lihat slide 17).</p>
     </div>
   </div>
 </section>
 
 <!-- 13 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s13" data-period="risiko">
-  <div class="rail"><span class="num">13</span><span>Penjualan, Iklan &amp; ROAS</span><span class="tag tag-risiko">Data Belum Tersedia</span></div>
-  <h2 class="wide">Kerangka metriknya sudah disiapkan, angkanya menunggu ekspor</h2>
-  <p class="lede">Big Seller tidak bisa dijangkau dari lingkungan kerja ini — jaringan ke domainnya tertutup dan tidak ada kredensial tersimpan. Tidak ada satu pun file ekspor penjualan atau iklan di repositori maupun di Google Drive yang bisa diakses. Angka apa pun yang saya tulis di sini tanpa itu hanya akan jadi karangan.</p>
+<section class="slide" id="s16" data-period="risiko">
+  <div class="rail"><span class="num">16</span><span>Penjualan, Iklan &amp; ROAS</span><span class="tag tag-risiko">Sebagian Tersedia</span></div>
+  <h2 class="wide">Penjualan agregat sudah terisi — iklan, rating, dan pemisahan per toko masih menunggu ekspor</h2>
+  <p class="lede">Sesi ini tidak punya koneksi browser ke Big Seller, jadi tidak bisa menarik data live dari sana. Yang terisi di slide 2–4 berasal dari ekspor yang sudah ada di Google Drive Anda. Tiga blok di bawah ini masih kosong karena dimensinya (per toko, per periode, iklan, rating) memang tidak ada di ekspor itu — bukan karena belum dicoba.</p>
 
   <div class="body-grid">
     <div>
       <div class="card" style="margin-bottom:14px">
-        <div class="cap">Penjualan — per periode, per toko</div>
+        <div class="cap">Penjualan — agregat kumulatif <span class="pill p-good" style="margin-left:6px">Terisi · slide 2–4</span></div>
         <div class="slots">
-          <div class="slot"><div class="s-lbl">Penjualan kotor</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
-          <div class="slot"><div class="s-lbl">Jumlah pesanan</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
-          <div class="slot"><div class="s-lbl">Unit terjual</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
-          <div class="slot"><div class="s-lbl">Nilai pesanan rata-rata</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
-          <div class="slot"><div class="s-lbl">Tingkat pembatalan &amp; retur</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Total penjualan (net)</div><div class="s-val" style="color:var(--ink)">Rp 8,02 M</div><div class="s-src">Mobil Terlaris.xlsx</div></div>
+          <div class="slot"><div class="s-lbl">Unit terjual</div><div class="s-val" style="color:var(--ink)">27.229</div><div class="s-src">Mobil Terlaris.xlsx</div></div>
+          <div class="slot"><div class="s-lbl">Harga rata-rata/unit</div><div class="s-val" style="color:var(--ink)">Rp 294.631</div><div class="s-src">turunan</div></div>
+          <div class="slot"><div class="s-lbl">Baris dikeluarkan (batal/retur)</div><div class="s-val" style="color:var(--ink)">15,5%</div><div class="s-src">Mobil Terlaris.xlsx</div></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="cap">Penjualan — per periode &amp; per toko</div>
+        <div class="slots">
+          <div class="slot"><div class="s-lbl">Penjualan minggu ini vs minggu lalu</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Penjualan per toko (UA/OT/SP/OP)</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Jumlah pesanan</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Nilai pesanan rata-rata</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
+        </div>
+        <p class="cmp-cap" style="margin-top:12px">Data yang ada gabungan 4 toko jadi satu dan seluruh histori jadi satu — tidak bisa dipecah tanpa ekspor baru bertanggal.</p>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -991,25 +1174,25 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 14 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s14">
-  <div class="rail"><span class="num">14</span><span>Cara Melengkapi</span></div>
-  <h2 class="wide">Empat ekspor ini cukup untuk mengisi seluruh slide 13</h2>
-  <p class="lede">Kirimkan filenya, dan bagian penjualan, iklan, ROAS, produk terlaris, serta rating toko akan langsung dihitung dan dimasukkan ke deck ini — termasuk perbandingan dua periodenya.</p>
+<section class="slide" id="s17">
+  <div class="rail"><span class="num">17</span><span>Cara Melengkapi</span></div>
+  <h2 class="wide">Tiga ekspor lagi cukup untuk mengisi sisa slide 16</h2>
+  <p class="lede">Penjualan agregat (slide 2–4) sudah terisi dari ekspor yang ada di Drive. Kirimkan tiga hal di bawah, dan pemisahan per toko/per periode, iklan, ROAS, serta rating toko bisa langsung dihitung dan dimasukkan ke deck ini.</p>
 
   <div class="body-grid">
     <div class="steps">
       <div class="step">
         <div class="step-n">01</div>
         <div>
-          <h4>Big Seller → Laporan Penjualan</h4>
-          <p>Atur rentang tanggal <strong>2–8 Agustus 2026</strong>, ekspor Excel. Ulangi untuk <strong>26 Juli – 1 Agustus 2026</strong>. Pilih rincian per toko kalau tersedia, supaya UA/OT/SP/OP bisa dipisah.</p>
+          <h4>Big Seller → Laporan Penjualan (bertanggal, per toko)</h4>
+          <p>Atur rentang tanggal <strong>2–8 Agustus 2026</strong>, ekspor Excel. Ulangi untuk <strong>26 Juli – 1 Agustus 2026</strong>. Pilih rincian per toko kalau tersedia, supaya UA/OT/SP/OP bisa dipisah. Ini beda dari yang sudah dipakai di slide 2–4 — file itu kumulatif gabungan, bukan bertanggal per toko.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-n">02</div>
         <div>
-          <h4>Big Seller → Laporan Produk / Analisis Produk</h4>
-          <p>Rentang tanggal yang sama, ekspor Excel. Dari sini daftar produk terlaris per periode dan perbandingannya bisa disusun — sekaligus dicocokkan ke daftar peringkat 215 yang sudah dipakai proyek SKU.</p>
+          <h4>Big Seller → Laporan Produk / Analisis Produk (bertanggal)</h4>
+          <p>Rentang tanggal yang sama, ekspor Excel. Formatnya mirip <em>Mobil Terlaris.xlsx</em> yang sudah dipakai di slide 2–4, tapi versi bertanggal — dari sini produk terlaris <strong>khusus 2–8 Agustus</strong> dan pembandingnya baru bisa disusun.</p>
         </div>
       </div>
       <div class="step">
@@ -1028,13 +1211,13 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
       </div>
     </div>
 
-    <div class="note neutral"><strong>Catatan teknis:</strong> file besar tidak perlu masuk repositori git — cukup taruh di folder kerja seperti biasa dan sebutkan lokasinya, atau lampirkan langsung di percakapan.</div>
+    <div class="note neutral"><strong>Soal "fetch langsung ke Chrome":</strong> sesi ini tidak punya koneksi ke browser Anda maupun kredensial Big Seller — tidak ada tool semacam itu terpasang, dan sesi berjalan di kontainer cloud terpisah dari perangkat Anda. Cara yang terbukti jalan tetap: ekspor manual lalu taruh di Drive/folder kerja seperti biasa (workflow yang sudah dipakai untuk <em>Mobil Terlaris.xlsx</em>). File besar tidak perlu masuk repositori git — cukup taruh di folder kerja seperti biasa dan sebutkan lokasinya, atau lampirkan langsung di percakapan.</div>
   </div>
 </section>
 
 <!-- 15 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s15" data-period="risiko">
-  <div class="rail"><span class="num">15</span><span>Risiko &amp; Blocker</span><span class="tag tag-risiko">Terbuka</span></div>
+<section class="slide" id="s18" data-period="risiko">
+  <div class="rail"><span class="num">18</span><span>Risiko &amp; Blocker</span><span class="tag tag-risiko">Terbuka</span></div>
   <h2 class="wide">Sepuluh hal yang belum tertutup</h2>
 
   <div class="body-grid">
@@ -1099,8 +1282,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 16 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s16">
-  <div class="rail"><span class="num">16</span><span>Rencana</span><span>Minggu Depan</span></div>
+<section class="slide" id="s19">
+  <div class="rail"><span class="num">19</span><span>Rencana</span><span>Minggu Depan</span></div>
   <h2 class="wide">Urutannya penting — beberapa langkah tidak boleh dibalik</h2>
 
   <div class="body-grid">
@@ -1152,8 +1335,8 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
 </section>
 
 <!-- 17 ─────────────────────────────────────────────────────── -->
-<section class="slide" id="s17">
-  <div class="rail"><span class="num">17</span><span>Sumber Data</span></div>
+<section class="slide" id="s20">
+  <div class="rail"><span class="num">20</span><span>Sumber Data</span></div>
   <h2 class="wide">Dari mana setiap angka di deck ini berasal</h2>
 
   <div class="body-grid cols-2">
@@ -1164,18 +1347,19 @@ tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--
         <li><strong>Catatan proyek Big Seller Sync</strong> — seluruh angka SKU, hasil audit, keputusan aturan</li>
         <li><strong>Catatan audit foto Shopee</strong> — hasil 1 Agustus</li>
         <li><strong>Spreadsheet <em>Report</em></strong> (akun <span class="mono" style="font-size:12.5px">under.covermobil</span>) — catatan komplain 18–30 Juli</li>
-        <li><strong>Daftar peringkat 300 model terlaris</strong> (29 Juli) — rujukan peringkat, bukan penjualan periode</li>
+        <li><strong>Mobil Terlaris.xlsx</strong> (Google Drive, akun under.covermobil, dibuat 29 Juli, diperbarui 7 Agustus) — peringkat 217 model, kuantitas &amp; nilai penjualan kumulatif per model/tier/warna. Dasar seluruh angka di slide 2–4</li>
       </ul>
     </div>
     <div class="card">
       <div class="cap">Tidak tersedia di sesi ini</div>
       <ul style="padding-left:1.05em">
-        <li><strong>Big Seller</strong> — domainnya tidak bisa dijangkau dari lingkungan kerja ini, dan tidak ada kredensial maupun file ekspornya</li>
+        <li><strong>Big Seller secara live</strong> — sesi ini tidak punya koneksi browser ke sana dan tidak ada kredensial tersimpan; angka penjualan di slide 2–4 berasal dari ekspor yang sudah ada di Drive, bukan tarikan langsung</li>
+        <li><strong>Penjualan per toko &amp; per periode</strong> — <em>Mobil Terlaris.xlsx</em> kumulatif gabungan 4 toko, bukan bertanggal per toko</li>
         <li><strong>Shopee / TikTok / Lazada Seller Center</strong> — tidak ada akses maupun ekspor</li>
         <li><strong>Data iklan berbayar</strong> — tidak ada di repositori maupun Drive yang terjangkau</li>
         <li><strong>Rating &amp; skor kesehatan toko resmi</strong> — hanya catatan komplain internal yang tersedia</li>
       </ul>
-      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-3)">Tidak ada angka penjualan, ROAS, atau rating yang diperkirakan atau diisi sementara di deck ini. Slot yang kosong memang kosong.</p>
+      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-3)">Tidak ada angka penjualan, ROAS, atau rating yang diperkirakan atau diisi sementara di deck ini. Slot yang kosong memang kosong. Perlu diketahui juga: <em>Mobil Terlaris.xlsx</em> mencatat 33.369 baris order dari Shopee, 160 dari Lazada, dan 0 dari TikTok — angka penjualan di slide 2–4 pada dasarnya potret Shopee.</p>
     </div>
   </div>
 </section>
