@@ -1,0 +1,1241 @@
+<title>Laporan Progres Mingguan — 2–8 Agustus 2026</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — palet lengkap didefinisikan di :root (mode terang).
+   Blok gelap hanya mendefinisi ULANG token yang sama.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#FBFAF8;
+  --surface:#FFFFFF;
+  --surface-2:#F3F2EE;
+  --surface-3:#EAE8E2;
+  --ink:#16191D;
+  --ink-2:#454D57;
+  --ink-3:#6D7783;
+  --rule:#DEDBD4;
+  --rule-strong:#C9C5BC;
+
+  --marine:#2E6FA3;
+  --marine-ink:#245A85;
+  --marine-soft:rgba(46,111,163,.10);
+  --amber:#C8801A;
+  --amber-ink:#9A6110;
+  --amber-soft:rgba(200,128,26,.13);
+
+  --good:#2C7A57;
+  --good-soft:rgba(44,122,87,.11);
+  --warn:#A9761A;
+  --warn-soft:rgba(169,118,26,.13);
+  --crit:#B0453B;
+  --crit-soft:rgba(176,69,59,.10);
+
+  --shadow:0 1px 2px rgba(22,25,29,.05), 0 8px 24px -12px rgba(22,25,29,.16);
+
+  --font-display:"Segoe UI Variable Display","Helvetica Neue",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#101316;
+    --surface:#171B1F;
+    --surface-2:#1E2328;
+    --surface-3:#262C32;
+    --ink:#EDEDEA;
+    --ink-2:#B3BAC2;
+    --ink-3:#868F99;
+    --rule:#2C3238;
+    --rule-strong:#3C444C;
+
+    --marine:#4E96C6;
+    --marine-ink:#7FB6DC;
+    --marine-soft:rgba(78,150,198,.14);
+    --amber:#BE8630;
+    --amber-ink:#D6A257;
+    --amber-soft:rgba(190,134,48,.16);
+
+    --good:#4FA87C;
+    --good-soft:rgba(79,168,124,.14);
+    --warn:#C89A3F;
+    --warn-soft:rgba(200,154,63,.15);
+    --crit:#D2695E;
+    --crit-soft:rgba(210,105,94,.14);
+
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101316;
+  --surface:#171B1F;
+  --surface-2:#1E2328;
+  --surface-3:#262C32;
+  --ink:#EDEDEA;
+  --ink-2:#B3BAC2;
+  --ink-3:#868F99;
+  --rule:#2C3238;
+  --rule-strong:#3C444C;
+
+  --marine:#4E96C6;
+  --marine-ink:#7FB6DC;
+  --marine-soft:rgba(78,150,198,.14);
+  --amber:#BE8630;
+  --amber-ink:#D6A257;
+  --amber-soft:rgba(190,134,48,.16);
+
+  --good:#4FA87C;
+  --good-soft:rgba(79,168,124,.14);
+  --warn:#C89A3F;
+  --warn-soft:rgba(200,154,63,.15);
+  --crit:#D2695E;
+  --crit-soft:rgba(210,105,94,.14);
+
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0;font-family:var(--font-display);text-wrap:balance;letter-spacing:-.02em;font-weight:700}
+p{margin:0}
+ul,ol{margin:0;padding-left:1.15em}
+li{margin:.3em 0}
+strong{font-weight:650;color:var(--ink)}
+code,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* ── DECK SHELL ───────────────────────────────────────────── */
+.deck{max-width:1180px;margin:0 auto;padding:0 clamp(14px,3.5vw,40px)}
+.slide{
+  position:relative;
+  padding:clamp(32px,5vw,60px) 0 clamp(40px,6vw,72px);
+  border-top:1px solid var(--rule);
+  scroll-margin-top:0;
+}
+.slide:first-of-type{border-top:0}
+@media (min-width:940px){
+  .slide{min-height:100svh;display:flex;flex-direction:column;justify-content:center}
+}
+/* garis tepi kiri = penanda periode/severitas, bukan hiasan */
+.slide::before{
+  content:"";position:absolute;left:calc(-1 * clamp(14px,3.5vw,40px));top:clamp(32px,5vw,60px);
+  width:3px;height:clamp(56px,8vw,92px);background:var(--rule-strong);border-radius:2px;
+}
+.slide[data-period="lalu"]::before{background:var(--marine)}
+.slide[data-period="ini"]::before{background:var(--amber)}
+.slide[data-period="risiko"]::before{background:var(--crit)}
+
+.rail{
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:18px;
+}
+.rail .num{color:var(--ink);font-weight:600}
+.rail .tag{padding:2px 7px;border-radius:3px;letter-spacing:.1em}
+.tag-lalu{background:var(--marine-soft);color:var(--marine-ink)}
+.tag-ini{background:var(--amber-soft);color:var(--amber-ink)}
+.tag-risiko{background:var(--crit-soft);color:var(--crit)}
+
+.slide h2{font-size:clamp(26px,4.1vw,42px);line-height:1.1;max-width:19ch}
+.slide h2.wide{max-width:26ch}
+.lede{margin-top:14px;max-width:64ch;color:var(--ink-2);font-size:clamp(15px,1.5vw,17.5px)}
+.body-grid{margin-top:clamp(24px,3.5vw,38px);display:grid;gap:clamp(16px,2.2vw,26px)}
+@media (min-width:840px){ .cols-2{grid-template-columns:1fr 1fr} }
+
+/* ── COVER ────────────────────────────────────────────────── */
+.cover{padding-top:clamp(48px,9vw,110px)}
+.cover h1{font-size:clamp(38px,7.6vw,86px);line-height:.98;letter-spacing:-.035em;max-width:14ch}
+.cover .kicker{
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:22px;
+}
+.periods{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.period{
+  flex:1 1 240px;background:var(--surface);border:1px solid var(--rule);border-radius:5px;
+  padding:16px 18px;border-left:3px solid var(--rule-strong);
+}
+.period.a{border-left-color:var(--marine)}
+.period.b{border-left-color:var(--amber)}
+.period .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.period .dt{font-family:var(--font-mono);font-size:clamp(17px,2.2vw,21px);font-weight:600;margin-top:5px;letter-spacing:-.01em}
+.period .meta{font-size:13.5px;color:var(--ink-2);margin-top:6px}
+.cover-foot{
+  margin-top:38px;padding-top:20px;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:10px 28px;font-size:13.5px;color:var(--ink-3);
+}
+.cover-foot span{font-family:var(--font-mono);font-size:12.5px}
+
+/* ── KPI TILES ────────────────────────────────────────────── */
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.kpi{
+  background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:16px 16px 14px;
+  display:flex;flex-direction:column;gap:5px;
+}
+.kpi .k-lbl{font-size:12.5px;color:var(--ink-3);line-height:1.35;min-height:2.7em}
+.kpi .k-val{font-family:var(--font-mono);font-size:clamp(26px,3.4vw,34px);font-weight:600;letter-spacing:-.03em;line-height:1}
+.kpi .k-sub{font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+.kpi.up .k-val{color:var(--amber-ink)}
+.kpi.warn .k-val{color:var(--crit)}
+.kpi.good .k-val{color:var(--good)}
+
+.note{
+  margin-top:22px;background:var(--crit-soft);border:1px solid var(--rule);border-left:3px solid var(--crit);
+  border-radius:5px;padding:15px 18px;font-size:14.5px;color:var(--ink-2);max-width:74ch;
+}
+.note strong{color:var(--crit)}
+.note.neutral{background:var(--surface-2);border-left-color:var(--rule-strong)}
+.note.neutral strong{color:var(--ink)}
+
+/* ── GRAFIK BATANG PERBANDINGAN ───────────────────────────── */
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;color:var(--ink-2)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px}
+.legend .sw-a{background:var(--marine)}
+.legend .sw-b{background:var(--amber)}
+
+.cmp{display:flex;flex-direction:column;gap:2px}
+.cmp-row{
+  display:grid;grid-template-columns:minmax(120px,1.15fr) minmax(0,2.6fr) 82px;
+  gap:14px;align-items:center;padding:9px 8px;border-radius:4px;
+}
+.cmp-row:hover{background:var(--surface-2)}
+.cmp-label{font-size:13.5px;color:var(--ink-2);line-height:1.25}
+.cmp-bars{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* grid, bukan flex: lebar % batang relatif ke trek-nya sendiri,
+   sehingga label nilai selalu punya ruang dan sejajar satu kolom */
+.cmp-line{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px;min-width:0}
+.cmp-line i{display:block;height:9px;border-radius:0 3px 3px 0;min-width:3px}
+.cmp-line i.a{background:var(--marine)}
+.cmp-line i.b{background:var(--amber)}
+.cmp-line b{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.cmp-delta{font-family:var(--font-mono);font-size:13px;font-weight:600;text-align:right;color:var(--good)}
+.cmp-cap{margin-top:14px;font-size:12.5px;color:var(--ink-3);max-width:70ch}
+
+/* ── BATANG TUNGGAL (per toko) ────────────────────────────── */
+.bars{display:flex;flex-direction:column;gap:3px}
+.bar-row{display:grid;grid-template-columns:74px minmax(0,1fr) auto;gap:12px;align-items:center;padding:7px 8px;border-radius:4px}
+.bar-row:hover{background:var(--surface-2)}
+.bar-row .nm{font-family:var(--font-mono);font-size:13px;font-weight:600}
+.bar-row .tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0}
+.bar-row .tr i{display:block;height:11px;border-radius:0 3px 3px 0;background:var(--marine);min-width:3px}
+.bar-row .vl{font-family:var(--font-mono);font-size:13px;font-weight:600;white-space:nowrap}
+.bar-row .cx{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+
+/* ── TABEL ────────────────────────────────────────────────── */
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:5px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;background:var(--surface-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tfoot td{font-weight:650;background:var(--surface-2);border-top:1px solid var(--rule-strong)}
+.sku{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:3px;white-space:nowrap}
+
+/* ── PILL STATUS ──────────────────────────────────────────── */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;white-space:nowrap;font-weight:600;
+}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.p-good{background:var(--good-soft);color:var(--good)}
+.p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-crit{background:var(--crit-soft);color:var(--crit)}
+.p-idle{background:var(--surface-3);color:var(--ink-3)}
+
+/* ── LINIMASA ─────────────────────────────────────────────── */
+.tl{display:flex;flex-direction:column;gap:0}
+.tl-item{display:grid;grid-template-columns:88px minmax(0,1fr);gap:clamp(12px,2vw,26px);padding:18px 0;border-top:1px solid var(--rule)}
+.tl-item:first-child{border-top:0;padding-top:4px}
+.tl-date{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.tl-date small{display:block;font-weight:400;color:var(--ink-3);font-size:11.5px;letter-spacing:.06em;margin-top:2px}
+.tl-body h4{font-size:16px;letter-spacing:-.01em;margin-bottom:6px}
+.tl-body p{font-size:14px;color:var(--ink-2);max-width:70ch}
+.tl-figs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.fig{font-family:var(--font-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--rule);
+     padding:3px 8px;border-radius:3px;color:var(--ink-2)}
+.fig b{color:var(--ink);font-weight:600}
+
+/* ── KARTU ────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:18px 20px}
+.card h4{font-size:15.5px;margin-bottom:8px;letter-spacing:-.01em}
+.card p,.card li{font-size:14px;color:var(--ink-2)}
+.card .cap{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+
+.steps{display:flex;flex-direction:column;gap:0;counter-reset:s}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:16px;padding:16px 0;border-top:1px solid var(--rule)}
+.step:first-child{border-top:0;padding-top:2px}
+.step-n{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink-3);padding-top:2px}
+.step h4{font-size:15.5px;margin-bottom:5px}
+.step p{font-size:14px;color:var(--ink-2);max-width:68ch}
+.step .arrow{font-family:var(--font-mono);font-size:13px;color:var(--ink-3);margin-top:7px}
+.step .arrow b{color:var(--ink);font-weight:600}
+
+/* ── SLOT DATA KOSONG ─────────────────────────────────────── */
+.slots{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.slot{
+  border:1px dashed var(--rule-strong);border-radius:5px;padding:14px 16px;background:transparent;
+  display:flex;flex-direction:column;gap:4px;
+}
+.slot .s-lbl{font-size:13px;color:var(--ink-2);line-height:1.3}
+.slot .s-val{font-family:var(--font-mono);font-size:24px;font-weight:600;color:var(--ink-3);letter-spacing:.02em}
+.slot .s-src{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);letter-spacing:.04em}
+
+/* ── NAVIGASI ─────────────────────────────────────────────── */
+.dots{
+  position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:20;
+  display:none;flex-direction:column;gap:7px;
+}
+@media (min-width:1100px){.dots{display:flex}}
+.dots button{
+  width:8px;height:8px;padding:0;border:0;border-radius:50%;background:var(--rule-strong);
+  cursor:pointer;transition:background .18s,transform .18s;
+}
+.dots button:hover{background:var(--ink-3);transform:scale(1.35)}
+.dots button[aria-current="true"]{background:var(--ink);transform:scale(1.35)}
+.dots button:focus-visible{outline:2px solid var(--marine);outline-offset:3px}
+.hint{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);background:var(--surface);border:1px solid var(--rule);border-radius:20px;
+  padding:6px 14px;box-shadow:var(--shadow);display:none;
+}
+@media (min-width:1100px){.hint{display:block}}
+.hint.gone{opacity:0;pointer-events:none;transition:opacity .5s}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+@media print{
+  .dots,.hint{display:none}
+  .slide{min-height:0;page-break-after:always;padding:24px 0}
+  body{background:#fff;color:#000}
+}
+</style>
+
+<nav class="dots" id="dots" aria-label="Navigasi slide"></nav>
+<div class="hint" id="hint">← → untuk pindah slide</div>
+
+<main class="deck">
+
+<!-- 01 ─────────────────────────────────────────────────────── -->
+<section class="slide cover" id="s1">
+  <p class="kicker">Undercover · Laporan Internal</p>
+  <h1>Progres Mingguan Katalog &amp; Toko</h1>
+  <p class="lede">Perbandingan dua periode tujuh-harian: apa yang dikerjakan, seberapa jauh perbaikan SKU 215 produk terlaris berjalan di empat toko, dan mana yang masih menunggu keputusan.</p>
+
+  <div class="periods">
+    <div class="period a">
+      <div class="lbl">Periode Pembanding</div>
+      <div class="dt">26 Jul – 1 Agu 2026</div>
+      <div class="meta">4 hari kerja aktif · 1 toko · 2 channel</div>
+    </div>
+    <div class="period b">
+      <div class="lbl">Periode Berjalan</div>
+      <div class="dt">2 – 8 Agu 2026</div>
+      <div class="meta">5 hari kerja aktif · 4 toko · 3 channel</div>
+    </div>
+  </div>
+
+  <div class="cover-foot">
+    <div>Disusun <span>9 Agustus 2026</span></div>
+    <div>Toko <span>UA · OT · SP · OP</span></div>
+    <div>Marketplace <span>Shopee · TikTok · Lazada</span></div>
+  </div>
+</section>
+
+<!-- 02 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s2" data-period="ini">
+  <div class="rail"><span class="num">02</span><span>Ringkasan Eksekutif</span><span class="tag tag-ini">2–8 Agustus</span></div>
+  <h2 class="wide">Minggu tersibuk sejak proyek dimulai — dan minggu paling banyak koreksi</h2>
+  <p class="lede">Cakupan melompat dari satu toko ke empat toko. Bersamaan dengan itu, dua koreksi metodologi membongkar bahwa angka "selesai" minggu-minggu sebelumnya terlalu optimistis.</p>
+
+  <div class="body-grid">
+    <div class="kpis">
+      <div class="kpi up">
+        <div class="k-lbl">Catatan kerja tercatat</div>
+        <div class="k-val">22</div>
+        <div class="k-sub">↑ dari 10</div>
+      </div>
+      <div class="kpi up">
+        <div class="k-lbl">Toko dicakup pemeriksaan</div>
+        <div class="k-val">4</div>
+        <div class="k-sub">↑ dari 1</div>
+      </div>
+      <div class="kpi good">
+        <div class="k-lbl">Baris SKU disiapkan untuk upload</div>
+        <div class="k-val">2.820</div>
+        <div class="k-sub">17 file kerja</div>
+      </div>
+      <div class="kpi warn">
+        <div class="k-lbl">Baris top-215 masih belum sesuai</div>
+        <div class="k-val">8.777</div>
+        <div class="k-sub">741 listing</div>
+      </div>
+      <div class="kpi">
+        <div class="k-lbl">Kepatuhan SKU 215 terlaris</div>
+        <div class="k-val">86,1%</div>
+        <div class="k-sub">dari 63.364 baris</div>
+      </div>
+      <div class="kpi warn">
+        <div class="k-lbl">Baris menunggu keputusan Anda</div>
+        <div class="k-val">635</div>
+        <div class="k-sub">UA saja</div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Yang belum bisa dilaporkan:</strong> penjualan, penjualan dari iklan, ROAS, dan rating toko tidak tersedia di sesi ini — Big Seller tidak bisa diakses dari lingkungan kerja ini dan tidak ada file ekspornya. Slide 13 &amp; 14 menjelaskan kerangka metriknya dan cara mengambil datanya, supaya bagian itu bisa langsung diisi begitu ekspornya tersedia.</div>
+  </div>
+</section>
+
+<!-- 03 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s3">
+  <div class="rail"><span class="num">03</span><span>Perbandingan Aktivitas</span></div>
+  <h2 class="wide">Volume kerja naik di semua ukuran</h2>
+  <p class="lede">Setiap baris dibandingkan pada skalanya sendiri, dan kedua nilainya dilabeli langsung.</p>
+
+  <div class="body-grid">
+    <div>
+      <div class="legend">
+        <span><i class="sw-a"></i>26 Jul – 1 Agu</span>
+        <span><i class="sw-b"></i>2 – 8 Agu</span>
+      </div>
+      <div class="cmp">
+        <div class="cmp-row">
+          <div class="cmp-label">Hari kerja aktif</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:80%"></i><b>4</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>5</b></div>
+          </div>
+          <div class="cmp-delta">+1</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">Catatan kerja tercatat</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:45%"></i><b>10</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>22</b></div>
+          </div>
+          <div class="cmp-delta">+120%</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">Baris dokumentasi ditulis</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:34%"></i><b>160</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>471</b></div>
+          </div>
+          <div class="cmp-delta">+194%</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">Toko dicakup</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:25%"></i><b>1</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>4</b></div>
+          </div>
+          <div class="cmp-delta">+3</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">Kombinasi toko × channel diperiksa</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:22%"></i><b>2</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>9</b></div>
+          </div>
+          <div class="cmp-delta">+7</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">Aturan bisnis baru / direvisi</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:60%"></i><b>3</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>5</b></div>
+          </div>
+          <div class="cmp-delta">+2</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">File kerja dihasilkan</div>
+          <div class="cmp-bars">
+            <div class="cmp-line"><i class="a" style="width:41%"></i><b>7</b></div>
+            <div class="cmp-line"><i class="b" style="width:100%"></i><b>17</b></div>
+          </div>
+          <div class="cmp-delta">+10</div>
+        </div>
+      </div>
+      <p class="cmp-cap">Sumber: riwayat commit dan catatan kerja repositori <code>undercover-claude</code>. "Hari kerja aktif" dihitung dari tanggal pekerjaan sesungguhnya, bukan tanggal pencatatan — pekerjaan 31 Juli dan 1 Agustus baru tercatat 3 Agustus, tetapi dihitung masuk periode pembanding.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 04 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s4" data-period="lalu">
+  <div class="rail"><span class="num">04</span><span>Linimasa</span><span class="tag tag-lalu">26 Juli – 1 Agustus</span></div>
+  <h2 class="wide">Fondasi: memetakan gudang Big Seller dan membongkar risiko stok</h2>
+
+  <div class="body-grid">
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-date">28 Jul<small>Selasa</small></div>
+        <div class="tl-body">
+          <h4>Sub-proyek baru dimulai — sinkronisasi SKU listing ke SKU Gudang Big Seller</h4>
+          <p>Seluruh SKU listing dicocokkan ke daftar SKU gudang. Dibuat file impor terpisah antara yang aman dibuat sekarang dan yang ditunda karena modelnya belum punya formula resmi. Audit aturan formula ikut dijalankan.</p>
+          <div class="tl-figs">
+            <span class="fig"><b>16.303</b> SKU dianalisis</span>
+            <span class="fig"><b>12.689</b> sudah ada (77,8%)</span>
+            <span class="fig"><b>3.614</b> belum ada</span>
+            <span class="fig"><b>2.620</b> siap impor</span>
+            <span class="fig"><b>994</b> ditunda</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">29 Jul<small>Rabu</small></div>
+        <div class="tl-body">
+          <h4>Risiko stok tertahan ditemukan — dipicu pertanyaan spot-check Anda</h4>
+          <p>Peleburan kode generasi aman dari sisi kelengkapan SKU (diuji 4 cara, 0 celah), <strong>tetapi stoknya tidak ikut pindah otomatis</strong>. Ditemukan juga bahwa 80,5% SKU gudang berstok tepat 5 — itu nilai bawaan sistem, bukan stok fisik — sehingga pewarisan stok memakai nilai tertinggi, bukan penjumlahan.</p>
+          <div class="tl-figs">
+            <span class="fig"><b>16.315</b> SKU yatim berstok</span>
+            <span class="fig"><b>81.927</b> unit menganggur</span>
+            <span class="fig"><b>48.781</b> unit tertahan &amp; punya pengganti</span>
+            <span class="fig"><b>1.371</b> SKU listing berubah</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">31 Jul<small>Jumat</small></div>
+        <div class="tl-body">
+          <h4>Shopee UA menyusut dari 29 listing bermasalah jadi 11</h4>
+          <p>Dibandingkan ke ekspor live, bukan ke file target lama. Dari sini lahir pola baku pembuatan file upload: ambil baris dari ekspor live, lalu timpa kolom SKU-nya saja — supaya harga dan stok tidak ikut tertimpa nilai basi.</p>
+          <div class="tl-figs">
+            <span class="fig"><b>182</b> baris tersisa</span>
+            <span class="fig"><b>11</b> listing</span>
+            <span class="fig"><b>10</b> transien, cukup unggah ulang</span>
+            <span class="fig"><b>1</b> terblokir syarat foto</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">1 Agu<small>Sabtu</small></div>
+        <div class="tl-body">
+          <h4>Audit foto produk dijalankan ulang dengan metode baru</h4>
+          <p>Tanggal unggah tiap foto bisa didekode langsung dari URL-nya tanpa mengunduh gambar. Setelah itu 1.012 foto sampul diunduh dan diperiksa visual dengan pemilah otomatis. Rinciannya di slide 10.</p>
+          <div class="tl-figs">
+            <span class="fig"><b>9.896</b> URL foto dibaca</span>
+            <span class="fig"><b>1.012</b> sampul diperiksa visual</span>
+            <span class="fig"><b>29</b> produk mendesak</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s5" data-period="ini">
+  <div class="rail"><span class="num">05</span><span>Linimasa</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
+  <h2 class="wide">Perluasan ke empat toko, lalu dua koreksi besar</h2>
+
+  <div class="body-grid">
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-date">3 Agu<small>Senin</small></div>
+        <div class="tl-body">
+          <h4>Shopee UA praktis tuntas; giliran TikTok UA diperiksa</h4>
+          <p>Dari 9.789 baris top-215 di Shopee UA, tinggal satu listing bermasalah — Mitsubishi L300 Pickup, yang terblokir syarat jumlah foto, bukan masalah SKU. Di TikTok ditemukan 19 listing yang kode generasinya belum dilebur.</p>
+          <div class="tl-figs">
+            <span class="fig">Shopee UA <b>14</b> baris tersisa</span>
+            <span class="fig">TikTok UA <b>423</b> baris / <b>19</b> listing</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">5 Agu<small>Rabu</small></div>
+        <div class="tl-body">
+          <h4>Hari terpadat: TikTok bersih, Lazada ketahuan terlewat, perluasan ke OT &amp; SP</h4>
+          <p>TikTok UA terverifikasi 100% bersih untuk top-215. Sebaliknya <strong>Lazada ternyata tidak pernah ikut perbaikan formula sama sekali</strong> — enam model yang sudah dibetulkan di Shopee dan TikTok masih rusak di sana. Akar penyebab kegagalan upload Lazada 29 Juli juga terbongkar: 10.534 baris dilewati Lazada dengan pesan "tidak ada perubahan", termasuk kolom SKU-nya.</p>
+          <div class="tl-figs">
+            <span class="fig">TikTok UA <b>0</b> sisa</span>
+            <span class="fig">Lazada UA <b>566</b> baris / <b>21</b> listing</span>
+            <span class="fig">Otonation <b>118</b> baris</span>
+            <span class="fig">Smartprotection <b>395</b> baris</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">6 Agu<small>Kamis</small></div>
+        <div class="tl-body">
+          <h4>Otoprotection selesai diperiksa — lalu pemeriksaan menyeluruh membalik kesimpulan</h4>
+          <p>Setelah toko keempat rampung, dijalankan sapuan penuh ke semua baris di semua toko. Hasilnya: klaim "first-pass selesai" ternyata jauh dari lengkap, karena metode sebelumnya membandingkan listing ke file target yang <em>ikut salah</em>.</p>
+          <div class="tl-figs">
+            <span class="fig">Otoprotection <b>107</b> baris</span>
+            <span class="fig">Sapuan penuh <b>7.629</b> baris belum sesuai</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">7 Agu<small>Jumat</small></div>
+        <div class="tl-body">
+          <h4>Spot-check Anda memicu dua koreksi metodologi dalam satu hari</h4>
+          <p>Vellfire di Otoprotection TikTok dan Harrier di Smartprotection TikTok terkonfirmasi persis seperti yang Anda laporkan. Audit ulang menaikkan angka ke 8.777, lalu koreksi kedua menurunkannya lagi karena pengujian format ternyata salah dasar. Rinciannya di slide 7.</p>
+          <div class="tl-figs">
+            <span class="fig">Audit ulang <b>8.777</b> baris</span>
+            <span class="fig">UA lawan master <b>1.829</b> perlu perhatian</span>
+            <span class="fig"><b>2.200</b> baris UA diperbaiki</span>
+            <span class="fig"><b>635</b> perlu keputusan</span>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">8 Agu<small>Sabtu</small></div>
+        <div class="tl-body">
+          <h4>Aturan Mazda 2 dicatat untuk seluruh toko</h4>
+          <p>Kode model dibedakan per bodystyle — <span class="sku">-2S-</span> untuk Sedan, <span class="sku">-2H-</span> untuk Hatchback, mengikuti pola Mazda 3. Di master, Sedan sudah benar; Hatchback masih memakai kode lama <span class="sku">MZD-MZ2</span> dan perlu dikonversi di tiap toko.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s6" data-period="ini">
+  <div class="rail"><span class="num">06</span><span>Capaian per Toko</span><span class="tag tag-ini">2 – 8 Agustus</span></div>
+  <h2 class="wide">2.820 baris SKU sudah dihitung dan dikemas jadi file siap unggah</h2>
+  <p class="lede">Undercover Autocare sudah melewati tiga channel penuh dengan metode terbaru. Tiga toko lain baru melewati pemeriksaan tahap pertama.</p>
+
+  <div class="body-grid">
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Toko</th>
+            <th>Channel diperiksa</th>
+            <th class="num">Baris disiapkan</th>
+            <th>Status unggah</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Undercover Autocare</strong><br><span class="mono" style="font-size:12px;color:var(--ink-3)">UA</span></td>
+            <td>Shopee · TikTok · Lazada</td>
+            <td class="num">2.200</td>
+            <td><span class="pill p-warn">Siap, belum diunggah</span></td>
+            <td>3 file "hanya baris berubah" + catatan keputusan. 635 baris menunggu jawaban Anda.</td>
+          </tr>
+          <tr>
+            <td><strong>Otonation</strong><br><span class="mono" style="font-size:12px;color:var(--ink-3)">OT</span></td>
+            <td>Shopee</td>
+            <td class="num">118</td>
+            <td><span class="pill p-warn">Siap, belum diunggah</span></td>
+            <td>Lazada belum diperiksa — perlu konfirmasi apakah toko ini punya channel Lazada.</td>
+          </tr>
+          <tr>
+            <td><strong>Smartprotection</strong><br><span class="mono" style="font-size:12px;color:var(--ink-3)">SP</span></td>
+            <td>Shopee · TikTok · Lazada</td>
+            <td class="num">395</td>
+            <td><span class="pill p-warn">Siap, belum diunggah</span></td>
+            <td>Shopee 143 · TikTok 38 · Lazada 214. Semua sudah diverifikasi bebas SKU kembar.</td>
+          </tr>
+          <tr>
+            <td><strong>Otoprotection</strong><br><span class="mono" style="font-size:12px;color:var(--ink-3)">OP</span></td>
+            <td>Shopee · TikTok</td>
+            <td class="num">107</td>
+            <td><span class="pill p-warn">Siap, belum diunggah</span></td>
+            <td>Shopee 65 · TikTok 42. Lazada belum diperiksa.</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td>9 kombinasi</td>
+            <td class="num">2.820</td>
+            <td colspan="2">17 file kerja dihasilkan minggu ini</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="note neutral"><strong>Perlu diperhatikan:</strong> UA sudah diuji dengan metode terbaru (dibandingkan ke master SKU). OT, SP, dan OP baru diuji dengan metode lama, jadi angkanya kemungkinan besar masih akan bergerak ketika metode master diterapkan ke sana.</div>
+  </div>
+</section>
+
+<!-- 07 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s7" data-period="risiko">
+  <div class="rail"><span class="num">07</span><span>Koreksi Metodologi</span><span class="tag tag-risiko">Temuan Utama</span></div>
+  <h2 class="wide">Angka berubah tiga kali minggu ini — karena alat ukurnya yang diperbaiki</h2>
+  <p class="lede">Ini bagian terpenting laporan ini. Angka yang naik-turun bukan tanda pekerjaan bertambah atau berkurang, tapi tanda cara mengukurnya jadi makin benar.</p>
+
+  <div class="body-grid">
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div>
+          <h4>6 Agustus — membandingkan listing ke file target</h4>
+          <p>Metode awal: bandingkan SKU di listing dengan SKU di file target. Kelemahannya baru ketahuan sekarang — kalau file targetnya sendiri belum pernah diperbarui, listing dan target sama-sama salah, dan perbandingan justru melaporkan "sudah benar".</p>
+          <div class="arrow">Hasil → <b>7.629 baris</b> belum sesuai</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div>
+          <h4>7 Agustus pagi — sapuan penuh dari data live</h4>
+          <p>Berhenti memakai file target sebagai acuan; semua baris disapu langsung dari ekspor live tiap toko. Sekaligus ketemu bug pencocokan nama: Undercover Autocare memakai dua pola penamaan, dan pola terbalik <em>"… – Undercover Autocare"</em> tidak ikut terbaca — 1.155 baris hilang diam-diam dari hitungan sebelumnya.</p>
+          <div class="arrow">Hasil → <b>8.777 baris</b> di 741 listing, 113 model</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div>
+          <h4>7 Agustus siang — diuji lawan master, bukan lawan pola tulisan</h4>
+          <p>Ketahuan bahwa menilai kepatuhan dari pola penulisan SKU salah dasar. Master memang sengaja memakai kode generasi non-angka untuk mobil yang generasinya tidak bernomor — <span class="sku">COM</span>, <span class="sku">J40</span>, <span class="sku">3P</span>, <span class="sku">YJ</span>, dan lainnya. Ada 2.077 baris master UA yang memang begitu <em>by design</em>. Aturan baru: SKU dinilai benar kalau cocok dengan salah satu SKU sah model itu di master.</p>
+          <div class="arrow">Hasil UA → <b>1.829 baris</b> perlu perhatian (bukan 3.757), <b>1.099</b> bisa diperbaiki otomatis</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><strong>Konsekuensi yang harus disadari:</strong> koreksi ketiga baru dijalankan untuk UA. Angka OT (872), SP (2.602), dan OP (1.546) masih memakai metode kedua, jadi kemungkinan besar <em>lebih tinggi dari kondisi sebenarnya</em>. Menjalankan metode master ke tiga toko itu adalah pekerjaan berikutnya.</div>
+  </div>
+</section>
+
+<!-- 08 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s8">
+  <div class="rail"><span class="num">08</span><span>Kepatuhan SKU</span><span>215 Produk Terlaris</span></div>
+  <h2 class="wide">86,1% baris sudah sesuai — tidak ada satu channel pun yang tuntas</h2>
+  <p class="lede">Dari 63.364 baris varian yang masuk daftar 215 model terlaris, di sembilan kombinasi toko × channel.</p>
+
+  <div class="body-grid cols-2">
+    <div>
+      <div class="card">
+        <div class="cap">Baris belum sesuai per toko</div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="nm">UA</div>
+            <div class="tr"><i style="width:100%"></i><span class="vl">3.757</span></div>
+            <div class="cx">→ 1.829 setelah uji master</div>
+          </div>
+          <div class="bar-row">
+            <div class="nm">SP</div>
+            <div class="tr"><i style="width:69%"></i><span class="vl">2.602</span></div>
+            <div class="cx">belum diuji master</div>
+          </div>
+          <div class="bar-row">
+            <div class="nm">OP</div>
+            <div class="tr"><i style="width:41%"></i><span class="vl">1.546</span></div>
+            <div class="cx">belum diuji master</div>
+          </div>
+          <div class="bar-row">
+            <div class="nm">OT</div>
+            <div class="tr"><i style="width:23%"></i><span class="vl">872</span></div>
+            <div class="cx">belum diuji master</div>
+          </div>
+        </div>
+        <p class="cmp-cap" style="margin-top:16px">Total 8.777 baris, hasil audit 7 Agustus pagi. Kolom kanan menunjukkan bahwa hanya UA yang sudah melewati pengujian lawan master.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="cap">Sebaran dampak</div>
+        <ul style="padding-left:1.05em">
+          <li><strong>741 listing</strong> produk terdampak</li>
+          <li><strong>113 dari 215 model</strong> terlaris punya minimal satu baris bermasalah</li>
+          <li>Kepatuhan per channel merata di kisaran <strong>83–88%</strong></li>
+          <li>Terendah: <strong>Smartprotection / Lazada 83,4%</strong></li>
+          <li>Tertinggi: <strong>Undercover Autocare / TikTok 88,3%</strong></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cap">Jenis masalah (contoh UA)</div>
+        <div class="tw" style="border:0">
+          <table style="min-width:0">
+            <tbody>
+              <tr><td>Model belum ada di master sama sekali</td><td class="num">1.505</td></tr>
+              <tr><td>SKU angka otomatis Lazada</td><td class="num">846</td></tr>
+              <tr><td>Tidak cocok entri master mana pun</td><td class="num">636</td></tr>
+              <tr><td>Varian generik tapi ada SKU</td><td class="num">233</td></tr>
+              <tr><td>Kosong padahal bukan varian generik</td><td class="num">114</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s9" data-period="ini">
+  <div class="rail"><span class="num">09</span><span>Aturan Bisnis</span><span class="tag tag-ini">Baru &amp; Direvisi</span></div>
+  <h2 class="wide">Lima keputusan aturan diambil minggu ini</h2>
+  <p class="lede">Semuanya sudah dicatat permanen supaya tidak dirancang ulang di sesi berikutnya.</p>
+
+  <div class="body-grid">
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th>Tgl</th><th>Aturan</th><th>Isi keputusan</th><th class="num">Dampak</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">5 Agu</td>
+            <td><strong>Hyundai Santa Fe → 2 formula</strong></td>
+            <td>Gen 1–3 (2001–2018) memakai <span class="sku">G1</span>; Gen 4–5 (2019–2024) memakai <span class="sku">G2</span>. Sebelumnya semua generasi dilebur ke <span class="sku">G1</span>.</td>
+            <td class="num">153 baris</td>
+          </tr>
+          <tr>
+            <td class="num">5 Agu</td>
+            <td><strong>Mazda 3 → kode per bodystyle</strong></td>
+            <td>Sedan <span class="sku">-3S-</span>, Hatchback <span class="sku">-3H-</span>. Bukan soal jumlah formula, tapi kode nama model.</td>
+            <td class="num">4 toko</td>
+          </tr>
+          <tr>
+            <td class="num">7 Agu</td>
+            <td><strong>Hyundai Stargazer → 2 formula</strong></td>
+            <td>Gen 2 (2025–2026) dipisah dari Gen 1. Gen 2 belum punya SKU di semua toko dan belum ada di master.</td>
+            <td class="num">148 baris</td>
+          </tr>
+          <tr>
+            <td class="num">7 Agu</td>
+            <td><strong>Revisi aturan #4 — varian generik</strong></td>
+            <td>Varian "Model/Tahun Lain" tetap <em>diisi</em> SKU kalau modelnya cuma punya satu formula; baru dikosongkan kalau formulanya lebih dari satu. Ini membalik pekerjaan sebelumnya.</td>
+            <td class="num">1.810 baris</td>
+          </tr>
+          <tr>
+            <td class="num">8 Agu</td>
+            <td><strong>Mazda 2 → kode per bodystyle</strong></td>
+            <td>Sedan <span class="sku">-2S-</span>, Hatchback <span class="sku">-2H-</span>. Berlaku semua toko. Hatchback di master masih kode lama <span class="sku">MZD-MZ2</span>.</td>
+            <td class="num">4 toko</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note neutral"><strong>Pelajaran mahal minggu ini:</strong> Lazada mewajibkan SKU unik per listing, sementara Shopee dan TikTok justru membolehkan beberapa varian berbagi satu SKU — itu inti dari konsolidasi formula. Perbaikan Lazada pertama tidak memperhitungkan itu dan 181 dari 187 baris ditolak. Sekarang setiap file Lazada wajib lewat pemeriksaan duplikat sebelum dikirim.</div>
+  </div>
+</section>
+
+<!-- 10 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s10" data-period="lalu">
+  <div class="rail"><span class="num">10</span><span>Audit Foto Produk</span><span class="tag tag-lalu">1 Agustus</span></div>
+  <h2 class="wide">29 produk masih memakai foto sampul mobil polos tanpa desain toko</h2>
+  <p class="lede">Audit ini dijalankan ulang dengan metode yang jauh lebih murah, lalu diverifikasi secara visual — bukan lagi menebak dari metadata.</p>
+
+  <div class="body-grid cols-2">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="cap">Metode</div>
+        <p>Tanggal unggah setiap foto ternyata bisa dibaca langsung dari URL Shopee — delapan karakter pertama ID gambar adalah stempel waktu. Berlaku untuk 9.852 dari 9.896 URL, tanpa mengunduh satu gambar pun.</p>
+        <p style="margin-top:9px">Setelah itu 1.012 foto sampul prioritas diunduh dan dipilah otomatis dengan mengukur porsi piksel pada strip 13% teratas gambar — tempat logo, banner biru, dan badge tier berada. Pada 72 gambar yang dilabeli manual, pemisahannya sempurna.</p>
+      </div>
+      <div class="card">
+        <div class="cap">Keterkaitan dengan proyek SKU</div>
+        <p>Mitsubishi L300 Pickup Reguler ternyata punya <strong>0 foto galeri</strong>, hanya sampul. Itulah sebab konkret kenapa unggahan SKU-nya di Shopee ditolak dengan pesan <em>"jumlah gambar produk harus antara 3 dan 9"</em> — dan kenapa listing itu masih tersisa sejak 31 Juli.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        <div class="kpi warn">
+          <div class="k-lbl">Sampul masih foto mobil polos</div>
+          <div class="k-val">29</div>
+          <div class="k-sub">mendesak</div>
+        </div>
+        <div class="kpi">
+          <div class="k-lbl">Sampul berdesain, batch lama</div>
+          <div class="k-val">982</div>
+          <div class="k-sub">prioritas rendah</div>
+        </div>
+        <div class="kpi good">
+          <div class="k-lbl">Sampul sudah diganti 2025+</div>
+          <div class="k-val">375</div>
+          <div class="k-sub">aman</div>
+        </div>
+        <div class="kpi">
+          <div class="k-lbl">Belum diperiksa</div>
+          <div class="k-val">276</div>
+          <div class="k-sub">prioritas 3</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cap">Yang termasuk 29 produk mendesak</div>
+        <p>Ketiga listing Chery Tiggo 8 (Reguler/Premium/Exclusive), Neta V, GAC Aion Hyptec HT, Proton Gen 2 / Suprima / Exora, Daihatsu Ceria / Espass / Taft GT, Mercedes SLK (3 listing), Kia Pride &amp; Cerato, Hyundai Getz &amp; Grand i20, Volvo 850, Mazda 323, Daewoo Ssangyong Musso, dan Mitsubishi L300 Pickup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s11" data-period="risiko">
+  <div class="rail"><span class="num">11</span><span>Kesehatan Toko</span><span class="tag tag-risiko">Komplain &amp; Rating</span></div>
+  <h2 class="wide">Empat dari tujuh komplain menunjuk satu sebab yang sama: warna abu</h2>
+  <p class="lede">Dari catatan komplain <em>Report</em> milik akun toko, periode 18–30 Juli. Rata-rata bintang 1,9.</p>
+
+  <div class="body-grid cols-2">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Tgl</th><th>Toko</th><th>Channel</th><th class="num">Bintang</th><th>Sebab</th></tr></thead>
+        <tbody>
+          <tr><td class="num">18 Jul</td><td>Otoprotection</td><td>TikTok</td><td class="num">1</td><td>Dikirim abu strip 1, pesanan strip 2 — kain abu habis, konfirmasi tidak direspons</td></tr>
+          <tr><td class="num">21 Jul</td><td>UA</td><td>Shopee</td><td class="num">3</td><td>Warna pudar setelah pemakaian 2 bulan</td></tr>
+          <tr><td class="num">21 Jul</td><td>UA</td><td>Shopee</td><td class="num">2</td><td>Ukuran cover kekecilan, tidak menutup penuh</td></tr>
+          <tr><td class="num">22 Jul</td><td>UA</td><td>Shopee</td><td class="num">2</td><td><strong>Abu diterima terlihat seperti dongker</strong></td></tr>
+          <tr><td class="num">25 Jul</td><td>UA</td><td>Shopee</td><td class="num">2</td><td>Tas cover tidak disertakan</td></tr>
+          <tr><td class="num">29 Jul</td><td>UA</td><td>Shopee</td><td class="num">1</td><td><strong>Abu diterima terlihat seperti hitam</strong></td></tr>
+          <tr><td class="num">30 Jul</td><td>Smartprotection</td><td>TikTok</td><td class="num">2</td><td><strong>Abu diterima terlihat seperti hitam</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="cap">Pola yang terbaca</div>
+        <ul style="padding-left:1.05em">
+          <li><strong>4 dari 7 komplain (57%)</strong> soal warna abu tidak sesuai persepsi foto — termasuk yang dikirim benar tapi tetap dianggap salah oleh pembeli</li>
+          <li><strong>5 dari 7</strong> terjadi di Undercover Autocare / Shopee</li>
+          <li>Hanya <strong>1 komplain</strong> yang benar-benar soal mutu bahan</li>
+          <li>1 komplain akibat stok kain habis + chat tidak direspons — masalah operasional, bukan produk</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cap">Kaitan langsung dengan slide 10</div>
+        <p>Keluhan "abu terlihat seperti hitam/dongker" adalah masalah <em>representasi foto</em>, bukan mutu barang. Ini bersinggungan persis dengan audit foto: selama foto sampul dan galeri tidak merepresentasikan warna abu dengan benar, komplain jenis ini akan terus berulang dan menekan rating.</p>
+      </div>
+      <div class="note" style="margin-top:0"><strong>Batas data:</strong> catatan komplain hanya sampai 30 Juli. Tidak ada entri untuk 2–8 Agustus, jadi tren minggu ini belum bisa dibandingkan. Rating toko resmi tiap marketplace juga belum tersedia di sini.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s12">
+  <div class="rail"><span class="num">12</span><span>Produk Terlaris</span></div>
+  <h2 class="wide">Yang tersedia baru peringkat, bukan penjualan mingguan</h2>
+  <p class="lede">Acuan yang dipakai proyek ini adalah daftar peringkat 300 model terlaris yang dibuat 29 Juli — potret kumulatif, bukan penjualan per periode.</p>
+
+  <div class="body-grid cols-2">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="cap">Temuan dari daftar peringkat</div>
+        <p>Empat produk berperingkat tinggi <strong>bukan cover mobil</strong>, melainkan produk perawatan: Headlamp Restorer (#65), Glass Polish Magic (#69), Black Trim Reborn (#82), dan Snow Wash Active Foam (#114). Kategori ini masuk 115 besar tanpa pernah jadi fokus proyek katalog.</p>
+      </div>
+      <div class="card">
+        <div class="cap">Peluang yang belum diambil</div>
+        <p><strong>Peugeot 206</strong> menempati peringkat #169 tetapi <em>tidak punya listing sama sekali</em> di Shopee Undercover Autocare. Di TikTok, delapan model terlaris juga belum pernah dibuatkan listing: Mitsubishi Strada Triton, Daihatsu Taft GT, Hyundai Getz, BYD Seal, Geely EX2, Mercedes SLK Class, Daihatsu Ceria, dan Volvo 850 Sedan.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">Model terlaris yang SKU-nya bermasalah minggu ini</div>
+      <div class="tw" style="border:0">
+        <table style="min-width:0">
+          <thead><tr><th class="num">Rank</th><th>Model</th><th>Kondisi</th></tr></thead>
+          <tbody>
+            <tr><td class="num">96–125</td><td>Toyota Corona, Mitsubishi Galant, Hyundai Santa Fe, Mercedes C Class, Toyota Harrier, Hyundai Atoz</td><td>Kode generasi belum dilebur — ditemukan di Lazada, sudah dibetulkan di Shopee &amp; TikTok</td></tr>
+            <tr><td class="num">132</td><td>Range Rover</td><td>Sebagian baris belum sesuai master</td></tr>
+            <tr><td class="num">135 / 140</td><td>Hyundai Avega Sedan / Hatchback</td><td>Banyak baris SKU kosong total</td></tr>
+            <tr><td class="num">152</td><td>Mazda 3</td><td>Kena revisi kode bodystyle <span class="sku">3S</span>/<span class="sku">3H</span></td></tr>
+            <tr><td class="num">166</td><td>Mitsubishi L300 Pickup</td><td>Terblokir syarat jumlah foto di Shopee</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cmp-cap" style="margin-top:14px">Daftar produk terlaris untuk periode 2–8 Agustus dan pembandingnya belum bisa disusun — butuh ekspor penjualan per produk dari Big Seller.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s13" data-period="risiko">
+  <div class="rail"><span class="num">13</span><span>Penjualan, Iklan &amp; ROAS</span><span class="tag tag-risiko">Data Belum Tersedia</span></div>
+  <h2 class="wide">Kerangka metriknya sudah disiapkan, angkanya menunggu ekspor</h2>
+  <p class="lede">Big Seller tidak bisa dijangkau dari lingkungan kerja ini — jaringan ke domainnya tertutup dan tidak ada kredensial tersimpan. Tidak ada satu pun file ekspor penjualan atau iklan di repositori maupun di Google Drive yang bisa diakses. Angka apa pun yang saya tulis di sini tanpa itu hanya akan jadi karangan.</p>
+
+  <div class="body-grid">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="cap">Penjualan — per periode, per toko</div>
+        <div class="slots">
+          <div class="slot"><div class="s-lbl">Penjualan kotor</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Jumlah pesanan</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Unit terjual</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+          <div class="slot"><div class="s-lbl">Nilai pesanan rata-rata</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
+          <div class="slot"><div class="s-lbl">Tingkat pembatalan &amp; retur</div><div class="s-val">—</div><div class="s-src">Big Seller</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="cap">Iklan — per channel</div>
+        <div class="slots">
+          <div class="slot"><div class="s-lbl">Biaya iklan</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Penjualan dari iklan</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">ROAS</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
+          <div class="slot"><div class="s-lbl">ACOS</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
+          <div class="slot"><div class="s-lbl">Impresi · klik · CTR</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Tingkat konversi</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Porsi penjualan dari iklan</div><div class="s-val">—</div><div class="s-src">turunan</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cap">Kesehatan toko — per toko</div>
+        <div class="slots">
+          <div class="slot"><div class="s-lbl">Rating toko</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Skor kesehatan toko</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Tingkat pesanan bermasalah</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Waktu balas chat</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+          <div class="slot"><div class="s-lbl">Tingkat pengiriman tepat waktu</div><div class="s-val">—</div><div class="s-src">Seller Center</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s14">
+  <div class="rail"><span class="num">14</span><span>Cara Melengkapi</span></div>
+  <h2 class="wide">Empat ekspor ini cukup untuk mengisi seluruh slide 13</h2>
+  <p class="lede">Kirimkan filenya, dan bagian penjualan, iklan, ROAS, produk terlaris, serta rating toko akan langsung dihitung dan dimasukkan ke deck ini — termasuk perbandingan dua periodenya.</p>
+
+  <div class="body-grid">
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div>
+          <h4>Big Seller → Laporan Penjualan</h4>
+          <p>Atur rentang tanggal <strong>2–8 Agustus 2026</strong>, ekspor Excel. Ulangi untuk <strong>26 Juli – 1 Agustus 2026</strong>. Pilih rincian per toko kalau tersedia, supaya UA/OT/SP/OP bisa dipisah.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div>
+          <h4>Big Seller → Laporan Produk / Analisis Produk</h4>
+          <p>Rentang tanggal yang sama, ekspor Excel. Dari sini daftar produk terlaris per periode dan perbandingannya bisa disusun — sekaligus dicocokkan ke daftar peringkat 215 yang sudah dipakai proyek SKU.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div>
+          <h4>Data iklan — dari Seller Center masing-masing</h4>
+          <p>Big Seller umumnya tidak menarik data iklan berbayar. Ambil dari <strong>Shopee Seller Center → Iklanku → Statistik</strong>, <strong>TikTok Shop → Ads Manager</strong>, dan <strong>Lazada → Sponsored Solutions</strong>. Ekspor per rentang tanggal yang sama. Sertakan biaya, penjualan dari iklan, impresi, klik, dan konversi — ROAS dan ACOS akan dihitung dari situ.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">04</div>
+        <div>
+          <h4>Rating &amp; kesehatan toko</h4>
+          <p>Tangkapan layar halaman <strong>Performa Toko</strong> di tiap Seller Center sudah cukup — rating, skor kesehatan, tingkat pesanan bermasalah, dan waktu balas chat. Empat toko × tiga channel.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note neutral"><strong>Catatan teknis:</strong> file besar tidak perlu masuk repositori git — cukup taruh di folder kerja seperti biasa dan sebutkan lokasinya, atau lampirkan langsung di percakapan.</div>
+  </div>
+</section>
+
+<!-- 15 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s15" data-period="risiko">
+  <div class="rail"><span class="num">15</span><span>Risiko &amp; Blocker</span><span class="tag tag-risiko">Terbuka</span></div>
+  <h2 class="wide">Sepuluh hal yang belum tertutup</h2>
+
+  <div class="body-grid">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Prioritas</th><th>Hal</th><th>Dampak kalau dibiarkan</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="pill p-crit">Tinggi</span></td>
+            <td><strong>Impor 3.614 SKU gudang belum dijalankan</strong></td>
+            <td>Terverifikasi belum jalan per ekspor 29 Juli. Selama belum, pesanan bisa masuk tanpa SKU gudang dan stok tidak terpotong.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-crit">Tinggi</span></td>
+            <td><strong>48.781 unit stok tertahan di SKU lama</strong></td>
+            <td>16.315 SKU yatim masih berstok total 81.927 unit; 9.728 di antaranya sudah punya SKU pengganti aktif tetapi stoknya tidak ikut pindah. Barang ada, sistem menganggap kosong.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-crit">Tinggi</span></td>
+            <td><strong>176 SKU motor tambalan kembar</strong></td>
+            <td>Menahan 820 unit. Kalau file impor dijalankan apa adanya, akan ada dua SKU gudang untuk barang fisik yang sama.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-warn">Sedang</span></td>
+            <td><strong>Metode master baru diterapkan ke UA</strong></td>
+            <td>Angka OT, SP, dan OP masih memakai metode lama — belum bisa dipakai sebagai dasar eksekusi.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-warn">Sedang</span></td>
+            <td><strong>635 baris UA menunggu keputusan</strong></td>
+            <td>Mayoritas bukan listing yang salah, melainkan master yang tertinggal: Santa Fe 153, Corolla 113, Xenia 51.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-warn">Sedang</span></td>
+            <td><strong>Master SKU punya lubang</strong></td>
+            <td>Mini Cooper tidak ada sama sekali; Corolla baru mulai dari Gen 6; Santa Fe belum dipecah; Stargazer Gen 2, Xenia Gen 3, HiAce Premio, Hilux Rangga, Navara PRO-4X belum ada.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-warn">Sedang</span></td>
+            <td><strong>Semua file upload minggu ini belum diunggah</strong></td>
+            <td>2.820 baris perbaikan sudah siap tapi belum masuk ke marketplace, jadi belum berdampak apa pun ke toko.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-warn">Sedang</span></td>
+            <td><strong>L300 Pickup Shopee terblokir</strong></td>
+            <td>Butuh minimal 3 foto galeri ditambahkan di Seller Center sebelum SKU-nya bisa diunggah. Tercatat sama persis sejak 31 Juli.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-idle">Perlu jawaban</span></td>
+            <td><strong>Lazada untuk OT &amp; OP belum diperiksa</strong></td>
+            <td>Belum jelas apakah kedua toko itu punya channel Lazada. Kalau punya, ada gap yang belum terhitung sama sekali.</td>
+          </tr>
+          <tr>
+            <td><span class="pill p-idle">Perlu jawaban</span></td>
+            <td><strong>HiAce Premio: kode generasi sendiri atau tetap <span class="sku">COM</span>?</strong></td>
+            <td>Listing sudah membedakan lewat kode model, tapi segmen generasinya masih sama. 148 baris di 4 toko.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 16 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s16">
+  <div class="rail"><span class="num">16</span><span>Rencana</span><span>Minggu Depan</span></div>
+  <h2 class="wide">Urutannya penting — beberapa langkah tidak boleh dibalik</h2>
+
+  <div class="body-grid">
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div>
+          <h4>Jalankan impor SKU gudang, baru pindahkan stok</h4>
+          <p>Urutan ini wajib. 1.599 SKU tujuan belum ada di Big Seller — kalau stok dipindahkan lebih dulu, tujuannya tidak ada. Sebelum menjalankan, putuskan dulu perlakuan untuk 176 SKU motor tambalan supaya tidak jadi kembar.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div>
+          <h4>Unggah 2.820 baris yang sudah siap</h4>
+          <p>Tiga file UA lebih dulu (sudah lewat metode master), lalu OT, SP, OP. Untuk Lazada, bangun ulang dari ekspor live terbaru dan kirim per batch kecil — batch raksasa 21.865 baris sudah terbukti memicu penolakan massal.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div>
+          <h4>Tutup 635 keputusan terbuka dan lengkapi master</h4>
+          <p>Sebagian besar terselesaikan hanya dengan menambah entri ke master: Santa Fe, Corolla Gen 1–5, Mini Cooper, Xenia Gen 3, Stargazer Gen 2. Arah perbaikannya ke master, bukan ke listing.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">04</div>
+        <div>
+          <h4>Terapkan metode master ke OT, SP, dan OP</h4>
+          <p>Sampai ini dijalankan, angka tiga toko itu belum bisa dipakai sebagai dasar eksekusi massal.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">05</div>
+        <div>
+          <h4>Perbaiki 29 sampul polos dan tambah foto L300 Pickup</h4>
+          <p>Dua pekerjaan foto ini punya nilai ganda: menaikkan tampilan produk sekaligus membuka blokir unggahan SKU L300. Prioritaskan warna abu — 4 dari 7 komplain terakhir berasal dari sana.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">06</div>
+        <div>
+          <h4>Kirim ekspor Big Seller dan data iklan</h4>
+          <p>Supaya laporan minggu depan bisa memuat penjualan, ROAS, produk terlaris, dan rating toko sebagai angka nyata, bukan slot kosong.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 ─────────────────────────────────────────────────────── -->
+<section class="slide" id="s17">
+  <div class="rail"><span class="num">17</span><span>Sumber Data</span></div>
+  <h2 class="wide">Dari mana setiap angka di deck ini berasal</h2>
+
+  <div class="body-grid cols-2">
+    <div class="card">
+      <div class="cap">Terpakai</div>
+      <ul style="padding-left:1.05em">
+        <li><strong>Riwayat kerja repositori</strong> <code>undercover-claude</code> — linimasa, jumlah aktivitas, tanggal</li>
+        <li><strong>Catatan proyek Big Seller Sync</strong> — seluruh angka SKU, hasil audit, keputusan aturan</li>
+        <li><strong>Catatan audit foto Shopee</strong> — hasil 1 Agustus</li>
+        <li><strong>Spreadsheet <em>Report</em></strong> (akun <span class="mono" style="font-size:12.5px">under.covermobil</span>) — catatan komplain 18–30 Juli</li>
+        <li><strong>Daftar peringkat 300 model terlaris</strong> (29 Juli) — rujukan peringkat, bukan penjualan periode</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="cap">Tidak tersedia di sesi ini</div>
+      <ul style="padding-left:1.05em">
+        <li><strong>Big Seller</strong> — domainnya tidak bisa dijangkau dari lingkungan kerja ini, dan tidak ada kredensial maupun file ekspornya</li>
+        <li><strong>Shopee / TikTok / Lazada Seller Center</strong> — tidak ada akses maupun ekspor</li>
+        <li><strong>Data iklan berbayar</strong> — tidak ada di repositori maupun Drive yang terjangkau</li>
+        <li><strong>Rating &amp; skor kesehatan toko resmi</strong> — hanya catatan komplain internal yang tersedia</li>
+      </ul>
+      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-3)">Tidak ada angka penjualan, ROAS, atau rating yang diperkirakan atau diisi sementara di deck ini. Slot yang kosong memang kosong.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = document.getElementById('dots');
+  var hint = document.getElementById('hint');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Slide ' + (i+1));
+    b.addEventListener('click', function(){ go(i); });
+    dots.appendChild(b);
+  });
+  var buttons = Array.prototype.slice.call(dots.children);
+
+  function current(){
+    var best = 0, bestD = Infinity;
+    slides.forEach(function(s, i){
+      var d = Math.abs(s.getBoundingClientRect().top - 8);
+      if (d < bestD){ bestD = d; best = i; }
+    });
+    return best;
+  }
+  function go(i){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    slides[i].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+  function mark(){
+    var c = current();
+    buttons.forEach(function(b, i){
+      if (i === c) b.setAttribute('aria-current', 'true');
+      else b.removeAttribute('aria-current');
+    });
+  }
+  mark();
+
+  var ticking = false;
+  window.addEventListener('scroll', function(){
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function(){ mark(); ticking = false; });
+  }, { passive: true });
+
+  document.addEventListener('keydown', function(e){
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown'){ e.preventDefault(); go(current() + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); go(current() - 1); }
+    else if (e.key === 'Home'){ e.preventDefault(); go(0); }
+    else if (e.key === 'End'){ e.preventDefault(); go(slides.length - 1); }
+    if (hint) hint.classList.add('gone');
+  });
+
+  setTimeout(function(){ if (hint) hint.classList.add('gone'); }, 6000);
+})();
+</script>
