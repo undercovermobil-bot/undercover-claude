@@ -200,6 +200,52 @@ justru ada, jadi file ini memang versi terbaru — EQE-nya yang hilang entah di
 regenerasi mana. Kebetulan EQE termasuk 57 model yang ditambahkan sekarang, jadi
 gap-nya ikut tertutup. Perlu dicek apakah ada hasil kerja 07-11 lain yang ikut hilang.
 
+## Versi 100 Terlaris (`build_top100_terlaris.py`)
+
+`DATA UC HPP Top 100 Terlaris.xlsx` — permintaan user: format sama, tapi cuma 100
+model mobil terlaris, jadi 1 sheet saja (bukan 76 sheet per merk).
+
+**Sumber ranking**: `Mobil Terlaris.xlsx` (Google Drive, diupdate 2026-08-10), sheet
+"Top 300 Mobil" — ranking penjualan REAL (qty net setelah retur, 4 toko x
+Shopee/TikTok/Lazada), bukan asumsi/daftar manual.
+
+Script ini **reuse langsung** fungsi-fungsi dari `build_hpp_per_merk.py`
+(`baca_harga_shopee`, `baca_model_per_merk`, `ALIAS`, `tulis_sheet`, `norm`) supaya
+100% konsisten dengan workbook per-merk — bukan re-implementasi logic.
+
+### Resolusi nama ranking → baris master
+
+Ranking pakai judul listing (kadang beda dari nama master), jadi tiap baris dicocokkan
+lewat 2 lapis: (1) index nama master + reverse-`ALIAS` (nama gaya Shopee → nama
+master), (2) tabel `RESOLUSI_MANUAL` utk kasus yang perlu verifikasi tambahan:
+
+| Ranking | → Baris master | Bukti |
+|---|---|---|
+| Honda City / Honda City Sedan | Honda City Sedan | Generasi ranking (2002-2004, 2011-2013, dst) match Sedan, BUKAN Hatchback RS yang cuma py 1 generasi (2021-2026) |
+| Mazda 2 | Mazda 2 Sedan | Generasi ranking (split 2007-2010, cutoff 2014-2019) match persis Sedan; Hatchback master gen-nya nyambung 2007-2014 |
+| Kia Rio | Kia Rio Sedan | Generasi ranking (2005-2009, 2011-2016, 2016-2020) match persis Sedan |
+| Mitsubishi Pajero | Mitsubishi Pajero Sport | Rentang tahun ranking (2008-2015, 2015-2026) = generasi Pajero Sport; Pajero klasik berhenti produksi ~2003 |
+| Suzuki APV Arena / Suzuki APV | Suzuki APV Arena / Blind Van | "Suzuki APV" py literal value "Arena (2007-2022)" di kolom Gen-nya sendiri di data ranking |
+| Mitsubishi Strada Triton | Mitsubishi Triton | Nama resmi berbeda, mobil sama |
+| Daihatsu Gran Max PU | Daihatsu Gran Max Pick Up | "PU" = singkatan Pick Up |
+| Honda City Hatchback | Honda City Hatchback RS | ALIAS sudah ada |
+| Suzuki Carry Pickup | Suzuki Carry | Sudah dikonfirmasi via SKU sebelumnya |
+
+Kasus **duplikat judul** (2 baris ranking, 1 model master) otomatis di-collapse jadi 1
+baris — bukan didobel. **Bukan mobil** (3 produk aksesori/perawatan yang kebetulan
+ikut ke-rank, judulnya diawali "Undercover Autocare -") dikecualikan otomatis. Karena
+100 slot butuh diisi PENUH oleh mobil unik, script otomatis lanjut membaca ranking di
+bawah #100 (sampai #110) buat mengisi slot yang gugur dari duplikat/non-mobil.
+
+Hasil: 100/100 model dapat harga, 0 gagal cocok.
+
+### Format
+
+Sama persis 76-sheet version: kolom A-AC, kolom C dikosongkan (diisi manual user),
+formula D/G/Y/Z/AC dijaga IFERROR/IF. **Baris diurutkan sesuai rank penjualan**
+(#1 = paling laris di baris 2), bukan alfabetis — beda dari versi 76-sheet yang
+ngikut urutan file SKU tracker.
+
 ## Menjalankan ulang
 
 ```bash
