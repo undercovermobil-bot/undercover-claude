@@ -497,3 +497,28 @@ Logikanya: kalau model cuma punya 1 formula, varian "Model/Tahun Lain" tidak amb
 **Catatan Lazada**: 684 baris generik dapat sufiks keunikan `_G2` otomatis karena SKU-nya bentrok dengan baris "Gen 1" di listing yang sama (mis. `HND-CTR-UA-S-G1-EAB` → `HND-CTR-UA-S-G1-EAB_G2`). Sesuai konvensi historis Lazada. Terverifikasi 0 duplikat. Baris dikosongkan turun drastis dari 614 → 17, jadi risiko "Lazada tolak SKU kosong" yang dicatat sebelumnya hampir hilang.
 
 **File final** (`Cek gagal upload/UA/`): `Upload {Shopee|TikTok|Lazada} UA - hanya baris berubah (2026-08-07).xlsx` + `CATATAN UA - perlu keputusan (2026-08-07) rev2.xlsx` (nama "rev2" karena file versi pertama sedang dibuka user di Excel → PermissionError saat ditimpa; kalau ketemu 2 file catatan, **yang rev2 yang benar**). Sisa 635 baris perlu keputusan.
+
+## 2026-08-08: file impor SKU Gudang Big Seller — SKU yang ada di listing tapi belum di gudang
+
+User instruksi: cek folder `SKU Gudang Big Seller/` (file baru dimasukkan), bandingkan SKU listing e-commerce vs SKU yang sudah ada di Big Seller, buatkan file impor untuk yang belum ada. Dua contoh diberikan sebagai petunjuk: Mazda 2 Hatchback (`-2H-`) dan varian warna Orange di SP/OP — **keduanya terkonfirmasi masuk hasil**.
+
+**Sumber data**: 8 file `SKU_Gudang20260808012521258(1-8).xlsx` sheet `SKU` (35.158 SKU gudang sudah ada, kolom `Nomor SKU`/`Judul`) + `impor_untuk_membuat_sku_gudang_in.xlsx` sheet `SKU` (template impor, 40 kolom, kolom 1-2 = `*Nomor SKU (Wajib Diisi)` / `*Judul (Wajib)`, baris 2 di file asli cuma contoh isian bukan data).
+
+**Metodologi diff**: kumpulkan SKU well-formed (6 segmen) dari SEMUA listing e-commerce yang sudah disweep sesi ini (`all_stores_sweep.json` utk OT/SP/OP + `ua_0807_all.json` dioverride dgn `ua_fix_v3.json` utk UA — pakai kondisi SETELAH perbaikan yg blm diupload, bukan kondisi lama), konsolidasi segmen toko (OT→UA, OP→SP sesuai aturan #1), lalu selisihkan terhadap set SKU gudang yang sudah ada.
+
+**Hasil**: 1.043 SKU baru perlu dibuat (UA 708, SP 335), tersebar di 39 kode model. Semua tervalidasi ADA landasannya (848 langsung cocok SKU di master, 195 kombinasi gen/warna baru tapi modelnya dikenal master — termasuk 17 `MZD-2H` yang diduga user, dan varian Orange yang juga diduga user). **0 SKU yang benar-benar tanpa dasar** — sempat dicurigai ada yg mencurigakan (kode gen `GB19912002`, `F2`, `B5` dst) tapi setelah dicek ke master ternyata memang format sah yg sudah dipakai (`GB` = "Gen Baru" utk mobil yg rentang tahunnya digabung tanpa nomor gen; `F`/`B` = kode facelift/body BMW-Volkswagen).
+
+**Cara menyusun Judul** (kolom 2, wajib), prioritas 3 tingkat:
+1. **Saudara** — cari SKU lain di gudang dgn prefix sama (model-toko-kategori-generasi) beda cuma di kode warna, salin judulnya & ganti nama warnanya. Paling akurat karena otomatis ikut gaya judul yg sudah dipakai utk SKU tetangga (gudang TERNYATA punya >1 gaya judul campur aduk utk model yg sama, mis. Lancer ada yg `Abu-abu,2007-2022` ada yg `Reguler-Abu-abu-Gen 10` — bukan galat, memang historisnya begitu).
+2. **Master** — `Model-Toko-Kategori-Warna-Gen` (aturan #5), pilih baris master yg segmen generasinya paling cocok dgn SKU (exact match dulu, fallback ke generasi terendah kalau tak ketemu).
+3. **Susun manual** dari segmen SKU + nama produk listing (dipakai kalau 1&2 gagal, mis. model sama sekali baru di gudang spt `MZD-2H`).
+
+**Jebakan yg sempat kejadian**: percobaan pertama pilih baris master SEMBARANG tanpa cocokkan generasi ke segmen SKU — `MTB-LAN-SP-R-G1-ORG` (segmen gen = G1) sempat dapat judul "...Gen 10" karena kebetulan baris master pertama yg ke-scan adalah Gen 10 bukan Gen 1 (di master, banyak baris SKU sama tapi field Generasi beda krn representasi longgar). Baru ketahuan pas eyeball manual. Diperbaiki dgn cocokkan `re.sub(non-alnum)` pada representasi generasi vs segmen SKU sebelum pilih baris master.
+
+**Validasi otomatis sebelum simpan**: semua judul terisi (tidak kosong), tidak ada SKU duplikat dalam file baru, tidak ada SKU yang sudah ada di gudang. Ketiganya lolos di run final.
+
+**Deliverable**: `SKU Gudang Big Seller/impor_sku_gudang_BARU (2026-08-08).xlsx` — sheet `SKU`, 40 kolom (format identik template asli, cuma kolom 1&2 terisi, sisanya kosong spt template — user yg isi Stok/Modal/dll manual sesuai kebutuhan). **Belum diimpor ke Big Seller.**
+
+**Script kunci** (scratchpad): `gudang_diff.py` (kumpulkan SKU listing terkonsolidasi vs gudang → `gudang_missing.json`), `build_gudang_import_v2.py` (3-tingkat penyusun Judul + validasi → file final). v1 (`build_gudang_import.py`) ditinggal sbg bukti prioritas judul yg lebih kasar (cuma master+susun, tanpa saudara — 100% kasusnya kebetulan cocok tapi kurang tahan utk kasus generasi-ganda spt Lancer).
+
+**Catatan utk sesi depan**: 1.043 ini HANYA yg ketahuan dari listing yg sudah disweep sesi ini (UA + hasil sweep OT/SP/OP tgl 08-05/06 — bisa jadi sudah agak basi kalau ada perubahan listing baru). Kalau user kasih listing terbaru toko lain, ulangi diff ini dgn data segar.
