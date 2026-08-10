@@ -60,10 +60,15 @@ def load_workbook_safe(path: str):
     """
     try:
         return openpyxl.load_workbook(path, data_only=True)
-    except ValueError as exc:
-        if "activePane" not in str(exc):
-            raise
-    patched = path + ".patched.xlsx"
+    except ValueError:
+        # openpyxl membungkus penyebab aslinya ("Value must be one of …") di
+        # dalam ValueError generik "could not read worksheets", jadi jangan
+        # cocokkan teks pesannya — langsung coba tambal lalu muat ulang.
+        pass
+    patched = os.path.join(
+        os.path.dirname(os.path.abspath(path)) if os.access(os.path.dirname(os.path.abspath(path)), os.W_OK) else ".",
+        os.path.basename(path) + ".patched.xlsx",
+    )
     with zipfile.ZipFile(path) as src, zipfile.ZipFile(patched, "w", zipfile.ZIP_DEFLATED) as dst:
         for item in src.infolist():
             data = src.read(item.filename)
