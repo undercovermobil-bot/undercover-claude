@@ -544,3 +544,17 @@ User tanya 2 hal spesifik dari file impor v2: (1) kenapa Hyundai Elantra SKU-nya
 **File final gudang** (v3, replace v2): `SKU Gudang Big Seller/impor_sku_gudang_BARU (2026-08-08).xlsx` — 941 baris (dari 1.043: -115 model bermasalah, -2 Santa Fe salah, +15 Santa Fe G2 benar).
 
 **Script tambahan** (scratchpad): `build_gudang_import_v3.py` (koreksi final: exclude 12 model + fix Santa Fe lengkap), `sp_shopee_santafe_fix2.py` (retry Shopee dibangun dari file asli, versi pertama sempat salah pakai `openpyxl.Workbook()` kosong lagi — kesalahan yg SAMA persis dgn insiden UA 08-07, harus selalu diingat: bangun dari file asli, JANGAN workbook baru).
+
+## 2026-08-10: Hyundai Atoz SP & OP — SKU sama sekali belum pernah dibuat
+
+User kirim screenshot listing Atoz SP dgn semua "Kode Variasi: -" (kosong total), minta dibuatkan SKU utk SP+OP sekaligus impor gudangnya. Ini model yg dari awal sesi memang sudah tercatat sbg "no_target bucket, semua blank, gap belum terselesaikan" (lihat entri²  lama) — sekarang baru benar² dikerjakan.
+
+**Master**: `HYN-ATZ`, TF=1 (Gen1=Gen1F, satu formula), SP/OP kategori Reguler(6 warna)+Strip(9: S1/S2/S3×Abu/Biru/Merah)+Transparan(1) = 16 kombinasi.
+
+**Jebakan warna Strip yg ketemu lagi**: listing OP Shopee menulis varian Strip LANGSUNG sbg teks "Strip 1 Abu"/"Strip 2 Biru"/"Strip 3 Merah" (bukan "Elite/Epic/Warrior" spt kebanyakan listing lain). Parser awal cuma kenal pola Elite/Epic/Warrior → 18 dari 32 baris OP Shopee gagal ke-parse di percobaan pertama. **Kedua gaya penulisan itu valid dan setara** — "Elite Abu"=S2A, "Strip 2 Abu"=S2A, sama² merujuk kode S2A; regex tambahan `strip\s*(\d)\s+(warna)` menangkap gaya kedua. Setelah fix: 32/32 lengkap di semua 5 kombinasi toko×channel.
+
+**Hasil**: 160 baris diperbaiki (SP Shopee 32, SP TikTok 32, SP Lazada 32, OP Shopee 32, OP TikTok 32 — genap semua krn produk ini memang cuma 32 varian per toko, semuanya kosong dari awal). 16 SKU unik dihasilkan, **semua 16 belum ada di gudang Big Seller** (wajar, produk ini belum pernah disentuh) → file impor terpisah `impor_sku_gudang_Hyundai_Atoz (2026-08-10).xlsx`.
+
+**File**: `Cek gagal upload/{SP,OP}/Upload {Shopee|TikTok|Lazada} {SP|OP} - Hyundai Atoz (2026-08-10).xlsx` (5 file, semua dibangun dari file sumber asli — verifikasi sheet/header/kolom identik ke file asli, 0 xml rusak) + `SKU Gudang Big Seller/impor_sku_gudang_Hyundai_Atoz (2026-08-10).xlsx` (16 baris, format 40 kolom sama persis template).
+
+**Script**: `atoz_sp_op.py` di scratchpad — pola reusable utk model lain yg blank total (TF=1, tinggal pasang REGULER dict + toko + source paths, otomatis handle Shopee/TikTok(produk-lengkap)/Lazada(dedup-suffix) sekaligus multi-toko dgn kode SKU dikonsolidasi terpisah dari nama folder).
