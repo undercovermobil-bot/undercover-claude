@@ -1140,3 +1140,48 @@ path SRC).
 ("buatkan format siap upload ke Shopee/TikTok/Lazada semua toko") BELUM dikerjakan —
 butuh 19 file listing (sama seperti proyek BARU_FIX 27 Juli) untuk menerapkan SKU baru
 Xenia/Veloz ke listing riil lalu di-generate jadi file per-marketplace siap upload.
+
+## Xenia Gen 3 (2021-2026) ditambahkan, ikut Avanza G3 (2026-08-11)
+
+Ketemu dari file "CATATAN UA - perlu keputusan (2026-08-07)": 51 baris listing UA
+Xenia dgn varian "Gen 3 (2021-2026)"/"Gen 3 (2021-2024)" — generasi yg TIDAK ADA
+di master (master lama cuma py Gen 1 & Gen 2 Xenia). User konfirmasi: Xenia Gen 3
+ikut kode Avanza G3, sama seperti Veloz.
+
+**Karena Xenia belum py baris Gen 3 di master sama sekali** (beda dgn Gen 1/2 yg
+tinggal ditimpa), 66 baris BARU ditambahkan meniru pola Avanza Gen 3 persis
+(toko/kategori/warna sama), SKU-nya langsung SKU Avanza Gen 3 (bukan kode baru).
+Script: `scripts/tambah_xenia_gen3.py`, dijalankan SETELAH
+`preview_xenia_veloz.py` + `terapkan_master_xenia_veloz.py`.
+
+**Pemetaan final Xenia/Veloz -> Avanza (lengkap)**:
+- Xenia Gen 1 (2003-2011) -> Avanza "Gen 1 & 2" (G1)
+- Xenia Gen 2 (2011-2021) -> Avanza "Gen 1 & 2" (G1)
+- Xenia Gen 3 (2021-2026) -> Avanza Gen 3 (G3) — BARU, 66 baris ditambah bukan ditimpa
+- Veloz Gen 1 (2011-2021) -> Avanza Gen 3 (G3)
+- Veloz Gen 2 (2021-2026) -> Avanza Gen 3 (G3)
+Total: 330 baris master terpengaruh (132 Xenia G1/G2 + 66 Xenia G3 baru + 132 Veloz).
+Output: `MASTER_Xenia_Veloz_ke_Avanza_v2.xlsx` (file scratchpad, tidak persisten).
+
+**ANTRIAN BERIKUTNYA (user, 2026-08-11) — 5 pasangan model lain, formula sama,
+konsolidasi SKU serupa Xenia/Veloz->Avanza**:
+- Sigra ikut kode Calya
+- Terios ikut kode Rush
+- Rocky ikut kode Raize
+- Vellfire ikut kode Alphard
+- Agya ikut kode Ayla
+
+(arah dikonfirmasi eksplisit oleh user — urutan penulisan di pesan aslinya TIDAK
+konsisten menunjukkan arah, mis. "Alphard = Vellfire" tapi arahnya Vellfire->Alphard,
+sedangkan "Sigra = Calya" arahnya Sigra->Calya; jangan menebak dari urutan tulisan).
+**BELUM dikerjakan** — user minta fokus Avanza/Xenia/Veloz selesai dulu.
+
+**Temuan terpisah dari file "gagal upload" (2026-08-11), DI LUAR scope Xenia/Veloz,
+user minta ditunda dulu**: banyak model lain py SKU dobel dalam 1 listing krn varian
+rentang-tahun lebih detail dari kode generasi master — OP: Hyundai Santa FE (15/30
+baris dobel). SP: Mazda 3 Sedan/Hatchback (+Transparan), Mitsubishi Galant
+(+Transparan), Hyundai Santa Fe Transparan, Toyota Corona Transparan, Mercedes Benz
+C Class — semua py pola sama (dua rentang tahun beda -> satu kode gen -> SKU kembar).
+Sebagian malah masih pakai skema SKU lama 3-segmen (mis. `CVR0038-STP-RTP` dipakai
+9x utk Toyota Corona rentang 1960an-2000an). File sumber ada di Drive folder
+"Cek gagal upload/{OP,SP}/..." — filenya "Retry Upload ... SKU belum sesuai".
