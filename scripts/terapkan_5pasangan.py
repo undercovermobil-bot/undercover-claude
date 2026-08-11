@@ -37,19 +37,25 @@ for label, rows in data.items():
             chk += 1
 print(f'   verifikasi: {chk} baris TIDAK sesuai (harus 0)')
 
-# pastikan Nama Produk tidak ikut berubah
-NAMA_ASLI = {
-    'Sigra->Calya': 'Daihatsu Sigra', 'Rocky A200->Raize': 'Daihatsu Rocky',
-    'Rocky F70->Feroza': 'Daihatsu Rocky', 'Vellfire 2-3F->Alphard1-3': 'Toyota Vellfire',
-    'Vellfire 2F->Alphard1-3': 'Toyota Vellfire', 'Vellfire 3->Alphard1-3': 'Toyota Vellfire',
-    'Vellfire 3F->Alphard1-3': 'Toyota Vellfire', 'Vellfire 4->Alphard4': 'Toyota Vellfire',
-    'Agya G1->Ayla G1': 'Toyota Agya', 'Agya G2->Ayla G2': 'Toyota Agya',
-    'Terios->Rush G1': 'Daihatsu Terios',
-}
+# pastikan Nama Produk tidak ikut berubah -- cocokkan via kata kunci di label,
+# tahan terhadap perubahan teks label (mis. tambahan suffix "[FIX: ...]")
+KUNCI_NAMA = [
+    ('Sigra', 'Daihatsu Sigra'), ('Rocky', 'Daihatsu Rocky'), ('Vellfire', 'Toyota Vellfire'),
+    ('Agya', 'Toyota Agya'), ('Terios', 'Daihatsu Terios'),
+]
+
+
+def nama_asli(label):
+    for kunci, nama in KUNCI_NAMA:
+        if kunci in label:
+            return nama
+    raise KeyError(f'tidak ada kunci nama utk label {label!r}')
+
+
 beda_nama = 0
 for label, rows in data.items():
     for sheet, r, key, lama, baru in rows:
-        if wb2[sheet].cell(row=r, column=2).value != NAMA_ASLI[label]:
+        if wb2[sheet].cell(row=r, column=2).value != nama_asli(label):
             beda_nama += 1
 print(f'   Nama Produk berubah tak sengaja: {beda_nama} (harus 0)')
 

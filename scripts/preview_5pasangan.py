@@ -71,9 +71,9 @@ TUGAS = [
     ('Vellfire 2F->Alphard1-3',   'Toyota', 'Toyota Vellfire', 'Gen 2F',    target_alphard_1_3),
     ('Vellfire 3->Alphard1-3',    'Toyota', 'Toyota Vellfire', 'Gen 3',     target_alphard_1_3),
     ('Vellfire 3F->Alphard1-3',   'Toyota', 'Toyota Vellfire', 'Gen 3F',    target_alphard_1_3),
-    ('Vellfire 4->Alphard4', 'Toyota', 'Toyota Vellfire', 'Gen 4',          target_alphard_4),
+    ('Vellfire 4->Alphard1-3 [FIX: Alphard nyatanya G1 semua]', 'Toyota', 'Toyota Vellfire', 'Gen 4', target_alphard_1_3),
     ('Agya G1->Ayla G1',    'Toyota',   'Toyota Agya',      'Gen 1',        target_ayla_g1),
-    ('Agya G2->Ayla G2',    'Toyota',   'Toyota Agya',      'Gen 2',        target_ayla_g2),
+    ('Agya G2->Ayla G1 [FIX: Ayla nyatanya G1 semua]', 'Toyota', 'Toyota Agya', 'Gen 2', target_ayla_g1),
     ('Terios->Rush G1',     'Daihatsu', 'Daihatsu Terios',  'Gen 1',        target_rush_g1),
 ]
 

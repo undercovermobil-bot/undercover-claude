@@ -1234,3 +1234,44 @@ Output: `MASTER_5pasangan.xlsx` (scratchpad, tidak persisten). Scripts:
 jadi SATU file master final (kedua-duanya modifikasi independen di atas source yg
 sama, tinggal digabung); lalu terapkan ke 19 file listing utk hasil siap-upload
 (masih menunggu file listing terbaru dari user, lihat entry sebelumnya).
+
+## KOREKSI PENTING: master TIDAK bisa dipercaya soal berapa banyak kode generasi (2026-08-11)
+
+User kirim 5 file sample listing Shopee UA riil (format sama sekali BUKA lewat repair_xlsx.py
+lebih dulu, bug `activePane="bottom_left"` yg sama). Dari situ ketahuan: **segmen generasi di
+SKU tidak selalu 1:1 dengan jumlah baris/label generasi di MASTER.**
+
+**Bukti nyata** (semua dicek langsung dari kolom SKU listing riil, bukan tebakan):
+- Alphard: variannya ada "Gen 1-3 (2002-2022)" DAN "Gen 4 (2023-2026)" di teks, tapi
+  KEDUANYA pakai kode SKU **G1** (`TYT-ALP-UA-*-G1-*`) — TIDAK ADA kode G4 yang benar2
+  dipakai, padahal master py baris terpisah utk "Gen 4".
+- Sama persis polanya di: Feroza (Gen1&2 vs Gen3 -> G1 semua), Feroza Long (Gen3/Gen4/
+  Model Lain -> G1 semua), Rocky (F70/F300 vs Gen2/A200 -> G1 semua, SEBELUM
+  dikonsolidasi), Terios (Gen1 vs Gen2-3 -> G1 semua), Rush (Gen1 vs Gen2 -> G1 semua),
+  **Ayla** (Gen1/1F1/1F2/**Gen2** -> G1 semua, termasuk yg TEKSNYA bilang "Gen 2
+  2023-2026"!), Agya (Gen1 vs Gen2 -> G1 semua).
+- **Avanza & Xenia PENGECUALIAN** — Avanza beneran py 2 kode berbeda di listing riil
+  (G1 utk 2003-2020, G3 utk 2021-2026), jadi kerjaan Avanza/Xenia/Veloz sebelumnya
+  **TETAP BENAR**, tidak perlu dikoreksi.
+
+**Prinsip yg dikonfirmasi user**: "yg perlu disinkronisasi itu kode SKU-nya, bukan nama
+varian gen-nya" — kalau fisik cover-nya cuma 1 formula, SKU-nya harus SATU KODE SERAGAM
+(G1) apa pun label generasi di teks varian. Master BOLEH punya banyak baris/label
+generasi (utk keperluan tracking/harga/dst), tapi itu TIDAK BOLEH diasumsikan berarti
+ada banyak kode SKU berbeda — harus dicek ke listing riil.
+
+**Akibat: 2 dari 11 pemetaan pasangan model (2026-08-11 sebelumnya) SALAH, sudah
+diperbaiki**:
+- ~~Agya Gen2 -> Ayla Gen2 (kode G2)~~ **-> Agya Gen2 -> Ayla G1** (66 baris)
+- ~~Vellfire Gen4 -> Alphard Gen4 (kode G4)~~ **-> Vellfire Gen4 -> Alphard G1** (66 baris)
+Total tetap 726 baris (11 tugas), tapi 2 tugas targetnya diganti.
+
+**Pelajaran metodologi ke depan**: sebelum menyimpulkan sebuah model "punya N generasi
+kode SKU berbeda" dari master, WAJIB cross-check ke sampel listing riil (kolom SKU
+apa adanya) utk model yg SAMA — jangan asumsikan struktur baris master = struktur kode
+SKU asli. Kalau ragu dan tidak ada sampel listing, lebih aman tanya user drpd menebak
+dari master saja (persis kasus ini).
+
+Script diperbarui: `preview_5pasangan.py` (2 baris target diganti), `terapkan_5pasangan.py`
+(verifikasi nama produk diganti dari dict exact-match jadi pencocokan kata kunci, lebih
+tahan perubahan label). Output `MASTER_5pasangan.xlsx` (sudah dikirim ulang versi benar).
