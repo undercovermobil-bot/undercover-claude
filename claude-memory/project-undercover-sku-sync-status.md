@@ -1105,3 +1105,38 @@ tayang** [turun dari 81], **164 kurang di toko** [naik dari 148]). Ke-13 model d
 rekonsiliasi (Huracan, Model 3/X, 6 Volvo, LC/LS/UX, Ghibli) **semuanya masuk kategori "kurang
 di toko"** — sudah tayang di UA, tinggal direplikasi ke OT/OP/SP. Bukan tercatat "belum ada"
 sama sekali, jadi listingnya real & sekarang terhubung ke SKU yg benar.
+
+## Konsolidasi SKU Xenia & Veloz -> Avanza (mulai 2026-08-06)
+
+Instruksi user 2026-08-06: kode SKU Daihatsu Xenia dan Toyota Veloz disamakan dengan
+Toyota Avanza (konsolidasi stok fisik — produknya diyakini identik secara fisik).
+
+**Aturan final (dikonfirmasi user)**:
+- Xenia Gen 1 (2003-2011) DAN Gen 2 (2011-2021) -> DUA-DUANYA pakai kode Avanza
+  **"Gen 1 & 2"** (kode segmen `G1`) — karena Avanza TIDAK punya kode G2 terpisah,
+  cuma G1 gabungan (2003-2021) dan G3 (2021-2026). Dikonfirmasi via AskUserQuestion.
+- Veloz Gen 1 (2011-2021) DAN Gen 2 (2021-2026) -> DUA-DUANYA pakai kode Avanza **Gen 3**
+  (kode segmen `G3`), sesuai instruksi eksplisit user ("semua gen Veloz = Avanza gen 3").
+- **Hanya kolom SKU yang diubah.** Nama Produk/Kategori/Warna/Generasi/Rentang Tahun/
+  Nama Produk Bigseller TETAP Xenia/Veloz apa adanya — produk tetap dijual dgn nama
+  aslinya, cuma kode SKU-gudang-nya dikonsolidasi ke Avanza (shared inventory).
+- Konsisten dgn aturan #7 (master tidak dedupe baris) — SKU yang sama boleh muncul di
+  3 baris berbeda (Avanza asli + Xenia + Veloz), itu sudah preseden lama (UA/OT, SP/OP).
+
+**Hasil pemetaan (dari master versi 14 Juli)**: 132 baris Xenia + 132 baris Veloz,
+**100% cocok** (0 gagal) lewat lookup by (Toko, Kategori, Warna) ke SKU Avanza asli
+(bukan direkonstruksi manual). Output: `MASTER_Xenia_Veloz_ke_Avanza.xlsx`
+(scripts: `preview_xenia_veloz.py` bangun mapping, `terapkan_master_xenia_veloz.py`
+terapkan + verifikasi). Warna sel oranye (konsolidasi) di 264 sel SKU yang berubah.
+
+**PENTING — file master yang dipakai per 2026-08-06 adalah versi 14 Juli** (upload lama
+yg masih tersisa di server setelah container reset berkali-kali sesi ini). Kemungkinan
+BUKAN versi terkini — banyak kerja sesi-sesi berikutnya (23 brand baru, reconciliation
+Master/Tracking 1.862 baris, dst, lihat entry-entry di atas). **Kalau user upload master
+lebih baru, mapping ini WAJIB dijalankan ulang** (script sudah siap pakai, tinggal ganti
+path SRC).
+
+**Status**: mapping master SELESAI & sudah diverifikasi. Bagian kedua instruksi user
+("buatkan format siap upload ke Shopee/TikTok/Lazada semua toko") BELUM dikerjakan —
+butuh 19 file listing (sama seperti proyek BARU_FIX 27 Juli) untuk menerapkan SKU baru
+Xenia/Veloz ke listing riil lalu di-generate jadi file per-marketplace siap upload.
