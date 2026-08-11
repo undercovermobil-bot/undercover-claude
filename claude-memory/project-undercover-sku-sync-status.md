@@ -1275,3 +1275,17 @@ dari master saja (persis kasus ini).
 Script diperbarui: `preview_5pasangan.py` (2 baris target diganti), `terapkan_5pasangan.py`
 (verifikasi nama produk diganti dari dict exact-match jadi pencocokan kata kunci, lebih
 tahan perubahan label). Output `MASTER_5pasangan.xlsx` (sudah dikirim ulang versi benar).
+
+## Script final siap-terap ke listing (2026-08-11)
+
+`scripts/terapkan_listing_final.py` — transformasi SKU langsung (regex parse 6 segmen,
+tukar prefix MEREK-MODEL, generasi ikut apa adanya KECUALI Veloz yg dipaksa G3 dan
+Rocky yg rutenya dibaca dari teks varian bukan kode SKU). Berlaku utk Shopee/TikTok/
+Lazada (auto-deteksi channel dari nama sheet). Belum sempat dipakai — file sample UA
+Shopee yg diupload user (1-5.xlsx) ikut hilang krn reset container SEBELUM sempat
+diproses, minta upload ulang.
+
+Cara pakai: `python3 terapkan_listing_final.py <folder_masukan_xlsx> <folder_keluaran>`
+— folder masukan berisi file .xlsx APA ADANYA (BUKAN hasil repair_xlsx.py; script ini
+belum termasuk repair, jalankan repair_xlsx.py dulu kalau file dari export Shopee
+langsung kena bug activePane).
