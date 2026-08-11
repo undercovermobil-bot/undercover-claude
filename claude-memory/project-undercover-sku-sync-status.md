@@ -1185,3 +1185,52 @@ C Class — semua py pola sama (dua rentang tahun beda -> satu kode gen -> SKU k
 Sebagian malah masih pakai skema SKU lama 3-segmen (mis. `CVR0038-STP-RTP` dipakai
 9x utk Toyota Corona rentang 1960an-2000an). File sumber ada di Drive folder
 "Cek gagal upload/{OP,SP}/..." — filenya "Retry Upload ... SKU belum sesuai".
+
+## 5 pasangan model dikonsolidasi ke master (2026-08-11, lanjutan)
+
+Dikerjakan setelah Avanza/Xenia/Veloz. User klarifikasi arah (urutan penulisan pesan
+TIDAK konsisten menunjukkan arah, sudah dikonfirmasi eksplisit satu-satu):
+
+| Sumber | Target | Baris |
+|---|---|---|
+| Daihatsu Sigra Gen1 (2016-2026) | Toyota Calya Gen1 (2016-2026) | 66 |
+| Daihatsu Rocky Gen2/A200 (2021-2026) | Toyota Raize Gen1 (2021-2026) | 66 |
+| Daihatsu Rocky F70/F300 (1984-2002) | **Daihatsu Feroza "Gen 1&2"** (1993-1996) | 66 |
+| Toyota Vellfire Gen2/2F/3/3F (2008-2023) | Toyota Alphard "Gen 1-3" gabungan (2002-2022) | 264 (4x66) |
+| Toyota Vellfire Gen4 (2023-2024) | Toyota Alphard Gen4 (2023-2026) | 66 |
+| Toyota Agya Gen1 (2013-2023) | Daihatsu Ayla Gen1 dasar (2013-2023, BUKAN F1/F2) | 66 |
+| Toyota Agya Gen2 (2023-2026) | Daihatsu Ayla Gen2 (2023-2026) | 66 |
+| **Daihatsu Terios Gen1 (1997-2006)** | **Toyota Rush Gen1 (2006-2017)** | 66 |
+
+**Total 726 baris (11 tugas), 100% cocok lewat lookup (Toko,Kategori,Warna) ke SKU
+target asli** — sama metodologi Xenia/Veloz.
+
+**Keputusan spesifik yg butuh diingat**:
+- **Rocky generasi tua (F70/F300) BUKAN dibiarkan sendiri** — user: "Rocky Gen F70/F300
+  = Feroza = Taft GT, kode SKU nya pakai yg SKU Feroza aja". Dipilih Feroza "Gen 1&2"
+  (bukan "Gen 3") sbg default krn generasi pertama/utama — BELUM dikonfirmasi user
+  scr eksplisit, kalau salah tinggal ganti target_feroza_g1 jadi lookup Gen 3.
+- **Terios TETAP dikonsolidasi** (awalnya salah paham dianggap "dibiarkan sendiri"
+  krn jawaban user "tetap pakai G1 aja karena formulanya cuma 1" — maksud
+  sebenarnya: Terios cuma py 1 generasi jadi langsung disamakan ke Rush Gen 1
+  TANPA perlu dipecah, bukan "biarkan kode sendiri". User mengoreksi langsung.
+- **Agya Gen1 -> Ayla Gen1 dasar saja**, TIDAK dipecah ke Gen1F1(2017-2020)/
+  Gen1F2(2020-2022) meski Ayla py label lebih detail.
+
+**Bug proses yg ketemu (bukan bug logika, tapi keandalan sesi)**: `preview_5pasangan.py`
+sempat dijalankan 2x scr berurutan (tanpa Terios, lalu dgn Terios ditambah via Edit)
+dlm SATU pemanggilan Bash — hasil JSON yg tersimpan ternyata dari run PERTAMA (tanpa
+Terios), padahal console print run KEDUA sudah menunjukkan Terios 66 cocok. Kemungkinan
+container reset di tengah rangkaian command turut memutus konsistensi file. **Pelajaran:
+setelah edit script yg akan dijalankan bertahap, verifikasi ulang isi JSON/output SEGERA
+di panggilan Bash yg sama, jangan asumsikan run sebelumnya "sudah pasti oke" krn
+consolenya kelihatan benar** — sempat nyaris terkirim file yg kurang 1 pasangan (660
+bukan 726 baris) kalau tidak dicek ulang.
+
+Output: `MASTER_5pasangan.xlsx` (scratchpad, tidak persisten). Scripts:
+`preview_5pasangan.py`, `terapkan_5pasangan.py`.
+
+**BELUM dikerjakan**: gabungkan hasil ini dgn `MASTER_Xenia_Veloz_ke_Avanza_v2.xlsx`
+jadi SATU file master final (kedua-duanya modifikasi independen di atas source yg
+sama, tinggal digabung); lalu terapkan ke 19 file listing utk hasil siap-upload
+(masih menunggu file listing terbaru dari user, lihat entry sebelumnya).
