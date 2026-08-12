@@ -23,7 +23,7 @@ bukan tebakan dari master -- lihat claude-memory/project-undercover-sku-sync-sta
 Pemakaian: python3 terapkan_listing_final.py <folder_masukan> <folder_keluaran>
 Struktur kolom per channel (startrow 1-based, sesuai files_baru.py):
   Shopee : Nama Produk kol B(2), Nama Variasi kol D(4), SKU kol F(6), mulai baris 7
-  TikTok : product_name kol C(3), variation_value kol E(5), seller_sku kol K(11), mulai baris 6
+  TikTok : product_name kol C(3), variation_value kol F(6), seller_sku kol K(11), mulai baris 6
   Lazada : Nama Produk kol C(3), Variations kol N(14), Seller SKU kol M(13), mulai baris 5
 """
 import sys, re, glob, os
@@ -138,7 +138,7 @@ def proses_tiktok(path_in, path_out):
             continue
         cell = ws.cell(row=r, column=11)
         sku = cell.value
-        var = ws.cell(row=r, column=5).value
+        var = ws.cell(row=r, column=6).value
         baru, err = transform_sku(sku, model, var)
         if err:
             gagal.append((r, nm, sku, var, err))
