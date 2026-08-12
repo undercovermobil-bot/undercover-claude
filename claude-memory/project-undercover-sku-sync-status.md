@@ -1289,3 +1289,42 @@ Cara pakai: `python3 terapkan_listing_final.py <folder_masukan_xlsx> <folder_kel
 — folder masukan berisi file .xlsx APA ADANYA (BUKAN hasil repair_xlsx.py; script ini
 belum termasuk repair, jalankan repair_xlsx.py dulu kalau file dari export Shopee
 langsung kena bug activePane).
+
+## UA Shopee (5 file) SELESAI diproses & dikirim ke user (2026-08-12)
+
+Setelah 2x file sample sempat hilang krn container reset (sekali chat-upload wiped,
+sekali lagi bahkan Drive backup 27 Juli terbukti USANG/tidak boleh dipakai — lihat
+entry di atas soal Rocky/Feroza/Ayla/Agya/Xenia/Veloz berubah drastis antara 27 Juli
+vs 11 Agustus), user upload ulang 5 file UA Shopee segar (12 Agustus) dan berhasil diproses.
+
+**`scripts/terapkan_listing_final.py` dijalankan, hasil (0 gagal di semua baris)**:
+
+| Model sumber | Baris berubah | Target |
+|---|---|---|
+| Daihatsu Xenia | 51 | Toyota Avanza (G1 tetap G1, G3 tetap G3) |
+| Toyota Veloz | 34 | Toyota Avanza (dipaksa G3) |
+| Daihatsu Rocky | 34 (17+17) | Toyota Raize / Daihatsu Feroza (rute dari teks varian) |
+| Toyota Agya | 34 | Daihatsu Ayla |
+| Daihatsu Terios | 34 | Toyota Rush |
+| Toyota Vellfire | 17 | Toyota Alphard |
+| Daihatsu Sigra | 17 | Toyota Calya |
+| **TOTAL** | **221 baris** | |
+
+Diverifikasi: 5 file zip valid (tidak corrupt), Rocky terbukti kepecah 17/17 ke dua
+target berbeda (bukan cuma 1 arah). File hasil dikirim ke user dgn nama jelas
+`UA_Shopee_1.xlsx` s/d `UA_Shopee_5.xlsx`.
+
+**PENTING — pelajaran soal keandalan file antar-sesi**: file upload chat TERBUKTI bisa
+hilang 2x dalam 1 sesi ini krn container reset (bukan cuma scratchpad, folder
+`/root/.claude/uploads/` sendiri ikut ke-reset ke snapshot lama). Backup di Google
+Drive JUGA TERBUKTI BISA USANG (versi 27 Juli beda total dari versi 11 Agustus utk
+7 dari 8 model yg dicek) — **JANGAN ASUMSIKAN backup Drive/upload lama = current**,
+selalu minta versi terbaru & verifikasi via spot-check SKU riil dulu (pola/prinsip
+yg sama dgn "jangan asumsikan path file dari memory lama masih benar" di CLAUDE.md,
+skrng terbukti berlaku juga utk ISI file, bukan cuma lokasinya).
+
+**BELUM dikerjakan**: UA TikTok (3 file) + UA Lazada (1 file) utk toko Undercover
+selesai penuh; lalu OT (2 Shopee), OP (2 Shopee + 2 TikTok), SP (2 Shopee + 1 TikTok +
+1 Lazada) — 14 file lagi dari 19 total. Semua bisa pakai `terapkan_listing_final.py`
+yg sama (auto-deteksi channel Shopee/TikTok/Lazada dari nama sheet), tinggal jalankan
+repair_xlsx.py dulu kalau file mentah dari export marketplace langsung.
