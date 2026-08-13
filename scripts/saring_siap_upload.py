@@ -79,10 +79,18 @@ def proses_channel(channel, pasangan, out_path):
         if wb_out is None:
             wb_out = wb_baru
             ws_out = ws_baru
-            semua_baris = set(range(start_row, ws_out.max_row + 1))
-            dihapus = sorted(semua_baris - set(baris_berubah), reverse=True)
-            for r in dihapus:
-                ws_out.delete_rows(r, 1)
+            # padatkan baris yg dipertahankan ke atas (in-place, per baris target selalu
+            # <= baris sumber jadi aman tidak menimpa baris yg belum dibaca), lalu hapus
+            # sisanya SEKALI panggil delete_rows -- panggil delete_rows per-baris terlalu
+            # lambat utk sheet besar (puluhan ribu baris = bisa >1 jam, tiap panggilan
+            # menggeser semua baris di bawahnya).
+            for i, r in enumerate(baris_berubah):
+                target = start_row + i
+                if target != r:
+                    salin_baris(ws_out, r, ws_out, target)
+            sisa_mulai = start_row + len(baris_berubah)
+            if sisa_mulai <= ws_out.max_row:
+                ws_out.delete_rows(sisa_mulai, ws_out.max_row - sisa_mulai + 1)
             r_out = start_row + len(baris_berubah)
         else:
             for r in baris_berubah:
