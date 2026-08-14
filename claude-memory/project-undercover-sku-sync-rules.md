@@ -38,3 +38,27 @@ How to apply: kalau butuh evidence "SKU ini beneran real/terpakai" (bukan cuma v
 Status saat ditemukan (UA, master): Sedan **sudah benar** (`MZD-2S`), Hatchback **masih kode lama** `MZD-MZ2` — konversi cuma ganti segmen model (segmen 2), segmen lain (kategori/generasi/warna) tetap sama persis. Pola cek untuk toko lain: kalau listing masih `MZD-MZ2-...`, itu Hatchback yang belum dikonversi.
 
 **Pola umum yang mulai terlihat**: Mazda sepertinya menomori bodystyle dengan kode `{angka}{S|H}` (3→3S/3H, 2→2S/2H). Kalau ketemu Mazda model lain dengan bodystyle ganda di toko lain, cek dulu ke user sebelum menyamaratakan pola ini — jangan diasumsikan otomatis berlaku ke semua model Mazda.
+
+## Aturan baru 2026-08-12: model "kembar" pakai kode SKU model dasar (bukan kode sendiri)
+
+Instruksi user (berlaku SEMUA toko, formula produk sama krn kembar/rebadge): twin (kiri) adopsi kode SKU dasar (kanan), kategori+warna tetap normal, hanya segmen model (dan kadang generasi) yg ganti.
+
+| Twin | Dasar | Kode dasar | Catatan generasi |
+|---|---|---|---|
+| Daihatsu Xenia | Toyota Avanza | TYT-AVZ | **per-gen**: Xenia gen1&2->G1, Xenia gen3->G3 (ikut skema Avanza sendiri: G1=gen1&2, G3=gen3 -- Avanza TIDAK py G2, loncat G1->G3) |
+| Toyota Veloz | Toyota Avanza | TYT-AVZ | SEMUA gen Veloz -> G3 (Veloz = branding gen-3 Avanza) |
+| Daihatsu Sigra | Toyota Calya | TYT-CLY | TF=1, semua->G1 |
+| Daihatsu Terios | Toyota Rush | TYT-RSH | TF=1, semua->G1 |
+| Toyota Raize | Daihatsu Rocky | DHT-RCK | TF=1, semua->G1 |
+| Toyota Alphard | Toyota Vellfire | TYT-VLF | TF=1, semua->G1 |
+| Daihatsu Ayla | Toyota Agya | TYT-AGY | TF=1, semua->G1 |
+
+**Arah pasangan dikonfirmasi dari rank top-215** (bukan cuma tebak dari urutan kalimat user): base selalu rank lebih tinggi KECUALI Raize(#27) vs Rocky(#60) dan Alphard(#53) vs Vellfire(#62) — di 2 pasang itu yg secara rank lebih populer (Raize, Alphard) malah jadi TWIN, bukan base. Jangan asumsikan "yg lebih laku = base" utk model baru yg mirip pola ini — pola user based on urutan kalimat "X = Y" (X adopsi Y), bukan rank.
+
+**Jebakan penting**: awalnya salah paksa Xenia SEMUA gen ke G1 (termasuk baris "Xenia Gen 3 (2021-2026)" yg ada di listing nyata) — user instruksinya eksplisit "begitupun gen berikutnya" = per-generasi, BUKAN blanket. Fix: cek angka gen dari teks varian, gen>=3 -> G3, selain itu G1.
+
+**Bug data ditemukan (bukan bug proyek, murni human error listing)**: produk TikTok "...Toyota Agya Reguler" py current SKU `DHT-AYL-...` (kode Ayla, ketuker), 30 baris. Otomatis kebenerin oleh proses konsolidasi ini juga (karena Ayla->Agya = kode sama persis), tapi dicatat sbg bukti listing memang sering keliru tempel SKU model lain.
+
+**Status UA (source fresh 2026-08-12, hanya UA)**: Shopee 0 (sudah benar semua -- ternyata sebagian sdh dikerjakan manual/sesi lain sebelum diminta), TikTok 211 baris/17 produk, Lazada 48 baris. File: `Cek gagal upload/UA/Upload {TikTok|Lazada} UA - Twin Model (2026-08-12).xlsx`.
+
+**BELUM dikerjakan**: OT/SP/OP (user minta "di semua toko" tapi source yg dikirim 08-12 cuma UA) -- perlu listing fresh OT/SP/OP baru sebelum bisa diterapkan ke situ.
