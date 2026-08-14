@@ -1323,8 +1323,48 @@ selalu minta versi terbaru & verifikasi via spot-check SKU riil dulu (pola/prins
 yg sama dgn "jangan asumsikan path file dari memory lama masih benar" di CLAUDE.md,
 skrng terbukti berlaku juga utk ISI file, bukan cuma lokasinya).
 
-**BELUM dikerjakan**: UA TikTok (3 file) + UA Lazada (1 file) utk toko Undercover
-selesai penuh; lalu OT (2 Shopee), OP (2 Shopee + 2 TikTok), SP (2 Shopee + 1 TikTok +
-1 Lazada) — 14 file lagi dari 19 total. Semua bisa pakai `terapkan_listing_final.py`
-yg sama (auto-deteksi channel Shopee/TikTok/Lazada dari nama sheet), tinggal jalankan
-repair_xlsx.py dulu kalau file mentah dari export marketplace langsung.
+**UPDATE 2026-08-13/14 — sisa 4 toko selesai diproses & dikirim, plus 2 bug ketemu & fix**:
+
+| Toko | Shopee | TikTok | Lazada |
+|---|---|---|---|
+| UA | 221 (0 gagal) | 221 (0 gagal, stlh fix bug kolom varian) | 221 (0 gagal, stlh fix bug regex underscore) |
+| OT | 221 (0 gagal) | belum | belum |
+| SP | 208 (0 gagal) | 208 (0 gagal) | 208 (0 gagal) |
+| OP | 208 (0 gagal) | 193 (0 gagal, tapi lihat gap Vellfire) | belum |
+
+Angka SP/OP lebih kecil dari 221 krn katalognya historisnya di-scope ke terlaris saja
+(bukan bug — dicek `RE_SKU` tidak match=0 dan SKU kosong=0 di semua baris target-model
+utk kedua toko, artinya semua yg ADA sudah tertangkap penuh).
+
+File dikirim dgn nama `SIAP_UPLOAD_<TOKO>_<CHANNEL>.xlsx` (mulai OP/SP batch ini —
+`saring_siap_upload.py` skrng terima argumen ke-4 opsional nama toko), isinya HANYA
+baris yg SKU-nya berubah (bukan seluruh listing) tapi header/kolom asli platform
+(Kode Produk/Kode Variasi dst) tetap utuh supaya bisa langsung diupload.
+
+**Gap ketemu (bukan bug script, perlu tindakan manual user)**: 15 varian
+"Toyota Vellfire" di TikTok Otoprotection SKU-nya KOSONG TOTAL (Reguler 6 warna +
+Strip 1/2/3 masing 3 warna, baris ~3351-3365 di file `tiktok_2.xlsx` OP) — beda dari
+Shopee OP yg sudah lengkap 208. Perlu diisi SKU dulu di TikTok sebelum bisa
+dikonsolidasi ke Alphard.
+
+**2 bug ditemukan & di-fix di `terapkan_listing_final.py`/`saring_siap_upload.py`
+selama proses ini** (detail lengkap + cara deteksi di
+[[feedback-undercover-sku-sync-lessons]] entri 2026-08-13):
+1. Regex `RE_SKU` tolak karakter `_` → SKU berakhiran disambiguator `_G1`/`_G2`
+   (Lazada, Xenia Gen1/Gen2 sama-sama kode G1) diam-diam ke-skip tanpa masuk log
+   gagal. Ketahuan dari spot-check screenshot listing user, bukan dari laporan
+   script sendiri. Sempat bikin file Lazada UA yg SUDAH dikirim ke user (136 baris)
+   ternyata kurang 85 baris — dikirim ulang versi benar (221 baris).
+2. Kolom teks varian TikTok salah ambil (baca `sku_id` kol E, seharusnya
+   `variation_value` kol F) → 34 baris Rocky UA gagal deteksi rute Feroza/Raize.
+   Ini kegagalan EKSPLISIT (masuk log gagal), beda dari bug #1 yg silent.
+
+**Cara verifikasi wajib skrng sebelum kirim file ke user** (bukan cuma percaya
+counter "diubah"/"gagal" dari script): scan ulang semua baris target-model, cek 3
+hal terpisah — SKU kosong (gap master/listing), gagal match `RE_SKU` (kandidat
+silent-skip), dan (khusus TikTok) kolom varian ke-baca benar. Ketiganya BEDA mode
+kegagalan, salah satu bersih tidak menjamin yang lain.
+
+**BELUM dikerjakan**: OT TikTok + OT Lazada, OP Lazada. Semua bisa pakai pipeline
+yg sama: `repair_xlsx.py` -> `terapkan_listing_final.py` -> (cek silent-skip manual)
+-> `saring_siap_upload.py <fix> <hasil> <out> <nama_toko>`.
