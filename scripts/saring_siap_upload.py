@@ -112,6 +112,9 @@ if __name__ == '__main__':
     FIX_DIR = sys.argv[1] if len(sys.argv) > 1 else 'fix'
     HASIL_DIR = sys.argv[2] if len(sys.argv) > 2 else 'hasil'
     OUT_DIR = sys.argv[3] if len(sys.argv) > 3 else 'siap_upload'
+    # nama toko opsional (mis. UA/OTONATION/OTOPROTECTION/SMARTPROTECTION), disisipkan
+    # ke nama file output supaya bisa dibedakan toko & e-commerce-nya sekaligus
+    TOKO = sys.argv[4].upper() + '_' if len(sys.argv) > 4 else ''
 
     # peta nama file "fix" (sebelum transform) -> nama file "hasil" (sesudah transform), per channel
     per_channel = {}
@@ -128,7 +131,7 @@ if __name__ == '__main__':
         per_channel.setdefault(chan, []).append((p_lama, p_baru))
 
     for chan, pasangan in per_channel.items():
-        out_path = os.path.join(OUT_DIR, f'SIAP_UPLOAD_{chan.upper()}.xlsx')
+        out_path = os.path.join(OUT_DIR, f'SIAP_UPLOAD_{TOKO}{chan.upper()}.xlsx')
         total, per_file = proses_channel(chan, pasangan, out_path)
         if total == 0:
             print(f'[{chan}] tidak ada baris berubah, tidak dibuat output')
