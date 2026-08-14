@@ -1368,3 +1368,58 @@ kegagalan, salah satu bersih tidak menjamin yang lain.
 **BELUM dikerjakan**: OT TikTok + OT Lazada, OP Lazada. Semua bisa pakai pipeline
 yg sama: `repair_xlsx.py` -> `terapkan_listing_final.py` -> (cek silent-skip manual)
 -> `saring_siap_upload.py <fix> <hasil> <out> <nama_toko>`.
+
+## Bug BARU ditemukan (2026-08-14): varian catch-all "Model/Tahun Lain" SKU kosong
+
+User spot-check produk Mazda MX-5 RF (UA Shopee): belasan varian "Model/Tahun Lain"
+(per warna/tier) SKU-nya KOSONG, padahal varian generasi spesifik (Gen 1-4) di warna
+yg SAMA semuanya pakai SKU IDENTIK (1 formula tunggal) — harusnya catch-all-nya bisa
+ikut diisi kode yg sama. Scan sistemik (`scripts/scan_catchall_kosong.py`) ke SEMUA
+file yg ada sesi ini (UA+OT+SP+OP, semua channel yg sudah diupload) ketemu pola ini
+di skala BESAR:
+- **866 baris AUTO_FIXABLE** (sibling 1 formula identik, aman diisi)
+- **2.680 baris AMBIGU** (sibling formula beda-beda per generasi, mis. BMW M5 py 6
+  kode chassis beda E28/E34/E39/E60/F10/F90 — TIDAK bisa ditebak, perlu keputusan)
+- **2.175 baris TANPA_SIBLING** (produk itu sendiri belum py SKU sama sekali di
+  varian manapun — beda masalah, gap master bukan gap catch-all)
+
+**User kasih file referensi `Data_Mobil_Lebih_dari_1_Formula.xlsx` (sheet "Sheet2",
+213 model) buat validasi** — kolom "Total Formula": =1 berarti SEMUA generasi model
+itu pakai 1 kode SKU sama (termasuk yg blm ke-cover eksplisit), >1 berarti generasi
+kebagi jadi beberapa formula (baca kolom "Generasi" & "Notes" per baris blok utk tau
+batasnya). 196/213 model Total=1, 12 model Total>1 (perlu baca manual, garis rowsplit
+tdk selalu = jumlah baris "Generasi"), 5 model "?" (tidak jelas).
+
+**PENTING - "213 terlaris" scope != file terpisah**: user klarifikasi 213 model di
+file referensi ITU SENDIRI adalah daftar produk prioritas ("213 terlaris") — bukan
+perlu file ranking terpisah. 204/213 model referensi ADA sbg produk nyata di file
+yg sudah dipunya sesi ini; SEBAGIAN BESAR (Calya/Ertiga/Rush/Agya/Ayla/Brio/Yaris/
+Fortuner dll) ternyata **sudah bersih, TIDAK py baris catch-all sama sekali**
+(kemungkinan model populer di-setup lebih rapi sejak awal, tanpa opsi "tahun lain").
+Yg genuinely py catch-all-kosong dlm scope 213 cuma **217 baris** (BMW X5, Isuzu Mux,
+Mitsubishi Mirage, Opel Blazer, Toyota Soluna/Nav1, Kia Seltos, Mazda MX-5 RF, dll —
+model non-mainstream yg kebetulan msk daftar 213).
+
+**Eksekusi 2026-08-14**: `scripts/isi_catchall_kosong.py` (mode `only_listed` = HANYA
+isi kalau model eksplisit match referensi Total=1, model tak dikenal/formula>1
+DILEWATI) dijalankan ke UA Shopee+TikTok+Lazada, OT Shopee, SP Shopee+TikTok+Lazada,
+OP Shopee+TikTok. Hasil: **217/217 baris terisi** (UA Shopee 17, OT Shopee 128, SP
+Shopee+TikTok 72, sisanya 0 krn tdk ada catch-all-kosong dlm scope di channel itu).
+File dikirim: `SIAP_UPLOAD_{UA,OTONATION,SMARTPROTECTION}_CATCHALL_{SHOPEE,TIKTOK}.xlsx`.
+
+**BELUM dikerjakan**: 649 baris AUTO_FIXABLE di LUAR scope 213 (kebanyakan mobil
+niche/import: Land Rover, Range Rover, BMW iX/i3, Wuling EV, Lexus, dll) — valid
+secara logika (sibling 1 formula) tapi belum divalidasi ke referensi resmi krn tidak
+terdaftar di situ, ATAU belum ditentukan prioritasnya. 2.680 baris AMBIGU (perlu
+keputusan default per model) & 2.175 baris TANPA_SIBLING (gap master) sama sekali
+belum disentuh — user belum diminta keputusan.
+
+**Jebakan teknis ditemukan sesi ini**: label file di laporan ringkas (`os.path.basename`
+saja) BISA BENTROK antar toko krn banyak folder pakai nama generik sama
+("1.xlsx"/"2.xlsx" dipakai UA DAN OT; "shopee_1.xlsx"/"tiktok_1.xlsx" dipakai SP DAN
+OP) — sempat bikin estimasi awal (217) kelihatan meleset drastis (cuma dpt 145) pas
+run pertama krn folder SP/OP kelupaan diproses (basename OT/SP/OP yg sama bikin ke-
+skip dari asumsi "sudah kecover"). **How to apply**: kalau melaporkan/membandingkan
+hasil per file lintas-folder (beda toko), SELALU pakai path relatif penuh (folder +
+nama file) sbg label, JANGAN basename saja — dan re-run definisi lengkap di SEMUA
+folder yg relevan drpd asumsi dari daftar ringkasan sebelumnya.
