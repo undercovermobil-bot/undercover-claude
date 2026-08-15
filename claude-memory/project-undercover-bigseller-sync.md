@@ -558,3 +558,22 @@ User kirim screenshot listing Atoz SP dgn semua "Kode Variasi: -" (kosong total)
 **File**: `Cek gagal upload/{SP,OP}/Upload {Shopee|TikTok|Lazada} {SP|OP} - Hyundai Atoz (2026-08-10).xlsx` (5 file, semua dibangun dari file sumber asli — verifikasi sheet/header/kolom identik ke file asli, 0 xml rusak) + `SKU Gudang Big Seller/impor_sku_gudang_Hyundai_Atoz (2026-08-10).xlsx` (16 baris, format 40 kolom sama persis template).
 
 **Script**: `atoz_sp_op.py` di scratchpad — pola reusable utk model lain yg blank total (TF=1, tinggal pasang REGULER dict + toko + source paths, otomatis handle Shopee/TikTok(produk-lengkap)/Lazada(dedup-suffix) sekaligus multi-toko dgn kode SKU dikonsolidasi terpisah dari nama folder).
+
+## 2026-08-13: Mitsubishi Lancer Reguler (OT/SP/OP) + rescan pola serupa
+
+User temukan Lancer Reguler (Abu/Hitam/Biru/Merah/Hijau/Orange) di Otoprotection masih CVR-lama, sedangkan Strip sudah `MTB-LAN-SP-S-G1-...`. Terkonfirmasi persis, dan ternyata di SEMUA toko (OT/SP/OP) -- Lancer memang belum pernah difix sesi manapun sebelumnya (cuma tercatat di audit, tak pernah dieksekusi). UA sendiri sudah 100% OK (204/204).
+
+**Hasil per toko/channel** (60 baris fix, master bersih TF=1 semua G1):
+OT Shopee 18, SP Shopee 3 + TikTok 9 + Lazada 16, OP Shopee 7 + TikTok 7. File: `Cek gagal upload/{OT|SP|OP}/Upload {Shopee|TikTok|Lazada} {toko} - Mitsubishi Lancer (2026-08-13).xlsx`.
+
+**Bug script sempat kejadian lagi**: OP Shopee py 2 file sumber (1.xlsx+2.xlsx), loop awal simpan tiap file ke NAMA OUTPUT SAMA -> file kedua timpa file pertama, 6 baris dari file1 hilang. Fix: gabung semua source jadi 1 output (basis file pertama, ambil baris dr file manapun yg berubah) -- pola yg SAMA persis dgn yg sudah dicatat utk Shopee multi-file sebelumnya, jangan lupa lagi.
+
+**Rescan menyeluruh** (data source 08-05/06, msh valid krn OT/SP/OP tak ada upload baru sejak itu): pola PERSIS Lancer -- model top-215 dgn sebagian kategori/warna sudah G1-formula, sebagian msh CVR-lama/blank/placeholder -- ternyata **BUKAN kasus terisolasi, melainkan 58 model, 2.553 baris** (di luar Lancer/Santa Fe/Atoz yg sudah ditangani). Terbesar: Toyota Corolla(214), Suzuki Carry(84), Mini Cooper(106), BMW Seri5(63), BMW X1(57), Mitsubishi Galant(57), Chevrolet Orlando(94), BMW X5(99), Isuzu Mux(96), Mazda 3(115, msh py Mazda3-Hatchback-code lama jg meski sdh direvisi UA -- brarti OT/SP/OP blm ikut revisi -3S-/-3H- baik). Rincian lengkap per model di file REKAP.
+
+**Deliverable**: `Cek gagal upload/REKAP SKU OT-SP-OP - lanjutan Lancer (2026-08-13).xlsx` -- sheet RINGKASAN (58 model x breakdown BLANK/CVR-lama/placeholder x toko-channel terdampak), sheet DETAIL (2.553 baris lengkap varian+SKU+masalah).
+
+**Status: BARU DIAGNOSIS, belum dieksekusi** (skala terlalu besar utk sekali jalan tanpa arahan prioritas user, sama spt keputusan di audit 08-07 sebelumnya). Lancer sendiri (bagian dr temuan user kali ini) SUDAH selesai dieksekusi+file siap upload.
+
+**Script kunci**: `master_index.py` (rebuild ringan, versi lama kehapus dari scratchpad), `lancer_fix.py` (pola reusable per-model spesifik, cocok dipakai ulang model lain), `ot_sp_op_rescan.py` (rescan comprehensive pola-Lancer, filter exclude yg sudah ditangani sesi ini via set HANDLED).
+
+**Catatan teknis**: file besar (`all_stores_sweep.json` 111.935 baris, `top215_bad_v3.json` dll) di scratchpad OS-managed, bisa kehapus antar sesi/waktu (terjadi kali ini) -- kalau perlu data itu lagi, cek dulu ada/tidak sebelum asumsikan, siap rebuild dari file sumber Cek gagal upload/ kalau hilang (masih valid selama tanggal source belum berubah).
