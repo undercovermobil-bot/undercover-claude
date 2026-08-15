@@ -75,6 +75,57 @@ Avanza/Veloz/Ertiga/Mobilio/Freed/Alvez(298) < Suzuki APV(299) < Xpander/
 Grand Livina/Kia Carens(302) < Wuling Confero(304) < Chevrolet Spin(306) <
 Wuling Cortez(308) < Suzuki XL7(311)
 
+## Eksekusi nyata 2026-08-15: harga baru dari file HPP Top 100 Terlaris
+
+User upload `DATA_HARGA_JUAL_UC_HPP_Top_100_Terlaris.xlsx` (100 produk terlaris,
+sheet "HPP 12%"), kolom "Harga Jual Terbaru" (hasil hitungan cost+margin per
+Pcs/Roll — makin banyak pcs per roll kain = mobil makin kecil = HPP makin
+murah). **Temuan penting**: kolom ini murni fungsi dari `Pcs/Roll`, BUKAN dari
+tipe/ukuran mobil aktual — semua produk dgn Pcs/Roll sama dapat harga IDENTIK
+persis walau beda kategori bodi total (mis. Toyota Avanza, Honda Jazz, Suzuki
+Ertiga, Toyota Vios semua Pcs/Roll=5 -> harga sama 381.591). Instruksi user:
+pakai kategori city car/SUV/MPV/dll sbg patokan tambahan, mobil terkecil per
+kategori jadi harga dasar (floor), mobil lain naik bertahap max Rp5.000/step,
+kelipatan ribuan, dibulatkan ke atas.
+
+**Metode final** (`scripts/` blm disimpan permanen — reproduksi manual dari
+riwayat sesi ini kalau perlu diulang):
+1. Klasifikasi tiap 100 produk ke 8 kategori bodi manual (City Car, Hatchback,
+   Sedan, SUV compact, SUV besar, MPV keluarga, MPV besar, Pickup) pakai
+   pengetahuan otomotif umum — 100/100 berhasil diklasifikasi.
+2. Per kategori, `Pcs/Roll` (data BAWAAN file, sudah proxy ukuran fisik yg
+   presisi — makin besar Pcs/Roll = mobil makin kecil) dipakai sbg dasar
+   ranking ukuran, BUKAN nebak dimensi manual — supaya konsisten sama data
+   biaya kain yg sudah dihitung user.
+3. Tier Pcs/Roll TERBESAR dlm kategori (mobil terkecil) -> harga dasar =
+   `ceil(harga_jual_terbaru_mentah / 1000) * 1000`.
+4. Tier Pcs/Roll berikutnya (mobil lebih besar) -> harga dasar + Rp5.000
+   (step tetap = batas maksimal yg diizinkan user, dipakai konsisten spy
+   simpel & bisa direproduksi). Kelipatan bertahap tiap tier, bukan
+   proporsional ke gap HPP asli (yg bisa >Rp50rb antar tier -> terlalu jauh
+   dari batas 5rb yg diminta user).
+5. Kolom "Harga Baru (Strip: Elite/Epic/Warrior)" = harga Reguler baru + Rp56.000
+   (instruksi eksplisit user, angka tetap flat utk semua produk & kategori).
+
+**Hasil per kategori** (harga dasar -> harga tier berikutnya, Rupiah):
+- City Car: Wuling Air EV(Pcs/Roll7)=296rb -> Brio/Karimun/March/Picanto/dst(P6)=301rb -> Agya/Ayla/Ignis(P5)=306rb
+- Hatchback: Yaris/Swift/Sirion/dst(P6)=332rb -> Jazz/Baleno(P5)=337rb
+- Sedan: City Sedan/Soluna/Timor(P6)=332rb -> Vios/Civic/Camry/Corolla/dst(P5)=337rb
+- SUV compact: Raize/Fronx/Jimny/WRV/Rocky/dst(P6)=332rb -> Feroza/Destinator/Creta(P5)=337rb
+- SUV besar: HRV/BRV/Rush/CRV/Terios/Hardtop/dst(P5)=382rb -> Fortuner/Pajero Sport/Land Cruiser/Palisade(P4)=387rb
+- MPV keluarga: Sigra/Sienta/Go Plus(P6)=332rb -> Avanza/Ertiga/Xenia/Calya/dst(P5)=337rb
+- MPV besar: Innova/Kijang/Panther/Odyssey/Kuda(P5)=382rb -> Alphard/Vellfire/Voxy(P4)=387rb -> HiAce(P3)=392rb
+- Pickup: Triton/Gran Max PU/Carry(P5)=382rb -> Hilux(P4)=387rb
+
+File hasil (3 kolom baru: Tipe Mobil, Harga Baru Reguler, Harga Baru Strip)
+dikirim ke user sbg `DATA_HARGA_JUAL_UC_HPP_Top_100_Terlaris_HASIL.xlsx`,
+formula & sheet lain di file asli tidak disentuh.
+
+**Kalau mau extend/ulang metode ini** (mis. utk toko/channel lain, atau full
+katalog bukan cuma Top 100): pakai kolom `Pcs/Roll` (bukan menebak dimensi
+mobil manual) sbg sumber ranking ukuran per kategori — jauh lebih presisi &
+konsisten drpd asumsi ukuran dari nama model doang.
+
 ## Cara pakai untuk update harga terbaru
 
 1. Kalau update harga 1 model, cek dulu posisinya di tabel kategori terkait
