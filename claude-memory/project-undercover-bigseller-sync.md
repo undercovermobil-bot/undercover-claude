@@ -577,3 +577,19 @@ OT Shopee 18, SP Shopee 3 + TikTok 9 + Lazada 16, OP Shopee 7 + TikTok 7. File: 
 **Script kunci**: `master_index.py` (rebuild ringan, versi lama kehapus dari scratchpad), `lancer_fix.py` (pola reusable per-model spesifik, cocok dipakai ulang model lain), `ot_sp_op_rescan.py` (rescan comprehensive pola-Lancer, filter exclude yg sudah ditangani sesi ini via set HANDLED).
 
 **Catatan teknis**: file besar (`all_stores_sweep.json` 111.935 baris, `top215_bad_v3.json` dll) di scratchpad OS-managed, bisa kehapus antar sesi/waktu (terjadi kali ini) -- kalau perlu data itu lagi, cek dulu ada/tidak sebelum asumsikan, siap rebuild dari file sumber Cek gagal upload/ kalau hilang (masih valid selama tanggal source belum berubah).
+
+## 2026-08-13 lanjutan: eksekusi massal SP+OP, 49 model rescan
+
+User pilih prioritas: SP+OP dulu (dari REKAP 58-model tadi, subset SP+OP = 49 model, 2.023 baris).
+
+**Resolver generic** (bukan hardcode per-model spt Lancer): parse warna dari vname (plain / Elite-Epic-Warrior 2-kata / "Strip N Warna") -> (tier,huruf) atau kode plain, kategori dari pname, validasi ke pool master Smartprotection per model. Kunci lookup model DUA tahap: nama spesifik dari pname dulu (mis. "Mazda 3 Sedan"), baru fallback ke nama generic ranking ("Mazda 3") -- URUTAN INI WAJIB.
+
+**Bug nyaris kejadian (ke-4 kalinya pola serupa)**: percobaan pertama pakai nama generic ranking langsung sbg kunci lookup -> Mazda 3 Sedan DAN Hatchback (100 baris) ke-resolve ke kode LEGACY `MZD-M3` krn master py entri bare "Mazda 3" (legacy) YG MASIH ADA berdampingan dgn "Mazda 3 Sedan"/"Mazda 3 Hatchback" (benar) -- generic-name match ketemu yg legacy duluan. Ini KELAS BUG SAMA dgn Santa Fe 08-08 (pool salah pilih krn tak spesifik). Fix: coba nama spesifik dari pname dulu (`specific_model_text()`, strip prefix/kategori-suffix), baru fallback. Setelah fix: Mazda3 turun dari 100 resolved (SALAH) jadi 53 resolved (BENAR, kode 3S/3H) + 50 unresolved (jujur, drpd salah diam2).
+
+**Hasil**: 1.523 dari 2.023 baris terselesaikan otomatis (SP 1001, OP 522). Sisa 500 baris didominasi kasus keras yg butuh gen-matching manual (Toyota Corolla 200 -- multi-formula persis kaya kasus UA, Mini Cooper 92, Suzuki Carry 67, Hyundai Avega Hatchback 54 -- model blm ada di master SP sama sekali).
+
+**File**: `Cek gagal upload/{SP|OP}/Upload {Shopee|TikTok|Lazada} {toko} - Rescan 49 Model (2026-08-13).xlsx` (5 file, OP tak py Lazada). `CATATAN SP-OP - 500 baris belum terselesaikan (2026-08-13).xlsx`.
+
+**Belum**: OT (530 baris dari REKAP awal, toko ke-3 blm digarap -- user prioritas SP+OP dulu), rescan 500 sisa butuh kerja manual per-model spt Lancer.
+
+**Script**: `sp_op_mass_fix.py` (resolver generic reusable), `sp_op_build_uploads.py` (builder pakai src+vid matching persis, bukan pname+vname yg rawan tabrakan).
