@@ -1423,3 +1423,35 @@ skip dari asumsi "sudah kecover"). **How to apply**: kalau melaporkan/membanding
 hasil per file lintas-folder (beda toko), SELALU pakai path relatif penuh (folder +
 nama file) sbg label, JANGAN basename saja — dan re-run definisi lengkap di SEMUA
 folder yg relevan drpd asumsi dari daftar ringkasan sebelumnya.
+
+## Verifikasi UA Shopee pasca-upload (2026-08-15)
+
+User upload ulang export UA Shopee terbaru untuk di-double-check setelah menerapkan
+harga baru. Hasil audit 22.933 baris listing:
+
+| Yang dicek | Hasil |
+|---|---|
+| Harga 10 produk teratas (308 baris) | SEMUA BENAR |
+| Premium/Exclusive ikut tercemar harga baru? | TIDAK (0 baris) |
+| Veloz→Avanza, Sigra→Calya, Terios→Rush, Vellfire→Alphard | SEMUA BENAR |
+| Rocky→Feroza/Raize | BENAR, terbagi 17/17 |
+| **SKU Xenia & Agya** | **70 baris TER-REVERT** (Xenia 42 `DHT-XNA-*`, Agya 28 `TYT-AGY-*`) |
+
+**Kenapa persis 70 baris itu yang kena**: mereka adalah IRISAN dari "produk yang kena
+konsolidasi SKU" DAN "produk yang masuk 10 teratas (dapat harga baru)". Cuma baris
+irisan itu yang ikut terbawa di file update harga (yang keliru dibangun dari export
+asli, kolom SKU-nya masih kode lama) sehingga tertulis balik. Model konsolidasi lain
+(Veloz/Sigra/Terios/Vellfire/Rocky) selamat karena tidak masuk 10 teratas jadi tidak
+ada di file harga sama sekali. Detail akar masalah: lihat entri 2026-08-15 di
+[[feedback-undercover-sku-sync-lessons]].
+
+Perbaikan dikirim: `SIAP_UPLOAD_UA_PERBAIKAN_SKU_SHOPEE.xlsx` (70 baris), dibangun
+dari export TERBARU (bukan export 12 Agustus) sehingga kolom harganya sudah membawa
+harga baru yang benar dan tidak me-revert harga.
+
+**Pelajaran metode verifikasi**: script cek harga versi pertama melaporkan "BEDA (ada
+385000, harusnya 385000)" untuk SEMUA baris — nilai identik tapi dinyatakan beda,
+karena harga di sel tersimpan sbg TEKS sedangkan pembandingnya int. Kalau tidak
+diperiksa, ini bisa memicu "perbaikan" 308 baris yang sebenarnya sudah benar. Selalu
+normalkan `int(float(v))` sebelum membandingkan nilai sel numerik dari export
+marketplace — tipe datanya tidak konsisten antar channel maupun antar export.
