@@ -121,10 +121,58 @@ File hasil (3 kolom baru: Tipe Mobil, Harga Baru Reguler, Harga Baru Strip)
 dikirim ke user sbg `DATA_HARGA_JUAL_UC_HPP_Top_100_Terlaris_HASIL.xlsx`,
 formula & sheet lain di file asli tidak disentuh.
 
+### REVISI (v2, masih menunggu review user) — matriks dibalik: Pcs/Roll DULU
+
+User menolak versi pertama & mengoreksi urutan matriksnya. **Aturan final v2**
+(script: `scripts/harga_baru_matriks.py`):
+1. **Pcs/Roll = penentu LANTAI harga**, dihitung sendiri per tier dan **TIDAK
+   saling menumpuk**: 7→Rp296rb, 6→Rp332rb, 5→Rp382rb, 4→Rp457rb, 3→Rp583rb
+   (semua = ceil-ribuan dari 'Harga Jual Terbaru' mentah tier itu). Jadi mobil
+   di tier 4 pcs/roll mulai dari Rp457rb, BUKAN melanjutkan tangga tier 5.
+   Contoh kanonik user: Fortuner (4 pcs/roll, terkecil di grup SUV besar-nya)
+   = Rp457.000, bukan hasil +5rb dari harga BR-V yg 5 pcs/roll.
+2. Di dalam tiap **(Pcs/Roll × kategori bodi)**, mobil diurut dari panjang bodi
+   TERKECIL; yg terkecil dapat lantai, yg lebih besar naik bertahap.
+3. Kenaikan kelipatan Rp1.000, rentang total per grup maksimal Rp5.000.
+4. Kolom Strip (Elite/Epic/Warrior) = harga Reguler + Rp56.000 (flat).
+
+**Cara menghitung lebar interval per grup — 2 tahap (penting, dua-duanya perlu):**
+- LEBAR spread grup dari skala ABSOLUT: tiap ~100mm selisih panjang
+  terkecil↔terbesar = Rp1.000, dibatasi Rp5.000. Tanpa ini, grup yg ukurannya
+  mirip-mirip ikut dipaksa menyebar penuh Rp5.000 (mis. Ignis vs Agya/Ayla yg
+  cuma beda 60mm jadi berjarak sama jauhnya dgn Mazda 2 vs S-Class yg beda
+  839mm — jelas salah).
+- POSISI tiap mobil di dalam spread itu PROPORSIONAL thd panjangnya. Tanpa ini,
+  satu mobil yg jauh lebih kecil bikin sisanya mentok di harga sama semua (mis.
+  Toyota Hardtop 3.840mm di SUV besar 5 pcs/roll bikin 11 mobil lain kena cap
+  Rp387rb identik).
+Hasil v2 kebetulan pas dgn dua tebakan user: Fortuner Rp457rb & BR-V Rp385rb.
+
+**Data panjang bodi (mm) per model di-hardcode di script** (dari pengetahuan
+otomotif umum, bukan dari kolom file) — kalau menambah model baru, WAJIB isi
+`PANJANG_MM` & `KATEGORI`, script sengaja `SystemExit` kalau ada model tanpa
+salah satunya, biar tidak diam-diam salah harga.
+
+### JEBAKAN TEKNIS: openpyxl merusak workbook ber-formula
+
+Versi pertama ditulis dgn cara menambah kolom ke workbook ASLI lalu
+`wb.save()`. Akibatnya user lapor **"formulanya jadi banyak yg kosong"**.
+Penyebab pasti (sudah diverifikasi dgn membandingkan XML dalam zip): openpyxl
+menulis ulang tiap sel formula TANPA cached value — dari ~8.200 formula di 6
+sheet, **0 yg menyisakan nilai** (aslinya ratusan punya). openpyxl juga
+membuang `xl/calcChain.xml`, `xl/sharedStrings.xml`, dan `xl/metadata`. Excel
+memang disuruh hitung ulang (`fullCalcOnLoad="1"`), tapi viewer lain (preview
+HP, Google Sheets, LibreOffice, atau Excel mode manual-calc) menampilkannya
+KOSONG. **How to apply: JANGAN pernah menambah kolom ke workbook ber-formula
+milik user lewat openpyxl.** Tulis hasil sbg workbook BARU berisi nilai statis
+saja, dan biarkan file sumber tidak tersentuh.
+
 **Kalau mau extend/ulang metode ini** (mis. utk toko/channel lain, atau full
 katalog bukan cuma Top 100): pakai kolom `Pcs/Roll` (bukan menebak dimensi
-mobil manual) sbg sumber ranking ukuran per kategori — jauh lebih presisi &
-konsisten drpd asumsi ukuran dari nama model doang.
+mobil manual) sbg penentu lantai harga — itu data biaya kain riil yg sudah
+dihitung user, jauh lebih presisi drpd asumsi ukuran dari nama model doang.
+Panjang bodi hanya dipakai utk mengurutkan DI DALAM grup, bukan utk menentukan
+harga dasar.
 
 ## Cara pakai untuk update harga terbaru
 
