@@ -12,7 +12,7 @@ Aturan (instruksi user 2026-08-15, revisi dari versi pertama):
    Yang terkecil dapat harga lantai; yang lebih besar naik bertahap.
 3. Kenaikan kelipatan Rp1.000, TOTAL rentang dalam 1 grup maksimal Rp5.000.
    Mobil berukuran mirip boleh dapat harga sama.
-4. Kolom Strip (Elite/Epic/Warrior) = harga Reguler + Rp56.000.
+4. Kolom Strip (Elite/Epic/Warrior) = harga Reguler + TAMBAHAN_STRIP.
 
 CATATAN TEKNIS: file asli TIDAK ditulis ulang. openpyxl membuang cached value
 semua formula saat menyimpan workbook yg py formula (terbukti: 0 dari ~8.200
@@ -30,7 +30,9 @@ from collections import defaultdict
 STEP = 1000         # kelipatan kenaikan
 MAX_SPREAD = 5000   # rentang maksimal dalam 1 grup
 MM_PER_STEP = 100   # tiap 100mm selisih panjang bodi = naik 1 langkah (Rp1.000)
-TAMBAHAN_STRIP = 56000
+# selisih harga varian Strip (Elite/Epic/Warrior) di atas harga Reguler.
+# Direvisi user 2026-08-15: semula Rp56.000 -> jadi Rp43.000.
+TAMBAHAN_STRIP = 43000
 
 # kategori bodi per produk (dipertahankan sama dgn pembahasan sebelumnya supaya
 # konsisten dgn cara user menyebut kelas mobilnya, mis. BR-V & Fortuner dua-duanya

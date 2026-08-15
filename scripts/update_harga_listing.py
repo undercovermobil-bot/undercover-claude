@@ -24,6 +24,8 @@ import sys, os, re, glob, copy
 import openpyxl
 from openpyxl.styles import PatternFill
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 ORANGE = PatternFill('solid', fgColor='FFC000')
 
 CFG = {
@@ -90,7 +92,7 @@ def cocok_model(nama_listing):
     return None
 
 
-def baca_harga_baru(path, override):
+def baca_harga_baru(path, override, tambahan_strip):
     wb = openpyxl.load_workbook(path, data_only=True)
     ws = wb['Harga Baru']
     harga = {}
@@ -100,9 +102,12 @@ def baca_harga_baru(path, override):
             continue
         harga[nm] = {'reguler': ws.cell(row=r, column=7).value,
                      'strip': ws.cell(row=r, column=8).value}
-    for nm, (reg, strip) in override.items():
+    # override hanya menyebut harga REGULER; harga strip selalu diturunkan dari
+    # tambahan_strip supaya tidak pernah ada dua angka yg saling bertentangan
+    # kalau selisih strip direvisi lagi
+    for nm, reg in override.items():
         if nm in harga:
-            harga[nm] = {'reguler': reg, 'strip': strip}
+            harga[nm] = {'reguler': reg, 'strip': reg + tambahan_strip}
     return harga
 
 
@@ -199,13 +204,15 @@ if __name__ == '__main__':
     out_dir = sys.argv[2]
     folders = sys.argv[3:]
 
-    # instruksi eksplisit user 2026-08-15: Brio & Jazz dipatok Rp332.000 / strip Rp388.000
+    # instruksi eksplisit user 2026-08-15: Brio & Jazz dipatok Rp332.000 (Reguler)
     OVERRIDE = {
-        'Honda Brio Satya / RS': (332000, 388000),
-        'Honda Jazz':            (332000, 388000),
+        'Honda Brio Satya / RS': 332000,
+        'Honda Jazz':            332000,
     }
+    # harus sama dgn TAMBAHAN_STRIP di harga_baru_matriks.py
+    from harga_baru_matriks import TAMBAHAN_STRIP
 
-    harga_baru = baca_harga_baru(path_harga, OVERRIDE)
+    harga_baru = baca_harga_baru(path_harga, OVERRIDE, TAMBAHAN_STRIP)
     print('Harga yg dipakai:')
     for nm, v in harga_baru.items():
         tanda = '  <- override' if nm in OVERRIDE else ''
