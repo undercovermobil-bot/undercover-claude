@@ -181,6 +181,10 @@ def main(src, out):
             raise SystemExit(f'BELUM ada kategori utk: {nm}')
         if nm not in PANJANG_MM:
             raise SystemExit(f'BELUM ada data panjang utk: {nm}')
+        # Pcs/Roll bisa tersimpan sbg float (6.0) tergantung versi file yg diekspor
+        # user -- normalkan ke int supaya pengelompokan tier tidak pecah antara
+        # 6 dan 6.0, dan outputnya tidak tampil "6.0"
+        pr = int(round(float(pr)))
         produk.append({'row': r, 'nama': nm, 'pcsroll': pr, 'hjt': hjt,
                        'kat': KATEGORI[nm], 'panjang': PANJANG_MM[nm]})
 
