@@ -25,7 +25,7 @@ karena harga HPP yg jadi dasar perhitungan memang tier Reguler.
 
 Pemakaian:
   python3 update_harga_per_sku.py <file_harga.xlsx> <no_awal> <no_akhir> \
-      <folder_out> <folder_listing...>
+      <folder_out> <nama_toko> <folder_listing...>
 """
 import sys, os, glob, copy
 import openpyxl
@@ -55,30 +55,131 @@ HEADER_KEY = {
 }
 
 # Nama produk di file harga -> prefix SKU (2 segmen pertama: MEREK-MODEL).
-# Diverifikasi langsung dari listing UA, bukan tebakan. Kalau menambah produk
-# baru WAJIB isi di sini -- script sengaja berhenti kalau ada yg belum terdaftar,
-# supaya tidak diam-diam melewatkan produk.
+# Diverifikasi langsung ke data listing (UA dan/atau OT), bukan tebakan. Kalau
+# menambah produk baru WAJIB isi di sini -- script sengaja berhenti kalau ada
+# yg belum terdaftar, supaya tidak diam-diam melewatkan produk.
+#
+# Produk 21-100 diverifikasi 2026-08-18 dari data OTONATION (OT) saat
+# memproses batch harga toko itu -- prefix yg sama berlaku lintas toko krn
+# desain SKU (`-UA-` di segmen ke-3 dipakai bersama semua toko, lihat
+# project-undercover-otonation-status.md).
+#
+# Kasus yg BUKAN pemetaan langsung (perlu keputusan, dicatat di
+# project-undercover-harga-referensi.md):
+# - Toyota Hilux -> TYT-HLX (base) SAJA, BUKAN TYT-HLR (Hilux Rangga = produk
+#   master terpisah, generasi sendiri, tidak termasuk top-100 ini).
+# - Daihatsu Rocky -> TYT-RZE (kembar modern Toyota Raize, 2019-2026, harga di
+#   file SAMA PERSIS dgn Raize: Rp336rb/379rb -- bukan kebetulan, memang 1
+#   SKU). SKU F70/F300 (Rocky klasik 1984-2002, DHT-FRZ, kembar Feroza) sudah
+#   otomatis kebagian harga lewat entri 'Daihatsu Feroza' sendiri -- tidak
+#   perlu entri terpisah.
+# - Toyota HiAce -> TYT-HAC (varian "Commuter") SAJA. Varian "Premio" (prefix
+#   TYT-HAL, kemungkinan "HiAce Long") SENGAJA TIDAK disentuh -- beda dari
+#   kasus Rush/Terios/Calya/Sigra (rebadge identik, kembar SEHARUSNYA sama
+#   harga), Commuter vs Premio/Long bisa jadi beda ukuran fisik asli, harga
+#   file cuma py 1 baris "Toyota HiAce" tanpa keterangan. Perlu konfirmasi
+#   user kalau mau Premio ikut disamakan.
 PREFIX = {
-    'Toyota Avanza':                'TYT-AVZ',
-    'Honda Brio Satya / RS':        'HND-BRI',
-    'Toyota Innova':                'TYT-INV',
-    'Honda Jazz':                   'HND-JAZ',
-    'Suzuki Ertiga':                'SZK-ERT',
-    'Honda HR-V / e:N1':            'HND-HRV',
-    'Toyota Agya':                  'DHT-AYL',
-    'Daihatsu Ayla':                'DHT-AYL',
-    'Daihatsu Xenia':               'TYT-AVZ',
-    'Nissan Livina / Grand Livina': 'NSN-LVN',
-    'Toyota Vios':                  'TYT-VIS',
-    'Toyota Fortuner':              'TYT-FTN',
-    'Honda BR-V':                   'HND-BRV',
-    'Toyota Calya':                 'TYT-CLY',
-    'Toyota Rush':                  'TYT-RSH',
-    'Toyota Yaris':                 'TYT-YRS',
-    'Toyota Kijang':                'TYT-KJG',
-    'Honda CR-V':                   'HND-CRV',
-    'Honda Mobilio':                'HND-MBL',
-    'Honda Civic':                  'HND-CVC',
+    'Toyota Avanza':                       'TYT-AVZ',
+    'Honda Brio Satya / RS':               'HND-BRI',
+    'Toyota Innova':                       'TYT-INV',
+    'Honda Jazz':                          'HND-JAZ',
+    'Suzuki Ertiga':                       'SZK-ERT',
+    'Honda HR-V / e:N1':                   'HND-HRV',
+    'Toyota Agya':                         'DHT-AYL',
+    'Daihatsu Ayla':                       'DHT-AYL',
+    'Daihatsu Xenia':                      'TYT-AVZ',
+    'Nissan Livina / Grand Livina':        'NSN-LVN',
+    'Toyota Vios':                         'TYT-VIS',
+    'Toyota Fortuner':                     'TYT-FTN',
+    'Honda BR-V':                          'HND-BRV',
+    'Toyota Calya':                        'TYT-CLY',
+    'Toyota Rush':                         'TYT-RSH',
+    'Toyota Yaris':                        'TYT-YRS',
+    'Toyota Kijang':                       'TYT-KJG',
+    'Honda CR-V':                          'HND-CRV',
+    'Honda Mobilio':                       'HND-MBL',
+    'Honda Civic':                         'HND-CVC',
+    'Daihatsu Terios':                     'TYT-RSH',
+    'Mitsubishi Xpander':                  'MTB-XPN',
+    'Toyota Camry':                        'TYT-CMY',
+    'Honda Accord':                        'HND-ACD',
+    'Toyota Corolla':                      'TYT-CRL',
+    'Suzuki APV Arena / Blind Van':        'SZK-APV',
+    'Toyota Raize':                        'TYT-RZE',
+    'Isuzu Panther':                       'ISZ-PTH',
+    'Mitsubishi Pajero Sport':             'MTB-PJS',
+    'Daihatsu Sigra':                      'TYT-CLY',
+    'Suzuki Baleno':                       'SZK-BLN',
+    'Suzuki Fronx':                        'SZK-FRX',
+    'Honda Freed':                         'HND-FRD',
+    'Toyota Hilux':                        'TYT-HLX',
+    'Suzuki Swift':                        'SZK-SWF',
+    'Suzuki Karimun':                      'SZK-KRM',
+    'Mitsubishi Triton':                   'MTB-TRN',
+    'Honda City Sedan':                    'HND-CTY',
+    'Suzuki XL7':                          'SZK-XL7',
+    'Nissan March':                        'NSN-MCH',
+    'Toyota HiAce':                        'TYT-HAC',
+    'Mazda 2 Sedan':                       'MZD-2S',
+    'Toyota Hardtop':                      'TYT-HTP',
+    'Suzuki Jimny':                        'SZK-JMN',
+    'Suzuki Ignis':                        'SZK-IGN',
+    'BMW Seri 3':                          'BMW-S3',
+    'Kia Picanto':                         'KIA-PIC',
+    'Daihatsu Sirion':                     'DHT-SRN',
+    'Daihatsu Feroza':                     'DHT-FRZ',
+    'Toyota Veloz':                        'TYT-AVZ',
+    'Toyota Alphard':                      'TYT-ALP',
+    'Toyota Starlet':                      'TYT-STR',
+    'Daihatsu Luxio':                      'DHT-LXO',
+    'Toyota Etios Valco':                  'TYT-ETV',
+    'Honda WR-V':                          'HND-WRV',
+    'Suzuki Splash':                       'SZK-SPL',
+    'Daihatsu Gran Max Pick Up':           'DHT-GMXP',
+    'Daihatsu Rocky':                      'TYT-RZE',
+    'Nissan Juke':                         'NSN-JUK',
+    'Toyota Vellfire':                     'TYT-ALP',
+    'Ford Fiesta':                         'FRD-FIE',
+    'MINI Cooper':                         'MNI-COO',
+    'Toyota Land Cruiser':                 'TYT-LCR',
+    'Honda Odyssey':                       'HND-ODY',
+    'Toyota Voxy':                         'TYT-VOX',
+    'Mercedes Benz E Class':               'MBZ-ECL',
+    'Suzuki Carry':                        'SZK-CAR',
+    'Nissan Evalia':                       'NSN-EVA',
+    'Mitsubishi Mitsubishi Kuda':          'MTB-KUD',
+    'Nissan X-Trail':                      'NSN-XTR',
+    'Suzuki SX4':                          'SZK-SX4',
+    'Daihatsu Taruna':                     'DHT-TAR',
+    'Mitsubishi Mitsubishi Xpander Cross': 'MTB-XPC',
+    'Toyota Sienta':                       'TYT-SNT',
+    'Mitsubishi Mitsubishi Destinator':    'MTB-DST',
+    'Honda City Hatchback RS':             'HND-CHB',
+    'Datsun Go Plus':                      'DTN-DGP',
+    'BYD Atto 1':                          'BYD-AT1',
+    'Nissan Terrano':                      'NSN-TER',
+    'Hyundai Creta':                       'HYN-CRT',
+    'Mitsubishi Mirage':                   'MTB-MIR',
+    'Mercedes Benz S Class':               'MBZ-SS',
+    'Hyundai Stargazer':                   'HYN-SGZ',
+    'Chevrolet Spin':                      'CHV-SPN',
+    'Mazda CX5':                           'MZD-CX5',
+    'Wuling Air EV':                       'WLG-AEV',
+    'BMW Seri 5':                          'BMW-S5',
+    'Toyota Harrier':                      'TYT-HAR',
+    'Wuling Almaz':                        'WLG-ALM',
+    'Mercedes Benz C Class':               'MBZ-CC',
+    'Kia Rio Sedan':                       'KIA-RS',
+    'Suzuki S-Presso':                     'SZK-SPR',
+    'Datsun Go':                           'DTN-DGO',
+    'Toyota Soluna':                       'TYT-SOL',
+    'Mitsubishi Mitsubishi Outlander':     'MTB-OUT',
+    'Suzuki Aerio Hatchback':              'SZK-ARH',
+    'Hyundai Palisade':                    'HYN-PLS',
+    'Timor':                               'TIM-TIM',
+    'Mazda 2 Hatchback':                   'MZD-MZ2',
+    'Wuling Confero':                      'WLG-CNF',
 }
 
 # Prefix SKU yg BELUM sinkron ke master, dipetakan ke prefix induknya supaya
@@ -283,14 +384,15 @@ if __name__ == '__main__':
     path_harga = sys.argv[1]
     no_awal, no_akhir = int(sys.argv[2]), int(sys.argv[3])
     out_dir = sys.argv[4]
-    folders = sys.argv[5:]
+    nama_toko = sys.argv[5]
+    folders = sys.argv[6:]
 
     target = baca_harga(path_harga, no_awal, no_akhir)
     print(f'Target produk #{no_awal}-{no_akhir} ({len(target)} prefix SKU):')
     for pfx, v in sorted(target.items(), key=lambda x: int(x[1]['label'].split()[0])):
         print(f'  {v["label"]:26s} [{pfx}]  reguler Rp{v["reguler"]:,}  strip Rp{v["strip"]:,}')
 
-    hasil, laporan, kena_model = proses(target, out_dir, folders)
+    hasil, laporan, kena_model = proses(target, out_dir, folders, nama_toko)
 
     print('\n=== Listing yang kena (per produk) ===')
     for label in sorted(kena_model, key=lambda x: int(x.split()[0])):

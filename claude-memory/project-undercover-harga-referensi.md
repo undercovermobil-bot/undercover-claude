@@ -328,3 +328,83 @@ Rp358rb->428rb) sudah dikirim & diverifikasi 0 masalah.
 **Pelajaran umum**: kalau nemu SKU kembar yg harganya belum sama, jangan
 langsung asumsikan itu bug update harga -- cek dulu riwayat SKU-nya, bisa jadi
 konsolidasi SKU-nya sendiri yg baru terjadi belakangan.
+
+
+## Eksekusi Otonation (OT) 2026-08-18: full 100 produk sekaligus
+
+Beda dari batch UA sebelumnya (bertahap 10 produk), user minta OT langsung
+semua 100 produk top-terlaris dalam 1 kali jalan. Script `update_harga_per_sku.py`
+diperluas: `PREFIX{}` sekarang lengkap 100 entri (sebelumnya cuma 1-20), dan
+`__main__` nambah argumen `nama_toko` supaya nama file output tidak selalu
+"UA" (dipakai: `python3 update_harga_per_sku.py <harga.xlsx> 1 100 <out_dir> OT <folder...>`).
+
+**OT cuma py channel Shopee** (2 file diupload, sudah kena bug XML activePane
+yg sama spt Shopee UA, diperbaiki pakai `repair_xlsx.py`). 83,8% baris OT (7.692
+dari 9.180) sudah SKU format master; sisanya kode lama `CVR####-OTN-XX`
+(pra-migrasi, konsisten dgn catatan lama di `project-undercover-otonation-status.md`)
+— otomatis dilewati oleh `urai_sku()` (butuh 6 segmen), aman, tapi berarti
+update harga TIDAK menjangkau baris2 itu sampai SKU-nya disinkronkan.
+
+**Metode pemetaan nama->prefix untuk 80 produk baru (21-100)**: exact-match
+token (bukan subset -- subset match ternyata salah tangkap Yaris Cross/GR
+Yaris ke bawah "Toyota Yaris", persis jebakan yg sama kayak batch UA
+sebelumnya) antara nama di file harga vs nama listing OT, dgn STOP-word yg
+diperluas mencakup istilah kategori khas OT (`outdoor`,`semi`,`indoor`,`dan`,
+`extreme`) supaya "Cover Mobil X - Reguler - Semi Outdoor" match ke "X" polos.
+87/100 langsung ketemu tunggal, 10 butuh keyword manual (Brio/HR-V/BR-V/CR-V/
+WR-V/APV/Pajero Sport/Mazda 2 Sedan/City Hatchback RS/Outlander -- semuanya
+py qualifier tambahan spt "Satya/RS" yg bikin token-set beda dari listing).
+
+**Kasus multi-prefix yg perlu keputusan (BUKAN tebakan, semua diverifikasi):**
+- **Toyota Hilux** -> `TYT-HLX` saja. `TYT-HLR` (Hilux Rangga) dikecualikan --
+  sudah dikonfirmasi lama sbg produk master terpisah (lihat
+  project-undercover-otonation-status.md, generasi sendiri 2024-2026).
+- **Daihatsu Rocky** -> `TYT-RZE` (kembar modern Toyota Raize 2019-2026).
+  DIKONFIRMASI bukan tebakan: harga baris "Daihatsu Rocky" & "Toyota Raize" di
+  file HARGA_BARU_TOP100_v4 SAMA PERSIS (Rp336rb/379rb) -- bukti independen yg
+  cocok sama Raize. SKU F70/F300 (Rocky klasik 1984-2002, kembar Feroza) yg
+  hidup di listing SAMA "Daihatsu Rocky" otomatis kebagian lewat entri
+  'Daihatsu Feroza' sendiri (Rp382rb/425rb) -- tidak perlu entri terpisah,
+  prefix-based filtering udah otomatis benar tanpa perlu logic khusus.
+- **Toyota HiAce** -> `TYT-HAC` ("Commuter") SAJA. `TYT-HAL` ("Premio",
+  kemungkinan "HiAce Long") SENGAJA TIDAK disentuh -- beda dari Rush/Terios
+  dkk (itu rebadge identik, terverifikasi harganya emang sama). Commuter vs
+  Premio bisa jadi beda ukuran fisik asli, file harga cuma py 1 baris "Toyota
+  HiAce" tanpa keterangan generasi/submodel. **User belum memutuskan** apakah
+  Premio perlu disamakan jg -- kalau iya, tambah `ALIAS['TYT-HAL']='TYT-HAC'`.
+
+**BENTROK harga (SKU sama, harga beda di file) -- diselesaikan konsisten dgn
+keputusan sebelumnya, bukan pilihan baru:**
+- Calya(382rb) vs Sigra(333rb) [`TYT-CLY`] -> pakai Calya, sama kayak
+  keputusan user 2026-08-18 pas UA.
+- Avanza(385rb) vs Veloz(386rb) [`TYT-AVZ`] -> pakai Avanza, konsisten sama
+  yg SUDAH dideploy ke UA/TikTok/Lazada (beda cuma Rp1rb, sepertinya
+  pembulatan independen per baris di file harga, bukan disengaja).
+Mekanisme BENTROK di `baca_harga()` otomatis pakai baris yg PERTAMA ketemu di
+file (row order), yg kebetulan match keputusan yg diinginkan di kedua kasus
+ini -- tapi JANGAN andalkan urutan file scr default terus, selalu cross-check
+manual kalau ada BENTROK baru.
+
+**Temuan anomali harga -- BELUM diverifikasi ke user, kemungkinan data lama
+salah**: 6 baris di listing **"Outdoor" POLOS** (bukan "Semi Outdoor"/"Indoor
+dan Outdoor"/"Extreme Outdoor") utk Avanza, HR-V, Rush/Terios, X-Trail, City
+Hatchback RS, Stargazer -- harga lama Rp780rb-810rb, jauh di luar rentang
+wajar tier Reguler manapun di seluruh proyek ini (296rb-490rb). SKU-nya
+memang bersegmen 'R' (bukan salah baca), jadi tetap ikut ter-update ke harga
+normal sesuai prinsip "sesuaikan dari SKU" yg dikonfirmasi user. Pola SAMA di
+semua 6 kasus (listing "Outdoor" polos, angka bulat ~800rb) -- kemungkinan
+placeholder/harga lama yg belum pernah diperbaiki, BUKAN kebetulan acak. Kalau
+ada kasus "Outdoor" polos lain di produk 21-100 yg belum dicek eksplisit,
+kemungkinan pola yg sama berulang -- worth di-scan lagi kalau lanjut ke toko
+lain (OP/SP).
+
+**Hasil**: 3.320 baris Shopee OT (1.205 R + 2.115 S), 92/93 prefix terpakai
+(cuma Mazda 2 Sedan #42 yg 0 baris -- genuinely tidak dijual OT, hanya Mazda 2
+Hatchback yg ada). 0 masalah integritas file.
+
+**PREFIX{} lengkap 100 produk sekarang tersimpan permanen di
+`scripts/update_harga_per_sku.py`** -- toko lain (OP/SP) kemungkinan besar
+bisa pakai prefix yg SAMA (desain SKU `-UA-` dipakai bersama semua toko), tapi
+tetap WAJIB cross-check ke data listing masing2 toko dulu sebelum jalan (kayak
+Mazda 2 Hatchback yg ternyata py prefix OT sendiri `MZD-MZ2`, beda dari
+prefix asli master `MZD-2H` yg dipakai UA -- jangan asumsikan 100% seragam).
