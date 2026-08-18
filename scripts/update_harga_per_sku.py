@@ -1,0 +1,282 @@
+# -*- coding: utf-8 -*-
+"""
+Update harga listing e-commerce (Shopee/TikTok/Lazada) berdasarkan PREFIX SKU,
+bukan nama listing.
+
+Kenapa berbasis SKU: beberapa model beda nama memakai cover yang SAMA PERSIS,
+jadi SKU-nya identik -> stoknya satu barang -> harganya WAJIB satu angka.
+Contoh terverifikasi di UA:
+    TYT-RSH = Toyota Rush + Daihatsu Terios
+    TYT-CLY = Toyota Calya + Daihatsu Sigra
+    TYT-AVZ = Toyota Avanza + Daihatsu Xenia + Toyota Veloz
+    DHT-AYL = Daihatsu Ayla + Toyota Agya
+Pencocokan lewat nama listing (`update_harga_listing.py`, dipakai utk produk
+1-10) akan MELEWATKAN pasangan seperti ini. Versi ini menyapu semua baris yang
+prefix SKU-nya sama, jadi kembaran ikut otomatis.
+
+Efek samping yg diinginkan: prefix SKU juga otomatis memisahkan model yg namanya
+mirip tapi produknya beda -- Yaris (TYT-YRS) tidak menyeret Yaris Cross
+(TYT-YRC) atau GR Yaris (TYT-GRY); Civic (HND-CVC) tidak menyeret Civic
+Hatchback (HND-CVH) atau Civic Type R (HND-CTR).
+
+Hanya tier REGULER yg disentuh (segmen ke-4 SKU: R = warna dasar, S = strip
+Elite/Epic/Warrior). Premium (P), Exclusive (E), Transparan (T) tidak ikut,
+karena harga HPP yg jadi dasar perhitungan memang tier Reguler.
+
+Pemakaian:
+  python3 update_harga_per_sku.py <file_harga.xlsx> <no_awal> <no_akhir> \
+      <folder_out> <folder_listing...>
+"""
+import sys, os, glob, copy
+import openpyxl
+from openpyxl.styles import PatternFill
+
+ORANGE = PatternFill('solid', fgColor='FFC000')
+
+# selisih harga tier Strip (Elite/Epic/Warrior) thd Reguler -- flat semua produk.
+# Direvisi user 2026-08-15 dari Rp56.000 jadi Rp43.000.
+TAMBAHAN_STRIP = 43000
+
+CFG = {
+    'shopee': {'sheet': 'Sheet1',   'nama': 2, 'var': 4,  'sku': 6,  'harga': 7, 'start': 7},
+    'tiktok': {'sheet': 'Template', 'nama': 3, 'var': 6,  'sku': 11, 'harga': 9, 'start': 6},
+    'lazada': {'sheet': 'template', 'nama': 3, 'var': 14, 'sku': 13, 'harga': 9, 'start': 5},
+}
+
+# Nama produk di file harga -> prefix SKU (2 segmen pertama: MEREK-MODEL).
+# Diverifikasi langsung dari listing UA, bukan tebakan. Kalau menambah produk
+# baru WAJIB isi di sini -- script sengaja berhenti kalau ada yg belum terdaftar,
+# supaya tidak diam-diam melewatkan produk.
+PREFIX = {
+    'Toyota Avanza':                'TYT-AVZ',
+    'Honda Brio Satya / RS':        'HND-BRI',
+    'Toyota Innova':                'TYT-INV',
+    'Honda Jazz':                   'HND-JAZ',
+    'Suzuki Ertiga':                'SZK-ERT',
+    'Honda HR-V / e:N1':            'HND-HRV',
+    'Toyota Agya':                  'DHT-AYL',
+    'Daihatsu Ayla':                'DHT-AYL',
+    'Daihatsu Xenia':               'TYT-AVZ',
+    'Nissan Livina / Grand Livina': 'NSN-LVN',
+    'Toyota Vios':                  'TYT-VIS',
+    'Toyota Fortuner':              'TYT-FTN',
+    'Honda BR-V':                   'HND-BRV',
+    'Toyota Calya':                 'TYT-CLY',
+    'Toyota Rush':                  'TYT-RSH',
+    'Toyota Yaris':                 'TYT-YRS',
+    'Toyota Kijang':                'TYT-KJG',
+    'Honda CR-V':                   'HND-CRV',
+    'Honda Mobilio':                'HND-MBL',
+    'Honda Civic':                  'HND-CVC',
+}
+
+# Prefix SKU yg BELUM sinkron ke master, dipetakan ke prefix induknya supaya
+# mobil kembar tetap ikut naik harga walau SKU-nya masih beda antar channel.
+# Terverifikasi 2026-08-18: Lazada belum ikut konsolidasi SKU kembar, dan TikTok
+# baru sebagian (Agya & Xenia punya DUA prefix sekaligus di sana).
+#   Sigra  DHT-SGR (Lazada)        <- TYT-CLY (Shopee/TikTok)
+#   Terios DHT-TRS (Lazada)        <- TYT-RSH (Shopee/TikTok)
+#   Veloz  TYT-VLZ (Lazada)        <- TYT-AVZ (Shopee/TikTok)
+#   Xenia  DHT-XNA (Lazada+TikTok) <- TYT-AVZ (Shopee)
+#   Agya   TYT-AGY (Lazada+TikTok) <- DHT-AYL (Shopee)
+# Ini TAMBALAN harga, bukan perbaikan SKU -- konsolidasi SKU-nya perlu dikerjakan
+# terpisah di proyek SKU Sync.
+ALIAS = {
+    'DHT-SGR': 'TYT-CLY',
+    'DHT-TRS': 'TYT-RSH',
+    'TYT-VLZ': 'TYT-AVZ',
+    'DHT-XNA': 'TYT-AVZ',
+    'TYT-AGY': 'DHT-AYL',
+}
+
+# Listing yg namanya mengandung ini TIDAK ikut walau prefix SKU-nya sama --
+# produk terpisah dgn harga sendiri. Terverifikasi: "Nissan Grand Livina Custom
+# Roofbox Reguler" memakai prefix NSN-LVN yg sama dgn Livina biasa, tapi
+# harganya Rp352.000 vs Rp385.000. Batch 11-20 tidak punya kasus begini
+# (sudah dicek), tapi penjaganya tetap dipasang utk batch berikutnya.
+KECUALI = ('x-gear', 'xgear', 'custom', 'roofbox')
+
+KAT_KE_JENIS = {'R': 'reguler', 'S': 'strip'}
+
+
+def deteksi_channel(wb):
+    n = set(s.lower() for s in wb.sheetnames)
+    if 'template' in n and 'brand' in n:
+        return 'tiktok'
+    if 'sheet1' in n:
+        return 'shopee'
+    if 'template' in n:
+        return 'lazada'
+    return None
+
+
+def cari_sheet(wb, ch):
+    t = CFG[ch]['sheet']
+    return wb[t] if t in wb.sheetnames else wb[wb.sheetnames[0]]
+
+
+def urai_sku(sku):
+    """SKU MEREK-MODEL-TOKO-KAT-GEN-WARNA -> (prefix, kategori)"""
+    if not sku or not isinstance(sku, str):
+        return None, None
+    b = sku.strip().split('-')
+    if len(b) < 6:
+        return None, None
+    return '-'.join(b[:2]).upper(), b[3].upper()
+
+
+def baca_harga(path, no_awal, no_akhir):
+    """ambil harga produk bernomor no_awal..no_akhir -> {prefix: {...}}"""
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb['Harga Baru']
+    target = {}
+    belum_terdaftar = []
+    for r in range(2, ws.max_row + 1):
+        no = ws.cell(row=r, column=1).value
+        nm = ws.cell(row=r, column=2).value
+        if not isinstance(no, int) or not (no_awal <= no <= no_akhir):
+            continue
+        if nm not in PREFIX:
+            belum_terdaftar.append((no, nm))
+            continue
+        reg = int(ws.cell(row=r, column=7).value)
+        pfx = PREFIX[nm]
+        # harga strip selalu diturunkan dari reguler + TAMBAHAN_STRIP supaya tidak
+        # pernah ada dua angka yg saling bertentangan kalau selisihnya direvisi
+        info = {'reguler': reg, 'strip': reg + TAMBAHAN_STRIP, 'label': f'{no} {nm}'}
+        if pfx in target and target[pfx]['reguler'] != reg:
+            print(f'  ! BENTROK {pfx}: {target[pfx]["label"]} Rp{target[pfx]["reguler"]:,} '
+                  f'vs {info["label"]} Rp{reg:,} -- pakai yg pertama')
+            continue
+        target.setdefault(pfx, info)
+    if belum_terdaftar:
+        print('PRODUK BELUM PUNYA PREFIX SKU di PREFIX{} -- lengkapi dulu:')
+        for no, nm in belum_terdaftar:
+            print(f'   #{no} {nm}')
+        raise SystemExit(1)
+    return target
+
+
+def salin(ws_s, r_s, ws_d, r_d, n_kol):
+    for c in range(1, n_kol + 1):
+        s = ws_s.cell(row=r_s, column=c)
+        d = ws_d.cell(row=r_d, column=c, value=s.value)
+        d.fill = copy.copy(s.fill)
+        d.number_format = s.number_format
+
+
+def proses(target, out_dir, folders, nama_toko='UA'):
+    os.makedirs(out_dir, exist_ok=True)
+    per_channel = {}
+    laporan = {}
+    kena_model = {}
+
+    berkas = []
+    for f in folders:
+        berkas.extend(sorted(glob.glob(os.path.join(f, '*.xlsx'))))
+
+    for path in berkas:
+        wb = openpyxl.load_workbook(path, data_only=False)
+        ch = deteksi_channel(wb)
+        if ch is None:
+            continue
+        cfg = CFG[ch]
+        ws = cari_sheet(wb, ch)
+        wbv = openpyxl.load_workbook(path, data_only=True)
+        wsv = cari_sheet(wbv, ch)
+
+        ubah = []
+        for r in range(cfg['start'], wsv.max_row + 1):
+            pfx, kat = urai_sku(wsv.cell(row=r, column=cfg['sku']).value)
+            pfx = ALIAS.get(pfx, pfx)
+            if pfx not in target:
+                continue
+            nm = str(wsv.cell(row=r, column=cfg['nama']).value or '')
+            if any(k in nm.lower() for k in KECUALI):
+                continue
+            jenis = KAT_KE_JENIS.get(kat)
+            if not jenis:
+                continue  # Premium/Exclusive/Transparan -> jangan disentuh
+            baru = target[pfx][jenis]
+            lama = wsv.cell(row=r, column=cfg['harga']).value
+            try:
+                if lama is not None and int(float(lama)) == baru:
+                    continue  # sudah benar, tidak perlu ikut file update
+            except (TypeError, ValueError):
+                pass
+            ubah.append((r, baru))
+            kena_model.setdefault(target[pfx]['label'], {}).setdefault(nm, 0)
+            kena_model[target[pfx]['label']][nm] += 1
+            laporan.setdefault(ch, []).append((target[pfx]['label'], jenis, lama, baru))
+
+        if not ubah:
+            continue
+
+        for r, baru in ubah:
+            sel = ws.cell(row=r, column=cfg['harga'])
+            sel.value = baru
+            sel.fill = ORANGE
+
+        n_kol = ws.max_column
+        baris = [u[0] for u in ubah]
+        for i, r in enumerate(baris):
+            t = cfg['start'] + i
+            if t != r:
+                salin(ws, r, ws, t, n_kol)
+        sisa = cfg['start'] + len(baris)
+        if sisa <= ws.max_row:
+            ws.delete_rows(sisa, ws.max_row - sisa + 1)
+
+        if ch not in per_channel:
+            per_channel[ch] = (wb, ws, cfg['start'] + len(baris))
+        else:
+            wo, wso, r_out = per_channel[ch]
+            for i in range(len(baris)):
+                salin(ws, cfg['start'] + i, wso, r_out + i, n_kol)
+            per_channel[ch] = (wo, wso, r_out + len(baris))
+
+    hasil = {}
+    for ch, (wb_o, _, _) in per_channel.items():
+        out = os.path.join(out_dir, f'UPDATE_HARGA_{nama_toko}_{ch.upper()}.xlsx')
+        wb_o.save(out)
+        hasil[ch] = out
+    return hasil, laporan, kena_model
+
+
+if __name__ == '__main__':
+    path_harga = sys.argv[1]
+    no_awal, no_akhir = int(sys.argv[2]), int(sys.argv[3])
+    out_dir = sys.argv[4]
+    folders = sys.argv[5:]
+
+    target = baca_harga(path_harga, no_awal, no_akhir)
+    print(f'Target produk #{no_awal}-{no_akhir} ({len(target)} prefix SKU):')
+    for pfx, v in sorted(target.items(), key=lambda x: int(x[1]['label'].split()[0])):
+        print(f'  {v["label"]:26s} [{pfx}]  reguler Rp{v["reguler"]:,}  strip Rp{v["strip"]:,}')
+
+    hasil, laporan, kena_model = proses(target, out_dir, folders)
+
+    print('\n=== Listing yang kena (per produk) ===')
+    for label in sorted(kena_model, key=lambda x: int(x.split()[0])):
+        print(f'  {label}')
+        for nm, n in sorted(kena_model[label].items()):
+            print(f'      {n:4d} baris  {nm}')
+
+    print()
+    for ch in ['shopee', 'tiktok', 'lazada']:
+        if ch not in laporan:
+            print(f'[{ch}] tidak ada baris yg perlu diubah')
+            continue
+        rows = laporan[ch]
+        print(f'[{ch}] {len(rows)} baris -> {os.path.basename(hasil[ch])}')
+        ringkas = {}
+        for label, jenis, lama, baru in rows:
+            k = (label, jenis)
+            ringkas.setdefault(k, [0, lama, baru])
+            ringkas[k][0] += 1
+        for (label, jenis), (n, lama, baru) in sorted(ringkas.items(), key=lambda x: (int(x[0][0].split()[0]), x[0][1])):
+            try:
+                s_lama = f'Rp{int(float(lama)):,}'
+            except (TypeError, ValueError):
+                s_lama = f'{lama!r}'
+            print(f'    {label:26s} {jenis:8s} {n:4d} baris  {s_lama:>12s} -> Rp{baru:,}')

@@ -199,3 +199,87 @@ harga dasar.
    `scripts/` kalau perlu: extract kolom B/D/G Sheet1 UA Shopee, filter
    kategori=Reguler & warna bukan tier Elite/Epic/Warrior/Strip-N, group by
    nama model, ambil harga modus).
+
+
+## Eksekusi produk 11-20 (2026-08-18) — pindah ke pencocokan berbasis SKU
+
+Script: `scripts/update_harga_per_sku.py` (menggantikan `update_harga_listing.py`
+utk batch berikutnya). Sumber harga: `HARGA_BARU_TOP100_v4.xlsx` kolom "Harga
+Baru (Reguler)"; strip = reguler + Rp43.000.
+
+**Perubahan metode paling penting: cocokkan lewat PREFIX SKU, bukan nama listing.**
+Instruksi eksplisit user — kalau Rush naik, Terios (SKU sama) harus ikut naik.
+Beberapa model beda nama memakai cover identik sehingga SKU-nya satu, artinya
+stoknya satu barang dan harganya WAJIB satu angka. Terverifikasi di UA:
+
+| Prefix | Model yang berbagi |
+|---|---|
+| TYT-RSH | Toyota Rush + Daihatsu Terios |
+| TYT-CLY | Toyota Calya + Daihatsu Sigra |
+| TYT-AVZ | Toyota Avanza + Daihatsu Xenia + Toyota Veloz |
+| DHT-AYL | Daihatsu Ayla + Toyota Agya |
+
+Pencocokan lewat nama (metode batch 1-10) MELEWATKAN pasangan seperti ini.
+Efek samping yang menguntungkan: prefix SKU otomatis memisahkan model bernama
+mirip tapi produknya beda — Yaris (TYT-YRS) tidak menyeret Yaris Cross
+(TYT-YRC)/GR Yaris (TYT-GRY); Civic (HND-CVC) tidak menyeret Civic Hatchback
+(HND-CVH)/Civic Type R (HND-CTR).
+
+### Keputusan user: Calya vs Sigra
+
+File harga memberi Calya (#14) Pcs/Roll 5 → Rp382rb tapi Sigra (#30) Pcs/Roll 6
+→ Rp333rb, padahal keduanya mobil kembar, panjang sama 4070mm, SKU sama
+TYT-CLY, dan harga listing-nya saat itu sama-sama Rp293rb. Karena SKU satu,
+harga harus satu. **User memilih Rp382.000 (Pcs/Roll 5).** Artinya kalau nanti
+memproses Sigra di batch #30, JANGAN pakai Rp333rb dari file — sudah diputuskan
+ikut Calya.
+
+### JEBAKAN: SKU kembar belum sinkron di semua channel
+
+Konsolidasi SKU kembar baru jalan di Shopee. Kondisi 2026-08-18:
+
+| Model | Shopee | TikTok | Lazada |
+|---|---|---|---|
+| Sigra | TYT-CLY | TYT-CLY | **DHT-SGR** |
+| Terios | TYT-RSH | TYT-RSH | **DHT-TRS** |
+| Veloz | TYT-AVZ | TYT-AVZ | **TYT-VLZ** |
+| Xenia | TYT-AVZ | TYT-AVZ + **DHT-XNA** | **DHT-XNA** |
+| Agya | DHT-AYL | DHT-AYL + **TYT-AGY** | **TYT-AGY** |
+
+Akibatnya update berbasis SKU melewatkan kembaran di Lazada/TikTok. Ditambal
+lewat `ALIAS{}` di script (prefix belum-sinkron → prefix induk). **Itu tambalan
+harga, bukan perbaikan SKU** — konsolidasi SKU-nya sendiri masih PR di proyek
+SKU Sync. Konsekuensi lain: batch 1-10 (Veloz/Xenia/Agya) kemungkinan besar
+BELUM ternaikkan di Lazada & TikTok karena waktu itu masih pencocokan nama —
+perlu dicek ulang.
+
+### JEBAKAN: prefix SKU tidak boleh ditebak dari nama model
+
+Tebakan `NSN-GLV` untuk Livina ternyata salah, yang benar `NSN-LVN`. Selalu
+verifikasi prefix langsung ke data listing sebelum dipakai. Script sengaja
+`SystemExit` kalau ada produk dalam rentang yang belum terdaftar di `PREFIX{}`.
+
+### JEBAKAN: satu prefix bisa memuat produk lain yang harganya beda
+
+"Nissan Grand Livina Custom Roofbox Reguler" memakai prefix NSN-LVN yang sama
+dengan Livina biasa, tapi harganya Rp352rb vs Rp385rb. Penjaga `KECUALI`
+(x-gear/custom/roofbox) tetap dipasang. Batch 11-20 sudah dicek bersih dari
+kasus ini, tapi batch berikutnya belum tentu.
+
+### Temuan sampingan: harga TikTok kependekan Rp100.000
+
+Yaris strip di TikTok Rp252rb padahal Shopee Rp352rb; Calya strip TikTok
+separuh Rp253rb separuh Rp353rb. Pola salah ketik digit ratusan-ribu (2 vs 3).
+Sudah ikut terkoreksi. Kalau menemukan harga yang menyimpang ~Rp100rb dari
+channel lain, curigai pola yang sama.
+
+### Hasil batch 11-20
+
+406 baris Shopee, 462 TikTok, 462 Lazada (hanya baris yang berubah, tier R & S).
+Sumber: Shopee export 2026-08-18, TikTok snapshot 2026-08-15, Lazada 2026-08-13.
+
+Pemakaian ulang untuk batch berikutnya (mis. 21-30):
+```
+python3 scripts/update_harga_per_sku.py <file_harga.xlsx> 21 30 <out_dir> <folder_listing...>
+```
+Lengkapi dulu `PREFIX{}` untuk produk 21-30 — script berhenti kalau ada yang belum terdaftar.
