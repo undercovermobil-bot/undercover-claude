@@ -1,0 +1,952 @@
+<title>Laporan Mingguan — 10–16 Agustus 2026</title>
+
+<style>
+  :root{
+    --ground:#F2F4F3;
+    --surface:#FFFFFF;
+    --surface-2:#F7F9F8;
+    --ink:#151A18;
+    --ink-2:#3F4946;
+    --ink-3:#6B7773;
+    --rule:#DCE2E0;
+    --rule-strong:#C2CCC8;
+    --accent:#0C5A52;
+    --accent-soft:#E4EFED;
+    --ok:#2F7D4F;
+    --fix:#1F6FB2;
+    --wait:#B4820C;
+    --block:#B02E26;
+    --bar-neutral:#7C8985;
+
+    --font-display:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+    --font-body:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+    --maxw:1120px;
+    --pad:clamp(18px,4vw,44px);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#101413;
+      --surface:#171C1A;
+      --surface-2:#1D2321;
+      --ink:#E9EEEC;
+      --ink-2:#B6C0BC;
+      --ink-3:#8A9591;
+      --rule:#2A312F;
+      --rule-strong:#3A423F;
+      --accent:#4FB3A5;
+      --accent-soft:#18302C;
+      --ok:#3E9463;
+      --fix:#4288CC;
+      --wait:#BC8C12;
+      --block:#D14C5E;
+      --bar-neutral:#6E7B77;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101413;
+    --surface:#171C1A;
+    --surface-2:#1D2321;
+    --ink:#E9EEEC;
+    --ink-2:#B6C0BC;
+    --ink-3:#8A9591;
+    --rule:#2A312F;
+    --rule-strong:#3A423F;
+    --accent:#4FB3A5;
+    --accent-soft:#18302C;
+    --ok:#3E9463;
+    --fix:#4288CC;
+    --wait:#BC8C12;
+    --block:#D14C5E;
+    --bar-neutral:#6E7B77;
+  }
+  :root[data-theme="light"]{
+    --ground:#F2F4F3;
+    --surface:#FFFFFF;
+    --surface-2:#F7F9F8;
+    --ink:#151A18;
+    --ink-2:#3F4946;
+    --ink-3:#6B7773;
+    --rule:#DCE2E0;
+    --rule-strong:#C2CCC8;
+    --accent:#0C5A52;
+    --accent-soft:#E4EFED;
+    --ok:#2F7D4F;
+    --fix:#1F6FB2;
+    --wait:#B4820C;
+    --block:#B02E26;
+    --bar-neutral:#7C8985;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad);}
+
+  /* ---------- nav ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:color-mix(in srgb,var(--ground) 88%,transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--rule);
+  }
+  .topbar-in{
+    max-width:var(--maxw);margin:0 auto;padding:9px var(--pad);
+    display:flex;align-items:center;gap:18px;
+  }
+  .brand{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);white-space:nowrap;font-weight:600;
+  }
+  .navlinks{
+    display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-left:auto;
+  }
+  .navlinks::-webkit-scrollbar{display:none;}
+  .navlinks a{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em;
+    color:var(--ink-3);text-decoration:none;white-space:nowrap;
+    padding:5px 9px;border-radius:5px;
+  }
+  .navlinks a:hover{color:var(--ink);background:var(--surface);}
+  .navlinks a:focus-visible,.tbtn:focus-visible,summary:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  .tbtn{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);
+    background:none;border:1px solid var(--rule);border-radius:5px;
+    padding:4px 9px;cursor:pointer;
+  }
+  .tbtn:hover{color:var(--ink);border-color:var(--rule-strong);}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:clamp(38px,7vw,76px) 0 clamp(26px,4vw,40px);}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 16px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-size:clamp(30px,5.4vw,54px);
+    line-height:1.04;letter-spacing:-.025em;font-weight:800;
+    margin:0 0 18px;text-wrap:balance;max-width:19ch;
+  }
+  .lead{
+    font-size:clamp(16px,1.9vw,19px);color:var(--ink-2);
+    max-width:62ch;margin:0 0 26px;
+  }
+  .stamps{display:flex;flex-wrap:wrap;gap:8px;}
+  .stamp{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);
+    background:var(--surface);border:1px solid var(--rule);
+    border-radius:100px;padding:5px 12px;
+  }
+  .stamp b{color:var(--ink);font-weight:600;}
+
+  /* ---------- kpi ---------- */
+  .kpis{
+    display:grid;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:10px;overflow:hidden;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    margin-top:clamp(28px,4vw,42px);
+  }
+  .kpi{background:var(--surface);padding:20px 20px 18px;}
+  .kpi .num{
+    font-family:var(--font-display);font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(30px,4vw,40px);line-height:1;
+    font-variant-numeric:tabular-nums;display:block;margin-bottom:9px;
+  }
+  .kpi .lbl{font-size:13.5px;color:var(--ink-2);line-height:1.4;display:block;}
+  .kpi .sub{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-3);margin-top:9px;display:block;
+  }
+
+  /* ---------- sections ---------- */
+  section{padding:clamp(40px,6vw,72px) 0;border-top:1px solid var(--rule);}
+  .sec-head{margin-bottom:clamp(22px,3vw,34px);}
+  h2{
+    font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(23px,3.3vw,34px);line-height:1.12;margin:0 0 12px;
+    text-wrap:balance;max-width:30ch;
+  }
+  .sec-head p{margin:0;color:var(--ink-2);max-width:66ch;font-size:15.5px;}
+  h3{
+    font-family:var(--font-display);font-size:17px;font-weight:700;
+    letter-spacing:-.01em;margin:0 0 10px;
+  }
+
+  .card{
+    background:var(--surface);border:1px solid var(--rule);
+    border-radius:10px;padding:clamp(16px,2.4vw,24px);
+  }
+  .grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+  .grid3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));}
+
+  .findings{list-style:none;margin:0;padding:0;display:grid;gap:1px;background:var(--rule);
+    border:1px solid var(--rule);border-radius:10px;overflow:hidden;}
+  .findings li{background:var(--surface);padding:18px 20px;display:flex;gap:14px;align-items:flex-start;}
+  .findings .mk{
+    flex:0 0 auto;width:9px;height:9px;border-radius:2px;margin-top:7px;
+  }
+  .findings p{margin:0;font-size:15px;color:var(--ink-2);}
+  .findings strong{color:var(--ink);font-weight:650;}
+
+  /* ---------- charts ---------- */
+  figure{margin:0;}
+  figcaption{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);margin-bottom:16px;
+  }
+  .chart{display:flex;flex-direction:column;gap:7px;}
+  .row{display:grid;grid-template-columns:minmax(96px,160px) 1fr auto;gap:12px;align-items:center;}
+  .row .name{
+    font-size:13px;color:var(--ink-2);line-height:1.25;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .row .name b{color:var(--ink);font-weight:600;display:block;}
+  .row .name .mono{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);}
+  .track{height:20px;display:flex;gap:2px;align-items:stretch;}
+  .seg{min-width:3px;}
+  .seg:first-child{border-radius:4px 0 0 4px;}
+  .seg:last-child{border-radius:0 4px 4px 0;}
+  .seg:only-child{border-radius:4px;}
+  .val{
+    font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;
+    color:var(--ink-2);white-space:nowrap;
+  }
+  .val .dim{color:var(--ink-3);}
+  .s-ok{background:var(--ok);}
+  .s-fix{background:var(--fix);}
+  .s-wait{background:var(--wait);}
+  .s-block{background:var(--block);}
+  .s-neutral{background:var(--bar-neutral);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);}
+  .legend span{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);}
+  .legend i{width:11px;height:11px;border-radius:3px;display:block;}
+
+  .chip{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 7px;border-radius:100px;white-space:nowrap;border:1px solid;
+  }
+  .chip-ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);}
+  .chip-wait{color:var(--wait);border-color:color-mix(in srgb,var(--wait) 45%,transparent);}
+  .chip-block{color:var(--block);border-color:color-mix(in srgb,var(--block) 45%,transparent);}
+  .chip-fix{color:var(--fix);border-color:color-mix(in srgb,var(--fix) 45%,transparent);}
+
+  /* ---------- matrix ---------- */
+  .matrix{width:100%;min-width:620px;border-collapse:collapse;font-size:14px;}
+  .matrix th,.matrix td{border:1px solid var(--rule);padding:11px 12px;text-align:left;}
+  .matrix thead th{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);font-weight:500;background:var(--surface-2);
+  }
+  .matrix tbody th{font-weight:650;font-size:14px;background:var(--surface-2);}
+  .cell{display:flex;align-items:center;gap:8px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .cell small{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);display:block;}
+
+  /* ---------- tables ---------- */
+  .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.data{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px;}
+  table.data th,table.data td{
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top;
+  }
+  table.data thead th{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);font-weight:500;
+  }
+  table.data td.n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  table.data tbody tr:last-child td{border-bottom:none;}
+  table.data .prod{font-weight:600;color:var(--ink);}
+  table.data .rank{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);}
+
+  details{margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;}
+  summary{
+    cursor:pointer;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);list-style:none;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"▸ ";}
+  details[open] summary::before{content:"▾ ";}
+  summary:hover{color:var(--ink);}
+
+  /* ---------- tiles ---------- */
+  .tiles{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    margin-bottom:18px;
+  }
+  .tile{
+    background:var(--surface);border:1px solid var(--rule);
+    border-left-width:3px;border-radius:8px;padding:16px 18px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .tile.t-block{border-left-color:var(--block);}
+  .tile.t-wait{border-left-color:var(--wait);}
+  .tile.t-ok{border-left-color:var(--ok);}
+  .tile.t-fix{border-left-color:var(--fix);}
+  .t-num{
+    font-family:var(--font-display);font-weight:800;font-size:26px;
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;
+  }
+  .t-num em{
+    font-family:var(--font-body);font-style:normal;font-weight:400;
+    font-size:13px;color:var(--ink-3);letter-spacing:0;margin-left:3px;
+  }
+  .t-tag{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-3);
+  }
+  .t-lbl{font-size:14.5px;color:var(--ink);line-height:1.35;}
+  .t-sub{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);line-height:1.45;}
+
+  /* ---------- timeline ---------- */
+  .tl{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+    border-radius:10px;overflow:hidden;}
+  .tl-row{background:var(--surface);padding:14px 18px;display:grid;
+    grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:baseline;}
+  .tl-date{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap;}
+  .tl-txt{font-size:14.5px;color:var(--ink-2);line-height:1.5;}
+  .tl-txt strong{color:var(--ink);font-weight:600;}
+
+  /* ---------- compare cols ---------- */
+  .compare{display:grid;gap:14px;grid-template-columns:1fr 1fr;}
+  @media(max-width:680px){.compare{grid-template-columns:1fr;}}
+  .compare .card h3{
+    display:flex;align-items:center;gap:8px;
+  }
+  .compare .card .wk{
+    font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);
+    letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px;display:block;
+  }
+
+  /* ---------- steps ---------- */
+  ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:12px;}
+  ol.steps li{
+    counter-increment:s;background:var(--surface);border:1px solid var(--rule);
+    border-radius:10px;padding:18px 20px;display:grid;gap:14px;
+    grid-template-columns:auto minmax(0,1fr);align-items:start;
+  }
+  ol.steps li::before{
+    content:counter(s);font-family:var(--font-mono);font-size:12px;font-weight:600;
+    color:var(--accent);background:var(--accent-soft);
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  ol.steps h3{margin:0 0 5px;}
+  ol.steps p{margin:0;font-size:14.5px;color:var(--ink-2);}
+  ol.steps .impact{
+    font-family:var(--font-mono);font-size:11px;color:var(--ink-3);
+    margin-top:8px;display:block;
+  }
+
+  .note{
+    background:var(--surface-2);border:1px solid var(--rule);
+    border-left:3px solid var(--wait);border-radius:8px;
+    padding:16px 18px;font-size:14px;color:var(--ink-2);
+  }
+  .note strong{color:var(--ink);}
+  .note.n-block{border-left-color:var(--block);}
+  .note.n-accent{border-left-color:var(--accent);}
+
+  footer{
+    border-top:1px solid var(--rule);padding:32px 0 56px;
+    font-size:13px;color:var(--ink-3);
+  }
+  footer p{margin:0 0 8px;max-width:70ch;}
+
+  /* ---------- week divider in chart ---------- */
+  .wk-divider{
+    display:flex;align-items:center;gap:10px;margin:4px 0;
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-3);
+  }
+  .wk-divider::before,.wk-divider::after{content:"";flex:1;height:1px;background:var(--rule);}
+
+  /* ---------- tooltip ---------- */
+  #tip{
+    position:fixed;z-index:60;pointer-events:none;opacity:0;
+    transform:translate(-50%,-120%);transition:opacity .12s ease;
+    background:var(--ink);color:var(--ground);
+    font-family:var(--font-mono);font-size:11.5px;line-height:1.5;
+    padding:7px 10px;border-radius:6px;max-width:260px;white-space:pre-line;
+  }
+  #tip.on{opacity:1;}
+  [data-tip]{cursor:default;}
+
+  @media (max-width:640px){
+    .row{
+      grid-template-columns:1fr auto;grid-template-areas:"name val" "bar bar";
+      row-gap:7px;padding-bottom:11px;border-bottom:1px solid var(--rule);
+    }
+    .row:last-child{padding-bottom:0;border-bottom:none;}
+    .row .name{grid-area:name;}
+    .row .track{grid-area:bar;}
+    .row .val{grid-area:val;text-align:right;}
+    .chart{gap:11px;}
+    .kpi .num{font-size:32px;}
+    .brand .date{display:none;}
+    .tl-row{grid-template-columns:1fr;gap:4px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important;}
+  }
+  html{scroll-behavior:smooth;}
+  section{scroll-margin-top:56px;}
+</style>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brand">Laporan Mingguan</span>
+    <nav class="navlinks">
+      <a href="#ringkasan">Ringkasan</a>
+      <a href="#progress">Progress</a>
+      <a href="#cakupan">Cakupan</a>
+      <a href="#penjualan">Penjualan</a>
+      <a href="#kesehatan">Kesehatan</a>
+      <a href="#terlaris">Terlaris</a>
+      <a href="#gap">Gap data</a>
+      <a href="#prioritas">Prioritas</a>
+    </nav>
+    <button class="tbtn" id="themeBtn" type="button" aria-label="Ganti tema terang/gelap">Tema</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Laporan mingguan internal · Undercover / Otonation / Otoprotection / Smartprotection</p>
+    <h1>Minggu 10–16 Agustus, dibandingkan 3–9 Agustus</h1>
+    <p class="lead">
+      Minggu yang lebih tenang di sisi cakupan SKU (belum ada rekap baru), tapi ada dua temuan baru: pergeseran
+      kerja ke "cek gagal upload", dan — untuk pertama kalinya di laporan seri ini — angka penjualan riil
+      (harian, channel Sosmed/live-selling) yang bisa dibandingkan minggu-ke-minggu.
+    </p>
+    <div class="stamps">
+      <span class="stamp">Minggu ini: <b>10–16 Agustus 2026</b></span>
+      <span class="stamp">Minggu lalu: <b>3–9 Agustus 2026</b></span>
+      <span class="stamp">Cakupan SKU: snapshot <b>7 Agustus</b> (belum di-refresh)</span>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <span class="num">86,1%</span>
+        <span class="lbl">Cakupan SKU 215 terlaris — angka sama seperti laporan lalu, belum ada rekap baru minggu ini</span>
+        <span class="sub">snapshot tetap 7 Agustus</span>
+      </div>
+      <div class="kpi">
+        <span class="num">94 <em style="font-size:15px;color:var(--ink-3);">order</em></span>
+        <span class="lbl">Channel Sosmed (live-selling), 10–14 Agustus — baru 5 dari 7 hari tercatat</span>
+        <span class="sub">±18,8 order/hari, naik dari ±11,7 minggu lalu</span>
+      </div>
+      <div class="kpi">
+        <span class="num">0</span>
+        <span class="lbl">Komplain baru &amp; rekap SKU baru minggu ini — sinyal minggu ini lebih ke QA/dokumentasi</span>
+        <span class="sub">log CS masih berhenti 30 Juli</span>
+      </div>
+      <div class="kpi">
+        <span class="num">40,5%</span>
+        <span class="lbl">Tingkat retur channel Sosmed jalur internal — jauh di atas jalur eksternal (3,3%)</span>
+        <span class="sub">temuan baru, periode file belum eksplisit</span>
+      </div>
+    </div>
+  </header>
+
+  <section id="ringkasan">
+    <div class="sec-head">
+      <h2>Ringkasan</h2>
+      <p>Empat hal yang paling penting dari minggu ini.</p>
+    </div>
+
+    <ul class="findings">
+      <li>
+        <span class="mk s-wait"></span>
+        <p><strong>Minggu ini lebih tenang dari sisi cakupan katalog.</strong> Tidak ada rekap SKU baru (angka
+        86,1% masih snapshot 7 Agustus) dan tidak ada entri komplain baru. Kerja yang ada bergeser ke QA: folder
+        kerja utama <strong>direname dari "List Produk SKU" jadi "Cek gagal upload"</strong> — fokusnya sekarang
+        memverifikasi mana dari hasil retry-upload minggu lalu yang benar-benar gagal ter-apply di seller center,
+        bukan lagi menambah cakupan baru.</p>
+      </li>
+      <li>
+        <span class="mk s-ok"></span>
+        <p><strong>Untuk pertama kalinya, ada angka penjualan riil yang bisa dibandingkan minggu-ke-minggu.</strong>
+        Ditemukan log order harian channel Sosmed (live-selling): 82 order (3–9 Agustus, lengkap 7 hari) vs
+        94 order (10–14 Agustus, baru 5 hari tercatat) — rata-rata harian naik dari ±11,7 ke ±18,8 order/hari.
+        Ini <strong>bukan angka total perusahaan</strong> — cuma channel Sosmed, terpisah dari Shopee/TikTok/Lazada.</p>
+      </li>
+      <li>
+        <span class="mk s-block"></span>
+        <p><strong>Retur channel Sosmed jalur internal 40,5% dari order — 12x lebih tinggi dari jalur eksternal (3,3%).</strong>
+        Ditemukan di file finance baru ("Retur Wajar Sosmed.xlsx", 15 Agustus). Periode persis file ini tidak
+        dinyatakan eksplisit di dalamnya, jadi angka ini disajikan sebagai sinyal, bukan angka minggu-ini yang pasti.</p>
+      </li>
+      <li>
+        <span class="mk s-fix"></span>
+        <p><strong>Ranking produk terlaris dikoreksi.</strong> Ditemukan dataset "GABUNGAN" (Shopee+Lazada+TikTok/Tokopedia
+        digabung eksplisit) yang totalnya lebih besar dari yang dipakai laporan minggu lalu (36.457 unit vs ±27.300).
+        Urutan top-20 sedikit bergeser — Toyota Rush naik ke #8. Detail &amp; alasan koreksi di bagian "Produk terlaris".</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="progress">
+    <div class="sec-head">
+      <h2>Progress kerja: minggu ini vs minggu lalu</h2>
+      <p>
+        Dibaca dari tanggal-modifikasi file kerja di Drive. Catatan penting: karena pergeseran 1 hari dari laporan
+        sebelumnya, "minggu lalu" di sini (3–9 Agustus) tumpang-tindih hampir penuh dengan "minggu ini" di laporan
+        lalu (2–8 Agustus) — jadi kolom kiri di bawah ini sengaja diringkas, bukan diulang penuh.
+      </p>
+    </div>
+
+    <div class="compare">
+      <div class="card">
+        <span class="wk">3–9 Agustus (ringkas — sudah dilaporkan minggu lalu)</span>
+        <h3>Minggu lalu — kelanjutan retry-upload</h3>
+        <div class="tl">
+          <div class="tl-row"><span class="tl-date">5–7 Agu</span><span class="tl-txt">Retry-upload OT/OP/SP (Shopee/TikTok/Lazada) dituntaskan, REKAP SKU 215 dibuat (86,1%), aturan #4 direvisi, UA selesai upload final 3 channel.</span></div>
+          <div class="tl-row"><span class="tl-date">8–9 Agu</span><span class="tl-txt">Tidak ada file kerja baru terdeteksi — hanya backup/reorganisasi folder rutin.</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <span class="wk">10–16 Agustus</span>
+        <h3>Minggu ini — QA &amp; dokumentasi pendukung</h3>
+        <div class="tl">
+          <div class="tl-row"><span class="tl-date">11 Agu</span><span class="tl-txt">Folder kerja utama <strong>direname "List Produk SKU" → "Cek gagal upload"</strong>. UA Shopee dapat re-export penuh (5 file) + TikTok mass-update baru; OP &amp; SP Shopee dapat versi "fixed" kedua (koreksi lanjutan).</span></div>
+          <div class="tl-row"><span class="tl-date">14 Agu</span><span class="tl-txt">Dokumen referensi baru <strong>"Data Mobil Lebih dari 1 Formula.xlsx"</strong> dibuat — memetakan resmi model mana yang butuh &gt;1 formula SKU vs cukup 1, mendukung revisi aturan #4 minggu lalu.</span></div>
+          <div class="tl-row"><span class="tl-date">15 Agu</span><span class="tl-txt">File finance baru: <strong>"Retur Wajar Sosmed.xlsx"</strong> (model margin vs retur channel Sosmed) dan salinan data HPP.</span></div>
+          <div class="tl-row"><span class="tl-date">10–16 Agu</span><span class="tl-txt">Tidak ada REKAP SKU baru, tidak ada komplain baru tercatat di log CS.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroller" style="margin-top:16px;">
+      <table class="matrix">
+        <thead>
+          <tr><th scope="col">Toko</th><th scope="col">Status minggu ini (10–16 Agu)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Undercover Autocare</th>
+            <td><span class="cell"><span class="dot s-fix"></span><span>Paling aktif: Shopee di-re-export penuh + TikTok mass-update baru (11 Agu) — kelanjutan QA pasca upload final minggu lalu</span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Otoprotection</th>
+            <td><span class="cell"><span class="dot s-fix"></span><span>Shopee dapat versi "fixed" kedua (11 Agu) — koreksi lanjutan dari retry-upload 6 Agustus</span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Smartprotection</th>
+            <td><span class="cell"><span class="dot s-fix"></span><span>Shopee dapat versi "fixed" kedua (11 Agu) — koreksi lanjutan dari retry-upload 5 Agustus</span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Otonation</th>
+            <td><span class="cell"><span class="dot s-neutral"></span><span>Tidak ada file baru terdeteksi minggu ini</span></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend" style="border-top:none;padding-top:0;">
+      <span><i class="s-fix"></i> Ada aktivitas QA/koreksi minggu ini</span>
+      <span><i class="s-neutral"></i> Tidak ada file baru terdeteksi</span>
+    </div>
+  </section>
+
+  <section id="cakupan">
+    <div class="sec-head">
+      <h2>Cakupan SKU: masih snapshot 7 Agustus</h2>
+      <p>
+        Sudah dicek ulang — tidak ada file "REKAP SKU" baru yang dibuat minggu ini, jadi angka di bawah ini
+        <strong>identik dengan laporan minggu lalu</strong>, bukan pengukuran baru. Dicantumkan lagi supaya laporan
+        ini tetap bisa dibaca berdiri sendiri.
+      </p>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>% baris sesuai formula SKU terbaru, per toko × channel — snapshot 7 Agustus, belum berubah</figcaption>
+        <div class="chart">
+          <div class="row">
+            <span class="name"><b>SP · Lazada</b><span class="mono">6.089 baris</span></span>
+            <span class="track" style="width:60.9%">
+              <span class="seg s-ok" style="width:83.4%" data-tip="Smartprotection · Lazada&#10;Sesuai: 5.080 baris (83,4%)"></span>
+              <span class="seg s-block" style="width:16.6%" data-tip="Smartprotection · Lazada&#10;Belum sesuai: 1.009 baris (16,6%)"></span>
+            </span>
+            <span class="val">83,4%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>OP · TikTok</b><span class="mono">5.135 baris</span></span>
+            <span class="track" style="width:51.4%">
+              <span class="seg s-ok" style="width:84.1%" data-tip="Otoprotection · TikTok&#10;Sesuai: 4.317 baris (84,1%)"></span>
+              <span class="seg s-block" style="width:15.9%" data-tip="Otoprotection · TikTok&#10;Belum sesuai: 818 baris (15,9%)"></span>
+            </span>
+            <span class="val">84,1%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>SP · TikTok</b><span class="mono">5.436 baris</span></span>
+            <span class="track" style="width:54.4%">
+              <span class="seg s-ok" style="width:84.3%" data-tip="Smartprotection · TikTok&#10;Sesuai: 4.582 baris (84,3%)"></span>
+              <span class="seg s-block" style="width:15.7%" data-tip="Smartprotection · TikTok&#10;Belum sesuai: 854 baris (15,7%)"></span>
+            </span>
+            <span class="val">84,3%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>OT · Shopee</b><span class="mono">5.870 baris</span></span>
+            <span class="track" style="width:58.7%">
+              <span class="seg s-ok" style="width:85.1%" data-tip="Otonation · Shopee&#10;Sesuai: 4.998 baris (85,1%)"></span>
+              <span class="seg s-block" style="width:14.9%" data-tip="Otonation · Shopee&#10;Belum sesuai: 872 baris (14,9%)"></span>
+            </span>
+            <span class="val">85,1%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>OP · Shopee</b><span class="mono">5.163 baris</span></span>
+            <span class="track" style="width:51.6%">
+              <span class="seg s-ok" style="width:85.9%" data-tip="Otoprotection · Shopee&#10;Sesuai: 4.435 baris (85,9%)"></span>
+              <span class="seg s-block" style="width:14.1%" data-tip="Otoprotection · Shopee&#10;Belum sesuai: 728 baris (14,1%)"></span>
+            </span>
+            <span class="val">85,9%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>UA · Lazada</b><span class="mono">9.999 baris</span></span>
+            <span class="track" style="width:100%">
+              <span class="seg s-ok" style="width:86.5%" data-tip="Undercover Autocare · Lazada&#10;Sesuai: 8.654 baris (86,5%)"></span>
+              <span class="seg s-block" style="width:13.5%" data-tip="Undercover Autocare · Lazada&#10;Belum sesuai: 1.345 baris (13,5%)"></span>
+            </span>
+            <span class="val">86,5%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>UA · Shopee</b><span class="mono">9.961 baris</span></span>
+            <span class="track" style="width:99.6%">
+              <span class="seg s-ok" style="width:87.3%" data-tip="Undercover Autocare · Shopee&#10;Sesuai: 8.698 baris (87,3%)"></span>
+              <span class="seg s-block" style="width:12.7%" data-tip="Undercover Autocare · Shopee&#10;Belum sesuai: 1.263 baris (12,7%)"></span>
+            </span>
+            <span class="val">87,3%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>SP · Shopee</b><span class="mono">5.917 baris</span></span>
+            <span class="track" style="width:59.2%">
+              <span class="seg s-ok" style="width:87.5%" data-tip="Smartprotection · Shopee&#10;Sesuai: 5.178 baris (87,5%)"></span>
+              <span class="seg s-block" style="width:12.5%" data-tip="Smartprotection · Shopee&#10;Belum sesuai: 739 baris (12,5%)"></span>
+            </span>
+            <span class="val">87,5%</span>
+          </div>
+          <div class="row">
+            <span class="name"><b>UA · TikTok</b><span class="mono">9.794 baris</span></span>
+            <span class="track" style="width:97.9%">
+              <span class="seg s-ok" style="width:88.3%" data-tip="Undercover Autocare · TikTok&#10;Sesuai: 8.645 baris (88,3%)"></span>
+              <span class="seg s-block" style="width:11.7%" data-tip="Undercover Autocare · TikTok&#10;Belum sesuai: 1.149 baris (11,7%)"></span>
+            </span>
+            <span class="val">88,3%</span>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="s-ok"></i> Sudah sesuai formula baru</span>
+          <span><i class="s-block"></i> Belum sesuai</span>
+          <span style="color:var(--ink-3);">Total: 54.587/63.364 baris (86,1%) — tidak berubah dari 7 Agustus</span>
+        </div>
+      </figure>
+    </div>
+
+    <div class="note n-accent" style="margin-top:16px;">
+      <strong>Kenapa belum ada rekap baru?</strong> File-file yang muncul minggu ini (lihat "Progress kerja" di atas)
+      sifatnya QA per-file ("cek mana yang gagal upload"), bukan cross-check ulang seluruh 215 model terlaris
+      lintas 9 kombinasi toko×channel seperti yang menghasilkan angka 86,1%. Kemungkinan rekap berikutnya baru
+      keluar setelah siklus "Cek gagal upload" ini selesai.
+    </div>
+  </section>
+
+  <section id="penjualan">
+    <div class="sec-head">
+      <h2>Penjualan: baru ketemu untuk 1 channel</h2>
+      <p>
+        Setelah dua laporan mencari tanpa hasil, minggu ini ketemu log order harian — tapi cakupannya cuma
+        channel <strong>Sosmed (live-selling lewat Deal Maker)</strong>, terpisah dari katalog Shopee/TikTok/Lazada
+        yang jadi fokus bagian SKU di atas. Jangan disamakan dengan omzet total perusahaan.
+      </p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile t-ok">
+        <span class="t-tag">3–9 Agustus (lengkap)</span>
+        <span class="t-num">82 <em>order</em></span>
+        <span class="t-lbl">Closing ±Rp31,9 juta</span>
+        <span class="t-sub">±11,7 order/hari</span>
+      </div>
+      <div class="tile t-fix">
+        <span class="t-tag">10–14 Agustus (baru 5/7 hari)</span>
+        <span class="t-num">94 <em>order</em></span>
+        <span class="t-lbl">Closing ±Rp35,0 juta</span>
+        <span class="t-sub">±18,8 order/hari — 15–16 Agustus belum ter-log</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>Order harian channel Sosmed · 3–14 Agustus 2026</figcaption>
+        <div class="chart">
+          <div class="row"><span class="name"><b>Sen 3 Agu</b></span><span class="track" style="width:31%"><span class="seg s-neutral" style="width:100%" data-tip="3 Agustus&#10;9 order · closing ±Rp3,5 jt"></span></span><span class="val">9</span></div>
+          <div class="row"><span class="name"><b>Sel 4 Agu</b></span><span class="track" style="width:62.1%"><span class="seg s-neutral" style="width:100%" data-tip="4 Agustus&#10;18 order · closing ±Rp6,8 jt"></span></span><span class="val">18</span></div>
+          <div class="row"><span class="name"><b>Rab 5 Agu</b></span><span class="track" style="width:41.4%"><span class="seg s-neutral" style="width:100%" data-tip="5 Agustus&#10;12 order · closing ±Rp4,8 jt"></span></span><span class="val">12</span></div>
+          <div class="row"><span class="name"><b>Kam 6 Agu</b></span><span class="track" style="width:24.1%"><span class="seg s-neutral" style="width:100%" data-tip="6 Agustus&#10;7 order · closing ±Rp2,8 jt"></span></span><span class="val">7</span></div>
+          <div class="row"><span class="name"><b>Jum 7 Agu</b></span><span class="track" style="width:41.4%"><span class="seg s-neutral" style="width:100%" data-tip="7 Agustus&#10;12 order · closing ±Rp4,6 jt"></span></span><span class="val">12</span></div>
+          <div class="row"><span class="name"><b>Sab 8 Agu</b></span><span class="track" style="width:41.4%"><span class="seg s-neutral" style="width:100%" data-tip="8 Agustus&#10;12 order · closing ±Rp4,7 jt"></span></span><span class="val">12</span></div>
+          <div class="row"><span class="name"><b>Min 9 Agu</b></span><span class="track" style="width:41.4%"><span class="seg s-neutral" style="width:100%" data-tip="9 Agustus&#10;12 order · closing ±Rp4,7 jt"></span></span><span class="val">12</span></div>
+
+          <div class="wk-divider">10 Agustus — minggu ini mulai</div>
+
+          <div class="row"><span class="name"><b>Sen 10 Agu</b></span><span class="track" style="width:58.6%"><span class="seg s-fix" style="width:100%" data-tip="10 Agustus&#10;17 order · closing ±Rp6,5 jt"></span></span><span class="val">17</span></div>
+          <div class="row"><span class="name"><b>Sel 11 Agu</b></span><span class="track" style="width:62.1%"><span class="seg s-fix" style="width:100%" data-tip="11 Agustus&#10;18 order · closing ±Rp6,3 jt"></span></span><span class="val">18</span></div>
+          <div class="row"><span class="name"><b>Rab 12 Agu</b></span><span class="track" style="width:55.2%"><span class="seg s-fix" style="width:100%" data-tip="12 Agustus&#10;16 order · closing ±Rp6,4 jt"></span></span><span class="val">16</span></div>
+          <div class="row"><span class="name"><b>Kam 13 Agu</b></span><span class="track" style="width:48.3%"><span class="seg s-fix" style="width:100%" data-tip="13 Agustus&#10;14 order · closing ±Rp5,1 jt"></span></span><span class="val">14</span></div>
+          <div class="row"><span class="name"><b>Jum 14 Agu</b></span><span class="track" style="width:100%"><span class="seg s-fix" style="width:100%" data-tip="14 Agustus&#10;29 order · closing ±Rp10,7 jt — hari tertinggi di 12 hari ini"></span></span><span class="val">29</span></div>
+        </div>
+        <div class="legend">
+          <span><i class="s-neutral"></i> Minggu lalu (3–9 Agu)</span>
+          <span><i class="s-fix"></i> Minggu ini (10–14 Agu)</span>
+        </div>
+      </figure>
+    </div>
+
+    <div class="note" style="margin-top:16px;">
+      <strong>Baca dengan hati-hati:</strong> lonjakan 14 Agustus (29 order, hampir 2× rata-rata) bisa jadi tren
+      riil atau bisa jadi efek entri data yang menumpuk (Deal Maker kadang input rapel, bukan real-time). Belum
+      ada cara memverifikasi ini dari data yang ada — perlu dikonfirmasi langsung ke tim Sosmed. 15–16 Agustus
+      belum tercatat di log per saat data ini diambil, jadi total minggu ini kemungkinan masih akan bertambah.
+    </div>
+  </section>
+
+  <section id="kesehatan">
+    <div class="sec-head">
+      <h2>Kesehatan toko</h2>
+      <p>Dua sinyal: retur channel Sosmed (baru) dan komplain pelanggan (tidak berubah dari laporan lalu).</p>
+    </div>
+
+    <div class="card">
+      <h3>Retur channel Sosmed — External vs Internal</h3>
+      <div class="scroller" style="margin-top:12px;">
+        <table class="data">
+          <thead>
+            <tr><th>Jalur</th><th>Omzet kotor</th><th>Order</th><th>Order retur</th><th>Retur % order</th><th>Omzet bersih</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="prod">External</td><td class="n">Rp43.730.000</td><td class="n">120</td><td class="n">4</td><td class="n">3,33%</td><td class="n">Rp42.085.000</td></tr>
+            <tr><td class="prod">Internal / Annisa</td><td class="n">Rp80.650.000</td><td class="n">195</td><td class="n">79</td><td class="n">40,51%</td><td class="n">Rp50.601.000</td></tr>
+            <tr><td><strong>Gabungan</strong></td><td class="n"><strong>Rp124.380.000</strong></td><td class="n"><strong>315</strong></td><td class="n"><strong>83</strong></td><td class="n"><strong>26,35%</strong></td><td class="n"><strong>Rp92.686.000</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:13px;color:var(--ink-2);margin-top:14px;margin-bottom:0;">
+        Sumber: <code style="font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;">Retur Wajar Sosmed.xlsx</code>,
+        dibuat 15 Agustus. File ini tidak mencantumkan periode secara eksplisit (kemungkinan akumulasi bulan berjalan,
+        bukan 1 minggu) — jadi angka retur 40,5% di atas jangan dibaca sebagai "minggu ini", tapi sebagai sinyal
+        gap kualitas jalur internal yang layak ditindaklanjuti terlepas dari periode persisnya.
+      </p>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Komplain pelanggan — tidak ada perubahan</h3>
+      <p style="font-size:14.5px;color:var(--ink-2);">
+        Log CS sudah dicek ulang: masih 7 komplain, rata-rata rating 1,9★, entri terakhir tetap 30 Juli — tidak ada
+        entri baru sepanjang 3–16 Agustus. 5 dari 7 komplain dari Undercover Autocare (semua Shopee), 4 dari 7
+        (57%) soal warna abu-abu terlihat lebih gelap dari deskripsi. Detail lengkap sudah ada di laporan minggu lalu.
+      </p>
+      <p style="font-size:14.5px;color:var(--ink-2);margin-bottom:0;">
+        Abu-abu tetap warna terlaris di hampir semua model top-20 (lihat bagian "Produk terlaris") — pola
+        komplain-warna ini masih layak dipantau meski belum ada data baru untuk mengonfirmasi tren minggu ini.
+      </p>
+    </div>
+  </section>
+
+  <section id="terlaris">
+    <div class="sec-head">
+      <h2>Produk terlaris — angkanya dikoreksi</h2>
+      <p>
+        Ditemukan <code style="font-family:var(--font-mono);background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;">MOBIL_TERLARIS_GABUNGAN.xlsx</code>,
+        yang eksplisit menyatakan gabungan Shopee+Lazada+TikTok/Tokopedia: total <strong>36.457 unit senilai
+        Rp10,6 miliar</strong> (Jan–Jun 2026, 181 hari) — lebih besar dari ±27.300 unit/Rp8,0 miliar yang dipakai
+        laporan minggu lalu, yang ternyata bersumber dari dataset yang kurang lengkap. Urutan top-20 di bawah ini
+        pakai dataset GABUNGAN ini; beberapa peringkat bergeser dari laporan sebelumnya.
+      </p>
+    </div>
+
+    <div class="card">
+      <figure>
+        <figcaption>Kuantitas terjual per model · kumulatif Jan–Jun 2026 · Top 20 (dataset GABUNGAN)</figcaption>
+        <div class="chart" id="chartTerlaris">
+          <div class="row"><span class="name"><b>Toyota Avanza</b><span class="mono">#1 · 16,9/hari</span></span><span class="track" style="width:100%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Avanza&#10;3.067 pcs · Rp895,1 jt&#10;Abu-abu: 37,2% dari warna polos"></span></span><span class="val">3.067</span></div>
+          <div class="row"><span class="name"><b>Honda Brio</b><span class="mono">#2 · 14,0/hari</span></span><span class="track" style="width:82.4%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Brio&#10;2.528 pcs · Rp701,7 jt&#10;Abu-abu: 45,0% dari warna polos"></span></span><span class="val">2.528</span></div>
+          <div class="row"><span class="name"><b>Toyota Innova</b><span class="mono">#3 · 12,3/hari</span></span><span class="track" style="width:72.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Innova&#10;2.223 pcs · Rp667,8 jt&#10;Abu-abu: 32,3% dari warna polos"></span></span><span class="val">2.223</span></div>
+          <div class="row"><span class="name"><b>Honda Jazz</b><span class="mono">#4 · 8,5/hari</span></span><span class="track" style="width:49.9%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Jazz&#10;1.532 pcs · Rp428,2 jt&#10;Abu-abu: 37,1% dari warna polos"></span></span><span class="val">1.532</span></div>
+          <div class="row"><span class="name"><b>Honda HR-V</b><span class="mono">#5 · 6,9/hari</span></span><span class="track" style="width:40.4%"><span class="seg s-neutral" style="width:100%" data-tip="Honda HR-V&#10;1.240 pcs · Rp364,2 jt&#10;Abu-abu: 34,1% dari warna polos"></span></span><span class="val">1.240</span></div>
+          <div class="row"><span class="name"><b>Suzuki Ertiga</b><span class="mono">#6 · 6,7/hari</span></span><span class="track" style="width:39.7%"><span class="seg s-neutral" style="width:100%" data-tip="Suzuki Ertiga&#10;1.218 pcs · Rp360,6 jt&#10;Abu-abu: 52,9% dari warna polos"></span></span><span class="val">1.218</span></div>
+          <div class="row"><span class="name"><b>Toyota Agya</b><span class="mono">#7 · 6,0/hari</span></span><span class="track" style="width:35.3%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Agya&#10;1.082 pcs · Rp302,6 jt&#10;Abu-abu: 39,2% dari warna polos"></span></span><span class="val">1.082</span></div>
+          <div class="row"><span class="name"><b>Toyota Rush</b><span class="mono">#8 · 5,6/hari <span class="chip chip-fix">naik dari #15</span></span></span><span class="track" style="width:32.8%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Rush&#10;1.006 pcs · Rp294,9 jt&#10;Abu-abu: 31,1% dari warna polos&#10;Laporan lalu: #15 dengan 558 pcs (dataset lama)"></span></span><span class="val">1.006</span></div>
+          <div class="row"><span class="name"><b>Daihatsu Ayla</b><span class="mono">#9 · 4,9/hari</span></span><span class="track" style="width:29.0%"><span class="seg s-neutral" style="width:100%" data-tip="Daihatsu Ayla&#10;889 pcs · Rp247,0 jt&#10;Abu-abu: 52,1% dari warna polos"></span></span><span class="val">889</span></div>
+          <div class="row"><span class="name"><b>Daihatsu Xenia</b><span class="mono">#10 · 4,8/hari</span></span><span class="track" style="width:28.0%"><span class="seg s-neutral" style="width:100%" data-tip="Daihatsu Xenia&#10;860 pcs · Rp261,8 jt&#10;Abu-abu: 40,8% dari warna polos"></span></span><span class="val">860</span></div>
+          <div class="row"><span class="name"><b>Toyota Vios</b><span class="mono">#11 · 4,6/hari</span></span><span class="track" style="width:27.3%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Vios&#10;836 pcs · Rp237,7 jt&#10;Abu-abu: 35,5% dari warna polos"></span></span><span class="val">836</span></div>
+          <div class="row"><span class="name"><b>Nissan Grand Livina</b><span class="mono">#12 · 4,6/hari</span></span><span class="track" style="width:27.0%"><span class="seg s-neutral" style="width:100%" data-tip="Nissan Grand Livina&#10;827 pcs · Rp242,5 jt&#10;Abu-abu: 40,3% dari warna polos"></span></span><span class="val">827</span></div>
+          <div class="row"><span class="name"><b>Toyota Fortuner</b><span class="mono">#13 · 4,5/hari</span></span><span class="track" style="width:26.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Fortuner&#10;813 pcs · Rp278,7 jt&#10;Abu-abu: 35,2% dari warna polos"></span></span><span class="val">813</span></div>
+          <div class="row"><span class="name"><b>Toyota Yaris</b><span class="mono">#14 · 4,4/hari</span></span><span class="track" style="width:25.7%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Yaris&#10;788 pcs · Rp230,6 jt&#10;Abu-abu: 33,9% dari warna polos"></span></span><span class="val">788</span></div>
+          <div class="row"><span class="name"><b>Toyota Calya</b><span class="mono">#15 · 4,1/hari</span></span><span class="track" style="width:24.2%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Calya&#10;742 pcs · Rp207,8 jt&#10;Abu-abu: 34,1% dari warna polos"></span></span><span class="val">742</span></div>
+          <div class="row"><span class="name"><b>Honda BR-V</b><span class="mono">#16 · 4,1/hari</span></span><span class="track" style="width:24.0%"><span class="seg s-neutral" style="width:100%" data-tip="Honda BR-V&#10;735 pcs · Rp210,6 jt&#10;Abu-abu: 38,4% dari warna polos"></span></span><span class="val">735</span></div>
+          <div class="row"><span class="name"><b>Toyota Kijang</b><span class="mono">#17 · 3,3/hari</span></span><span class="track" style="width:19.5%"><span class="seg s-neutral" style="width:100%" data-tip="Toyota Kijang&#10;598 pcs · Rp151,1 jt&#10;Abu-abu: 27,8% dari warna polos"></span></span><span class="val">598</span></div>
+          <div class="row"><span class="name"><b>Honda Mobilio</b><span class="mono">#18 · 3,1/hari</span></span><span class="track" style="width:18.0%"><span class="seg s-neutral" style="width:100%" data-tip="Honda Mobilio&#10;553 pcs · Rp162,4 jt&#10;Abu-abu: 49,0% dari warna polos"></span></span><span class="val">553</span></div>
+          <div class="row"><span class="name"><b>Honda CR-V</b><span class="mono">#19 · 3,0/hari</span></span><span class="track" style="width:17.4%"><span class="seg s-neutral" style="width:100%" data-tip="Honda CR-V&#10;534 pcs · Rp147,6 jt&#10;Abu-abu: 29,2% dari warna polos"></span></span><span class="val">534</span></div>
+          <div class="row"><span class="name"><b>Daihatsu Terios</b><span class="mono">#20 · 2,6/hari</span></span><span class="track" style="width:15.3%"><span class="seg s-neutral" style="width:100%" data-tip="Daihatsu Terios&#10;468 pcs · Rp138,1 jt&#10;Abu-abu: 46,4% dari warna polos"></span></span><span class="val">468</span></div>
+        </div>
+        <div class="legend">
+          <span><i class="s-neutral"></i> Kuantitas terjual (pcs), kumulatif Jan–Jun</span>
+          <span style="color:var(--ink-3);">Arahkan kursor/fokus tiap batang untuk lihat detail</span>
+        </div>
+      </figure>
+    </div>
+
+    <div class="note" style="margin-top:16px;">
+      <strong>Yang berubah dari laporan lalu:</strong> Honda Civic dan Mitsubishi Xpander (dulu #20 dan tidak masuk
+      top-20) turun keluar dari top-20 di dataset yang lebih lengkap ini, digantikan Toyota Rush (naik drastis dari
+      #15 ke #8) dan Daihatsu Terios (masuk di #20). Kolom "/hari" dihitung dari rata-rata 181 hari periode
+      Jan–Jun — <strong>ini proyeksi historis, bukan angka aktual minggu 10–16 Agustus.</strong>
+    </div>
+  </section>
+
+  <section id="gap">
+    <div class="sec-head">
+      <h2>Yang masih belum tersedia</h2>
+      <p>Progress dari laporan lalu — satu channel penjualan sudah ketemu, tapi gambaran lengkapnya belum.</p>
+    </div>
+
+    <div class="blockers" style="display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;">
+      <div class="card" style="border:none;border-radius:0;">
+        <h3>Penjualan omni-channel (Shopee + TikTok + Lazada + Sosmed digabung)</h3>
+        <p style="font-size:14.5px;color:var(--ink-2);margin-bottom:0;">
+          Yang ada sekarang baru pecahan: order harian channel Sosmed (bagian "Penjualan" di atas), dan rekap
+          margin/retur Sosmed yang periodenya tidak eksplisit. Belum ada satu sumber yang menggabungkan order/omzet
+          <strong>per hari, per toko, per channel marketplace</strong> — yang sebenarnya paling relevan untuk
+          menjawab "penjualan Shopee/TikTok/Lazada minggu ini berapa". <strong>Supaya bisa diisi:</strong> export
+          "Order.all" per toko dari BigSeller atau seller center masing-masing, untuk rentang 3–16 Agustus.
+        </p>
+      </div>
+      <div class="card" style="border:none;border-radius:0;">
+        <h3>Performa iklan</h3>
+        <p style="font-size:14.5px;color:var(--ink-2);margin-bottom:0;">
+          Tetap dikecualikan sesuai catatan proyek (proyek Digital Marketing terpisah). File "Retur Wajar Sosmed.xlsx"
+          memuat satu baris "Iklan dialokasikan" sebagai komponen biaya dalam model margin — dipakai apa adanya
+          sebagai angka biaya, <strong>tidak dianalisis lebih lanjut</strong> (tidak ada breakdown campaign, CTR, atau ROAS di laporan ini).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="prioritas">
+    <div class="sec-head">
+      <h2>Prioritas minggu depan</h2>
+      <p>Diurutkan dari dampak paling besar terhadap gap yang masih terbuka.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div>
+          <h3>Tuntaskan siklus "Cek gagal upload", lalu refresh REKAP SKU 215</h3>
+          <p>Cakupan 86,1% sudah 9 hari tidak berubah. Setelah QA gagal-upload OT/OP/SP selesai, jalankan satu
+          cross-check baru lintas 9 kombinasi toko×channel supaya ada angka terbaru untuk laporan berikutnya.</p>
+          <span class="impact">Prasyarat: pastikan folder "Cek gagal upload" sudah menampung koreksi dari semua toko, bukan cuma UA/OP/SP Shopee</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Investigasi retur internal 40,5% channel Sosmed</h3>
+          <p>Selisihnya dengan jalur eksternal (3,3%) terlalu besar untuk dianggap wajar tanpa penjelasan. Cek
+          apakah ini soal kualitas closing (COD tanpa verifikasi ketat), SOP pengiriman, atau isu produk yang sama
+          dengan pola komplain warna abu-abu.</p>
+          <span class="impact">Konfirmasi juga periode persis file "Retur Wajar Sosmed.xlsx" supaya bisa dilacak trennya minggu-ke-minggu</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Cek sumber lonjakan order 14 Agustus</h3>
+          <p>29 order dalam 1 hari (hampir 2× rata-rata) — perlu dipastikan ini tren riil (misal ada live-selling
+          besar) atau efek entri data yang dirapel oleh Deal Maker.</p>
+          <span class="impact">Kalau riil, cek apa yang dilakukan beda hari itu — bisa jadi pola yang bisa diulang</span>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Bangun sumber penjualan omni-channel mingguan</h3>
+          <p>Sudah 3 laporan berturut-turut meminta ini. Log Sosmed membuktikan datanya ADA dan bisa dipakai kalau
+          formatnya konsisten — tinggal disepakati apakah Shopee/TikTok/Lazada bisa diekspor dengan cara serupa
+          (per hari, per toko) secara rutin.</p>
+          <span class="impact">Prasyarat utama supaya laporan mingguan berikutnya tidak perlu "mencari" data penjualan lagi dari nol</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Laporan mingguan · disusun 18 Agustus 2026 · sumber: file kerja Google Drive proyek Undercover (bukan wawancara/asumsi).
+    Progress SKU dibaca dari tanggal-modifikasi file per 10–16 Agustus 2026. Data penjualan Top 300 kumulatif Januari–Juni 2026
+    (dataset GABUNGAN). Order harian Sosmed dari log "ANNISA", 3–14 Agustus 2026. Retur Sosmed dari "Retur Wajar Sosmed.xlsx", 15 Agustus.</p>
+    <p>Empat toko: Undercover Autocare, Otonation, Otoprotection, Smartprotection · tiga marketplace: Shopee, TikTok, Lazada,
+    plus channel Sosmed (live-selling). Performa iklan di luar scope repo ini — lihat proyek Digital Marketing terpisah.</p>
+  </footer>
+
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+  (function(){
+    var tip = document.getElementById('tip');
+    var current = null;
+
+    function show(el, x, y){
+      tip.textContent = el.getAttribute('data-tip');
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      tip.classList.add('on');
+    }
+    function hide(){ tip.classList.remove('on'); current = null; }
+
+    document.addEventListener('mousemove', function(e){
+      var el = e.target.closest ? e.target.closest('[data-tip]') : null;
+      if(el){
+        current = el;
+        show(el, e.clientX, e.clientY - 6);
+      } else if(current){
+        hide();
+      }
+    });
+    document.addEventListener('mouseleave', hide);
+    window.addEventListener('scroll', function(){ if(current) hide(); }, {passive:true});
+
+    document.querySelectorAll('[data-tip]').forEach(function(el){
+      el.setAttribute('tabindex','0');
+      el.setAttribute('role','img');
+      el.setAttribute('aria-label', el.getAttribute('data-tip').replace(/\n/g,'. '));
+      el.addEventListener('focus', function(){
+        var r = el.getBoundingClientRect();
+        current = el;
+        show(el, r.left + r.width/2, r.top - 2);
+      });
+      el.addEventListener('blur', hide);
+    });
+
+    var btn = document.getElementById('themeBtn');
+    btn.addEventListener('click', function(){
+      var root = document.documentElement;
+      var isDark = root.getAttribute('data-theme') === 'dark' ||
+        (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+  })();
+</script>
