@@ -283,3 +283,42 @@ Pemakaian ulang untuk batch berikutnya (mis. 21-30):
 python3 scripts/update_harga_per_sku.py <file_harga.xlsx> 21 30 <out_dir> <folder_listing...>
 ```
 Lengkapi dulu `PREFIX{}` untuk produk 21-30 — script berhenti kalau ada yang belum terdaftar.
+
+
+## Perbaikan script 2026-08-18: kolom dicari lewat nama header, bukan nomor tetap
+
+User upload file TikTok terbaru (`Tiktoksellercenter_batchedit_20260818_sales_information_template.xlsx`)
+dan Lazada terbaru. Ternyata TikTok Seller Center py 2 varian template export:
+- **all_information** (dipakai batch 11-20 pertama): 41 kolom, sheet tambahan
+  `Brand` + `HiddenAttr`. Kolom: nama=3, var=6, sku=11, harga=9.
+- **sales_information** (file 18 Agustus ini): 8 kolom saja, TANPA sheet `Brand`.
+  Kolom BEDA TOTAL: nama=3, var=5, sku=7, harga=6.
+
+Kalau nomor kolom di-hardcode per channel (cara lama), ganti varian template =
+harga tertulis ke kolom yang salah tanpa ketahuan (tidak error, cuma salah
+sasaran diam-diam — bug paling berbahaya). **Diperbaiki**: `update_harga_per_sku.py`
+sekarang cari kolom lewat NAMA header di baris 1 (`resolve_cols()`), pola field
+name-nya stabil lintas varian (`product_name`, `variation_value`, `seller_sku`,
+`price` utk TikTok; field serupa utk Shopee/Lazada) walau nomor kolomnya beda.
+Juga `deteksi_channel()` diperbaiki: sheet `template_hide` jadi penanda unik
+Lazada (dicek SEBELUM fallback generik `'template' in n`), krn TikTok varian
+baru tidak lagi py sheet `Brand` sbg pembeda dan sheet-nya bernama 'Template'
+yg jadi sama dgn 'template' Lazada setelah di-lowercase.
+
+**Kalau nanti kolom template berubah lagi**: script akan `SystemExit` dgn pesan
+kolom mana yg tidak ketemu, bukan diam-diam salah tulis — cek `HEADER_KEY{}`
+kalau itu terjadi.
+
+## JEBAKAN TERKONFIRMASI: batch 1-10 (Avanza/Ayla) bocor di Lazada
+
+Cross-check file Lazada terbaru (18 Agustus) vs harga target: **Veloz di
+Lazada masih Rp298.000**, padahal Avanza & Xenia (SKU sama TYT-AVZ) sudah
+Rp385.000 di Lazada. TikTok sudah benar utk Agya/Veloz/Xenia bertiga (SKU-nya
+match ke ALIAS). Ini mengkonfirmasi dugaan yg dicatat sblmnya: batch 1-10
+dikerjakan sblm pindah ke pencocokan berbasis SKU, jadi kembaran yg beda nama
+listing (Veloz utk Avanza) kemungkinan terlewat di Lazada. **User belum
+memutuskan mau dibenerin sekarang atau nanti** — kalau lanjut, jalankan:
+```
+python3 scripts/update_harga_per_sku.py <file_harga.xlsx> 1 1 <out_dir> <folder_lazada...>
+```
+(nomor 1 = Avanza, ALIAS sudah mencakup TYT-VLZ -> TYT-AVZ utk Lazada).

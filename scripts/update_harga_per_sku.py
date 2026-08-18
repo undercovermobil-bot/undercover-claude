@@ -37,10 +37,21 @@ ORANGE = PatternFill('solid', fgColor='FFC000')
 # Direvisi user 2026-08-15 dari Rp56.000 jadi Rp43.000.
 TAMBAHAN_STRIP = 43000
 
-CFG = {
-    'shopee': {'sheet': 'Sheet1',   'nama': 2, 'var': 4,  'sku': 6,  'harga': 7, 'start': 7},
-    'tiktok': {'sheet': 'Template', 'nama': 3, 'var': 6,  'sku': 11, 'harga': 9, 'start': 6},
-    'lazada': {'sheet': 'template', 'nama': 3, 'var': 14, 'sku': 13, 'harga': 9, 'start': 5},
+# Kolom dicari lewat NAMA header di baris 1 (bukan nomor kolom tetap) --
+# terbukti perlu 2026-08-18: TikTok mengirim varian template baru
+# ("sales_information", kolom lebih sedikit) yg nomor kolomnya beda total dari
+# varian lama ("all_information") yg dipakai sebelumnya, walau nama field di
+# header r1 tetap sama. Kalau nomor kolom di-hardcode, ganti varian template =
+# harga salah sasaran tanpa ketahuan.
+SHEET = {'shopee': 'Sheet1', 'tiktok': 'Template', 'lazada': 'template'}
+STARTROW = {'shopee': 7, 'tiktok': 6, 'lazada': 5}
+HEADER_KEY = {
+    'shopee': {'nama': 'et_title_product_name', 'var': 'et_title_variation_name',
+               'sku': 'et_title_variation_sku', 'harga': 'et_title_variation_price'},
+    'tiktok': {'nama': 'product_name', 'var': 'variation_value',
+               'sku': 'seller_sku', 'harga': 'price'},
+    'lazada': {'nama': 'nama produk', 'var': 'variations combo',
+               'sku': 'seller sku', 'harga': 'harga'},
 }
 
 # Nama produk di file harga -> prefix SKU (2 segmen pertama: MEREK-MODEL).
@@ -101,18 +112,42 @@ KAT_KE_JENIS = {'R': 'reguler', 'S': 'strip'}
 
 def deteksi_channel(wb):
     n = set(s.lower() for s in wb.sheetnames)
-    if 'template' in n and 'brand' in n:
-        return 'tiktok'
     if 'sheet1' in n:
         return 'shopee'
+    # 'template_hide' unik dipunyai Lazada -- dicek SEBELUM fallback 'template'
+    # generik krn TikTok jg py sheet bernama 'Template' (beda kapital, tp
+    # dibandingkan case-insensitive di sini jadi bisa bentrok kalau salah urutan)
+    if 'template_hide' in n:
+        return 'lazada'
+    if 'saleplatform' in n or 'templateconfig' in n or ('template' in n and 'brand' in n):
+        return 'tiktok'
     if 'template' in n:
         return 'lazada'
     return None
 
 
 def cari_sheet(wb, ch):
-    t = CFG[ch]['sheet']
+    t = SHEET[ch]
     return wb[t] if t in wb.sheetnames else wb[wb.sheetnames[0]]
+
+
+def resolve_cols(ws, ch):
+    """cari nomor kolom lewat nama header di baris 1, bukan nomor tetap"""
+    want = HEADER_KEY[ch]
+    idx = {}
+    for c in range(1, ws.max_column + 1):
+        v = ws.cell(row=1, column=c).value
+        if not v:
+            continue
+        vs = str(v).strip().lower()
+        for key, target in want.items():
+            if vs == target:
+                idx[key] = c
+    hilang = [k for k in want if k not in idx]
+    if hilang:
+        raise SystemExit(f'[{ch}] kolom header tidak ketemu utk: {hilang} '
+                          f'-- template mungkin berubah lagi, cek HEADER_KEY')
+    return idx
 
 
 def urai_sku(sku):
@@ -180,25 +215,26 @@ def proses(target, out_dir, folders, nama_toko='UA'):
         ch = deteksi_channel(wb)
         if ch is None:
             continue
-        cfg = CFG[ch]
         ws = cari_sheet(wb, ch)
         wbv = openpyxl.load_workbook(path, data_only=True)
         wsv = cari_sheet(wbv, ch)
+        col = resolve_cols(wsv, ch)
+        start = STARTROW[ch]
 
         ubah = []
-        for r in range(cfg['start'], wsv.max_row + 1):
-            pfx, kat = urai_sku(wsv.cell(row=r, column=cfg['sku']).value)
+        for r in range(start, wsv.max_row + 1):
+            pfx, kat = urai_sku(wsv.cell(row=r, column=col['sku']).value)
             pfx = ALIAS.get(pfx, pfx)
             if pfx not in target:
                 continue
-            nm = str(wsv.cell(row=r, column=cfg['nama']).value or '')
+            nm = str(wsv.cell(row=r, column=col['nama']).value or '')
             if any(k in nm.lower() for k in KECUALI):
                 continue
             jenis = KAT_KE_JENIS.get(kat)
             if not jenis:
                 continue  # Premium/Exclusive/Transparan -> jangan disentuh
             baru = target[pfx][jenis]
-            lama = wsv.cell(row=r, column=cfg['harga']).value
+            lama = wsv.cell(row=r, column=col['harga']).value
             try:
                 if lama is not None and int(float(lama)) == baru:
                     continue  # sudah benar, tidak perlu ikut file update
@@ -213,26 +249,26 @@ def proses(target, out_dir, folders, nama_toko='UA'):
             continue
 
         for r, baru in ubah:
-            sel = ws.cell(row=r, column=cfg['harga'])
+            sel = ws.cell(row=r, column=col['harga'])
             sel.value = baru
             sel.fill = ORANGE
 
         n_kol = ws.max_column
         baris = [u[0] for u in ubah]
         for i, r in enumerate(baris):
-            t = cfg['start'] + i
+            t = start + i
             if t != r:
                 salin(ws, r, ws, t, n_kol)
-        sisa = cfg['start'] + len(baris)
+        sisa = start + len(baris)
         if sisa <= ws.max_row:
             ws.delete_rows(sisa, ws.max_row - sisa + 1)
 
         if ch not in per_channel:
-            per_channel[ch] = (wb, ws, cfg['start'] + len(baris))
+            per_channel[ch] = (wb, ws, start + len(baris))
         else:
             wo, wso, r_out = per_channel[ch]
             for i in range(len(baris)):
-                salin(ws, cfg['start'] + i, wso, r_out + i, n_kol)
+                salin(ws, start + i, wso, r_out + i, n_kol)
             per_channel[ch] = (wo, wso, r_out + len(baris))
 
     hasil = {}
