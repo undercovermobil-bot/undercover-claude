@@ -316,9 +316,15 @@ Lazada masih Rp298.000**, padahal Avanza & Xenia (SKU sama TYT-AVZ) sudah
 Rp385.000 di Lazada. TikTok sudah benar utk Agya/Veloz/Xenia bertiga (SKU-nya
 match ke ALIAS). Ini mengkonfirmasi dugaan yg dicatat sblmnya: batch 1-10
 dikerjakan sblm pindah ke pencocokan berbasis SKU, jadi kembaran yg beda nama
-listing (Veloz utk Avanza) kemungkinan terlewat di Lazada. **User belum
-memutuskan mau dibenerin sekarang atau nanti** — kalau lanjut, jalankan:
-```
-python3 scripts/update_harga_per_sku.py <file_harga.xlsx> 1 1 <out_dir> <folder_lazada...>
-```
-(nomor 1 = Avanza, ALIAS sudah mencakup TYT-VLZ -> TYT-AVZ utk Lazada).
+listing (Veloz utk Avanza) kemungkinan terlewat di Lazada. **Sudah dibereskan 2026-08-18**, sekaligus ketemu penyebabnya: SKU Veloz di
+Lazada ternyata baru disinkronkan ke TYT-AVZ (sama dgn Avanza) di suatu waktu
+ANTARA snapshot 13→18 Agustus — sebelumnya masih SKU sendiri TYT-VLZ (lihat
+riwayat proyek SKU Sync utk kapan persisnya). Jadi bukan human error di
+update harga kemarin; listingnya memang baru "ikut nempel" ke SKU induk
+belakangan (proyek SKU Sync jalan terpisah dari update harga), dan harganya
+belum sempat menyusul. 28 baris Lazada (10 R Rp298rb->385rb, 18 S
+Rp358rb->428rb) sudah dikirim & diverifikasi 0 masalah.
+
+**Pelajaran umum**: kalau nemu SKU kembar yg harganya belum sama, jangan
+langsung asumsikan itu bug update harga -- cek dulu riwayat SKU-nya, bisa jadi
+konsolidasi SKU-nya sendiri yg baru terjadi belakangan.
