@@ -69,6 +69,29 @@ RESOLUSI_MANUAL = {
     # (tanpa hubung/spasi) sama dengan "X-Trail" (hubung -> jadi 2 token "x trail"),
     # dan ini bukan model lain, cuma satu-satunya X-Trail di master.
     "Nissan XTrail": "Nissan X-Trail",
+    # "MB" = Minibus. Generasi ranking "Gen 1 (2007-2024)" match persis
+    # "Daihatsu Gran Max Minibus / Blind Van" master (Gen 1, 2007-2026).
+    "Daihatsu Gran Max MB": "Daihatsu Gran Max Minibus / Blind Van",
+    # Rentang tahun ranking "2021-2022" cuma cocok Land Cruiser J300 (2021-2026).
+    # "Toyota Hardtop" cuma py 1 generasi tunggal J40 (1960-1985) - sama sekali
+    # tidak nyambung ke 2021-2022, jadi baris ranking ini murni Land Cruiser.
+    "Toyota Hardtop / Land Cruiser": "Toyota Land Cruiser",
+}
+
+# Nama ranking yang GENUINELY ambigu - datanya tidak cukup utk membedakan kandidat
+# di master (rentang tahun identik persis / info generasi kosong total), jadi
+# SENGAJA tidak dipetakan (bukan tebakan sepihak). Dilaporkan ke user di CATATAN,
+# baris ranking-nya dilewati (backfill otomatis dari rank di bawahnya).
+AMBIGU_PERLU_KEPUTUSAN = {
+    "Suzuki Aerio": "Ranking tanpa info generasi sama sekali; master py 'Suzuki Aerio "
+                     "Sedan' & 'Suzuki Aerio Hatchback' dgn rentang tahun IDENTIK "
+                     "(Gen1 2001-2005, Gen1F 2005-2007) - tidak bisa dibedakan dari data ini.",
+    "Daihatsu Gran Max": "Ranking nyaris tanpa info generasi ('2008-2022' doang); master "
+                         "py 'Daihatsu Gran Max Minibus / Blind Van' & '... Pick Up' dgn "
+                         "rentang tahun IDENTIK (Gen 1, 2007-2026) - tidak bisa dibedakan. "
+                         "'Daihatsu Gran Max MB' (Minibus) & '... Pick Up' sudah py baris "
+                         "sendiri di ranking lain, jadi entri generik ini kemungkinan cuma "
+                         "variasi judul salah satunya, bukan model ke-3.",
 }
 
 # Bukan mobil - produk perawatan/aksesori yang kebetulan ikut ke-rank di file sumber.

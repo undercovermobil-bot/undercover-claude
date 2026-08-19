@@ -246,6 +246,55 @@ formula D/G/Y/Z/AC dijaga IFERROR/IF. **Baris diurutkan sesuai rank penjualan**
 (#1 = paling laris di baris 2), bukan alfabetis — beda dari versi 76-sheet yang
 ngikut urutan file SKU tracker.
 
+## Versi 300 Terlaris (`build_top300_terlaris.py`)
+
+`DATA UC HPP Top 300 Terlaris.xlsx` — lanjutan dari versi 100. User kirim sumber
+ranking baru & minta diperluas ke 300 model.
+
+**Sumber ranking berganti**: `MOBIL_TERLARIS_GABUNGAN.xlsx` (dikirim user 2026-08-19)
+menggantikan `Mobil Terlaris.xlsx` yang dipakai versi 100. Gabungan
+Shopee+Lazada+TikTok/Tokopedia, periode 1 Jan-30 Jun 2026 (181 hari, 36.457 unit,
+Rp 10,6 M), 321 model dirinci — jauh lebih lengkap dari sumber lama (217 model,
+sebagian besar cuma Shopee). Struktur kolom sama (No/Peringkat di kolom 1, Nama
+Mobil di kolom 2), cuma baris data mulai row 6 (bukan row 5 di sumber lama).
+
+**Hasil akhir: 292 model, BUKAN 300.** Sheet sumbernya sendiri "cuma" 321 baris
+(walau namanya "Top 300 Mobil"), dan setelah dikurangi yang genuinely bukan model
+unik tersendiri, 292 adalah batas maksimal yang valid — bukan kegagalan script,
+levelnya sudah maksimal dari data yang ada:
+
+| Alasan dikeluarkan | Jumlah |
+|---|---|
+| Duplikat judul (model sama, 2 ejaan listing beda) | ~21 |
+| Bukan produk cover mobil (aksesori/perawatan, judul diawali nama toko) | 3 |
+| Genuinely tidak ada di master — **sudah divalidasi sesi audit OP/SP sebelumnya**, bukan temuan baru (Chevrolet Estate Magnum, Hyundai Verna, Hummer H3, Toyota FJ Cruiser) | 4 |
+| Ambigu, data ranking tidak cukup utk pilih kandidat (Suzuki Aerio Sedan vs Hatchback, Daihatsu Gran Max Minibus vs Pick Up — rentang tahun master identik) | 2 |
+| Ada di master tapi cuma kategori Strip, tidak py varian Reguler (Volkswagen Kombi) | 1 |
+
+Semua kasus di atas ada di sheet `CATATAN` dgn rank asli + alasan spesifik.
+
+### 12 resolusi manual baru (di luar yg sudah ada di versi 100)
+
+Ditemukan & diverifikasi (bukan tebakan) waktu data diperluas ke 321 baris:
+`Toyota 86`→`Toyota GR 86`, `Mercedes E Class`→`Mercedes Benz E Class`,
+`Toyota Altis`→`Toyota Corolla Altis` (**satu-satunya yg genuinely nambah baris baru** —
+11 lainnya cuma duplikat judul dari model yg sudah kepakai lewat listing lain),
+`Mitsubishi L300`→`Mitsubishi L300 Pickup`, `Volkkswagen Polo`→`Volkswagen Polo`
+(typo di file sumber), `Aion Hyptec HT`→`GAC Aion Hyptec HT`, `Mazda CX30`→`Mazda CX-30`,
+`Daihatsu Gran Max MB`→`... Minibus / Blind Van`, `Toyota Hardtop / Land Cruiser`→
+`Toyota Land Cruiser` (generasi ranking 2021-2022 cuma cocok Land Cruiser J300, Hardtop
+cuma py 1 generasi J40 1960-1985), dan **`Honda Fortuner`→`Toyota Fortuner`** — bug
+salah-brand yang SUDAH DIKONFIRMASI di sesi audit OP/SP sebelumnya (listing salah tag
+merek, mobilnya beneran Toyota Fortuner).
+
+### Diagnostik baru: bedakan "tidak ada di master" vs "ada tapi bukan Reguler"
+
+`resolusi_index_semua_kategori()` — index tambahan dari SEMUA baris master tanpa
+filter Kategori. Kalau sebuah nama ranking gagal cocok ke index Reguler-only tapi
+ADA di index semua-kategori ini, pesannya jadi eksplisit "ada di master tapi cuma
+kategori non-Reguler" (kasus Volkswagen Kombi, cuma py varian Strip) — bukan
+disamaratakan dgn "genuinely tidak ada" yang bisa bikin user salah simpul.
+
 ## Menjalankan ulang
 
 ```bash
