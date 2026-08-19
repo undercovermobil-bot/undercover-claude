@@ -63,3 +63,37 @@ How to apply: sebelum lanjut kerja OT di sesi depan, baca file ini dulu lengkap 
 **Sisa ~1.000 baris NO_LOOKUP sekarang didominasi kasus GENUINE (bukan bug klasifier lagi)**: (a) gap kategori Transparan yg memang tidak ada di master utk banyak model (konsisten dgn gap lama yg sudah diketahui), (b) generasi sangat lawas yg gak pernah di-riset (mis. Toyota Corolla Gen1-5 thn 1966-1987), (c) skema generasi listing pakai kode chassis Eropa (Mercedes W-code, BMW E/F/G-code, VW B-code) yang TIDAK py pemetaan otomatis ke skema "Gen N" master — butuh riset manual per model kalau mau dikejar, TIDAK auto-fix karena resiko salah tebak tinggi.
 
 Why: dicatat detail supaya sesi depan tidak perlu re-discover bug yang sama (terutama guard anti-dobel-alias dan bug default-warna-Exclusive yang keduanya sempat bikin regresi kalau tidak hati-hati).
+
+
+## (2026-08-19) Bug SKU salah-tag di listing "Outdoor" polos -- DIPERBAIKI
+
+Ditemukan pas kerja update harga (lihat project-undercover-harga-referensi.md
+utk kronologi lengkap): 31 baris di 15 model, hidup di listing kategori
+**"Outdoor" POLOS** (setara tier Premium UA, dikonfirmasi user -- BUKAN
+"Semi Outdoor" yg setara Reguler), tapi SKU-nya bersegmen **'R' (Reguler)**
+padahal seharusnya **'P' (Premium)**. Semua kasus: warna Abu-abu, harga
+SENDIRI sudah benar Premium (Rp700rb-1,06jt) -- murni segmen SKU-nya yg keliru.
+
+Model kena: Terios(TYT-RSH), Xenia(TYT-AVZ), Vellfire(TYT-ALP), HR-V(HND-HRV),
+X-Trail(NSN-XTR), Suzuki XL7(SZK-XL7), Sirion(DHT-SRN), Camry(TYT-CMY),
+Nissan Serena(NSN-SRN), Corolla(TYT-CRL), Stargazer(HYN-SGZ), City
+Hatchback(HND-CHB), Mercedes S Class(MBZ-SS), BMW Seri 5(BMW-S5), Toyota
+Harrier(TYT-HAR).
+
+**Diverifikasi ketat sebelum eksekusi**: SETIAP kombinasi prefix+gen+warna
+hasil ganti R->P dicocokkan ke keseluruhan SKU master UA (`ua_skus` set) --
+100% match, termasuk kasus yg kelihatan janggal (Corolla Gen 5 -- OT sendiri
+tidak py baris Premium G5 lain sbg pembanding, tapi ternyata memang ada di
+master UA). Jadi bukan SKU baru yg diciptakan, murni koreksi segmen yg salah
+ketik/salah proses ke kode yg SUDAH ADA di master.
+
+**Fix**: `scripts/fix_sku_outdoor_polos.py` (pakai helper `is_outdoor_polos()`
+dari `update_harga_per_sku.py`) -- ganti SEGMEN KE-4 SKU (R/S -> P) doang,
+gen+warna+prefix tidak disentuh. Hanya kolom SKU yg berubah, harga tidak
+disentuh (sudah benar dari awal). Hasil: 31 baris Shopee OT, 0 masalah.
+
+**Kalau extend ke toko lain (OP/SP)**: pola yg sama (listing "Outdoor" polos
+py SKU tersasar R/S padahal harusnya P) kemungkinan berulang -- jalankan
+`fix_sku_outdoor_polos.py` yg sama, tapi WAJIB verifikasi ulang tiap hasil ke
+set SKU master (jangan asumsikan otomatis benar tanpa cross-check, spt yg
+dilakukan di sini).
