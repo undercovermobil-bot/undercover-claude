@@ -251,7 +251,10 @@ def tulis_catatan(ws, dipakai, dilewati, tanpa_harga, n_target, n_ranking):
             tulis(nama, alasan)
 
 
-def main():
+def resolusi_ranking(n_target=N_TARGET):
+    """Jalankan resolusi ranking GABUNGAN -> baris master. Dipakai langsung oleh
+    main() di sini, dan direuse oleh build_top300_urutan_gabungan.py utk kasus
+    yang butuh urutan berbeda (100 pertama override dari sumber lain)."""
     harga_shopee = baca_harga_shopee()
     merk_model = baca_model_per_merk()
     norm_harga = {norm(k): (k, v) for k, v in harga_shopee.items()}
@@ -262,7 +265,7 @@ def main():
 
     dipakai, dilewati, terpakai_nama = [], [], set()
     for rank, nama_ranking in ranking:
-        if len(dipakai) >= N_TARGET:
+        if len(dipakai) >= n_target:
             break
         if POLA_BUKAN_MOBIL.match(nama_ranking):
             dilewati.append((rank, nama_ranking, "bukan produk cover mobil (aksesori/perawatan)"))
@@ -294,20 +297,32 @@ def main():
         terpakai_nama.add(target)
         dipakai.append((rank, nama_ranking, target))
 
-    if len(dipakai) < N_TARGET:
-        print(f"PERINGATAN: cuma dapat {len(dipakai)}/{N_TARGET} model unik dari "
+    if len(dipakai) < n_target:
+        print(f"PERINGATAN: cuma dapat {len(dipakai)}/{n_target} model unik dari "
               f"{len(ranking)} baris ranking yang tersedia - lanjut dgn yang ada.")
 
-    model_list = [target for _, _, target in dipakai]
+    return dipakai, dilewati, ranking
 
+
+def peta_harga_untuk(model_list, harga_shopee=None, norm_harga=None):
+    if norm_harga is None:
+        harga_shopee = harga_shopee or baca_harga_shopee()
+        norm_harga = {norm(k): (k, v) for k, v in harga_shopee.items()}
     peta_harga, tanpa_harga = {}, []
-    for nama_ranking, target in ((r[1], r[2]) for r in dipakai):
+    for target in model_list:
         alias_target = ALIAS.get(target, target)
         hit = norm_harga.get(norm(alias_target))
         if hit:
             peta_harga[target] = hit[1][0]
         else:
             tanpa_harga.append((target, "tidak ada listing 'Reguler' di Shopee Undercover Autocare"))
+    return peta_harga, tanpa_harga
+
+
+def main():
+    dipakai, dilewati, ranking = resolusi_ranking(N_TARGET)
+    model_list = [target for _, _, target in dipakai]
+    peta_harga, tanpa_harga = peta_harga_untuk(model_list)
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)

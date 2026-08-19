@@ -295,6 +295,35 @@ ADA di index semua-kategori ini, pesannya jadi eksplisit "ada di master tapi cum
 kategori non-Reguler" (kasus Volkswagen Kombi, cuma py varian Strip) — bukan
 disamaratakan dgn "genuinely tidak ada" yang bisa bikin user salah simpul.
 
+## Versi urutan gabungan (`build_top300_urutan_gabungan.py`)
+
+`DATA UC HPP Top 300 Terlaris (urutan gabungan).xlsx` — instruksi user 2026-08-19:
+
+> "Sesuaikan urutan di 100 pertamanya pakai yg terlaris 100 ini, kemudian selanjutnya
+> hingga 300 an pakai file yg sebelumnya aku kirim, kalau ada list produk yg
+> urutannya berbeda dengan 100 terlaris, taruh di setelah urutan nomor 100"
+
+Artinya: posisi 1-100 **dikunci** memakai urutan dari `DATA UC HPP Top 100
+Terlaris.xlsx` (dikirim user balik — versi lama, sumber `Mobil Terlaris.xlsx` 217
+model), posisi 101+ lanjut dari ranking GABUNGAN (321 model), model yang sudah
+kepakai di 100 pertama tidak didobel.
+
+**Verifikasi sebelum digabung**: dicek eksplisit apakah semua 100 model dari file
+top-100 lama benar-benar ada di list GABUNGAN (bukan asumsi) — hasilnya **overlap
+100%, 0 model hilang**, meski urutannya beda-beda (mis. `Toyota Rush` #15 di
+top-100 lama tapi #8 di GABUNGAN; `Honda BR-V` #13 vs #16). Karena overlap bersih,
+penggabungan tidak perlu fuzzy-match tambahan.
+
+Data (harga kolom J, formula) diambil dari **pipeline saat ini**
+(`baca_harga_shopee`/`peta_harga_untuk`), bukan nilai beku di file top-100 lama —
+supaya semua baris konsisten dengan koreksi yang sudah dilakukan sepanjang sesi.
+
+Hasil: 292 baris total (100 dikunci + 192 lanjutan GABUNGAN), 288 dapat harga.
+
+`build_top300_terlaris.py` di-refactor supaya logika resolusi ranking-nya
+(`resolusi_ranking()`) & lookup harga (`peta_harga_untuk()`) bisa dipakai ulang
+oleh script ini, bukan duplikasi kode.
+
 ## Menjalankan ulang
 
 ```bash
