@@ -385,18 +385,40 @@ file (row order), yg kebetulan match keputusan yg diinginkan di kedua kasus
 ini -- tapi JANGAN andalkan urutan file scr default terus, selalu cross-check
 manual kalau ada BENTROK baru.
 
-**Temuan anomali harga -- BELUM diverifikasi ke user, kemungkinan data lama
-salah**: 6 baris di listing **"Outdoor" POLOS** (bukan "Semi Outdoor"/"Indoor
-dan Outdoor"/"Extreme Outdoor") utk Avanza, HR-V, Rush/Terios, X-Trail, City
-Hatchback RS, Stargazer -- harga lama Rp780rb-810rb, jauh di luar rentang
-wajar tier Reguler manapun di seluruh proyek ini (296rb-490rb). SKU-nya
-memang bersegmen 'R' (bukan salah baca), jadi tetap ikut ter-update ke harga
-normal sesuai prinsip "sesuaikan dari SKU" yg dikonfirmasi user. Pola SAMA di
-semua 6 kasus (listing "Outdoor" polos, angka bulat ~800rb) -- kemungkinan
-placeholder/harga lama yg belum pernah diperbaiki, BUKAN kebetulan acak. Kalau
-ada kasus "Outdoor" polos lain di produk 21-100 yg belum dicek eksplisit,
-kemungkinan pola yg sama berulang -- worth di-scan lagi kalau lanjut ke toko
-lain (OP/SP).
+**PENTING -- dikoreksi 2026-08-19, dijelaskan user**: temuan "6 baris
+anomali Rp780-810rb" di atas SALAH ARAH sebagai "harga lama placeholder".
+User klarifikasi: di OT, listing **"Outdoor" POLOS setara tier PREMIUM UA**
+(bukan Reguler) -- **"Semi Outdoor"** yg setara Reguler. Jadi rentang harga
+jauh lebih tinggi di listing "Outdoor" polos itu MEMANG BENAR, bukan bug.
+
+Investigasi lanjutan (scan semua 100 produk, bukan cuma yg kelihatan
+anomali): ketemu **31 baris di 15 model berbeda** yg hidup di listing
+"Outdoor" polos TAPI SKU-nya SALAH TAG segmen 'R'/'S' (Reguler/Strip) padahal
+seharusnya 'P' (Premium) -- harganya SENDIRI SUDAH BENAR Premium (Rp700rb-
+1,06jt, sesuai model), cuma kode SKU-nya yg keliru. Model yg kena: BMW Seri
+5(7), Mercedes S Class(7), Toyota Harrier(3), HR-V(2), X-Trail(2), + masing2
+1 baris di Rush/Terios, Avanza/Xenia, Stargazer, City Hatchback RS, Sirion,
+Suzuki XL7, Camry, Corolla, Vellfire (+1 Nissan Serena, di luar top-100 jadi
+tidak relevan). Kalau update harga Reguler/Strip dijalankan naif ikut segmen
+SKU apa adanya (spt versi pertama script), 30 baris ini KETIMPA jadi harga
+Reguler yg salah -- padahal produknya beneran Premium.
+
+**Fix**: `scripts/update_harga_per_sku.py` sekarang py `is_outdoor_polos(nm)`
+-- exclude baris apa pun yg nama listingnya mengandung "outdoor" TAPI TIDAK
+mengandung "semi outdoor"/"extreme outdoor"/"indoor dan outdoor", TERLEPAS
+dari kata SKU-nya. Guard ini jalan SEBELUM cek segmen R/S, jadi baris yg
+salah-tag ikut kelindungi walau SKU bilang R/S. Hasil setelah fix: 3.290
+baris (turun dari 3.320 di versi pertama yg salah), 0 baris outdoor-polos
+bocor saat diverifikasi ulang.
+
+**Kalau extend ke toko lain (OP/SP) atau produk >100**: WAJIB pakai
+`is_outdoor_polos()` yg sudah ada di script (jangan filter manual berdasar
+ambang harga spt yg pertama kali dicoba -- itu cuma nangkep kasus yg
+harganya kebetulan tinggi, MELEWATKAN kasus yg harga Premium modelnya
+kebetulan rendah/normal-looking, false negative). Guard ini murni berbasis
+TEKS NAMA LISTING, bukan besaran harga, jadi menjangkau semua kasus terlepas
+dari harga modelnya berapa. SKU yg salah tag itu SENDIRI belum diperbaiki --
+di luar cakupan update harga, PR terpisah utk proyek SKU Sync.
 
 **Hasil**: 3.320 baris Shopee OT (1.205 R + 2.115 S), 92/93 prefix terpakai
 (cuma Mazda 2 Sedan #42 yg 0 baris -- genuinely tidak dijual OT, hanya Mazda 2

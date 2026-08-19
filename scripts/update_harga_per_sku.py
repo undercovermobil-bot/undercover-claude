@@ -208,6 +208,21 @@ ALIAS = {
 # (sudah dicek), tapi penjaganya tetap dipasang utk batch berikutnya.
 KECUALI = ('x-gear', 'xgear', 'custom', 'roofbox')
 
+
+def is_outdoor_polos(nm):
+    """True kalau listing OT kategori 'Outdoor' POLOS (bukan Semi/Extreme/
+    Indoor dan Outdoor). Dikonfirmasi user 2026-08-19: 'Outdoor' polos di OT
+    setara tier PREMIUM UA, BUKAN Reguler -- 'Semi Outdoor' yg setara Reguler.
+    31 baris ditemukan dgn segmen SKU R/S (harusnya P) tapi harga SUDAH benar
+    Premium (Rp700rb-1.06jt) -- SKU-nya salah tag, bukan harganya yg salah.
+    Guard ini nyegah baris begini ketimpa harga Reguler/Strip walau SKU-nya
+    (keliru) bilang R/S."""
+    low = ' '.join(str(nm or '').lower().split())
+    if 'outdoor' not in low:
+        return False
+    return not any(k in low for k in ('semi outdoor', 'extreme outdoor', 'indoor dan outdoor'))
+
+
 KAT_KE_JENIS = {'R': 'reguler', 'S': 'strip'}
 
 
@@ -330,6 +345,8 @@ def proses(target, out_dir, folders, nama_toko='UA'):
                 continue
             nm = str(wsv.cell(row=r, column=col['nama']).value or '')
             if any(k in nm.lower() for k in KECUALI):
+                continue
+            if is_outdoor_polos(nm):
                 continue
             jenis = KAT_KE_JENIS.get(kat)
             if not jenis:
