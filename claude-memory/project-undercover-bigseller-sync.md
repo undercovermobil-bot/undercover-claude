@@ -609,3 +609,21 @@ User temukan 3 produk dr layar order Big Seller ("Kesalahan: Pesanan blm dihubun
 **File**: `Cek gagal upload/{UA|SP}/Upload {Shopee|TikTok|Lazada} {toko} - Evalia-AudiQ5-MazdaCX9 (2026-08-14).xlsx` (5 file byk 0-row diskip otomatis), `SKU Gudang Big Seller/impor_sku_gudang_Audi_Q5 (2026-08-14).xlsx` (48 baris, cuma Q5 yg genuinely baru; Evalia+CX9 SKU-nya semua udah ada di gudang).
 
 **Script**: `three_models_sweep.py`+`three_models_fix.py`+`three_models_build.py` (scratchpad) -- pola generic serupa `sp_op_mass_fix.py` tp ditambah cabang "konstruksi baru tanpa master" utk model yg belum exist sama sekali (Q5).
+
+## 2026-08-20: CX9 Lazada gagal (34/34 duplicate) — akar masalah churn suffix, bukan _G salah
+
+08-14 CX9 Lazada upload GAGAL 100% (34/34 baris) error "Duplicate input sku ID". Evalia+Q5 di file sama SUKSES (65/65) walau sama2 pakai suffix `_G2` — jadi bukan suffix-nya yg salah.
+
+**Akar masalah**: source-nya SUDAH py suffix historis (`MZD-CX9-UA-R-G1-MRH_G1` utk baris Gen1, bare utk Gen2 -- master collapse Gen1&Gen2 jadi 1 SKU sama). Resolver lama SELALU hitung ulang suffix dari nol (bare dulu, baru _G2,_G3...) tanpa peduli baris itu SUDAH py suffix valid yg beda -- akibatnya baris yg `_G1`(sudah unik, gak perlu diapa2in) ikut di-**rename** jadi `_G2`. Rename yg gak perlu ini yg kena tolak Lazada (bukan soal isi akhirnya duplikat, tp soal RENAME PAKSA ke slot yg sblmnya py histori beda).
+
+**Aturan baru, WAJIB dipakai tiap Lazada dedup-suffix ke depan**: sebelum assign suffix, cek dulu `base_of(current_sku)` (strip trailing `_G\d+`) — kalau SUDAH SAMA dgn base target, **JANGAN SENTUH baris itu sama sekali**, walau nomor suffix-nya "gak sesuai urutan logis". Suffix baru cuma utk baris yg basis SEKARANG genuinely beda dr target (CVR-lama/placeholder/blank), dan nomor suffix-nya dihitung dari SEMUA sibling (yg disentuh maupun yg dibiarkan), bukan direset ulang dr `_G2`.
+
+Hasil setelah fix: dari 34 baris "berubah" versi lama, cuma **17 yg genuinely perlu diubah** (17 sisanya dibiarkan apa adanya). File baru: `Cek gagal upload/UA/Upload Lazada UA - Mazda CX9 perbaikan (2026-08-20).xlsx`. **Belum diverifikasi berhasil** (baru dibangun, blm ada laporan upload).
+
+**Script**: `cx9_lazada_refix.py` (scratchpad) -- pola `base_of()` + "jangan sentuh yg udah cocok basis" ini generalizable, pakai lagi kalau nemu kasus serupa (produk formula-collapse yg py histori suffix campur aduk).
+
+## 2026-08-20: Wuling Darion gudang import, SP
+
+User laporan dr Otoprotection TikTok: Wuling Darion blm py SKU Gudang. Master ADA (TF=1, 16 kombinasi: Reguler 6 warna + Strip 9 + Transparan 1, kode `WLG-DRN`), semua 16 **belum ada di gudang** (produk baru). File: `SKU Gudang Big Seller/impor_sku_gudang_Wuling_Darion (2026-08-20).xlsx`, format terbaru (Gudang="Default Warehouse", Stok=5, Judul gaya "Smartprotection - Cover Mobil Wuling Darion {Kategori} {Warna}").
+
+Catatan: cuma gudang import yg diminta, blm dicek/dibenerin SKU listingnya sendiri (beda dr kasus Evalia/Q5/CX9 yg sekalian fix listing) -- kalau listing OP/SP Darion ternyata jg blm pakai kode ini, itu tugas terpisah blm dikerjakan.
