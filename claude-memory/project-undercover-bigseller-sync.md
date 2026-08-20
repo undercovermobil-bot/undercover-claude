@@ -593,3 +593,19 @@ User pilih prioritas: SP+OP dulu (dari REKAP 58-model tadi, subset SP+OP = 49 mo
 **Belum**: OT (530 baris dari REKAP awal, toko ke-3 blm digarap -- user prioritas SP+OP dulu), rescan 500 sisa butuh kerja manual per-model spt Lancer.
 
 **Script**: `sp_op_mass_fix.py` (resolver generic reusable), `sp_op_build_uploads.py` (builder pakai src+vid matching persis, bukan pname+vname yg rawan tabrakan).
+
+## 2026-08-14: Evalia/Audi Q5/Mazda CX9 (dr order Big Seller gagal link SKU gudang), UA+SP
+
+User temukan 3 produk dr layar order Big Seller ("Kesalahan: Pesanan blm dihubungkan dgn SKU Gudang"): Nissan Evalia, Audi Q5, Mazda CX9. Evalia+CX9 sudah py master (TF=1 efektif keduanya, walau CX9 py 2 baris "Gen" beda tp collapse ke SKU G1 sama). **Audi Q5 sama sekali tak ada di master** -- brand baru, cuma py preseden Audi A4/A8 (kode AUD-A4/AUD-A8) sbg acuan pola. Konstruksi manual: G1(2009-2012)/G1F(2012-2017)/G2(2018-2024) dibedakan (ikut pola A4 yg jg pisah G5/G5F), UA-only (Q5 blm ada listing di SP).
+
+**Hasil**: 239 baris fix (UA Shopee 48+TikTok 65+Lazada 99, SP Shopee 13+Lazada 14; SP TikTok 0 -- ternyata sudah 100% benar duluan). 15 baris residual tak terselesaikan: 9 baris Q5 "Gen X" tanpa warna sama sekali (data yatim), 6 baris CX9 SP (2 "3 kandidat" msh misteri kecil + 4 Transparan krn master SP CX9 memang tak py kategori Transparan).
+
+**2 bug ditemukan+diperbaiki saat resolver dibangun** (kelas sama dgn bug2 sebelumnya, dicatat biar next time langsung kena):
+1. Perbandingan `tuple_slice == list_literal` SELALU False (`('ABU',) != ['ABU']`) -- semua kombinasi plain-color gagal match walau datanya identik. Fix: jangan slice-compare, cek elemen langsung (`pc[1]==code`).
+2. Filter kandidat lupa exclude kategori lain (Reguler-lookup ikut kebawa Premium+Exclusive krn sama2 py warna Abu-abu) -- "3 kandidat" padahal 1 SKU x 3 kategori. Fix: filter eksplisit `r['kategori']==cat_target` sebelum cek warna.
+
+**Format gudang import DIREVISI** (user kirim contoh `impor_untuk_membuat_sku_gudang_in (2).xlsx`, instruksi "buat model seperti ini"): kolom Gudang="Default Warehouse" dan Stok=5 (bukan dikosongkan spt sebelumnya), Judul pakai gaya **"{Toko} - Cover Mobil {Model} {Kategori} {Warna}"** (bukan gaya hyphen "Model-Toko-Kategori-Warna-Gen" yg dipakai sblmnya) -- setidaknya utk UA. **Ini kemungkinan preferensi BARU/default kedepan utk toko UA, catat & pakai lagi kalau ada gudang-import UA berikutnya**, tp verifikasi ulang ke user kalau ragu krn cuma 1 contoh.
+
+**File**: `Cek gagal upload/{UA|SP}/Upload {Shopee|TikTok|Lazada} {toko} - Evalia-AudiQ5-MazdaCX9 (2026-08-14).xlsx` (5 file byk 0-row diskip otomatis), `SKU Gudang Big Seller/impor_sku_gudang_Audi_Q5 (2026-08-14).xlsx` (48 baris, cuma Q5 yg genuinely baru; Evalia+CX9 SKU-nya semua udah ada di gudang).
+
+**Script**: `three_models_sweep.py`+`three_models_fix.py`+`three_models_build.py` (scratchpad) -- pola generic serupa `sp_op_mass_fix.py` tp ditambah cabang "konstruksi baru tanpa master" utk model yg belum exist sama sekali (Q5).
