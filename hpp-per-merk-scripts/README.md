@@ -410,3 +410,124 @@ Fix (di `tulis_catatan()`):
 dengan `value=""`, yang oleh openpyxl diserialisasi sebagai `<c t="inlineStr" />` tanpa child
 `<is>` — melanggar skema OOXML. Sudah ikut diperbaiki di `tulis()`: sel yang isinya kosong
 sekarang dilewati total, tidak disentuh sama sekali.)
+
+---
+
+# Penyamaan SKU Mobil Kembar (badge engineering)
+
+Script: `samakan_sku_kembar.py` → `verify_kembar.py` → `laporan_listing_kembar.py`
+
+## Keputusan user (2026-08-19/20)
+
+- Mobil kembar **berbagi 1 SKU** (bukan SKU sendiri-sendiri yang "disamakan formatnya").
+- Prefix **Toyota yang menang** kalau grupnya lintas merk: "Rush+Terios jadi TYT-RSH".
+- Alphard+Vellfire → `TYT-ALP`.
+- Rocky **generasi awal (F70/F300) ≠ Rocky baru**: "opsi satu benar, tapi rocky yg
+  generasi awal = feroza = taft gt".
+- Jumlah kode generasi mengikuti **Total Formula (TF)** di Sheet2
+  `Data_Mobil_Lebih_dari_1_Formula_2.xlsx`.
+
+## Bukti pendukung: harga listing Shopee (Reguler termurah)
+
+| Grup | Harga |
+|---|---|
+| Avanza = Xenia = Veloz | 298.000 |
+| Agya = Ayla | 287.000 |
+| Calya = Sigra | 293.000 |
+| Rush = Terios | 302.000 |
+| Raize = Rocky baru | 292.000 |
+| Alphard = Vellfire | 317.000 |
+| Feroza = Taft GT | 288.000 |
+| ~~Feroza Long~~ | 295.000 → **beda, sengaja TIDAK digabung** |
+
+Harga listing sama persis = ukuran cover sama = memang 1 SKU. Ini dipakai sebagai
+verifikasi independen atas pernyataan user, bukan sebagai sumber keputusan.
+
+## Hasil di master
+
+1.438 baris berubah, 726 baris memang sudah sesuai (total 2.164 baris grup kembar).
+
+| Grup | Prefix kanonik | Perpindahan |
+|---|---|---|
+| Avanza+Xenia+Veloz (TF=2) | `TYT-AVZ` | `DHT-XNA`→G1 (132), `TYT-VLZ`→G3 (132), `DHT-XNA` G3→G3 (66) |
+| Agya+Ayla (TF=1) | `TYT-AGY` | `DHT-AYL` (330) |
+| Calya+Sigra (TF=1) | `TYT-CLY` | `DHT-SGR` (66) |
+| Rush+Terios (TF=1) | `TYT-RSH` | `DHT-TRS` (132) |
+| Raize+Rocky baru (TF=1) | `TYT-RZE` | `DHT-RCK` Gen 2 (A200) (66) |
+| Alphard+Vellfire (TF=1) | `TYT-ALP` | `TYT-VLF` (330) |
+| Rocky lawas+Feroza+Taft GT (TF=1) | `DHT-RCK` | `DHT-FRZ` (132), `DHT-TG` (52) |
+
+## Tabrakan SKU yang ikut ketahuan & beres
+
+`DHT-RCK-*-G1-*` di master dipakai **dua mobil yang sama sekali berbeda**: Rocky
+F70/F300 (1984-2002, SUV kotak) dan Rocky Gen 2 A200 (2021-2026, crossover kembaran
+Raize). Setelah pemisahan: F70/F300 tetap `DHT-RCK`, A200 jadi `TYT-RZE`.
+
+Bukti tambahan bahwa keduanya memang beda: listing Shopee sudah memakai kode generasi
+berbeda (`F7` vs `G2`) di dalam satu listing — jadi yang salah selama ini justru master
+yang menyamakan keduanya jadi `G1`.
+
+## Catatan penting yang perlu keputusan user
+
+1. **Prefix kanonik grup Rocky lawas** dipakai `DHT-RCK` (dari jawaban user "opsi satu
+   benar" = Rocky lawas tetap `DHT-RCK`). Kalau lebih suka `DHT-FRZ` (nama pasar
+   Indonesia, tidak rancu dengan Rocky 2021), cukup ganti konstanta
+   `PREFIX_ROCKY_LAWAS` di `samakan_sku_kembar.py`.
+2. **Sheet2 no.60 menulis Daihatsu Rocky TF=1** dengan kedua generasi (F70/F300 dan
+   Gen 2) dalam satu entri — artinya file formula menganggap keduanya 1 cover. Ini
+   **bertentangan** dengan instruksi user. Yang dipakai instruksi user (didukung bukti
+   kode generasi terpisah di listing). Sheet2 perlu dikoreksi jadi 2 entri.
+3. **Veloz Gen 1 (2011-2021)** ikut formula Avanza **Gen 3** (`G3`), bukan G1 — mengikuti
+   catatan Sheet2 "Avanza Gen 3 = Xenia Gen 3 = Veloz Gen 1,2,3". Ini counter-intuitif
+   (bodi Veloz 2011-2021 basisnya Avanza Gen 2), jadi perlu konfirmasi.
+4. **Harga Rocky lawas 292.000 vs Feroza/Taft GT 288.000** — kalau memang satu cover,
+   salah satu listing salah harga (beda 4.000). Perlu diseragamkan.
+5. **`Daihatsu Ayla` Gen 2 dan `Daihatsu All New Ayla` Gen 2 (A350)** adalah mobil yang
+   sama dengan dua nama baris di master (132 baris kembar). Sengaja **tidak dihapus** —
+   menghapus baris master itu keputusan user. Pola yang sama: `Daihatsu Xenia` /
+   `Daihatsu All New Xenia`, `Daihatsu Sirion` / `Daihatsu New Sirion`,
+   `Daihatsu Terios` / `Daihatsu Terios / New Terios`.
+
+## KOREKSI: audit "7 pelanggaran Total Formula" itu SALAH
+
+Laporan sebelumnya (2026-08-20) menyebut 7 model melanggar TF. Setelah diaudit ulang
+lewat `audit_tf2.py`: **0 pelanggaran** dari 192 entri Sheet2 yang ketemu di master.
+
+Penyebab false positive: audit lama mengelompokkan **per nama model di master**, padahal
+satu entri formula bisa dipegang beberapa nama baris. Contoh:
+
+- `Daihatsu Xenia` TF=2 "cuma pakai G1" → kode `G3`-nya ada di baris bernama
+  **`Daihatsu All New Xenia`**. Total 2 kode = sesuai.
+- `Honda Civic` TF=11 → `Honda Civic` (11 kode) + `Honda Civic Sedan` + `Honda Civic
+  Sedan / RS`. Total tepat 11 kode.
+- `Nissan Navara` TF=2 → `Nissan Navara` (G1) + `Nissan Navara PRO-4X` (G4) = 2 kode.
+- `Toyota Corolla` TF=9 → `Corolla` + `Corolla Altis` + `Corolla Cross` = 6 kode (≤ 9).
+
+Ini persis jebakan yang sudah dicatat di `feedback-undercover-sku-sync-lessons.md`
+(pernah menghasilkan "85 pelanggaran palsu"). **Selalu kelompokkan per entri formula,
+jangan per nama baris master.**
+
+## Perubahan yang harus menyusul di listing Shopee
+
+`laporan_listing_kembar.py` → `PERUBAHAN SKU KEMBAR - listing Shopee UA.xlsx`
+(**319 varian** di toko Undercover Autocare).
+
+Listing memakai kode generasi yang lebih banyak dari master dan harus ikut melebur:
+Xenia `G2`, Veloz `G2`, Agya `G2`, Rush `G2`, Terios `G2`, Alphard `G4`, Feroza `G3`,
+Rocky `F7`/`G2`.
+
+Bug listing yang ikut ketahuan: **`DHT-TG-UA-R-Hijau-*`** — slot generasi di 4 varian
+Reguler Taft GT diisi kata warna `"Hijau"`, bukan kode generasi.
+
+## Verifikasi (`verify_kembar.py`, 12 cek, semuanya dibaca ulang dari disk)
+
+1. daftar sheet sama · 2. jumlah baris tiap sheet sama · 3. **tidak ada kolom selain SKU
+yang berubah** · 4. jumlah SKU berubah tepat 1.438 · 5. semua baris grup kembar pakai
+prefix+kode generasi target · 6. semua kunci peta ketemu di master · 7. prefix lama
+(`DHT-XNA` `TYT-VLZ` `DHT-AYL` `DHT-SGR` `DHT-TRS` `DHT-FRZ` `DHT-TG` `TYT-VLF`) hilang
+total · 8. kembar satu grup menghasilkan SKU identik per toko/kategori/warna ·
+9. jumlah kode generasi ≤ TF · 10. Rocky lawas ≠ Rocky baru · 11. kode toko di SKU hanya
+`UA`/`SP` (aturan konsolidasi OT→UA, OP→SP) · 12. tidak ada elemen `<f>` di XML (anti
+dialog "repair" Excel).
+
+Semua lulus.
