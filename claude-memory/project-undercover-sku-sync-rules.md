@@ -62,3 +62,7 @@ Instruksi user (berlaku SEMUA toko, formula produk sama krn kembar/rebadge): twi
 **Status UA (source fresh 2026-08-12, hanya UA)**: Shopee 0 (sudah benar semua -- ternyata sebagian sdh dikerjakan manual/sesi lain sebelum diminta), TikTok 211 baris/17 produk, Lazada 48 baris. File: `Cek gagal upload/UA/Upload {TikTok|Lazada} UA - Twin Model (2026-08-12).xlsx`.
 
 **BELUM dikerjakan**: OT/SP/OP (user minta "di semua toko" tapi source yg dikirim 08-12 cuma UA) -- perlu listing fresh OT/SP/OP baru sebelum bisa diterapkan ke situ.
+
+## Mitsubishi Colt T120SS Pick Up (2026-08-21) — model baru, kode MTB-CT1
+
+Tak ada di master sama sekali. Ikut pola Mitsubishi L300 Pickup (model pickup klasik sejenis, TF=1, cuma Reguler(5 warna)+Strip(9), tanpa Premium/Exclusive/Transparan) sbg template. Kode `CT1` (Colt T1-series), bukan singkatan literal T120SS krn sudah ada pola L300→`LP` (singkat, bukan literal).
