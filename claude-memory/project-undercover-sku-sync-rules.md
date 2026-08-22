@@ -77,7 +77,11 @@ Live listing "Carry Pick Up" dan "Carry Reguler" share SKU sama (`SZK-CAR-...`) 
 
 Hasil: 592 resolved, 6 unresolved (OT "Carry/Carry Pickup Outdoor" Gen7/8/10 tanpa label warna eksplisit, Premium py 2 warna jadi ambigu Abu vs Silver — perlu konfirmasi manual user). Detail lengkap+file di [[project-undercover-bigseller-sync]] 2026-08-22.
 
-## Daihatsu Gran Max Minibus = Luxio (2026-08-22) — pola twin lagi, kode adopsi DHT-LXO
+## Daihatsu Gran Max Minibus = Luxio (2026-08-22) — ARAH SUDAH DIKOREKSI, lihat catatan di bawah
+
+**KOREKSI sesaat setelah dikerjakan**: user langsung bilang "terbalik skunya, harusnya luxio yg skunya pakai gran max" — jadi arah yg BENAR adalah kebalikan dari draft awal: **Luxio yg adopsi kode Gran Max (`DHT-GMX`)**, bukan Gran Max adopsi `DHT-LXO`. File batch awal ("...Samakan Luxio...") sudah DIHAPUS dan diganti file baru ("...Luxio-GranMax Minibus (revisi arah, kode DHT-GMX)...") yg isinya gabungan: (a) fix Luxio asli (148 baris, target DHT-GMX) + (b) revert Gran Max Minibus balik ke DHT-GMX (150 baris, jaga2 kalau batch awal keburu diupload user sebelum koreksi). Semua teknis parsing (deteksi body-style, kategori, warna, tier) di bawah ini TETAP BERLAKU SAMA, cuma arah kode-nya kebalik. **Pelajaran**: untuk model "kembar/ukuran sama" yg BUKAN dari daftar 7-pasang eksplisit user (lihat [[project-undercover-sku-sync-rules]] section 08-12), jangan asumsikan arah dari kalimat semata kalau ambigu -- di sini kalimat user "gran max minibus skunya sama dengan luxio" ternyata dimaksud Luxio ikut Gran Max, bukan sebaliknya (beda dgn pola 08-12 yg selalu "X = Y" berarti X ikut Y). Kalau ragu arah utk kasus serupa ke depan, lebih aman tanya dulu drpd langsung asumsi dari urutan kalimat.
+
+Detail resolver asli (masih akurat, cuma target kode-nya kebalik jadi DHT-GMX bukan DHT-LXO):
 
 User: "gran max minibus skunya sama dengan luxio karena ukuran mereka sama" — pola sama persis dgn [[project-undercover-sku-sync-rules]] twin-model 08-12 (bukan model baru, adopsi kode existing). Luxio (`DHT-LXO`) TF=1 semua toko. Master py sheet gabungan "Daihatsu Gran Max Minibus / Blind Van" (kode lama `DHT-GMX`) yg strukturnya paralel 1:1 persis dgn Luxio (toko/kategori/warna/gen sama, cuma model-code beda) — tinggal swap segmen GMX->LXO, kategori/warna/gen ikut apa adanya.
 
@@ -85,6 +89,10 @@ User: "gran max minibus skunya sama dengan luxio karena ukuran mereka sama" — 
 
 **2 data-quality quirk kecil ditemukan+ditolerir**: (1) 2 baris UA Lazada vname cuma "Blindvan (2008-2024)"/"Pickup (2008-2024)" tanpa info warna sama sekali — fallback: kalau current_sku udah py format `DHT-GMX-{toko}-{kategori}-G1-{warna}` valid, warna diambil langsung dari situ (cuma swap GMX->LXO), gak perlu nebak. (2) SP TikTok ada typo "Eltie Biru" (harusnya "Elite") -- ditambah sbg alias toleran di dict tier, pola sama dgn 'warior'/'stirp' yg udah ada duluan.
 
-Hasil: 150 resolved, 0 gagal, 149 baris Pick Up diskip (di luar scope, sudah benar). Semua kode gudang `DHT-LXO` (66) udah lengkap ada di Big Seller (Luxio produk lama, bukan baru) — **tidak perlu file impor gudang**. File: `Cek gagal upload/{toko}/Upload {channel} {toko} - Gran Max Minibus - Samakan Luxio (2026-08-22).xlsx`, 9 file (UA Shopee/TikTok/Lazada, OT Shopee, SP Shopee/TikTok/Lazada, OP Shopee/TikTok).
+Hasil (Gran Max, sblm koreksi arah): 150 resolved, 0 gagal, 149 baris Pick Up diskip (di luar scope, sudah benar). Hasil (Luxio, resolver kebalik `luxio_fix.py`, arah final yg benar): 148 resolved, 0 gagal, target semua `DHT-GMX-{toko}-{kategori}-G1-{warna}`.
 
-**Script**: `granmax_sweep.py`+`granmax_fix.py`+`granmax_build.py` (scratchpad), pola generic sama dgn `carry_split_*.py`.
+Kode gudang: `DHT-GMX` sudah dicek ulang stlh koreksi arah — lengkap (semua 33 kombinasi unik dari master ada, termasuk varian toko-code OT/OP legacy yg terpisah dr UA/SP). **Tidak perlu file impor gudang** utk kasus ini jg.
+
+File final (pasca-koreksi): `Cek gagal upload/{toko}/Upload {channel} {toko} - Luxio-GranMax Minibus (revisi arah, kode DHT-GMX) (2026-08-22).xlsx`, 9 file (UA Shopee/TikTok/Lazada, OT Shopee, SP Shopee/TikTok/Lazada, OP Shopee/TikTok). File draft awal ("...Samakan Luxio...") sudah dihapus dari folder, jangan dicari/dipakai.
+
+**Script**: `granmax_sweep.py`+`granmax_fix.py`+`granmax_build.py` (draft awal, arah salah, tp logic parsing reusable) lalu `luxio_sweep.py`+`luxio_fix.py`+`luxio_build.py` (arah final benar, gabung fix Luxio + revert Gran Max jadi 1 file per toko/channel) -- semua di scratchpad, pola generic sama dgn `carry_split_*.py`.
