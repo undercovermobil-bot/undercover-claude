@@ -76,3 +76,15 @@ Live listing "Carry Pick Up" dan "Carry Reguler" share SKU sama (`SZK-CAR-...`) 
 **Kategori "outdoor" OT** (dipakai jg di produk OT lain, bukan cuma Carry): "Extreme Outdoor"=Exclusive(E), "Outdoor"(bare)=Premium(P), "Semi Outdoor"=Reguler(R). Substring-match harus urut dari paling spesifik dulu ("extreme outdoor"/"semi outdoor" sebelum bare "outdoor"), kalau nggak "semi/extreme outdoor" ke-match duluan sama rule bare-'outdoor'.
 
 Hasil: 592 resolved, 6 unresolved (OT "Carry/Carry Pickup Outdoor" Gen7/8/10 tanpa label warna eksplisit, Premium py 2 warna jadi ambigu Abu vs Silver — perlu konfirmasi manual user). Detail lengkap+file di [[project-undercover-bigseller-sync]] 2026-08-22.
+
+## Daihatsu Gran Max Minibus = Luxio (2026-08-22) — pola twin lagi, kode adopsi DHT-LXO
+
+User: "gran max minibus skunya sama dengan luxio karena ukuran mereka sama" — pola sama persis dgn [[project-undercover-sku-sync-rules]] twin-model 08-12 (bukan model baru, adopsi kode existing). Luxio (`DHT-LXO`) TF=1 semua toko. Master py sheet gabungan "Daihatsu Gran Max Minibus / Blind Van" (kode lama `DHT-GMX`) yg strukturnya paralel 1:1 persis dgn Luxio (toko/kategori/warna/gen sama, cuma model-code beda) — tinggal swap segmen GMX->LXO, kategori/warna/gen ikut apa adanya.
+
+**Scope ketat "Minibus" doang** — Gran Max Pick Up py kode SENDIRI (`DHT-GMXP`, master terpisah), sudah benar, TIDAK disentuh. Deteksi body-style: cek pname dulu ("minibus" / "pick up"/"pickup"/"pick-up"); kalau pname bare tanpa keyword (produk UA Lazada tipe "Gran Max Premium"/"Gran Max Exclusive" yg gabungin 2 body-style dlm 1 listing via variant), fallback cek vname — "blindvan"/"blind van" = setara Minibus (ikut penamaan sheet master sendiri), "pickup" = Pick Up (skip). Vname "Model Lain/Custom" tanpa keyword body-style = ambigu, dibiarkan (matched business rule#4 generic TF>1->kosong, karena 1 produk py 2 formula riil: Blindvan & Pickup).
+
+**2 data-quality quirk kecil ditemukan+ditolerir**: (1) 2 baris UA Lazada vname cuma "Blindvan (2008-2024)"/"Pickup (2008-2024)" tanpa info warna sama sekali — fallback: kalau current_sku udah py format `DHT-GMX-{toko}-{kategori}-G1-{warna}` valid, warna diambil langsung dari situ (cuma swap GMX->LXO), gak perlu nebak. (2) SP TikTok ada typo "Eltie Biru" (harusnya "Elite") -- ditambah sbg alias toleran di dict tier, pola sama dgn 'warior'/'stirp' yg udah ada duluan.
+
+Hasil: 150 resolved, 0 gagal, 149 baris Pick Up diskip (di luar scope, sudah benar). Semua kode gudang `DHT-LXO` (66) udah lengkap ada di Big Seller (Luxio produk lama, bukan baru) — **tidak perlu file impor gudang**. File: `Cek gagal upload/{toko}/Upload {channel} {toko} - Gran Max Minibus - Samakan Luxio (2026-08-22).xlsx`, 9 file (UA Shopee/TikTok/Lazada, OT Shopee, SP Shopee/TikTok/Lazada, OP Shopee/TikTok).
+
+**Script**: `granmax_sweep.py`+`granmax_fix.py`+`granmax_build.py` (scratchpad), pola generic sama dgn `carry_split_*.py`.
