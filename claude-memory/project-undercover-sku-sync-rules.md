@@ -96,3 +96,19 @@ Kode gudang: `DHT-GMX` sudah dicek ulang stlh koreksi arah — lengkap (semua 33
 File final (pasca-koreksi): `Cek gagal upload/{toko}/Upload {channel} {toko} - Luxio-GranMax Minibus (revisi arah, kode DHT-GMX) (2026-08-22).xlsx`, 9 file (UA Shopee/TikTok/Lazada, OT Shopee, SP Shopee/TikTok/Lazada, OP Shopee/TikTok). File draft awal ("...Samakan Luxio...") sudah dihapus dari folder, jangan dicari/dipakai.
 
 **Script**: `granmax_sweep.py`+`granmax_fix.py`+`granmax_build.py` (draft awal, arah salah, tp logic parsing reusable) lalu `luxio_sweep.py`+`luxio_fix.py`+`luxio_build.py` (arah final benar, gabung fix Luxio + revert Gran Max jadi 1 file per toko/channel) -- semua di scratchpad, pola generic sama dgn `carry_split_*.py`.
+
+## BUG SERIUS 2026-08-22: aturan base_of()-aware Lazada (dari kasus CX9 08-20) TIDAK dipakai lagi di carry_build.py & luxio_build.py -- 1 kegagalan nyata + 3 lain dicegah
+
+User laporan SP Lazada Carry Split (`Cek gagal upload/SP/Lazada/pricestock...export1787373724257_0822-12-42-04.xlsx`, file "Keterangan Error") GAGAL 100% (70/70 baris, 2 produk: Suzuki Carry pid 8002154365 + Carry Pickup pid 8004180686) — error sama persis dgn CX9 08-20: `Duplicate input sku ID`.
+
+**Akar masalah**: `do_lazada()` di `carry_build.py` DAN `luxio_build.py` masih pakai logika dedup naive lama (assign suffix dari nol tiap kali, gak cek basis current dulu) — PADAHAL aturan base_of()-aware ("baris yg basis current-nya SUDAH sama dgn basis target, JANGAN disentuh; suffix baru cuma utk baris yg genuinely beda, dihitung dari SEMUA sibling") **SUDAH ditemukan+didokumentasikan dari kasus CX9** (lihat [[project-undercover-bigseller-sync]] 2026-08-20) tp KELUPAAN diterapkan pas nulis builder Carry & Luxio-GranMax minggu yg sama. Ini bug proses (lupa pakai fix sendiri), bukan bug logika baru.
+
+**Dampak diperiksa ke SEMUA 4 file Lazada yg dibangun sesi ini pakai builder lama** (bukan cuma yg dilaporkan gagal):
+- SP Carry Split: 70/70 baris genuinely perlu berubah (cocok persis dgn 70 baris yg gagal) — confirmed real failure.
+- UA Carry Split: builder lama tulis 136 baris "berubah", versi bener cuma **102** genuinely perlu (34 baris churn tak perlu) — **belum dilaporkan gagal tp resiko sama, diperbaiki preventif sebelum sempat diupload**.
+- UA Luxio-GranMax: 36 -> **17** genuinely perlu (19 churn).
+- SP Luxio-GranMax: 32 -> **16** genuinely perlu (16 churn).
+
+Fix: 1 script generik reusable `refix(store, targets_by_vid, tag, outp)` di `lazada_refix_generic.py` (scratchpad) — pola sama dgn `cx9_lazada_refix.py` tp pid-set diambil otomatis dr daftar fix (bukan hardcode manual). Ke-4 file Lazada di-**overwrite di nama file yg sama** (Shopee & TikTok TIDAK kena bug ini, gak perlu diulang -- bug spesifik ke logika suffix-dedup Lazada).
+
+**ATURAN DIPERKUAT (bukan sekadar dicatat, tp WAJIB jadi bagian TEMPLATE builder Lazada ke depan)**: jangan lagi tulis `do_lazada()` dari nol tiap kali bikin builder baru — pakai/adaptasi `lazada_refix_generic.py`'s `refix()` sbg basis SETIAP kali ada perubahan SKU yg disubmit ke Lazada, walau kelihatannya "baris ini pasti aman". Precedent 08-20 (CX9) + 08-22 (Carry+Luxio, 4 file sekaligus) nunjukin bug ini gampang keulang kalau nulis builder baru dari template lama/naive, bukan dari versi yg udah correct.
