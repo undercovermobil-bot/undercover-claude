@@ -627,3 +627,31 @@ Hasil setelah fix: dari 34 baris "berubah" versi lama, cuma **17 yg genuinely pe
 User laporan dr Otoprotection TikTok: Wuling Darion blm py SKU Gudang. Master ADA (TF=1, 16 kombinasi: Reguler 6 warna + Strip 9 + Transparan 1, kode `WLG-DRN`), semua 16 **belum ada di gudang** (produk baru). File: `SKU Gudang Big Seller/impor_sku_gudang_Wuling_Darion (2026-08-20).xlsx`, format terbaru (Gudang="Default Warehouse", Stok=5, Judul gaya "Smartprotection - Cover Mobil Wuling Darion {Kategori} {Warna}").
 
 Catatan: cuma gudang import yg diminta, blm dicek/dibenerin SKU listingnya sendiri (beda dr kasus Evalia/Q5/CX9 yg sekalian fix listing) -- kalau listing OP/SP Darion ternyata jg blm pakai kode ini, itu tugas terpisah blm dikerjakan.
+
+## 2026-08-21: Mitsubishi Colt T120SS Pick Up gudang import, UA
+
+User laporan dr screenshot order gagal ("Undercover Autocare - Cover Mobil Mitsubishi Colt T120SS Pick Up Reguler"). Model sama sekali tak ada di master (dicek scan prefix SKU semua sheet Mitsubishi -- "Colt" absen total) -- brand baru murni, tak py listing existing utk direferensi. Konstruksi manual ikut template Mitsubishi L300 Pickup (pickup klasik sejenis, TF=1, cuma Reguler 5 warna + Strip 9, tanpa Premium/Exclusive/Transparan). Kode `MTB-CT1` (bukan singkatan literal T120SS, ikut pola L300->`LP` yg jg singkat bukan literal).
+
+**Bug kecil ditemukan+fix**: draft awal judul baris Strip salah tulis "...Pick Up Reguler {tier}" (harusnya "Strip {tier}") -- kebawa copy-paste dr baris Reguler, ketahuan dr review manual sebelum save final.
+
+File: `SKU Gudang Big Seller/impor_sku_gudang_Colt_T120SS (2026-08-21).xlsx`, 14 baris (Reguler 5 + Strip 9), format terbaru (Gudang="Default Warehouse", Stok=5, Judul "Undercover Autocare - Cover Mobil Mitsubishi Colt T120SS Pick Up {Kategori} {Warna}").
+
+Catatan: cuma gudang import yg dibangun (sesuai permintaan) -- kode SKU listing (Shopee/TikTok/Lazada UA) blm dibuatkan krn produk ini kemungkinan baru mau di-listing, blm ada baris existing utk diperbaiki.
+
+## 2026-08-22: Suzuki Carry vs Carry Pickup dipisah, kode baru SZK-CRP, SEMUA toko+channel
+
+User laporan screenshot: listing "Suzuki Carry Pick Up" dan "Suzuki Carry Reguler" share SKU sama persis (`SZK-CAR-UA-R-G1-ABU`) padahal ukuran fisik beda -- minta kode dibedakan + upload file semua toko/channel + gudang import.
+
+Sweep "carry" (exclude "futura") semua toko/channel: 776 baris total. Master cuma py `Suzuki Carry`(SZK-CAR, UA-only, 102 baris, Gen6-Gen11 semua collapse->segmen G1, kategori Exclusive 1 warna/Premium 2/Reguler 5/Strip 9, tanpa Transparan walau listing live py Transparan) dan `Suzuki New Carry Pick-Up`(SZK-NCR, ada di 4 toko tp cuma 1 generasi "Baru") -- **SZK-NCR dicek BUKAN produk yg sama** dgn listing "Carry Pick Up" (yg rentang Gen6-11 spt Carry sendiri, bukan model modern 1-gen), jadi diputuskan kode BARU `SZK-CRP` (bukan reuse SZK-NCR). Struktur kategori/warna ikut sama persis pola SZK-CAR, gen tetap G1 semua toko.
+
+Deteksi pickup vs reguler dari substring "pick up"/"pickup"/"pick-up" pd nama produk.
+
+**2 bug ditemukan+diperbaiki saat resolver dibangun**:
+1. Kategori "outdoor" OT (Extreme Outdoor=Exclusive/Outdoor bare=Premium/Semi Outdoor=Reguler) -- substring-match urutan salah, bare 'outdoor' ke-match duluan sblm sempat cek 'semi outdoor'/'extreme outdoor'. Fix: taruh pola lebih spesifik duluan di list pencocokan.
+2. **Kode tier Strip UA/OT ketuker pakai dict warna 1-huruf milik SP/OP** (harusnya UA/OT py dict 2-huruf sendiri: EAB/PAB/WAB, bukan EA/PA/WA) -- akibatnya semua baris Strip UA/OT keluar kode rusak/kependekan. Ketahuan dr spot-check hasil terlihat kode kayak "...-S-G1-PA" bukan "...-S-G1-PAB". **Pola resiko berulang, cek [[project-undercover-sku-sync-rules]] section Carry** tiap bikin resolver baru yg nyentuh Strip UA/OT.
+
+Hasil: 592 resolved, 6 unresolved (OT "Carry/Carry Pickup Outdoor" Gen7/8/10 tanpa label warna eksplisit di teks varian -- Premium py 2 pilihan warna [Abu/Silver] jadi genuinely ambigu, **belum dilaporkan ke user, perlu konfirmasi manual**). Per kode: SZK-CRP 461 baris, SZK-CAR 131 baris.
+
+File: 9 file upload -- `Cek gagal upload/{toko}/Upload {channel} {toko} - Suzuki Carry Split (2026-08-22).xlsx` (UA Shopee/TikTok/Lazada, OT Shopee, SP Shopee/TikTok/Lazada, OP Shopee/TikTok -- OT tak py TikTok/Lazada, OP Lazada tak diminta/tak ada source). Gudang: `SKU Gudang Big Seller/impor_sku_gudang_Suzuki_Carry_Split (2026-08-22).xlsx`, 35 kode baru yg blm ada di gudang (2x SZK-CAR-SP [Reguler-Orange + Transparan] + 16x SZK-CRP-SP + 17x SZK-CRP-UA -- SZK-CRP-OT/OP tak dibuatkan, ikut aturan#3 konsolidasi gudang UA+SP saja). Semua 10 file terverifikasi format (struktur sheet cocok source asli) sebelum dikirim.
+
+**Script**: `carry_split_sweep.py`+`carry_split_fix.py`+`carry_build.py` (scratchpad) -- pola sama dgn `three_models_*.py`.

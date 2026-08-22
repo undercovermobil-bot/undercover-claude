@@ -66,3 +66,13 @@ Instruksi user (berlaku SEMUA toko, formula produk sama krn kembar/rebadge): twi
 ## Mitsubishi Colt T120SS Pick Up (2026-08-21) — model baru, kode MTB-CT1
 
 Tak ada di master sama sekali. Ikut pola Mitsubishi L300 Pickup (model pickup klasik sejenis, TF=1, cuma Reguler(5 warna)+Strip(9), tanpa Premium/Exclusive/Transparan) sbg template. Kode `CT1` (Colt T1-series), bukan singkatan literal T120SS krn sudah ada pola L300→`LP` (singkat, bukan literal).
+
+## Suzuki Carry vs Carry Pickup (2026-08-22) — model baru terpisah, kode SZK-CRP
+
+Live listing "Carry Pick Up" dan "Carry Reguler" share SKU sama (`SZK-CAR-...`) padahal ukuran beda — user eksplisit minta dipisah. Master cuma py `Suzuki Carry`(SZK-CAR, UA only, 102 baris, Gen6-11 semua->G1) dan `Suzuki New Carry Pick-Up`(SZK-NCR, single-gen "Baru") — SZK-NCR **BUKAN** produk yg sama (itu pickup modern 1-generasi, sedangkan listing "Carry Pick Up" rentang Gen6-11 spt Carry sendiri) jadi dibuatkan kode baru `SZK-CRP` (bukan reuse SZK-NCR). Struktur kategori/warna sama persis dgn SZK-CAR (Exclusive 1 warna, Premium 2, Reguler 5, Strip 9 + Transparan yg muncul di listing tp gak ada di master), gen tetap G1 semua (TF=1 efektif). Deteksi pickup vs reguler: substring "pick up"/"pickup"/"pick-up" di nama produk.
+
+**Bug ditemukan+fix — 1-huruf vs 2-huruf kode tier warna, RESIKO BERULANG**: kode tier Strip UA/OT butuh 2-huruf warna (EAB/PAB/WAB = Elite/Epic/Warrior + Abu/Biru/Merah), SP/OP butuh 1-huruf (S1A/S2A/S3A). Sempat kepake 1 dict warna sama utk keduanya, hasil kode UA/OT jadi rusak/kependekan (mis. "...-S-G1-PA" bukan "...-S-G1-PAB"). Ketauan dr spot-check hasil. **Kalau nulis resolver baru utk model apapun yg py kategori Strip di UA/OT, SELALU pastikan dict warna tier UA/OT (2-huruf) terpisah dari dict SP/OP (1-huruf) — jangan share 1 dict warna utk kedua skema.**
+
+**Kategori "outdoor" OT** (dipakai jg di produk OT lain, bukan cuma Carry): "Extreme Outdoor"=Exclusive(E), "Outdoor"(bare)=Premium(P), "Semi Outdoor"=Reguler(R). Substring-match harus urut dari paling spesifik dulu ("extreme outdoor"/"semi outdoor" sebelum bare "outdoor"), kalau nggak "semi/extreme outdoor" ke-match duluan sama rule bare-'outdoor'.
+
+Hasil: 592 resolved, 6 unresolved (OT "Carry/Carry Pickup Outdoor" Gen7/8/10 tanpa label warna eksplisit, Premium py 2 warna jadi ambigu Abu vs Silver — perlu konfirmasi manual user). Detail lengkap+file di [[project-undercover-bigseller-sync]] 2026-08-22.
