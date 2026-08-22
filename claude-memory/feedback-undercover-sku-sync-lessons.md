@@ -91,3 +91,13 @@ Terbukti 2026-08-07. Upload TikTok berisi 645 baris yang berubah saja → **614 
 Cara verifikasi sebelum kirim: bandingkan himpunan `sku_id` per `product_id` di file upload vs file sumber; harus identik untuk setiap produk. Kalau ada yang kurang, pasti kena `sku not allow delete`.
 
 **Catatan**: permintaan user "isinya produk yg memang perlu perubahan aja" tetap terpenuhi — yang difilter adalah **produk**-nya (120 dari ~1.900 produk), bukan barisnya. Jangan tafsirkan sebagai filter per-baris untuk TikTok.
+
+## Shopee 2-file source: JANGAN hardcode "baris ini dari file 1/file 2" — boundary split geser antar export (2026-08-22)
+
+Kasus: OT Shopee py 2 file source (`1.xlsx`+`2.xlsx`, total >9000 baris, Shopee otomatis pecah export jadi beberapa file kalau katalog besar). Builder yg nyatet `src` (file asal) per baris SAAT SWEEP AWAL, lalu pas rebuild cuma scan file yg tercatat di `src` itu → **17 dari 45 baris target hilang tanpa error/warning** krn di export BARU (user re-export stlh update harga), 17 baris itu geser posisi dr `2.xlsx` ke `1.xlsx` (Shopee split boundary bukan berdasarkan produk/SKU yg stabil, tampaknya cuma potong per-N-baris row-count, jadi geser tiap kali jumlah/urutan baris total berubah).
+
+**Gejala**: jumlah baris hasil build < jumlah baris di fixes.json, TANPA pesan error apapun (loop `if vid not in ov: continue` diam2 skip, gak pernah tau ada yg "harusnya ketemu tp kagak").
+
+**Aturan baru**: kalau source Shopee py >1 file DAN sedang REBUILD pakai file yg mungkin sudah di-re-export user (bukan file yg sama persis dgn saat sweep pertama) — JANGAN filter scan ke `paths = [p for p in SRC if p in by_src]` (pola lama, ngandelin atribusi `src` historis). Sebagai gantinya: flatten semua fix jadi 1 dict `{vid: target}` (gak peduli asalnya file mana), lalu **scan SEMUA file source tanpa kecuali**, cocokkan by vid apa adanya di file manapun ketemu. Di akhir, cek `set(target_vids) - set(found_vids)` dan **print WARNING eksplisit** kalau ada yg tetap gak ketemu (jangan diam2 skip) — supaya gap kayak gini ketauan sebelum file terkirim, bukan sesudah user upload & baru sadar sebagian produk gak ke-update.
+
+Pola generic ini berlaku bukan cuma Shopee OT — cek ulang tiap kali rebuild file yg sumbernya multi-file DAN sumbernya kemungkinan sudah di-refresh/re-export sejak fixes.json pertama kali dibuat.
