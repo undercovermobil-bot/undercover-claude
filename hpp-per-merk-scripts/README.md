@@ -531,3 +531,61 @@ total · 8. kembar satu grup menghasilkan SKU identik per toko/kategori/warna ·
 dialog "repair" Excel).
 
 Semua lulus.
+
+---
+
+# Harga Jual Baru SP/OP (Reguler)
+
+Script: `harga_baru_sp_op.py` → `verify_harga_sp_op.py`
+
+## Instruksi user (2026-08-20)
+
+> "Aku mau membuat harga produk baru seperti di toko undercover kemarin, harganya
+> gunakan yg di sheet hpp 12% dan pakai yg kolom 'harga jual terbaru' yang aku warnai
+> hijau, untuk harganya sesuaikan dengan ukuran mobilnya seperti undercover kemarin,
+> dengan jarak maksimal 5rb dari harga terendahnya, untuk harga jual terbarunya
+> bulatkan keatas paling dekat jadi nominal ribuan."
+
+Diperjelas lewat 2 pertanyaan:
+1. **Sebaran dalam 1 kelas ukuran**: ikut **peringkat** harga UC (bukan proporsional
+   rupiah, bukan rata) — dihitung per kelas Pcs/Roll, persis metodologi UC.
+2. **Kolom "Harga Jual ACTUAL" (I) di file sumber diabaikan** — user mengonfirmasi itu
+   harga toko UC lama yang kebetulan tercampur di file `HPP_STP_OTP_.xlsx` (file ini
+   sebenarnya untuk toko Smartprotection & Otoprotection), bukan acuan untuk SP/OP.
+   Acuan peringkat yang dipakai: harga Reguler asli dari listing Shopee Undercover
+   Autocare (`baca_harga_shopee()` + `ALIAS`, infrastruktur yang sama dipakai di
+   `build_hpp_per_merk.py`).
+
+## Metodologi
+
+1. `Harga Jual Terbaru` (kolom AC, sheet `HPP 12%`) murni fungsi dari `Pcs/Roll ACTUAL`
+   — dicek eksplisit **konstan sempurna** per kelas pcs: pcs 3→565rb, 4→443rb, 5→370rb,
+   6→322rb, 7→287rb. Dibulatkan **ke atas** ke ribuan terdekat → jadi **dasar** (harga
+   terendah) kelas itu.
+2. Plafon kelas = dasar + Rp5.000. Karena hasil akhir wajib kelipatan Rp1.000, tiap
+   kelas cuma punya **6 kemungkinan nilai**.
+3. Tiap model dicocokkan ke harga Reguler UC lewat `ALIAS` yang sudah divalidasi
+   sepanjang sesi — **199/200 model ketemu langsung** (termasuk kasus yang dulu gagal
+   cocok manual: "Suzuki Grand Vitara"→"Suzuki Vitara", nama dobel "Mitsubishi
+   Mitsubishi Kuda", dll). 1 model (`Toyota Corolla Altis`) sengaja tidak dicocokkan
+   (tercatat di `MERAGUKAN`: beda nameplate dari "Toyota Corolla") → dapat harga dasar
+   kelasnya (aman, ditandai kuning di output) dan dilaporkan di CATATAN untuk dicek
+   manual, bukan ditebak.
+4. Dalam 1 kelas pcs, model diurutkan berdasar harga UC, disebar rata ke 6 tingkat
+   **berdasar peringkat** — termurah dapat dasar, termahal dapat dasar+5rb. Harga UC
+   yang sama persis → tingkat yang sama (tidak dipisah paksa).
+
+## Hasil
+
+200 model, 5 kelas ukuran (pcs 3/4/5/6/7 → dasar 565rb/443rb/370rb/322rb/287rb).
+`verify_harga_sp_op.py` — 10 cek, semua baca ulang dari disk: rentang & kelipatan
+Rp1.000, dasar kelas benar (dihitung ulang independen dari kolom AC sumber), monoton
+(harga UC naik → harga baru tidak pernah turun), harga UC sama → harga baru sama,
+model tanpa acuan dapat dasar (bukan tebakan), tiap kelas punya ≥1 model di harga
+dasar, XML bersih.
+
+## Status: LIST HARGA SAJA, belum diterapkan ke listing manapun
+
+Sesuai instruksi: "Buatkan dulu saja listnya di file baru, nanti untuk update ke
+ecommercenya setelah aku berikan file list produk SP dan OP nya." Menunggu file
+listing SP & OP dari user sebelum lanjut ke tahap update.
