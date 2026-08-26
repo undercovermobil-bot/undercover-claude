@@ -626,3 +626,33 @@ berubah). `verify_update_harga_uc_tiktok.py`: 7 cek independen, semua lulus.
 
 Lazada UC belum disentuh (belum diupload user) - tinggal tambahkan folder file
 Lazada ke `update_harga_per_sku.py` kalau sudah ada, prosesnya identik.
+
+---
+
+## KOREKSI 2026-08-26: Honda Brio & Honda Jazz dipatok di lantai, BUKAN hasil spread
+
+User tunjukkan screenshot Shopee Seller Center live: "Cover Mobil Honda Brio
+Reguler" harganya **Rp332.000 (Reguler) / Rp375.000 (Strip)** — beda dari hasil
+spread `harga_baru_matriks.py` yang menghitung Rp335.000/Rp378.000 (Brio bukan
+mobil terpendek di grup City Car pcs=6, kalah dari S-Presso/Picanto/Karimun yang
+dapat lantai persis Rp332rb).
+
+Ditanyakan eksplisit ke user (AskUserQuestion, 2 opsi: tetap spread vs semua
+flat) — **jawaban user: HANYA Brio & Jazz yang dipatok di lantai (332rb/375rb),
+produk lain TETAP pakai hasil spread apa adanya.** Bukan perubahan metode
+global, murni 2 pengecualian manual.
+
+**Diterapkan** via `terapkan_override_brio_jazz.py` — override 2 baris di
+`Harga Baru UC Top 100 (matriks).xlsx` (Reguler 335rb->332rb, Strip 378rb->375rb
+utk Honda Brio Satya/RS & Honda Jazz), lalu `update_harga_per_sku.py` dijalankan
+ulang dari file yang sudah dikoreksi itu (bukan logic override terpisah - file
+target jadi satu-satunya sumber kebenaran). Hasil: Shopee 882->826 baris,
+TikTok 952->896 baris (Brio/Jazz yang sudah live di 332rb/375rb otomatis
+di-skip krn sudah benar, sisanya identik dgn sebelumnya). Kedua file
+diverifikasi ulang (`verify_update_harga_uc.py`/`_tiktok.py`), semua lulus.
+
+**Pelajaran**: kalau nemu 1 produk yang harga live-nya tidak cocok hasil
+hitungan, JANGAN asumsikan salah satu (hitungan ATAU live) otomatis benar utk
+SEMUA produk lain juga — tanya user scope-nya spesifik ke produk mana. Di sini
+ternyata cuma 2 dari ~40 produk yang exception, bukan seluruh metode yang
+salah.
