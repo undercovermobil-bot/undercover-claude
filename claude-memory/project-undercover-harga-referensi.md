@@ -589,3 +589,40 @@ tersinkron ke branch manapun yang bisa diakses sesi ini — tanya user detail le
 lanjut (tanggal kira-kira, konteks) sebelum menyimpulkan lebih jauh. Untuk sekarang,
 Daihatsu Luxio memakai prefix `DHT-GMX` di listing OT (ditemukan 2026-08-20 saat
 cek harga Otonation) tetap dianggap SALAH TAG SKU (bug), bukan keputusan sengaja.
+
+---
+
+## Eksekusi 2026-08-26: UC TikTok top-40 (menyusul batch Shopee)
+
+User upload 3 file TikTok Seller Center ("all_information" template, sheet
+`Template`+`Instruction`+`Brand`+dst) - persis pola lama yang sudah dikenal
+(lihat bagian atas soal 2 varian template TikTok): **file 1 = cover motor**
+(2 baris, di luar scope), **file 2 = travel pouch** (20 baris, di luar scope,
+sesuai aturan bisnis #6), **file 3 = katalog cover mobil sungguhan** (22.657
+baris, ini yang diproses). `update_harga_per_sku.py` auto-deteksi channel per
+file (`deteksi_channel()`) jadi ke-3 file bisa langsung dilempar sekaligus ke
+satu folder tanpa perlu memilah manual - file 1&2 otomatis 0 baris kena krn
+prefix SKU-nya di luar scope 100 top-seller.
+
+Metode sama persis dengan batch Shopee sebelumnya: rentang **1-40** (bukan
+24-40) supaya kembar di luar 40 ikut tersapu otomatis lewat prefix SKU. Bukti
+konsisten dgn batch Shopee: Daihatsu Rocky varian A200 (rank 60) ikut naik ke
+Rp336rb/379rb lewat prefix `TYT-RZE` yang sama dengan Raize (#27); Honda Brio
+(#2) & Honda Jazz (#4) SAMA-SAMA masih harga lama di TikTok juga (bukan cuma
+Shopee) - menguatkan temuan sebelumnya bahwa klaim "23 terlaris sudah update"
+tidak akurat utk kedua produk ini di SEMUA channel, bukan cuma satu.
+
+**Bug lama yang masih ada, ikut terkoreksi sbg efek samping**: Toyota Raize
+Strip di TikTok tercatat Rp252.000 (seharusnya ~Rp352rb) - pola "salah ketik
+digit ratusan-ribu" yang sudah pernah dicatat (lihat bagian
+"Temuan sampingan: harga TikTok kependekan Rp100.000" di atas). Overwrite ke
+harga target (Rp379rb) otomatis memperbaikinya, tidak perlu penanganan khusus.
+
+**Hasil**: 420 SKU unik / 952 baris fisik berubah. Output:
+`UPDATE_HARGA_UA_TIKTOK.xlsx` (8 sheet dipertahankan utuh: Template,
+Instruction, HiddenStyle, HiddenAttr, SpecialProductListingType,
+TemplateConfig, Brand, SalePlatform - cuma isi baris di `Template` yang
+berubah). `verify_update_harga_uc_tiktok.py`: 7 cek independen, semua lulus.
+
+Lazada UC belum disentuh (belum diupload user) - tinggal tambahkan folder file
+Lazada ke `update_harga_per_sku.py` kalau sudah ada, prosesnya identik.
