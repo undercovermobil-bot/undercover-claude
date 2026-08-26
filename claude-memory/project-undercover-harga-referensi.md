@@ -725,3 +725,38 @@ diupload, ALIAS['DHT-TG']='DHT-FRZ' di `update_harga_per_sku.py` jadi tidak
 relevan lagi utk batch masa depan (SKU sumbernya sudah DHT-FRZ langsung),
 tapi TIDAK PERLU dihapus - alias yang tidak pernah match itu aman, cuma
 idle.
+
+---
+
+## Eksekusi 2026-08-26 (final): harga + SKU Taft GT digabung jadi 1 file Shopee
+
+User belum sempat upload file harga sebelumnya - minta perubahan SKU Taft GT
+(DHT-TG->DHT-FRZ) DIGABUNG ke file harga yang sama supaya cuma 1x upload.
+
+`update_batch_1_40_plus_feroza_taftgt_sku.py` membangun ULANG dari 5 file
+Shopee UA mentah (bukan edit file hasil sebelumnya) - target harga (1-40 +
+Feroza #49) + langkah tambahan: kalau prefix ASLI baris = `DHT-TG`, kolom SKU
+ikut ditulis `DHT-FRZ...`. Hasil: **882 baris, 1 file**
+(`UPDATE_HARGA_UA_SHOPEE.xlsx`) - 868 baris cuma harga berubah, 14 baris
+(Taft GT) harga+SKU berubah bareng.
+
+TikTok TIDAK digabung ulang - dikonfirmasi ke user Taft GT memang tidak
+dijual di TikTok (0 baris, sudah diverifikasi 2x independen). File TikTok
+sebelumnya (`UPDATE_HARGA_UC_TIKTOK_1-40_v2/UPDATE_HARGA_UA_TIKTOK.xlsx`,
+938 baris) tetap berlaku apa adanya.
+
+`verify_batch_final.py` (independen dari script pembuat, baca ulang dari
+disk): 6 cek termasuk pencocokan POSISI-DEMI-POSISI (bukan cuma set/dict)
+supaya urutan baris ikut terverifikasi persis sama antara yang dihasilkan
+script vs yang seharusnya menurut audit ulang dari 5 file sumber. Semua
+lulus.
+
+**File final yang berlaku untuk diupload user**:
+- Shopee: `UPDATE_HARGA_UC_1-40_final/UPDATE_HARGA_UA_SHOPEE.xlsx` (882 baris,
+  gabungan harga + SKU Taft GT)
+- TikTok: `UPDATE_HARGA_UC_TIKTOK_1-40_v2/UPDATE_HARGA_UA_TIKTOK.xlsx` (938
+  baris, harga saja, tidak ada Taft GT)
+
+File-file versi sebelumnya (`UPDATE_HARGA_UC_1-40_v2/...`,
+`UPDATE_SKU_HARGA_TAFT_GT_UA_SHOPEE.xlsx` terpisah) SUDAH TIDAK BERLAKU,
+digantikan oleh file final di atas.
