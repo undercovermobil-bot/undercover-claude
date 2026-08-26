@@ -527,3 +527,65 @@ Suzuki Carry Gen 2 F diperbaiki), jalankan ulang `cek_harga_otonation.py` dgn
 argumen `<target.xlsx> <listing1.xlsx> [listing2.xlsx ...]`. 3 model tanpa SKU
 di atas tidak akan pernah ketahuan otomatis lewat cara ini — kalau mau dicek
 scope lebih luas, cross-check manual by NAMA produk juga, jangan cuma via SKU.
+
+---
+
+## Eksekusi 2026-08-20 (lanjutan): UC top-40, otomatis sertakan kembar di luar scope
+
+User upload 5 file Shopee UA terbaru (`1.xlsx`-`5.xlsx`, sama bug XML activePane,
+diperbaiki `repair_xlsx.py`), minta lanjut ke 40 model terlaris (23 katanya sudah
+selesai kemarin), **dengan syarat**: kalau ada SKU kembar, ikutkan walau modelnya
+sendiri di luar 40 terlaris.
+
+**Cara memenuhi syarat itu tanpa logic khusus**: panggil `update_harga_per_sku.py`
+dengan rentang **1-40** (bukan 24-40). `baca_harga()` mengelompokkan target per
+PREFIX SKU (bukan per nama model) — jadi kalau salah satu anggota grup kembar ada
+di rank 1-40 (mis. Avanza #1, Raize #27), prefix targetnya (`TYT-AVZ`, `TYT-RZE`)
+otomatis kepakai untuk SEMUA baris listing yang SKU-nya prefix itu, TERLEPAS dari
+rank model itu sendiri — jadi Veloz (rank 52, sudah `TYT-AVZ` & sudah benar
+harganya, 0 perubahan) dan Daihatsu Rocky varian A200 (rank 60, prefix `TYT-RZE`,
+14 baris ikut naik) otomatis tersapu tanpa perlu whitelist manual. Reproses rank
+1-23 yang "katanya sudah selesai" itu AMAN & idempoten (baris yang sudah benar
+otomatis dilewati oleh `proses()` — `if lama == baru: continue`).
+
+**Temuan sampingan**: ternyata #2 Honda Brio & #4 Honda Jazz (harusnya masuk grup
+"23 sudah selesai") ikut BERUBAH (28 baris masing-masing, dari harga lama ke
+harga baru) — jadi klaim "23 terlaris sudah diupdate" TIDAK 100% akurat, atau ada
+listing yang balik ke harga lama sesudahnya. Dilaporkan ke user, tidak diam-diam
+"dianggap benar".
+
+**Bukti tambahan yang menguatkan koreksi arah Agya/Ayla & Rocky-lawas (lihat bagian
+di atas)**: dicek langsung ke listing SHOPEE LIVE (bukan cuma riwayat memory) —
+"Daihatsu Rocky" listing SUDAH memakai prefix `DHT-FRZ` utk varian F70/F300 dan
+`TYT-RZE` utk varian Gen 2 (A200), PERSIS sama dengan arah yang baru dikoreksi di
+`samakan_sku_kembar.py`. Listing produksi sudah lebih dulu benar sebelum master
+lokal di branch ini menyusul.
+
+**Hasil**: 364 SKU unik berubah (882 baris fisik di listing — banyak SKU muncul di
+lebih dari 1 dari 5 file Shopee, halaman listing berbeda tapi produk fisik sama;
+dicek eksplisit 0 SKU dengan harga TIDAK konsisten antar duplikat). Output:
+`UPDATE_HARGA_UA_SHOPEE.xlsx` (siap upload Shopee Seller Center, format batch-edit
+asli dipertahankan, cuma baris yang berubah yang disertakan). Verifikasi independen
+(`verify_update_harga_uc.py`, baca ulang dari disk, TIDAK percaya laporan konsol
+`update_harga_per_sku.py` sendiri): 6 cek, semua lulus — kelengkapan (tidak ada
+baris seharusnya-berubah yang hilang), ketepatan (harga = target persis), tidak ada
+baris ekstra di luar scope, cuma kategori R/S, XML bersih.
+
+TikTok & Lazada UC belum disentuh batch ini (user cuma upload Shopee) — proses
+sama persis begitu file TikTok/Lazada UC terbaru diupload (folder argumen tambahan
+ke `update_harga_per_sku.py`, script sudah auto-deteksi channel per file).
+
+## Soal "Luxio = Gran Max" (dicek 2026-08-20, TIDAK ketemu)
+
+User bertanya apakah pernah dibahas "SKU Luxio disamakan dengan Gran Max karena
+formula mirip". Dicek MENYELURUH: seluruh `claude-memory/` (semua file di branch
+ini setelah digabung), `scripts/formula_config.py`, dan riwayat commit penuh
+(`git log --all -S "Luxio"`) — **tidak ketemu** diskusi seperti itu. Yang ketemu
+malah kebalikannya: master SENGAJA membedakan Gran Max Minibus (`DHT-GMX`) dan
+Gran Max Pick Up (`DHT-GMXP`) sebagai 2 SKU terpisah (dikonfirmasi user 2026-07-27,
+lihat `project-undercover-sku-sync-status.md` bagian "Bug matcher tipe-badan").
+Kalau user mengingat pembahasan ini, kemungkinan ada di device/sesi lain yang belum
+tersinkron ke branch manapun yang bisa diakses sesi ini — tanya user detail lebih
+lanjut (tanggal kira-kira, konteks) sebelum menyimpulkan lebih jauh. Untuk sekarang,
+Daihatsu Luxio memakai prefix `DHT-GMX` di listing OT (ditemukan 2026-08-20 saat
+cek harga Otonation) tetap dianggap SALAH TAG SKU (bug), bukan keputusan sengaja.
