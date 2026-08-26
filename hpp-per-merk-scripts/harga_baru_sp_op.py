@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+!!! SUPERSEDED 2026-08-20 - JANGAN PAKAI SCRIPT INI SEBAGAI ACUAN METODE !!!
+Metode di file ini (sebar harga ikut PERINGKAT harga UC/ACTUAL) TERNYATA SALAH -
+metode yang benar & sudah divalidasi user adalah MATRIKS Pcs/Roll x kategori
+bodi x panjang fisik mobil, ditemukan di branch `claude/repo-memory-access-4hthja`
+(`scripts/harga_baru_matriks.py`, memory `project-undercover-harga-referensi.md`)
+SETELAH file ini dibuat. Pakai `harga_baru_sp_op_matriks.py` sebagai gantinya.
+Docstring asli di bawah ini dipertahankan apa adanya untuk riwayat, bukan acuan.
+
 Harga jual baru untuk toko Smartprotection (SP) & Otoprotection (OP), varian Reguler.
 
 Latar (instruksi user 2026-08-20):

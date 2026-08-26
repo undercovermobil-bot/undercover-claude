@@ -620,3 +620,53 @@ yang bisa dipakai untuk menebak yang mana dari 23 itu. Semua 100 model di output
 dihitung ULANG dari nol, bukan melanjutkan yang sudah ada — user perlu cross-check ke
 harga yang sudah live di Shopee sebelum menerapkan, supaya tidak menimpa yang sudah
 benar.
+
+---
+
+# KOREKSI 2026-08-20: metode harga baru yang benar ditemukan di branch lain
+
+User menunjukkan branch `claude/repo-memory-access-4hthja` yang punya riwayat kerja
+lengkap soal update harga UC (tidak tersinkron ke branch ini sebelumnya). Ternyata
+metode yang sudah divalidasi user berkali-kali (2026-08-14/15/18) adalah **matriks
+Pcs/Roll x kategori bodi x panjang fisik mobil** - BUKAN rank harga UC/ACTUAL yang
+dipakai di `harga_baru_sp_op.py` dan `harga_baru_uc_top100.py`. Kedua script itu
+**SUPERSEDED** (docstring sudah ditandai, dipertahankan untuk riwayat, jangan
+dipakai lagi sbg acuan). Detail lengkap metode & keputusan historisnya ada di
+`claude-memory/project-undercover-harga-referensi.md` (juga baru dibawa masuk dari
+branch yang sama).
+
+## Metode matriks (ringkas — detail lengkap di project-undercover-harga-referensi.md)
+
+1. **Pcs/Roll = lantai harga**, mandiri per tier (tidak menumpuk antar tier):
+   `lantai = ceil('Harga Jual Terbaru' mentah / 1000) * 1000`.
+2. Dalam grup **(Pcs/Roll x kategori bodi)**, mobil diurutkan dari **panjang bodi
+   (mm) terkecil**.
+3. Kenaikan kelipatan Rp1.000, rentang total per grup maksimal Rp5.000.
+4. Dua tahap: (a) **lebar spread** grup dari skala absolut (tiap 100mm selisih
+   terkecil-terbesar = Rp1.000, dibatasi Rp5.000 — grup yang mirip ukuran tidak
+   dipaksa menyebar penuh); (b) **posisi** tiap mobil proporsional terhadap
+   panjangnya di dalam spread itu (mencegah 1 mobil kekecilan menekan semua yang
+   lain ke harga sama).
+5. Strip (Elite/Epic/Warrior) = Reguler + Rp43.000 (flat, khusus UC — lihat catatan
+   di bawah soal SP/OP).
+
+## `harga_baru_matriks.py` — UC Top 100 (salinan verbatim dari branch lain)
+
+Tidak diubah sama sekali dari sumbernya, supaya hasilnya identik dgn yang sudah
+divalidasi user. Dijalankan ke `DATA_UC_HPP_Top_100_Terlaris.xlsx` (sheet HPP 12%)
+→ `Harga Baru UC Top 100 (matriks).xlsx`. `verify_harga_matriks_uc_top100.py` (10
+cek) mengonfirmasi hasil cocok dgn 2 patokan di memory: **Toyota Fortuner =
+Rp457.000, Honda BR-V = Rp385.000**.
+
+## `harga_baru_sp_op_matriks.py` — SP/OP 200 model (perluasan baru)
+
+Sama persis metodenya, untuk 200 model di `HPP_STP_OTP_.xlsx`. 100 dari 200 model
+sudah py kategori+panjang dari dict yang sudah divalidasi (dipertahankan apa
+adanya); **100 model SISANYA baru diklasifikasi khusus untuk file ini** (kategori
+bodi + panjang mm, pengetahuan otomotif umum, konvensi kategori sama + 1 kategori
+baru "Sport/Supercar" untuk mobil sport yang belum py preseden). **100 klasifikasi
+baru ini BELUM divalidasi user** — daftar lengkapnya ada di sheet CATATAN file
+hasil dan di `project-undercover-harga-referensi.md`, perlu direview.
+
+Beda dari versi UC: **tidak menyertakan kolom Strip** — user cuma minta harga
+Reguler untuk SP/OP kali ini. `verify_harga_matriks_sp_op.py` (11 cek) semua lulus.

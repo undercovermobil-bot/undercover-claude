@@ -11,6 +11,7 @@
 - [Status SKU Sync Smartprotection (SP)](project-undercover-smartprotection-status.md) — mulai 07-11, di-scope ke terlaris; 539 baris selesai; mapping warna Elite/Epic/Warrior->Strip-N (kebalikan OT)
 - [Status Stock Sync (mulai 2026-07-17)](project-undercover-stock-sync-status.md) — sub-proyek BARU, beda dari SKU Sync: sync kolom STOK/kuantitas dari Stock_Opname.xlsx, batch pertama warna Abu-abu kategori Reguler (1085 baris), 15 item skip butuh keputusan
 - [Sync SKU Gudang Big Seller (mulai 2026-07-28)](project-undercover-bigseller-sync.md) — sub-proyek BARU: listing skema formula -> SKU Gudang BS; 3.614 SKU perlu dibuat, keputusan user + jebakan baca file
+- [Referensi Harga per Tipe Bodi Mobil (mulai 2026-08-14)](project-undercover-harga-referensi.md) — metode matriks Pcs/Roll x kategori bodi x panjang fisik untuk harga baru; dibawa dari branch `claude/repo-memory-access-4hthja` 2026-08-20; UA batch 1-20 & Otonation 100 produk sudah live, SP/OP baru tahap list (100 model tambahan belum divalidasi user)
 - [Pelajaran SKU Sync](feedback-undercover-sku-sync-lessons.md) — pola berulang, termasuk instruksi 07-10 "prioritaskan 331 terlaris dulu, semua toko"
 - [Alur folder "Update via Claude"](feedback-undercover-update-folder-workflow.md) — mulai 07-10, edit ke folder terpisah, jangan overwrite file asli
 - [Audit Foto Produk](project-undercover-photo-shopee-audit.md) — selesai 2026-07-06, 45 produk, keterbatasan metode dimensi-foto

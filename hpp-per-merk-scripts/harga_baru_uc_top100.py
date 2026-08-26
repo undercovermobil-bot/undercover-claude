@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 """
+!!! SUPERSEDED 2026-08-20 - JANGAN PAKAI SCRIPT INI SEBAGAI ACUAN METODE !!!
+Metode di file ini (sebar harga ikut PERINGKAT Harga Jual ACTUAL) TERNYATA SALAH.
+Yang benar sudah dikerjakan & divalidasi user SEBELUMNYA (2026-08-14/15/18) di
+branch `claude/repo-memory-access-4hthja` - metode MATRIKS Pcs/Roll x kategori
+bodi x panjang fisik mobil (`scripts/harga_baru_matriks.py`,
+`project-undercover-harga-referensi.md`). File ini dibuat SEBELUM riwayat itu
+ketemu. Pakai `harga_baru_matriks.py` (salinan resmi dari branch tsb) sebagai
+gantinya - hasilnya cocok dgn patokan yang tercatat di memory (Fortuner
+Rp457rb, BR-V Rp385rb), sedangkan hasil script INI TIDAK. Docstring asli di
+bawah dipertahankan apa adanya untuk riwayat, bukan acuan.
+
 Harga jual baru untuk toko Undercover Autocare (UC), 100 model terlaris, Reguler.
 
 Latar (instruksi user 2026-08-20): "List harganya seperti di file ini [...], harusnya
