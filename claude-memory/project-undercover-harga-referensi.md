@@ -760,3 +760,52 @@ lulus.
 File-file versi sebelumnya (`UPDATE_HARGA_UC_1-40_v2/...`,
 `UPDATE_SKU_HARGA_TAFT_GT_UA_SHOPEE.xlsx` terpisah) SUDAH TIDAK BERLAKU,
 digantikan oleh file final di atas.
+
+---
+
+## 2026-08-26: TikTok batch-edit ERROR "sku not allow delete" - HANYA Toyota Hilux, produk lain semua sukses
+
+User upload file hasil batch-edit TikTok Seller Center
+(`Tiktoksellercenter_batchedit_20260826_all_information_result.xlsx`, sheet
+Template, 56 baris gagal dari total 942 baris di
+`UPDATE_HARGA_UC_TIKTOK_1-40_v2/UPDATE_HARGA_UA_TIKTOK.xlsx`). Semua 56 baris
+gagal = **persis semua baris Toyota Hilux Reguler+Strip** (5 warna x 4 gen =
+20 Reguler, 9 varian x 4 gen = 36 Strip), error seragam `"sku not allow
+delete"`. Hilux Rangga (SKU beda, `TYT-HLR-...`) tidak kena, tidak termasuk
+batch ini.
+
+**Investigasi (bukan cuma baca error, tapi cross-check independen):**
+1. Seller SKU Hilux (mis. `TYT-HLX-UA-R-G1-ABU`) memang KEMBAR di 4 baris
+   variation_value berbeda (Gen 1-2/3-4/5-6/7-8) - konsekuensi normal TF=1
+   (aturan #9 SKU sync). Dicek byte-per-byte: nilai seller_sku di file
+   sumber listing (`tiktok_uc/3.xlsx`), file update kita, dan file error
+   PERSIS SAMA - batch ini TIDAK mengubah SKU Hilux sama sekali, cuma harga
+   (322rb->457rb Reguler, 382rb->500rb Strip). Jadi TikTok menolak update
+   HARGA MURNI pada SKU yang sudah ada, bukan menolak perubahan SKU.
+2. **Pola "SKU kembar lintas variation_value" BUKAN penyebab umum** - dicek
+   distribusi cluster seller_sku kembar di seluruh 942 baris batch: Honda
+   Accord (5 baris kembar/SKU), Mitsubishi Triton (6), Toyota Camry (6),
+   Toyota Corolla (2-3), Mitsubishi Pajero Sport (3) - SEMUA berhasil update
+   tanpa error, padahal pola strukturnya identik dengan Hilux (malah lebih
+   besar clusternya). Ini menegaskan ULANG catatan lama "Shopee/TikTok boleh
+   kembar" (lih. `project-undercover-sku-sync-status.md` baris 250) MASIH
+   BENAR sebagai aturan umum - Hilux adalah ANOMALI produk spesifik, bukan
+   bukti aturan itu salah.
+3. Kesimpulan: kemungkinan besar ini lock/state di sisi platform TikTok yang
+   spesifik ke product_id Hilux itu (mis. sisa promo/campaign aktif yang
+   mengunci SKU, atau state SKU record yang belum sinkron sejak
+   Hilux Rangga ditambahkan sbg varian) - BUKAN bug di file/script kita,
+   dan tidak bisa didiagnosis lebih jauh dari data spreadsheet saja.
+
+**Dampak & tindak lanjut**: 886/942 baris (semua produk lain + Feroza) sudah
+sukses ter-update di TikTok. Harga Hilux Reguler (457rb) & Strip (500rb) di
+TikTok BELUM berubah (masih 322rb/382rb) - perlu diupdate MANUAL langsung
+di UI Seller Center (bukan batch-edit) untuk 2 tier itu saja. Kalau manual
+juga gagal dgn pesan sama, itu tanda perlu hubungi CS TikTok Shop dgn
+product_id `1729572004275521562`.
+
+**How to apply**: kalau ada error batch-edit TikTok lagi, JANGAN langsung
+simpulkan "SKU kembar = penyebabnya" - cek dulu apakah produk LAIN dengan
+pola SKU-kembar yang sama di batch yang sama juga gagal (kalau tidak, bukan
+soal SKU kembar secara umum, cek apa yang unik dari produk yang gagal itu
+sendiri: histori edit terakhir, promo aktif, dll).
