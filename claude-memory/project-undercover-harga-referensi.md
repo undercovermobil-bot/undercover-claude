@@ -695,3 +695,33 @@ langsung, bukan CLI). Hasil: Shopee 882 baris/364 SKU unik, TikTok 938
 baris/406 SKU unik (naik dari batch sebelumnya krn tambahan Feroza+Rocky
 lawas+Taft GT, Brio/Jazz tetap 0 baris sesuai override sebelumnya).
 `verify_batch_1_40_plus_feroza.py`: 6 cek x 2 channel, semua lulus.
+
+---
+
+## Eksekusi 2026-08-26 (lanjutan): SKU Daihatsu Taft GT diubah ke DHT-FRZ
+
+User minta eksplisit: "sekalian yg taft gt bantu ubah kode SKU nya biar pakai
+kode SKU nya feroza juga" — bukan cuma harga (yang sudah dikerjakan via ALIAS
+sebelumnya), tapi kode SKU di listing itu sendiri diubah permanen dari
+`DHT-TG` jadi `DHT-FRZ`.
+
+Digabung SEKALIGUS dengan harga baru (382rb Reguler/425rb Strip) dalam SATU
+file (`ubah_sku_taft_gt.py` → `UPDATE_SKU_HARGA_TAFT_GT_UA_SHOPEE.xlsx`) —
+BUKAN file terpisah untuk SKU vs harga, sesuai pelajaran lama "file update
+marketplace menimpa SEMUA kolom, dua file dari basis beda akan saling
+me-revert" (lihat `feedback-undercover-sku-sync-lessons.md` 2026-08-15).
+
+14 baris (5 Reguler + 9 Strip), semua di Shopee UA file 1.xlsx baris
+1037-1050 (Taft GT tidak dijual di TikTok). Setelah SKU diganti, nilainya
+jadi PERSIS SAMA dengan SKU Feroza sendiri di baris lain (mis.
+`DHT-FRZ-UA-R-G1-ABU`) — ini memang tujuannya (1 SKU fisik = 1 cover yang
+sama), bukan bug/duplikat.
+
+**PENTING - beda tingkat risiko dari update harga biasa**: ini mengubah kode
+SKU (bukan cuma harga), yang mengalir ke SKU Gudang BigSeller & tracking stok
+lintas channel. Setelah diupload, tidak ada jalan mudah untuk "batalkan" -
+kalau salah, perlu perbaikan SKU lagi secara eksplisit. Setelah file ini
+diupload, ALIAS['DHT-TG']='DHT-FRZ' di `update_harga_per_sku.py` jadi tidak
+relevan lagi utk batch masa depan (SKU sumbernya sudah DHT-FRZ langsung),
+tapi TIDAK PERLU dihapus - alias yang tidak pernah match itu aman, cuma
+idle.
