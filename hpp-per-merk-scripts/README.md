@@ -589,3 +589,34 @@ dasar, XML bersih.
 Sesuai instruksi: "Buatkan dulu saja listnya di file baru, nanti untuk update ke
 ecommercenya setelah aku berikan file list produk SP dan OP nya." Menunggu file
 listing SP & OP dari user sebelum lanjut ke tahap update.
+
+---
+
+# Harga Jual Baru UC Top 100 (Reguler)
+
+Script: `harga_baru_uc_top100.py` → `verify_harga_uc_top100.py`
+
+Sama persis metodologinya dengan "Harga Jual Baru SP/OP" di atas, tapi untuk 100
+model terlaris toko **Undercover Autocare sendiri** (file `DATA_UC_HPP_Top_100_Terlaris.xlsx`
+yang sudah ditambahi sheet `HPP 12%` oleh user). Bedanya: acuan peringkat pakai kolom
+"Harga Jual ACTUAL" (I) **langsung dari file ini** — dicek dulu 100/100 baris cocok
+persis dengan snapshot listing Shopee UA yang sudah divalidasi (beda dengan file
+SP/OP yang kolom I-nya kedapatan basi/tidak reliable).
+
+Dasar per kelas: pcs 3→583rb, 4→457rb, 5→382rb, 6→332rb, 7→296rb — semua dicek
+konstan sempurna. `verify_harga_uc_top100.py`: 9 cek, semua lulus.
+
+## PENTING: memory "~23 model sudah diupload ke ecommerce" TIDAK ketemu
+
+User menyebut sudah pernah menghitung & upload harga baru untuk ~23 model duluan.
+Sudah dicek `claude-memory/` (git) dan folder memory native sesi ini (tidak ada,
+environment cloud ini fresh) — **tidak ketemu catatan itu**. Kemungkinan dikerjakan
+di device/sesi Claude lain yang belum sinkron ke repo (lihat CLAUDE.md).
+
+Sempat dicoba validasi silang: bandingkan kolom I file ini vs snapshot Shopee lama
+(`shopee/uc1-5.xlsx`) — kalau ada yang beda, itu sinyal "sudah diupdate manual".
+Hasilnya **100/100 baris identik** dengan snapshot lama, jadi tidak ada sinyal empiris
+yang bisa dipakai untuk menebak yang mana dari 23 itu. Semua 100 model di output
+dihitung ULANG dari nol, bukan melanjutkan yang sudah ada — user perlu cross-check ke
+harga yang sudah live di Shopee sebelum menerapkan, supaya tidak menimpa yang sudah
+benar.
