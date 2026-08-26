@@ -486,3 +486,44 @@ Script: `hpp-per-merk-scripts/harga_baru_sp_op_matriks.py` ->
 **Beda dari versi UC**: SP/OP kali ini TIDAK menyertakan kolom Strip (Elite/
 Epic/Warrior +Rp43.000) - user cuma minta harga Reguler dari sheet HPP 12%,
 belum ada instruksi eksplisit soal Strip untuk SP/OP.
+
+---
+
+## Verifikasi 2026-08-20: cek listing Otonation vs harga baru top-100
+
+User upload 2 file listing Shopee OT ("1.xlsx"/"2.xlsx", kena bug XML activePane
+yang sama, diperbaiki `repair_xlsx.py`), minta dicek "apakah sudah sesuai" harga
+baru — **scope eksplisit user: hanya produk 'Semi Outdoor' atau yang setara**.
+
+Script: `hpp-per-merk-scripts/cek_harga_otonation.py` (read-only, tidak menulis
+apa pun) — reuse `PREFIX{}`/`ALIAS{}`/`is_outdoor_polos()`/`urai_sku()`/
+`baca_harga()` dari `update_harga_per_sku.py` (salinan verbatim branch lain).
+
+**Hasil: 3.248/3.262 baris (99,6%) dalam scope sudah cocok persis dengan target.**
+
+Temuan konkret (2 kategori beda sifat):
+
+1. **Suzuki Carry generasi "Gen 2 F (2023)" masih harga lama flat Rp315.000**
+   (target: Rp382.000 Reguler / Rp425.000 Strip) — 14 baris. SKU-nya (`SZK-CAR-
+   UA-*-G1-*`) **SAMA PERSIS** dengan generasi "Gen 2 (2018-2022)" yang SUDAH
+   benar (382rb/425rb) — jadi di Shopee ada 2 baris varian dengan SKU identik
+   tapi harga BERBEDA pada satu listing yang sama. Genuinely belum ke-update,
+   bukan false positive.
+
+2. **3 model tidak bisa dicek via SKU sama sekali** (prefix target 0 baris
+   ketemu):
+   - **Daihatsu Luxio**: SKU listing OT pakai prefix `DHT-GMX-...` (bukan
+     `DHT-LXO`), tapi **harganya sendiri sudah benar** (383rb/426rb = persis
+     target Luxio) — murni salah tag prefix SKU, bukan masalah harga. Ini PR
+     terpisah di proyek SKU Sync, bukan harga.
+   - **Honda City Hatchback RS** & **Mazda 2 Sedan**: SKU listing OT **kosong
+     total** (`None`), harga flat tanpa diferensiasi R/S (City Hatchback RS
+     Rp307.000 vs target 337rb/380rb; Mazda 2 Sedan Rp300.000 vs target
+     382rb/425rb) — kelihatan jelas BELUM diupdate, tapi tidak bisa
+     diverifikasi otomatis via SKU krn kolom SKU-nya blank di listing.
+
+**How to apply**: kalau minta cek serupa lagi (toko/channel lain, atau setelah
+Suzuki Carry Gen 2 F diperbaiki), jalankan ulang `cek_harga_otonation.py` dgn
+argumen `<target.xlsx> <listing1.xlsx> [listing2.xlsx ...]`. 3 model tanpa SKU
+di atas tidak akan pernah ketahuan otomatis lewat cara ini — kalau mau dicek
+scope lebih luas, cross-check manual by NAMA produk juga, jangan cuma via SKU.
