@@ -656,3 +656,42 @@ hitungan, JANGAN asumsikan salah satu (hitungan ATAU live) otomatis benar utk
 SEMUA produk lain juga — tanya user scope-nya spesifik ke produk mana. Di sini
 ternyata cuma 2 dari ~40 produk yang exception, bukan seluruh metode yang
 salah.
+
+---
+
+## Eksekusi 2026-08-26 (lanjutan): grup Rocky lawas/Feroza/Taft GT ikut diupdate
+
+User minta eksplisit: "Rocky gen awal" (F70/F300) diupdate juga karena "1 link
+dengan Rocky gen 2" dan "SKUnya mirip dengan Taft" + "ada 1 lagi yg sama kode
+SKUnya" — persis grup `DHT-FRZ` (Feroza + Rocky lawas + Taft GT) yang sudah
+dikonfirmasi 2026-08-20.
+
+Feroza sendiri rank **#49** di top-100 (bukan #51 - sempat salah tebak,
+dikoreksi cepat via lookup langsung ke file). Target dibangun dari 2
+pemanggilan `baca_harga()` terpisah (1-40 + 49-49 khusus Feroza) - BUKAN
+rentang lebar 1-49, supaya rank 41-48/50 yang tidak diminta user (HiAce,
+Mazda 2, Hardtop, Jimny, Ignis, BMW Seri 3, Picanto, Sirion) TIDAK ikut
+ke-update tanpa diminta.
+
+**Temuan penting yang butuh alias baru**: dicek langsung ke listing riil -
+Rocky F70/F300 sudah pakai `DHT-FRZ` (benar), tapi **Daihatsu Taft GT masih
+pakai prefix LAMA `DHT-TG`** (belum ikut migrasi SKU kembar ke listing).
+Ditambahkan `ALIAS['DHT-TG'] = 'DHT-FRZ'` di `update_harga_per_sku.py` (pola
+persis sama dengan alias lain yang sudah ada) supaya baris Taft GT tetap ikut
+ter-update walau SKU-nya belum disinkronkan manual. Taft GT ternyata TIDAK
+dijual di TikTok (0 baris ketemu di file TikTok, wajar - bukan bug).
+
+Harga sebelum vs sesudah unifikasi (3 listing beda2, sekarang sama semua
+382rb/425rb): Feroza 288rb/348rb, Rocky F70/F300 292rb/352rb (beda dari
+Feroza walau SKU sama - bukti tambahan bahwa unifikasi ini memang belum
+pernah diterapkan ke harga), Taft GT 288rb/348rb.
+
+**Catatan Feroza Long (`DHT-FRL`) SENGAJA TIDAK ikut** — bukan anggota grup
+ini (harga listing beda, sudah dikonfirmasi 2026-08-20), prefix-nya tidak
+masuk target sama sekali jadi otomatis tidak tersentuh.
+
+Script: `update_batch_1_40_plus_feroza.py` (reuse `baca_harga()`+`proses()`
+langsung, bukan CLI). Hasil: Shopee 882 baris/364 SKU unik, TikTok 938
+baris/406 SKU unik (naik dari batch sebelumnya krn tambahan Feroza+Rocky
+lawas+Taft GT, Brio/Jazz tetap 0 baris sesuai override sebelumnya).
+`verify_batch_1_40_plus_feroza.py`: 6 cek x 2 channel, semua lulus.

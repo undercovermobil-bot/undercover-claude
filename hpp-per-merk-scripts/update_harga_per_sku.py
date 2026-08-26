@@ -206,6 +206,11 @@ ALIAS = {
     'TYT-VLZ': 'TYT-AVZ',
     'DHT-XNA': 'TYT-AVZ',
     'TYT-AGY': 'DHT-AYL',
+    # 2026-08-26: Daihatsu Taft GT belum ikut migrasi SKU kembar ke DHT-FRZ di
+    # listing Shopee UA (masih pakai prefix lama DHT-TG) - diverifikasi
+    # langsung ke listing riil. Rocky lawas (F70/F300) SUDAH DHT-FRZ, jadi
+    # tidak perlu alias. Feroza sendiri prefix aslinya memang DHT-FRZ.
+    'DHT-TG': 'DHT-FRZ',
 }
 
 # Listing yg namanya mengandung ini TIDAK ikut walau prefix SKU-nya sama --
