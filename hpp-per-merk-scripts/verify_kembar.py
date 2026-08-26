@@ -13,7 +13,9 @@ from samakan_sku_kembar import GRUP, GRUP_DARI, MASTER_OUT, MASTER_SRC, PETA, bo
 KOL_NAMA, KOL_TOKO, KOL_KAT, KOL_WARNA, KOL_GEN, KOL_SKU = 2, 3, 4, 5, 6, 9
 
 # prefix yang setelah penggabungan HARUS hilang total dari master
-PREFIX_MATI = {"DHT-XNA", "TYT-VLZ", "DHT-AYL", "DHT-SGR", "DHT-TRS", "DHT-FRZ",
+# (2026-08-20: TYT-AGY & DHT-RCK menggantikan DHT-AYL & DHT-FRZ di sini setelah
+# koreksi arah pemenang Agya/Ayla & Rocky-lawas - lihat samakan_sku_kembar.py)
+PREFIX_MATI = {"DHT-XNA", "TYT-VLZ", "TYT-AGY", "DHT-SGR", "DHT-TRS", "DHT-RCK",
                "DHT-TG", "TYT-VLF"}
 
 # TF dari Sheet2 Data_Mobil_Lebih_dari_1_Formula_2.xlsx
@@ -69,7 +71,10 @@ def main():
                 else:
                     lain_berubah.append((k, i + 1, c + 1, va, vb))
     cek("3. tidak ada kolom selain SKU yang berubah", not lain_berubah, str(lain_berubah[:5]))
-    cek("4. jumlah SKU berubah = 1438", sku_berubah == 1438, f"aktual {sku_berubah}")
+    # 2026-08-20: turun dari 1438 -> 1174 setelah koreksi arah Agya/Ayla & Rocky-lawas
+    # (Ayla & Feroza sudah native jadi prefix pemenang, jadi baris mereka sendiri
+    # tidak perlu berubah lagi - beda dgn versi sebelumnya yang keduanya harus diubah).
+    cek("4. jumlah SKU berubah = 1174", sku_berubah == 1174, f"aktual {sku_berubah}")
 
     # 3. semua baris grup kembar sudah pakai prefix + kode generasi target
     salah = []

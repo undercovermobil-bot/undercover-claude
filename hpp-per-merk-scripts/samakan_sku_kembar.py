@@ -14,6 +14,22 @@ Latar (instruksi user 2026-08-19/20):
                                                             Total Formula (TF) di Sheet2
                                                             Data_Mobil_Lebih_dari_1_Formula_2.xlsx
 
+KOREKSI 2026-08-20 (setelah branch claude/repo-memory-access-4hthja digabung ke sini
+atas instruksi user): "Toyota selalu menang" TERNYATA bukan aturan blanket - 2 dari 7
+grup arahnya kebalik. Ditemukan lewat riwayat kerja NYATA (2026-08-11, sudah
+dieksekusi & dikonfirmasi user) di `project-undercover-sku-sync-status.md`:
+  - **Agya + Ayla**: arahnya "Agya ikut kode Ayla" -> DHT-AYL menang, BUKAN TYT-AGY.
+    (Konsisten juga dgn `PREFIX{}` di update_harga_per_sku.py yang sudah divalidasi
+    ke data listing riil: 'Toyota Agya': 'DHT-AYL'.)
+  - **Rocky lawas (F70/F300)**: targetnya "Daihatsu Feroza 'Gen 1&2'" (DHT-FRZ),
+    BUKAN DHT-RCK. Versi sebelumnya di sini (PREFIX_ROCKY_LAWAS="DHT-RCK") adalah
+    ASUMSI saya sendiri karena waktu itu belum ketemu riwayat kerja yang sebenarnya
+    sudah ada.
+5 grup lainnya (Avanza+Xenia+Veloz, Calya+Sigra, Rush+Terios, Raize+Rocky baru,
+Alphard+Vellfire) SUDAH cocok persis dengan riwayat 2026-08-11 itu, termasuk detail
+yang tadinya saya tandai "perlu konfirmasi" (Veloz Gen 1 2011-2021 ikut G3) - itu
+TERKONFIRMASI benar oleh preseden nyata "Veloz Gen 1 (2011-2021) -> Avanza Gen 3 (G3)".
+
 Bukti pendukung (harga listing Shopee toko Undercover Autocare, varian Reguler termurah):
     Avanza = Xenia = Veloz  298.000
     Agya   = Ayla           287.000
@@ -39,11 +55,10 @@ MASTER_OUT = "SKU, Price, Tracking Cover Mobil - SKU KEMBAR DISAMAKAN.xlsx"
 KOL_NAMA, KOL_TOKO, KOL_KAT, KOL_WARNA, KOL_GEN, KOL_SKU = 2, 3, 4, 5, 6, 9
 
 # Prefix kanonik grup Feroza/Taft GT/Rocky lawas.
-# ASUMSI: user menjawab "opsi satu benar" untuk opsi "Rocky lawas tetap DHT-RCK",
-# lalu menambahkan bahwa Feroza & Taft GT itu mobil yang sama -> DHT-RCK jadi kanonik.
-# Kalau user lebih suka DHT-FRZ (nama pasar Indonesia, tidak rancu dgn Rocky 2021),
-# cukup ganti 1 konstanta ini.
-PREFIX_ROCKY_LAWAS = "DHT-RCK"
+# DHT-FRZ (bukan DHT-RCK) - dikonfirmasi dari riwayat kerja nyata 2026-08-11 yang
+# sudah dieksekusi & dikonfirmasi user: "Daihatsu Rocky F70/F300 (1984-2002) ->
+# Daihatsu Feroza 'Gen 1&2' (1993-1996)". Lihat KOREKSI 2026-08-20 di docstring atas.
+PREFIX_ROCKY_LAWAS = "DHT-FRZ"
 
 # (nama produk di master, generasi di master) -> (prefix SKU baru, kode generasi baru)
 GRUP = {
@@ -59,13 +74,14 @@ GRUP = {
         ("Toyota Veloz", "Gen 2"): ("TYT-AVZ", "G3"),
     },
     "Agya + Ayla (TF=1)": {
-        ("Toyota Agya", "Gen 1"): ("TYT-AGY", "G1"),
-        ("Toyota Agya", "Gen 2"): ("TYT-AGY", "G1"),
-        ("Daihatsu Ayla", "Gen 1"): ("TYT-AGY", "G1"),
-        ("Daihatsu Ayla", "Gen 1F1"): ("TYT-AGY", "G1"),
-        ("Daihatsu Ayla", "Gen 1F2"): ("TYT-AGY", "G1"),
-        ("Daihatsu Ayla", "Gen 2"): ("TYT-AGY", "G1"),
-        ("Daihatsu All New Ayla", "Gen 2 (A350)"): ("TYT-AGY", "G1"),
+        # DHT-AYL menang (bukan TYT-AGY) - lihat KOREKSI 2026-08-20 di docstring atas.
+        ("Toyota Agya", "Gen 1"): ("DHT-AYL", "G1"),
+        ("Toyota Agya", "Gen 2"): ("DHT-AYL", "G1"),
+        ("Daihatsu Ayla", "Gen 1"): ("DHT-AYL", "G1"),
+        ("Daihatsu Ayla", "Gen 1F1"): ("DHT-AYL", "G1"),
+        ("Daihatsu Ayla", "Gen 1F2"): ("DHT-AYL", "G1"),
+        ("Daihatsu Ayla", "Gen 2"): ("DHT-AYL", "G1"),
+        ("Daihatsu All New Ayla", "Gen 2 (A350)"): ("DHT-AYL", "G1"),
     },
     "Calya + Sigra (TF=1)": {
         ("Toyota Calya", "Gen 1"): ("TYT-CLY", "G1"),

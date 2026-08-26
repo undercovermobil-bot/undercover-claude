@@ -30,19 +30,21 @@ isi("TYT-AVZ", ["G3"], "TYT-AVZ", "G3", "tetap - formula Avanza Gen 3/Veloz")
 isi("DHT-XNA", ["G1", "G2"], "TYT-AVZ", "G1", "Xenia Gen 1-2 = Avanza Gen 1-2")
 isi("DHT-XNA", ["G3"], "TYT-AVZ", "G3", "Xenia Gen 3 = Avanza Gen 3")
 isi("TYT-VLZ", ["G1", "G2"], "TYT-AVZ", "G3", "Sheet2: Veloz Gen 1,2,3 = Avanza Gen 3")
-isi("TYT-AGY", ["G1", "G2"], "TYT-AGY", "G1", "TF=1, semua generasi 1 kode")
-isi("DHT-AYL", ["G1", "G2"], "TYT-AGY", "G1", "Ayla = Agya")
+# 2026-08-20: arah Agya/Ayla & Rocky-lawas dikoreksi setelah branch
+# claude/repo-memory-access-4hthja digabung - lihat catatan di samakan_sku_kembar.py.
+isi("TYT-AGY", ["G1", "G2"], "DHT-AYL", "G1", "Agya = Ayla (DHT-AYL menang, dikonfirmasi user 08-11)")
+isi("DHT-AYL", ["G1", "G2"], "DHT-AYL", "G1", "tetap")
 isi("TYT-CLY", ["G1"], "TYT-CLY", "G1", "tetap")
 isi("DHT-SGR", ["G1"], "TYT-CLY", "G1", "Sigra = Calya")
 isi("TYT-RSH", ["G1", "G2"], "TYT-RSH", "G1", "TF=1, semua generasi 1 kode")
 isi("DHT-TRS", ["G1", "G2"], "TYT-RSH", "G1", "Terios = Rush")
 isi("TYT-RZE", ["G1"], "TYT-RZE", "G1", "tetap")
 isi("DHT-RCK", ["G2"], "TYT-RZE", "G1", "Rocky BARU (A200) = Raize")
-isi("DHT-RCK", ["F7"], "DHT-RCK", "G1", "Rocky LAWAS (F70/F300) - kode generasi ikut master")
+isi("DHT-RCK", ["F7"], "DHT-FRZ", "G1", "Rocky LAWAS (F70/F300) = Feroza (dikonfirmasi user 08-11)")
 isi("TYT-ALP", ["G1", "G4"], "TYT-ALP", "G1", "TF=1, semua generasi 1 kode")
 isi("TYT-VLF", ["G1"], "TYT-ALP", "G1", "Vellfire = Alphard")
-isi("DHT-FRZ", ["G1", "G3"], "DHT-RCK", "G1", "Feroza = Rocky lawas = Taft GT")
-isi("DHT-TG", ["G1", "Hijau"], "DHT-RCK", "G1", "Taft GT = Rocky lawas = Feroza")
+isi("DHT-FRZ", ["G1", "G3"], "DHT-FRZ", "G1", "tetap - Rocky lawas & Taft GT ikut kode ini")
+isi("DHT-TG", ["G1", "Hijau"], "DHT-FRZ", "G1", "Taft GT = Feroza = Rocky lawas")
 
 PREFIX = "Undercover Autocare - Cover Mobil "
 
