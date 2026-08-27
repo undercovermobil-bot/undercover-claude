@@ -1015,3 +1015,93 @@ pola yang sama - method yang recompute dari "anggota yang kebetulan hadir
 saat ini" gampang drift kalau datanya bertahap nambah dari waktu ke waktu.
 Solusi: kunci kalibrasi dari baseline yang sudah divalidasi, jangan
 recompute from scratch tiap ada data baru.
+
+---
+
+## 2026-08-27: Audit + usulan SKU Smartprotection (SP) - 291 produk vs listing riil
+
+User upload 2 file listing Shopee SP riil ("1.xlsx"/"2.xlsx", format
+"sales_info" sama seperti file OT sebelumnya, kena bug `activePane` yang
+sama, diperbaiki `repair_xlsx.py`). Tanya: apakah 291 produk yang ada di
+"Harga Baru SP-OP (matriks) FINAL.xlsx" sudah semua terisi kode SKU.
+
+**Iterasi pencocokan nama (PENTING - jangan ulang kesalahan ini)**: nama
+produk di listing SP SERING BEDA dari nama di file harga:
+- Brand didrop: listing "Feroza" (bukan "Daihatsu Feroza")
+- Trim/suffix didrop: listing "Mitsubishi Pajero" utk target "Mitsubishi
+  Pajero Sport"
+- Kode tanpa strip: listing "Honda BRV"/"HRV"/"CRV"/"WRV" (bukan
+  "BR-V"/"HR-V"/dst)
+- Brand dobel di HPP_STP_OTP_.xlsx: "Mitsubishi Mitsubishi Outlander" dll
+  (typo lama, tetap ada di target) vs listing "Mitsubishi Outlander" biasa
+- Prefix "Body Cover Mobil / Sarung / Selimut Mobil" (bukan cuma "Cover
+  Mobil / Selimut Mobil")
+
+User SENDIRI yang nemuin 2 kasus pertama (screenshot Shopee: Pajero &
+Feroza ternyata ADA + SKU-nya LENGKAP) setelah laporan audit pertama saya
+salah bilang "tidak ditemukan" - HARUS diperbaiki matching-nya, bukan
+percaya laporan pertama begitu saja. **How to apply ke depan**: kalau
+audit lintas-nama (file harga vs listing riil) bilang "tidak ditemukan"
+utk banyak produk, JANGAN langsung simpulkan produk itu belum dijual -
+cek dulu apakah itu cuma soal nama beda (brand didrop, trim didrop, tanda
+hubung hilang), coba alias 2-ARAH (bukan cuma "target adalah prefix
+listing" tapi juga sebaliknya).
+
+**Hasil final** (setelah matching diperbaiki): dari 291 target - **148
+SKU lengkap semua, 36 sebagian kosong, 4 semua kosong, 103 tidak
+ditemukan** (103 ini kemungkinan besar sebagian besar genuinely belum
+dijual di SP - 66 dari 103 itu dari 91 model ronde-2 yg baru saja
+ditambahkan sesi lalu, wajar; TAPI belum divalidasi 100% krn keterbatasan
+matching nama, ada beberapa kandidat spesifik yg dicurigai sama tapi beda
+nama: "Suzuki Vitara" (listing) vs "Suzuki Grand Vitara" (target), ada
+juga TYPO brand di listing "Mitshubishi Xforce" yg bikin tidak ke-match ke
+"Mitsubishi Xforce" - belum dikonfirmasi user, dicatat sbg temuan
+terpisah, BUKAN diperbaiki otomatis krn XForce risiko keliru kalau
+ternyata beda model).
+
+**Total Formula (TF) - dikonfirmasi MASIH BERLAKU** (rule #9,
+project-undercover-sku-sync-rules.md) - user tanya eksplisit apa masih
+ada memory soal ini sebelum minta generate SKU baru, DIKONFIRMASI ada &
+dipakai sbg pagar supaya tidak menebak generasi.
+
+**Metode isi SKU kosong (urutan prioritas, semua diverifikasi dari data
+riil produk itu sendiri, TIDAK ada yang ditebak dari luar)**:
+1. Variant "Tahun Lain"/"Model Lain" -> SENGAJA dilewati (rule #4 lama,
+   169 baris) - bukan gap, jangan diisi.
+2. Sibling SAMA produk + SAMA tier (Reguler/Strip) + SAMA teks tahun yang
+   SUDAH py SKU -> tinggal ganti segmen warna (31 baris, keyakinan
+   TINGGI). **Bug yang sempat kejadian & diperbaiki**: percobaan pertama
+   cuma cocokkan teks-tahun TANPA cek tier, jadi baris "Orange,2019-2026"
+   (Reguler) sempat salah ambil kode dari sibling "Elite Merah,2019-2026"
+   (Strip) - ke-detect sendiri sebelum dikirim ke user, diperbaiki dgn
+   nambah syarat tier harus sama juga.
+3. Fallback TF=1 seragam: kalau SEMUA baris produk itu yg sudah terisi
+   cuma pakai 1 kode generasi bersih "G<n>" (bukan kode bucket "GB..."),
+   generasi manapun yg kosong (walau tahun aslinya beda) ikut kode yang
+   sama itu - VALID krn TF=1 sudah TERBUKTI dari data produk itu sendiri,
+   bukan asumsi generik (58 baris: BMW X5, Holden, Hyundai Excel, dkk).
+4. **TIDAK diisi** (249 baris): (a) 4 produk 0 SKU sama sekali - Honda
+   Civic Hatchback (90), Honda Civic Type R (90), Mazda 2 Sedan (45),
+   Daihatsu Espass (15). Prefix Civic Hatchback/Type R/Mazda 2 Sedan
+   SUDAH diketahui dari `update_harga_per_sku.py` (HND-CVH, HND-CTR,
+   MZD-2S) tapi skema generasinya belum bisa dipastikan tanpa sibling/
+   master. Daihatsu Espass malah prefix-nya sendiri belum pernah ada.
+   (b) **Hyundai Elantra (9 baris) - KENA bug "skema generasi ganda" yang
+   SUDAH terdokumentasi 2026-07-18** (lihat project-undercover-sku-sync-
+   status.md baris ~234-243, nama "Hyundai Elantra/Sonata" eksplisit
+   disebut di situ) - kode campur G1/G3/G4/G5/G6/G7 DAN kode bucket-tahun
+   GB20152020/GB20202024/G5F. Perbaikan yang benar WAJIB tarik dari file
+   master 69-sheet asli sesuai metode yang sudah dicatat di situ, BUKAN
+   ditebak dari file listing SP ini saja.
+
+Script: `audit_dan_isi_sku_smartprotection.py` (gabungan audit + usulan,
+versi final dari 4 iterasi cek_sku_smartpro*.py). File hasil:
+`AUDIT_SKU_SMARTPROTECTION.xlsx` (status per produk) +
+`USULAN_SKU_SMARTPROTECTION.xlsx` (89 SKU diusulkan + sheet "Tidak Diisi -
+Perlu Info" utk 5 produk di atas).
+
+**How to apply**: tabel kode warna SP (Reguler: Abu-abu=ABU/Hitam=HTM/
+Biru Benhur=BRU/Merah=MRH/Hijau Army=GRN/Orange=ORG; Strip: Epic=S1/
+Elite=S2/Warior=S3 + Abu=A/Biru=B/Merah=M, mis. "Epic Biru"->S1B) berlaku
+umum, diverifikasi puluhan contoh lintas-brand - bisa dipakai lagi kalau
+ada audit SKU serupa utk OP/OT/UA.
