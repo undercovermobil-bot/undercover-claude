@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Isi template diskon Shopee (kolom Kode Produk/Kode Variasi/Harga diskon)
-untuk 100 produk Otonation (OT) terlaris - dipetakan pakai PREFIX SKU yang
-sama dgn "Harga Baru UC Top 100 (matriks).xlsx" (OT konsolidasi ke stok UA,
-jadi target harganya sama dgn top-100 UC - sudah divalidasi lewat
+Isi template diskon Shopee (Kode Produk/Kode Variasi/Harga Awal/Harga
+diskon) untuk 100 produk Otonation (OT) terlaris - dipetakan pakai PREFIX
+SKU yang sama dgn "Harga Baru UC Top 100 (matriks).xlsx" (OT konsolidasi ke
+stok UA, jadi target harganya sama dgn top-100 UC - sudah divalidasi lewat
 `cek_harga_otonation.py`, 2026-08-26).
 
 Hanya Reguler+Strip yg diisi (Premium/Exclusive tidak disentuh, konsisten
-dgn seluruh batch harga proyek ini). "Harga Awal" & "Batas Pembelian"
-sengaja dikosongkan (opsional di template, biar Shopee pakai harga listing
-saat ini scr otomatis).
+dgn seluruh batch harga proyek ini). "Batas Pembelian" sengaja dikosongkan
+(opsional, tidak perlu batas).
 
-PENTING: kolom "Harga diskon" diisi dgn TARGET RESMI dari file harga
-(bukan harga live di listing OT), supaya tidak ikut membawa 2 masalah yg
-sudah diketahui ke kampanye diskon baru:
-  - Brio & Jazz (56 baris): listing OT masih pakai harga spread lama
-    (335rb/378rb), padahal sudah dikoreksi ke plafon 332rb/375rb.
-  - Suzuki Carry (14 baris, varian Gen 2F): listing OT masih 315rb,
-    stale dari sebelum batch harga diterapkan sama sekali.
-Kalau target harga berubah lagi nanti, cek ulang perbedaan live-vs-target
-before generate ulang - JANGAN asumsikan otomatis semua sudah sinkron.
+Formula (2026-08-27, revisi dari versi awal yg cuma isi Harga diskon):
+    Harga Awal   = target resmi top-100 (BUKAN harga live di listing OT)
+    Harga diskon = Harga Awal - 3% (round eksak, semua target kelipatan
+                   Rp1.000 jadi 3%-nya selalu kelipatan Rp10, no rounding)
+
+Kenapa Harga Awal pakai target resmi bukan live: 2 masalah yg sempat
+ketahuan waktu Harga diskon msh dihitung dari live (2026-08-26/27) -
+- Brio & Jazz: live OT sempat pakai harga spread lama (335rb/378rb),
+  padahal target resmi sudah dikoreksi ke plafon 332rb/375rb. Target resmi
+  di file ini SUDAH mengandung plafon itu (`terapkan_override_brio_jazz.py`
+  sudah nulis nilainya langsung ke "Harga Baru UC Top 100 (matriks).xlsx"),
+  jadi baca_harga() otomatis kasih 332rb/375rb, tidak perlu override lagi
+  di sini.
+- Suzuki Carry (varian Gen 2F, 14 baris): live OT sempat stale di 315rb.
+  User sudah perbaiki manual match ke harga Gen 2 (2026-08-27) - dgn Harga
+  Awal dari target resmi, baris ini otomatis ikut benar juga.
 
 Pemakaian:
     python3 isi_template_diskon_ot_top100.py <harga_file.xlsx> \
@@ -32,6 +38,10 @@ from update_harga_per_sku import (baca_harga, urai_sku, ALIAS, KAT_KE_JENIS,
                                    KECUALI, is_outdoor_polos, resolve_cols)
 
 
+def diskon3(harga):
+    return harga - (harga * 3) // 100
+
+
 def main():
     harga_file = sys.argv[1]
     template_path = sys.argv[2]
@@ -41,7 +51,6 @@ def main():
     target = baca_harga(harga_file, 1, 100)
 
     rows_out = []
-    mismatch = []
     import glob, os
     berkas = []
     for f in folders:
@@ -68,18 +77,12 @@ def main():
             if not jenis:
                 continue
 
-            harga_diskon = target[pfx_resolved][jenis]
-            harga_live = wsv.cell(r, col['harga']).value
-            try:
-                if int(float(harga_live)) != harga_diskon:
-                    mismatch.append((pfx_resolved, jenis, nm, sku, harga_live, harga_diskon))
-            except (TypeError, ValueError):
-                pass
-
+            harga_awal = target[pfx_resolved][jenis]
+            harga_diskon = diskon3(harga_awal)
             rows_out.append((
                 pid, nm, None,
                 wsv.cell(r, 3).value, wsv.cell(r, 4).value, sku,
-                None, harga_diskon, None,
+                harga_awal, harga_diskon, None,
             ))
 
     wb = openpyxl.load_workbook(template_path)
@@ -91,12 +94,6 @@ def main():
 
     print(f'total baris: {len(rows_out)}')
     print(f'tersimpan: {out_path}')
-    if mismatch:
-        print(f'\n! {len(mismatch)} baris beda dgn harga live OT saat ini (dipakai target resmi, bukan live):')
-        from collections import Counter
-        by_prefix = Counter(m[0] for m in mismatch)
-        for pfx, n in by_prefix.most_common():
-            print(f'  {pfx}: {n} baris')
 
 
 if __name__ == '__main__':

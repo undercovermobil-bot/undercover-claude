@@ -901,3 +901,22 @@ saja belum sempat dikoreksi (kasus Brio/Jazz/Carry di atas), dan kampanye
 diskon baru adalah kesempatan bagus utk sekalian membetulkan tanpa perlu
 batch terpisah. Tapi WAJIB laporkan selisihnya ke user (jangan diam-diam),
 krn user mungkin py alasan lain kenapa live-nya beda.
+
+**Revisi 2026-08-27 (sama hari)**: user balas 2 hal soal file diskon di
+atas - (1) Suzuki Carry Gen 2F sudah diperbaiki manual match ke Gen 2, (2)
+kolom "Harga Awal" TERNYATA perlu diisi juga (bukan dikosongkan), dan
+"Harga diskon" = **3% lebih murah dari Harga Awal**, dgn tegas: utk
+Brio/Jazz basisnya 332rb (target resmi), BUKAN 335rb (harga live). Ini
+justru MENGUATKAN keputusan sebelumnya pakai target resmi (bukan live) -
+user sendiri yg minta demikian scr eksplisit, jadi keputusan "how to apply"
+di atas terbukti benar.
+
+Formula: `harga_diskon = harga_awal - (harga_awal*3)//100` (integer, exact -
+semua target kelipatan Rp1.000, 3%-nya otomatis kelipatan Rp10, tidak ada
+isu pembulatan). Diverifikasi independen: 3262 baris, kode_variasi unik
+(no duplikat), rekalkulasi ulang tiap baris cocok 100%, Harga Awal Brio/Jazz
+terkonfirmasi 332rb/375rb (bukan 335rb/378rb).
+
+Script `isi_template_diskon_ot_top100.py` sudah direvisi ikut formula
+final ini (Harga Awal + diskon 3%, bukan cuma Harga diskon = target polos).
+File hasil final: `TEMPLATE_DISKON_OT_TOP100_3PERSEN.xlsx`.
