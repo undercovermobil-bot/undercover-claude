@@ -930,3 +930,88 @@ File hasil final YANG BERLAKU: `TEMPLATE_DISKON_OT_TOP100_35PERSEN.xlsx`
 (file `..._3PERSEN.xlsx` sebelumnya SUDAH TIDAK BERLAKU, digantikan). Kalau
 user minta ganti persen lagi nanti, jangan asumsikan 3,5% ini permanen -
 cek chat/memory terbaru dulu.
+
+---
+
+## 2026-08-27: SP/OP lanjut ke 292 model (v2) - ketemu bug drift - diperbaiki (v3)
+
+User tanya status "update harga SP/OP terakhir sampe mana" (lihat status
+sebelumnya: baru sampai file target 200 model, BELUM pernah dieksekusi ke
+listing beneran). Lalu user upload `HPP_STP_OTP_.xlsx` versi baru dgn 92
+model TAMBAHAN di sheet 'HPP 12%' (200 lama + 92 baru = 292, 0 dihapus).
+
+**Verifikasi sebelum proses**: 200 model lama PERSIS SAMA di file baru
+(nama, Pcs/Roll, harga mentah, URUTAN baris 2-201) - dicek eksplisit position-
+by-position, 0 beda. Pcs/Roll 92 model baru semua masih di rentang lama
+[3,4,5,6,7], TIDAK ada tier baru. **1 baris rusak di sumber**: "Ferrari F8
+Tributo" (baris 263) - Pcs/Roll, Biaya Per PCS, HPP semua kosong (beda dari
+3 Ferrari lain di sekitarnya yg datanya lengkap, Pcs/Roll=5, harga mentah
+369.955 sama persis) - DIKECUALIKAN dari perhitungan, minta user lengkapi
+dulu di sumber.
+
+### v2 (`harga_baru_sp_op_matriks_v2.py`): 92 model diklasifikasi, TAPI ketemu bug drift
+
+92 model baru diklasifikasi kategori+panjang pakai pengetahuan otomotif
+umum (konvensi sama spt round 1). **1 nama ambigu: "Holden" tanpa model
+spesifik** (Commodore/Kingswood/dll beda ukuran jauh) - dipakai placeholder
+sedan besar ~4900mm, PALING PERLU dikoreksi user drpd yg lain di daftar.
+
+Generate v2 lalu diverifikasi bandingkan ke v1 (200 model) → **ketemu 33
+harga model LAMA ikut BERUBAH +-Rp1.000-3.000** (Brio, Jazz, Agya, Ayla,
+Civic, Camry, Accord, Corolla, Hilux, dll) padahal cuma nambah model baru.
+Root cause: rentang panjang-bodi min-max per grup (Pcs/Roll x Kategori)
+dihitung ULANG dari SELURUH anggota grup (lama+baru) tiap generate, jadi
+posisi proporsional mobil lama ikut geser kalau ada anggota baru masuk
+dgn panjang lebih pendek/panjang dari rekor lama. Ditunjukkan konkret ke
+user pakai contoh grup City Car Pcs/Roll=6 (Honda Brio Rp326rb->Rp327rb
+gara2 DFSK Seres E1/Daihatsu Ceria/Fiat 500 masuk grup yg sama).
+
+User: **"nanti tiap ada mobil baru yg dimasukkan bakal geser terus dong?"**
+- benar, itu bug desain, bukan sekali-ini-saja. User juga nanya apa
+rentang harusnya berdasar SELURUH mobil di master - dijawab: **master
+TIDAK punya kolom panjang bodi (mm)**, itu klasifikasi manual dari
+pengetahuan umum sejak awal, jadi cek master tidak menyelesaikan soal ini.
+
+### v3 (`harga_baru_sp_op_matriks_v3.py`): FIX permanen + 1 aturan baru dari user
+
+**Fix #1 - kalibrasi dikunci**: rentang (lo/hi/skala Rp-per-100mm) per
+grup (Pcs/Roll x Kategori) SEKARANG DIHITUNG SEKALI dari 200 model LAMA
+saja (`kalibrasi_grup()`), lalu dipakai ULANG (`posisi()`) utk memposisikan
+SEMUA anggota (lama & baru). Anggota baru yg panjangnya di luar rentang
+lama tetap dipetakan pakai skala yang sama, dibatasi 0..Rp5.000 (linear,
+tidak pernah negatif/tidak pernah lewat cap). **Permanen ke depan** - kalau
+ada tambahan model lagi nanti, kalibrasi TETAP dikunci dari 200 model ini
+(bukan dari 292 atau berapa pun jumlah saat itu), supaya tidak drift lagi.
+1 kombinasi grup (Pcs/Roll=6 x SUV besar) sama sekali tidak py anggota
+lama (isinya cuma Chery Tiggo 8 baru) - dihitung dari anggota barunya
+sendiri, jadi baseline baru ke depan utk grup itu.
+
+**Fix #2 - 10 produk terlaris pakai harga TERENDAH**: permintaan eksplisit
+user - Avanza, Brio, Innova, Jazz, Ertiga, HR-V, Agya, Ayla, Xenia, Livina
+(No.1-10 di file, sama seperti urutan batch UC top-100) diisi HARGA
+TERENDAH per tier Pcs/Roll-nya (lantai), BUKAN hasil spread. Contoh yg
+dikonfirmasi user: Brio Rp322.000 (bukan Rp326rb), Avanza Rp370.000 (bukan
+Rp373rb). Ditandai fill biru + kolom "Keterangan" di file hasil.
+
+**Verifikasi independen (posisi per model, bukan cuma total)**: 190 model
+lama (200 dikurang 10 top-floor) → 0 beda dari v1 (fix drift TERBUKTI
+berhasil). 10 model top-floor → semua berubah sesuai formula lantai
+(diharapkan/sengaja). 91 model baru (round 2, Ferrari F8 Tributo
+dikecualikan) → semua punya harga masuk akal.
+
+**File hasil final**: `Harga Baru SP-OP (matriks) FINAL.xlsx` (dari
+`harga_baru_sp_op_matriks_v3.py`, 291 baris). v1/v2 file & script DITANDAI
+SUPERSEDED di docstring (tetap disimpan, dict KATEGORI/PANJANG_MM-nya
+masih dipakai/di-import oleh v3, JANGAN dihapus).
+
+**Belum ada progres**: file ini masih tahap "harga target siap", BELUM
+dieksekusi ke listing SP/OP yang sebenarnya (sama seperti status sebelum
+sesi ini) - masih perlu file export listing Shopee/TikTok/Lazada SP & OP
+terbaru kalau mau lanjut ke tahap update listing beneran.
+
+**How to apply**: kalau desain "hitung ulang dari grup yang kebetulan ada
+di 1 file run" ketemu lagi di skenario lain (bukan cuma SP/OP), curigai
+pola yang sama - method yang recompute dari "anggota yang kebetulan hadir
+saat ini" gampang drift kalau datanya bertahap nambah dari waktu ke waktu.
+Solusi: kunci kalibrasi dari baseline yang sudah divalidasi, jangan
+recompute from scratch tiap ada data baru.

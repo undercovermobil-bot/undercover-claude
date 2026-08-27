@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+SUPERSEDED 2026-08-27 oleh `harga_baru_sp_op_matriks_v3.py` -- generate file
+ini (v2) MEMBUKTIKAN bug drift (200 harga lama, 33 di antaranya ikut
+geser +-Rp1.000-3.000 gara-gara 92 model baru masuk grup yang sama, lihat
+verifikasi di project-undercover-harga-referensi.md). v3 mengunci
+kalibrasi dari 200 model lama supaya tidak drift lagi + tambahan aturan
+top-10 pakai harga terendah. Dict KATEGORI_TAMBAHAN2/PANJANG_TAMBAHAN2 di
+file ini MASIH dipakai (di-import oleh v3), JANGAN diubah.
+
 Versi 2 dari `harga_baru_sp_op_matriks.py` -- user upload ulang
 `HPP_STP_OTP_.xlsx` (2026-08-27) dgn 292 model di sheet 'HPP 12%' (200 lama
 + 92 model BARU ditambahkan, 0 model dihapus). Diverifikasi eksplisit:

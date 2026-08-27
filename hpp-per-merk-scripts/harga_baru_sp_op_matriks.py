@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+SUPERSEDED 2026-08-27 oleh `harga_baru_sp_op_matriks_v3.py` -- v1 ini (200
+model) py bug desain: kalau ada model baru ditambahkan ke grup (Pcs/Roll x
+Kategori) yang sama, rentang panjang-bodi dihitung ULANG dari SELURUH
+anggota grup saat itu, jadi harga model LAMA ikut geser tiap kali ada
+tambahan (ketemu saat nambah 92 model di v2). v3 mengunci kalibrasi dari
+200 model ini SEKALI, tidak dihitung ulang lagi ke depannya. Dict
+KATEGORI/PANJANG_MM di file ini MASIH dipakai (di-import oleh v2/v3),
+JANGAN diubah -- cuma fungsi/proses hitungnya yang sudah digantikan.
+
 Harga jual baru untuk toko Smartprotection (SP) & Otoprotection (OP), 200 model,
 Reguler -- memakai metode matriks (Pcs/Roll x kategori bodi x panjang fisik)
 yang SUDAH DIVALIDASI user untuk Undercover Autocare (branch
