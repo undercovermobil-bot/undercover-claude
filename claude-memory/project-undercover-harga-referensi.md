@@ -809,3 +809,46 @@ simpulkan "SKU kembar = penyebabnya" - cek dulu apakah produk LAIN dengan
 pola SKU-kembar yang sama di batch yang sama juga gagal (kalau tidak, bukan
 soal SKU kembar secara umum, cek apa yang unik dari produk yang gagal itu
 sendiri: histori edit terakhir, promo aktif, dll).
+
+---
+
+## 2026-08-26/27: File Hilux khusus TikTok + batch harga Lazada UA 1-40+Feroza
+
+**File isolasi Hilux TikTok** (`update_harga_hilux_tiktok.py`) - target
+`{'TYT-HLX': {'reguler':457000,'strip':500000}}`, sumber `tiktok_uc/`.
+Hasil 56 baris, diverifikasi independen: `sku_id`-nya PERSIS SAMA dgn 56
+`sku_id` yg gagal di file error batch besar (set diff kosong), harga semua
+benar (Reguler 457rb, Strip 500rb sesuai kategori SKU). Dikirim ke user utk
+dicoba upload terpisah - belum ada laporan hasil coba-upload-ulangnya.
+
+**Batch harga Lazada UA #1-40 + Feroza #49** - user upload file export
+"Harga & Stok" Lazada asli (`pricestock403342000257export...xlsx`, sheet
+`template`, 21.133 baris, format INI SUDAH cocok dgn
+SHEET/STARTROW/HEADER_KEY['lazada'] yg sudah ada di `update_harga_per_sku.py`
+sejak awal - tidak perlu script baru, cukup panggil `proses()` langsung).
+Script baru `update_batch_1_40_plus_feroza_lazada.py` cuma wrapper tipis.
+
+Temuan sebelum proses: **Taft GT 0 baris di Lazada** (sama seperti TikTok,
+dicek eksplisit nama "Taft" dan SKU "DHT-TG") - tidak perlu langkah ubah-SKU.
+Rocky lawas (F70/F300) di Lazada ternyata SUDAH pakai prefix `DHT-FRZ`
+tercampur dalam SATU produk "Daihatsu Rocky" bareng Rocky baru (`TYT-RZE`) -
+beda dari Shopee yg masih pakai `DHT-TG` lama, jadi tidak perlu ALIAS
+tambahan di Lazada.
+
+Hasil: **1.400 baris berubah**, produk #11-40 + Feroza #49. Produk #1-10
+(Avanza, Brio, Innova, Jazz, Ertiga, HR-V, Agya, Xenia/Veloz, Livina)
+**0 baris** - dicek eksplisit ke source, ternyata harganya DI LAZADA SUDAH
+BENAR sebelum batch ini (bukan gagal ke-match, memang sudah sinkron -
+`proses()` sengaja skip baris yg sudah sama). Verifikasi independen: rekonstruksi
+ulang baris-yg-harus-berubah langsung dari file sumber (bukan trust laporan
+skrip) lalu dibandingkan POSISI-DEMI-POSISI ke file output - 1400/1400 cocok
+persis.
+
+Catatan format Lazada: SKU dasar yg kembar antar-generasi (TF=1, sama spt
+Hilux di Shopee/TikTok) di Lazada DIBERI SUFFIX `_G1`/`_G3`/`_G5`/`_G7` dst
+oleh sistem Lazada sendiri saat upload awal (utk penuhi syarat "Seller SKU
+tidak boleh digandakan") - jadi Lazada TIDAK pernah benar-benar py SKU
+identik di 2 baris, biarpun makna fisiknya sama. Kita cuma ubah kolom
+Harga, kolom SKU tidak disentuh, jadi tidak melanggar aturan itu.
+
+File hasil: `UPDATE_HARGA_UC_1-40_LAZADA.xlsx`.
