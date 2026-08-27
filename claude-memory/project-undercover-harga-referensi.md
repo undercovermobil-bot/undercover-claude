@@ -920,3 +920,13 @@ terkonfirmasi 332rb/375rb (bukan 335rb/378rb).
 Script `isi_template_diskon_ot_top100.py` sudah direvisi ikut formula
 final ini (Harga Awal + diskon 3%, bukan cuma Harga diskon = target polos).
 File hasil final: `TEMPLATE_DISKON_OT_TOP100_3PERSEN.xlsx`.
+
+**Revisi lanjutan (sama hari)**: user minta ganti persentase dari 3% ke
+3,5%. Formula jadi `harga_diskon = harga_awal - (harga_awal*35)//1000`
+(integer, tetap eksak krn semua target kelipatan Rp1.000). Diverifikasi
+independen: 3262 baris, kode_variasi unik, kalkulasi 100% cocok. Script
+`isi_template_diskon_ot_top100.py` diupdate ke 3,5% (fungsi `diskon35`).
+File hasil final YANG BERLAKU: `TEMPLATE_DISKON_OT_TOP100_35PERSEN.xlsx`
+(file `..._3PERSEN.xlsx` sebelumnya SUDAH TIDAK BERLAKU, digantikan). Kalau
+user minta ganti persen lagi nanti, jangan asumsikan 3,5% ini permanen -
+cek chat/memory terbaru dulu.

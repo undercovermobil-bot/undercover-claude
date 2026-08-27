@@ -11,10 +11,13 @@ Hanya Reguler+Strip yg diisi (Premium/Exclusive tidak disentuh, konsisten
 dgn seluruh batch harga proyek ini). "Batas Pembelian" sengaja dikosongkan
 (opsional, tidak perlu batas).
 
-Formula (2026-08-27, revisi dari versi awal yg cuma isi Harga diskon):
+Formula (2026-08-27, revisi dari versi awal yg cuma isi Harga diskon;
+persentase diubah dari 3% ke 3,5% di hari yg sama - PERSEN bisa berubah
+lagi kalau user minta, cek chat/memory terbaru sebelum pakai angka di sini):
     Harga Awal   = target resmi top-100 (BUKAN harga live di listing OT)
-    Harga diskon = Harga Awal - 3% (round eksak, semua target kelipatan
-                   Rp1.000 jadi 3%-nya selalu kelipatan Rp10, no rounding)
+    Harga diskon = Harga Awal - 3,5% = harga_awal - (harga_awal*35)//1000
+                   (integer, eksak - semua target kelipatan Rp1.000 jadi
+                   3,5%-nya selalu kelipatan Rp35, no rounding)
 
 Kenapa Harga Awal pakai target resmi bukan live: 2 masalah yg sempat
 ketahuan waktu Harga diskon msh dihitung dari live (2026-08-26/27) -
@@ -38,8 +41,8 @@ from update_harga_per_sku import (baca_harga, urai_sku, ALIAS, KAT_KE_JENIS,
                                    KECUALI, is_outdoor_polos, resolve_cols)
 
 
-def diskon3(harga):
-    return harga - (harga * 3) // 100
+def diskon35(harga):
+    return harga - (harga * 35) // 1000
 
 
 def main():
@@ -78,7 +81,7 @@ def main():
                 continue
 
             harga_awal = target[pfx_resolved][jenis]
-            harga_diskon = diskon3(harga_awal)
+            harga_diskon = diskon35(harga_awal)
             rows_out.append((
                 pid, nm, None,
                 wsv.cell(r, 3).value, wsv.cell(r, 4).value, sku,
