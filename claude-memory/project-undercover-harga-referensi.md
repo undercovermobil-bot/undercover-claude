@@ -852,3 +852,52 @@ identik di 2 baris, biarpun makna fisiknya sama. Kita cuma ubah kolom
 Harga, kolom SKU tidak disentuh, jadi tidak melanggar aturan itu.
 
 File hasil: `UPDATE_HARGA_UC_1-40_LAZADA.xlsx`.
+
+---
+
+## 2026-08-27: Isi template diskon Shopee OT (Otonation) top-100
+
+User upload 3 file: `templatediscount.xlsx` (template diskon toko Shopee
+kosong, kolom Kode Produk/Kode Variasi/Harga diskon dst - 9 kolom) + 2 file
+export listing OT mentah (`1.xlsx`/`2.xlsx`, kena bug `activePane` yg sama,
+diperbaiki `repair_xlsx.py`). User nanya sekaligus konfirmasi: "kemarin aku
+di otonation cuma ubah 100 produk terlaris ya?" - dijawab lewat pencocokan
+data, bukan tebakan.
+
+Pencocokan pakai infrastruktur yg sama (`urai_sku`, `ALIAS`, `KECUALI`,
+`is_outdoor_polos`, `resolve_cols`) thd `baca_harga(..., 1, 100)` dari
+"Harga Baru UC Top 100 (matriks).xlsx" (target OT = target UC krn OT
+konsolidasi stok ke UA - sudah established sejak `cek_harga_otonation.py`).
+**Hasil: 3.262 baris, 98 produk unik** - PERSIS sama dgn angka total baris
+yg ditemukan `cek_harga_otonation.py` sebelumnya (3.262), jadi terkonfirmasi
+independen bahwa dugaan user benar: batch kemarin memang scope-nya top-100.
+
+**70 baris ternyata beda antara harga LIVE di listing OT vs target resmi
+matriks** - diputuskan isi kolom "Harga diskon" pakai TARGET RESMI, bukan
+live, supaya tidak ikut menyebarkan masalah yg sudah diketahui ke kampanye
+diskon baru:
+- **Brio & Jazz, 56 baris** (28+28): live OT masih 335rb/378rb (harga
+  spread lama, SEBELUM koreksi floor 332rb/375rb yg diputuskan user via
+  screenshot Shopee - lihat eksekusi Brio/Jazz sebelumnya di file ini).
+  OT belum ikut dikoreksi ke floor.
+- **Suzuki Carry, 14 baris** (varian Gen 2F): live OT masih 315rb, vs
+  target 382rb(R)/425rb(S) - ini persis temuan lama `cek_harga_otonation.py`
+  ("Suzuki Carry Gen 2F stale, 14 baris") yg ternyata BELUM diperbaiki di
+  listing OT sampai sekarang.
+
+Kolom "Harga Awal" & "Batas Pembelian" sengaja dikosongkan (opsional di
+template - biarkan Shopee pakai harga listing saat ini scr otomatis saat
+kampanye jalan, tidak perlu kita tebak).
+
+Script: `isi_template_diskon_ot_top100.py`. File hasil:
+`TEMPLATE_DISKON_OT_TOP100_FINAL.xlsx`. Verifikasi independen dari disk:
+3262 baris, 3262 kode_variasi unik (no duplikat), 0 baris dgn field wajib
+kosong.
+
+**How to apply**: kalau ada permintaan serupa lagi (isi template
+diskon/promo dari data harga terpisah), field harga SEBAIKNYA diisi dari
+sumber TARGET/RESMI, bukan nilai live listing saat itu - live listing bisa
+saja belum sempat dikoreksi (kasus Brio/Jazz/Carry di atas), dan kampanye
+diskon baru adalah kesempatan bagus utk sekalian membetulkan tanpa perlu
+batch terpisah. Tapi WAJIB laporkan selisihnya ke user (jangan diam-diam),
+krn user mungkin py alasan lain kenapa live-nya beda.
