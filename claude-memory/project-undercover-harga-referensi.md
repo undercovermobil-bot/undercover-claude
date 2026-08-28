@@ -1327,3 +1327,36 @@ lain jg spt Xforce kalau ada) & Hyundai Elantra (9, bug skema-ganda,
 butuh master file). File final (sudah terverifikasi 0 sel nyasar, 0
 duplikat, 0 kosong): `UPDATE_SKU_SMARTPROTECTION.xlsx`,
 `USULAN_SKU_SMARTPROTECTION.xlsx`.
+
+**Lanjutan sama hari - Espass selesai, Elantra TETAP tidak bisa walau ada
+referensi UA**: user kasih screenshot UA utk Daihatsu Espass (`DHT-ESP`,
+1 generasi doang - cocok persis dgn data SP yg emang cuma bare-color tanpa
+info generasi) - **15 baris diisi langsung**, aman krn simpel & tidak ada
+ambiguitas skema.
+
+User JUGA kasih screenshot UA utk Hyundai Elantra (Gen1 1990-1995->G5,
+Gen2 1995-2000->G5F, Gen3 2000-2006->G6), tanya "bisa ambil dari referensi
+UA kan?" - **JAWABANNYA TETAP TIDAK**, beda dari Xforce/Espass. Alasan:
+**referensi UA ini justru mengungkap 3 SISTEM PENOMORAN GENERASI YANG
+SALING BEDA, bukan cuma 1 sistem yang tinggal disalin**:
+1. SP tier Reguler: per-generasi asli (G1 utk Gen1&3, G4, G5, G6, G7)
+2. SP tier Strip: CAMPUR - G1 utk Gen1&3 (sama dgn Reguler), TAPI
+   GB20152020 utk Gen2&5&6 dan GB20202024 utk Gen7 (BEDA sistem dari
+   Reguler, walau row Gen/tahun yg SAMA - bukti: Gen2:1995-2000 Reguler=
+   `G5F` tapi Strip=`GB20152020`, DUA KODE BEDA utk SATU generasi yg sama)
+3. UA: py rentang tahun SENDIRI yg beda dari SP (UA py "Gen1 1990-1995"
+   yg SP TIDAK PUNYA entrinya sama sekali - SP entri paling awal adalah
+   "Gen2 1995-2000")
+
+Dengan 3 sistem yang tidak sinkron ini, assign kode ke 9 baris kosong
+(Strip Gen4) beresiko GENUINELY SALAH - tidak ada cara aman menyimpulkan
+apakah Strip-Gen4 harus ikut pola Reguler-nya sendiri ("G4", konsisten
+dgn Gen1&3) atau ikut pola bucket Strip-nya sendiri (butuh tau rentang
+bucket yg benar, yg TIDAK ketahuan dari data manapun yg ada). **How to
+apply**: referensi toko lain (spt Xforce/Espass) cuma valid dipakai kalau
+skema-nya SATU & KONSISTEN - begitu ketemu bukti ada >1 sistem berbeda yg
+tumpang tindih (skema ganda), referensi toko lain JUSTRU menambah bukti
+kompleksitas, bukan menyelesaikannya - tetap wajib master file.
+
+**Total SKU final: 374** (359 sebelumnya + 15 Espass). Tersisa HANYA
+Hyundai Elantra (9 baris) yang blocked.
