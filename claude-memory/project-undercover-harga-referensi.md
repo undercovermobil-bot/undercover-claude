@@ -1406,3 +1406,56 @@ yang sama dipakai utk >1 generasi asli yang beda rentang tahunnya =
 mustahil valid, itu tanda bug bukan sistem paralel). Voting dari sumber
 yang SUDAH terbukti bersih (baris lain di produk yang sama, tier lain,
 dst) seringkali cukup - tidak selalu perlu file eksternal.
+
+---
+
+## 2026-08-27: KOREKSI - fix Elantra "voting dari Reguler" SALAH, harusnya literal Gen->G<n>
+
+**Fix di atas (47 baris, voting dari tier Reguler) ITU SENDIRI SALAH.**
+User mempertanyakan lagi: "kenapa Gen 3 tapi kode SKU -G1-? harusnya
+sesuai nama variasinya (Gen3->G3), atau sesuaikan formulanya kalau ada."
+Ini nunjukkin kekeliruan metodologi yang lebih dalam: **saya keliru
+menyamakan "konsisten" dengan "benar"** - kode G1/G5F yang ada di tier
+Reguler itu SENDIRI kemungkinan sudah salah dari awal (bukan cuma Strip
+yang salah), cuma karena konsisten dipakai berulang saya asumsikan itu
+"ground truth" tanpa verifikasi independen ke sumber otoritatif.
+
+User upload `Data_Mobil_Lebih_dari_1_Formula_3.xlsx` (Sheet2, 1305 baris,
+sama seperti versi lama yang didokumentasikan di
+`project-undercover-bigseller-sync.md`/`sku-sync-status.md` - format
+kolom No/Nama Mobil/Generasi/Total Formula/Notes, data mulai baris 4).
+**Hyundai Elantra TIDAK ADA di file ini** (dicek eksplisit, 12 entri
+Hyundai lain ada: Creta, Stargazer, Palisade, Atoz, Santa Fe, Avega,
+Tucson, Avega Hatchback, Getz, Kona, Accent, Excel - Elantra tidak
+termasuk). **Aturan fallback dari user**: kalau mobil TIDAK ada di file
+formula, pakai **literal**: "Gen N" -> `G<N>`, "Gen N Facelift" -> `G<N>F`.
+
+Dihitung ULANG dari nol (bukan nambal 47 sebelumnya): 65 dari 90 baris
+Elantra (non-Transparan) ternyata perlu diubah ke skema literal murni -
+LEBIH BANYAK dari 47 sebelumnya, krn skema literal mengoreksi JUGA baris
+Reguler Gen2/Gen3 yang tadinya saya anggap "benar" (padahal salah:
+Gen2 seharusnya G2 bukan G5F, Gen3 seharusnya G3 bukan G1). Gen4/5/6/7
+Reguler KEBETULAN sudah benar sejak awal (angka literalnya emang sudah
+cocok), makanya cuma sebagian yang perlu diubah.
+
+**Total SKU final: 439** (374 + 65, menggantikan 47 versi sebelumnya
+sepenuhnya). Semua 90 baris Elantra (non-Transparan, non-"Tahun Lain" -
+tidak ada Tahun Lain di produk ini) kini konsisten literal.
+
+**How to apply ke depan (KRITIS, revisi dari lesson sebelumnya)**:
+1. **JANGAN PERNAH anggap kode yang sudah ada di listing itu "benar"
+   hanya karena konsisten/berulang** - konsistensi cuma bukti "sengaja
+   ditulis begitu", BUKAN bukti "sesuai aturan resmi". Source of truth
+   SEBENARNYA adalah file Total Formula (`Data_Mobil_Lebih_dari_1_Formula
+   _N.xlsx` Sheet2) - kalau model ADA di situ, ikuti Total Formula-nya
+   (grup->kode generasi pertama di grup, TF=1->G1 semua). Kalau TIDAK ada
+   di situ, defaultnya LITERAL (Gen N -> GN, Gen N Facelift -> GNF) -
+   BUKAN "samakan ke tier/baris lain yang kelihatan konsisten".
+2. Voting/konsensus dari data internal (tier lain, sibling, dst) HANYA
+   valid dipakai kalau TIDAK ADA cara memverifikasi ke sumber otoritatif
+   (file formula) - begitu file formula bisa dicek, itu SELALU menang
+   dari konsensus internal, walau konsensus internal kelihatan "rapi".
+3. File formula ini TIDAK cover semua model (Elantra tidak ada) - kalau
+   model tidak ketemu di situ, JANGAN diam2 pakai kode yang sudah ada di
+   listing (bisa jadi warisan bug lama) - tanya user aturan default
+   (literal) baru dipakai, seperti kasus ini.
