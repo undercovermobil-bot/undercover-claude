@@ -1220,3 +1220,67 @@ cek format lebih teliti dan verifikasi diperluas ke SEMUA kolom.
 File final (sudah benar): `UPDATE_SKU_SMARTPROTECTION.xlsx` - klon utuh
 struktur Shopee asli, 91 baris terisi (kolom 1-7), kolom 8+ eksplisit
 kosong, tidak ada baris/sel nyasar.
+
+---
+
+## 2026-08-27: Lanjutan - klarifikasi Vitara/Xforce "stale file", scan lebih dalam, + 3 produk 0-SKU diisi pakai skema sibling body-style
+
+**Klarifikasi penting**: user screenshot Shopee tunjuk baris "Suzuki Grand
+Vitara" & "Mitsubishi Xforce" = "Tidak Ditemukan" di file audit - itu versi
+FILE LAMA (sebelum alias manual Vitara/86 ditambahkan). Versi TERBARU
+sudah benar (Vitara="Lengkap", Xforce="Semua Kosong" krn listing-nya
+ketemu via fuzzy typo-fix tapi SKU-nya beneran 0). **Pelajaran: kalau
+kirim file dgn NAMA SAMA berkali-kali, user bisa nyasar ke versi lama yg
+sempat didownload - selalu tegaskan versi/angka terbaru di pesan, jangan
+asumsikan user otomatis liat versi paling akhir.**
+
+**Scan lebih dalam** (kata kunci paling distinctive tiap target "tidak
+ditemukan" dicari sbg substring di SEMUA nama listing, bukan cuma yg
+belum match): 10 kandidat ketemu, **7 FALSE POSITIVE** (kata generik yg
+kebetulan sama - "Cross"/"Sedan"/"Class"/"Max"/"Pickup" muncul di banyak
+mobil BEDA total): Datsun Cross vs Yaris Cross/Xpander Cross, Mitsubishi
+L300 Pickup vs Suzuki Carry Pickup, Mercedes SLK vs Class lain, Volvo 850
+Sedan vs Sedan lain, Daihatsu Hi Max vs Gran Max. **3 perlu dicatat tapi
+TIDAK digabung** (beda dari Vitara/86 krn TIDAK ada bukti prefix
+konklusif): Kia Grand Carnival (listing "Kia Sedona / Carnival" SUDAH
+ke-assign ke target "Kia Sedona" - kemungkinan sama/kembar, tapi jangan
+paksa 1 listing ke 2 target), Jeep Wrangler vs Wrangler Rubicon (kasus
+lama yg sudah didokumentasikan ambigu, lihat sku-sync-status.md), Toyota
+GR Corolla vs Corolla biasa (beda tier/harga, tidak ada bukti prefix sama
+spt kasus GR86).
+
+**3 produk 0-SKU diisi** pakai metode baru: **pinjam skema generasi dari
+"sibling body-style"** (model sama, badan beda, biasanya SATU nameplate
+py TF yg konsisten lintas body-style) - BUKAN nebak, tapi baca dari data
+riil yg SUDAH disinkron:
+- **Honda Civic Hatchback** (prefix `HND-CVH`, sudah diketahui) & **Honda
+  Civic Type R** (`HND-CTR`) - pinjam skema dari **Honda Civic Sedan**
+  yang SUDAH lengkap: TIDAK collapse, tiap generasi asli (Gen6-11) py kode
+  sendiri PERSIS sama dgn angka generasinya (Gen 8 -> G8, dst) - dicek
+  variant teks Hatchback/Type R MEMANG pakai label "Gen 6-11" yang SAMA
+  persis dgn Sedan (bukti kuat body-style yg sama, generasi yg sama).
+- **Mazda 2 Sedan** (prefix `MZD-2S`) - pinjam skema dari **Mazda 2
+  Hatchback** yang sudah lengkap: TF=1 (semua 3 generasi asli collapse ke
+  G1) - beda dari Civic, jadi TIDAK bisa asumsikan 1 pola generik "semua
+  ikut Sedan-nya" - tiap nameplate WAJIB dicek sibling-nya sendiri.
+
+Total 225 baris baru (90+90+45). **Mitsubishi Xforce, Daihatsu Espass
+TETAP tidak diisi** - keduanya TIDAK py sibling body-style dalam katalog
+SP (nameplate berdiri sendiri), jadi tidak ada data riil utk dipinjam;
+Espass bahkan prefix-nya sendiri belum pernah ada. Hyundai Elantra tetap
+diblok krn bug skema-ganda yg sudah didokumentasikan (lihat entri
+sebelumnya).
+
+**Total SKU final: 316** (91 sebelumnya + 225 baru). File final (format
+klon Shopee asli, sudah lulus semua verifikasi termasuk cek kolom 8+ &
+duplikat): `UPDATE_SKU_SMARTPROTECTION.xlsx`, `USULAN_SKU_SMARTPROTECTION.xlsx`
+(3 warna beda utk 4 metode: hijau=sibling exact, kuning=TF1 seragam,
+oranye=borrow sibling body-style, kuning-tua=legacy 1-huruf).
+
+**How to apply ke depan**: kalau ketemu produk 0-SKU lagi, SEBELUM
+menyerah/minta master file, cek dulu apakah nameplate itu py "saudara
+body-style" lain (Sedan/Hatchback/Coupe dari model yang sama) yang SUDAH
+tersinkron di katalog yang sama - kalau ada, pinjam skema generasinya
+(cocokkan dulu apakah label generasi/tahun di teks variannya identik,
+baru boleh pinjam). Kalau tidak ada sibling sama sekali, itu baru
+genuinely butuh master file/keputusan user, jangan ditebak.

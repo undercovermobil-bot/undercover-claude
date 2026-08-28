@@ -38,11 +38,24 @@ Cara ngisi SKU kosong (URUTAN prioritas, TANPA nebak):
    real-nya beda dari yang sudah keisi) ikut kode yang sama itu. Ini
    VALID krn TF=1 berarti SEMUA generasi asli memang wajib 1 kode -
    sudah terbukti sendiri dari data produk itu (bukan tebakan generik).
-4. **TIDAK DIISI kalau**: (a) produk 0 SKU sama sekali (prefix + skema
-   generasi keduanya tidak diketahui), atau (b) kode generasi yang sudah
-   ada CAMPUR/tidak seragam (indikasi bug "skema generasi ganda" yang
-   sudah pernah didokumentasikan 2026-07-18 - WAJIB tarik dari master
-   69-sheet asli, bukan ditebak dari file listing SP saja).
+4. **Fallback "borrow" dari sibling body-style** (dipakai khusus produk 0
+   SKU yg PREFIX-nya sudah diketahui dari sumber lain, tapi skema
+   generasinya tidak - Honda Civic Hatchback/Type R & Mazda 2 Sedan,
+   2026-08-27): kalau nameplate itu py "saudara body-style" LAIN (Sedan/
+   Hatchback/dst dari model yg SAMA) yang SUDAH lengkap SKU-nya di
+   katalog yg sama, DAN teks variannya pakai label generasi/tahun yg
+   IDENTIK (bukti body-style sama, generasi sama) - pinjam skema
+   generasinya APA ADANYA (bisa per-generasi kayak Civic Sedan G6-G11,
+   bisa TF=1 seragam kayak Mazda 2 Hatchback G1). **Beda per nameplate,
+   JANGAN asumsikan 1 pola generik berlaku ke semua** - selalu cek
+   sibling-nya sendiri dulu.
+5. **TIDAK DIISI kalau**: (a) produk 0 SKU sama sekali DAN prefix TIDAK
+   diketahui dari mana pun DAN tidak py sibling body-style (mis.
+   Mitsubishi Xforce, Daihatsu Espass - nameplate berdiri sendiri), atau
+   (b) kode generasi yang sudah ada CAMPUR/tidak seragam (indikasi bug
+   "skema generasi ganda" yang sudah pernah didokumentasikan 2026-07-18 -
+   WAJIB tarik dari master 69-sheet asli, bukan ditebak dari file listing
+   SP saja - mis. Hyundai Elantra).
 
 Tabel kode warna (dipakai di langkah 2&3, diverifikasi puluhan contoh riil
 lintas-brand di file listing): Reguler (bare warna) - Abu-abu=ABU,
@@ -278,6 +291,42 @@ def usulkan_sku(per_target):
     return ok, gagal, skip_tahun_lain
 
 
+# Produk 0-SKU yg prefix-nya sudah diketahui (dari update_harga_per_sku.py
+# atau sumber lain) DAN py "saudara body-style" yg SUDAH lengkap di katalog
+# yg sama - dicek manual per kasus (2026-08-27), JANGAN tambah entri baru ke
+# sini tanpa verifikasi teks generasi identik dgn sibling-nya dulu.
+BORROW_DARI_SIBLING = {
+    # target: (prefix2, cara_gcode) - cara_gcode: 'literal' = ambil angka dari
+    # "Gen N" di teks varian; 'G1' = seragam (TF=1, borrow dari sibling body-style)
+    'Honda Civic Hatchback': ('HND-CVH', 'literal'),   # borrow skema Honda Civic Sedan
+    'Honda Civic Type R': ('HND-CTR', 'literal'),      # borrow skema Honda Civic Sedan
+    'Mazda 2 Sedan': ('MZD-2S', 'G1'),                 # borrow skema Mazda 2 Hatchback (TF=1)
+}
+GEN_RE = re.compile(r'Gen\s*(\d+)', re.IGNORECASE)
+
+
+def usulkan_sku_borrow(per_target):
+    ok, gagal = [], []
+    for target, (prefix2, cara) in BORROW_DARI_SIBLING.items():
+        for path, r, nm, pid, varid, variant in per_target[target]['blank_rows_detail']:
+            if not variant or 'tahun lain' in variant.lower():
+                continue
+            kat, warna = tier_dan_warna(variant)
+            if kat is None:
+                gagal.append((target, path, r, variant, "pola warna tidak dikenali")); continue
+            if cara == 'literal':
+                m = GEN_RE.search(variant)
+                if not m:
+                    gagal.append((target, path, r, variant, "tidak ada 'Gen N' di teks varian")); continue
+                gcode = f"G{m.group(1)}"
+            else:
+                gcode = cara
+            ok.append((target, path, r, pid, varid, variant,
+                       f"{prefix2}-SP-{kat}-{gcode}-{warna}",
+                       f"borrow skema sibling body-style ({cara})"))
+    return ok, gagal
+
+
 if __name__ == '__main__':
     targets, per_target, unmatched = audit()
     full_ok = [t for t in targets if t in per_target and per_target[t]['sku_kosong'] == 0 and per_target[t]['sku_ok'] > 0]
@@ -288,4 +337,8 @@ if __name__ == '__main__':
           f"Semua kosong: {len(all_kosong)}  Tidak ditemukan: {len(zero_found)}")
 
     ok, gagal, skip = usulkan_sku(per_target)
-    print(f"\nSKU diusulkan: {len(ok)}  |  'Tahun Lain' (sengaja skip): {skip}  |  Gagal/butuh info: {len(gagal)}")
+    ok_borrow, gagal_borrow = usulkan_sku_borrow(per_target)
+    ok_total = ok + ok_borrow
+    gagal_total = [g for g in gagal if g[0] not in BORROW_DARI_SIBLING] + gagal_borrow
+    print(f"\nSKU diusulkan (total, termasuk borrow sibling): {len(ok_total)}  |  "
+          f"'Tahun Lain' (sengaja skip): {skip}  |  Gagal/butuh info: {len(gagal_total)}")
