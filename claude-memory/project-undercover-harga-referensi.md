@@ -1180,3 +1180,43 @@ Diverifikasi independen: 91 baris, 91 Kode Variasi unik (no duplikat),
 0 baris SKU kosong, 0 baris Harga kosong. User belum konfirmasi hasil
 upload-nya ke Shopee - kalau upload gagal (mis. "sku not allow delete"
 spt kasus TikTok Hilux sebelumnya), catat di sini juga.
+
+**Revisi sama hari - user minta "format sama persis kayak di Shopee"**:
+versi pertama dibuat dari `openpyxl.Workbook()` KOSONG (cuma 7 kolom nilai
+polos, tanpa style/lebar-kolom/sheet lain dari file asli) - beda dari pola
+yang SUDAH TERBUKTI berhasil sepanjang proyek ini (`update_harga_per_sku.py`
+`proses()`/`salin()`: klon UTUH file sumber via
+`openpyxl.load_workbook(path, data_only=False)`, timpa baris data yg
+perlu, JANGAN bikin workbook baru dari nol). Diperbaiki: klon file
+`sp_sku_fixed/1.xlsx` utuh (semua style/format/lebar kolom ikut), timpa 91
+baris data (91 baris ini asalnya CAMPUR dari file-1 & file-2, karena
+target row-output r_out=7+i tidak selalu = row sumber r).
+
+**Bug ditemukan & diperbaiki saat verifikasi**: kolom di luar 7 kolom yang
+kita isi (GTIN, **Stok**, Min/Maks Pembelian, dst, sampai kolom O) di file
+sumber TERNYATA ADA ISINYA (mis. kolom Stok = "5" di HAMPIR SEMUA baris,
+bukan kosong) - kalau tidak dibersihkan, baris output yang datanya berasal
+dari FILE-2 tapi menempati posisi baris FILE-1 (krn kita gabung 2 sumber
+jadi 1 output berurutan) akan KEBAWA nilai kolom Stok dkk milik baris
+FILE-1 yang TIDAK RELEVAN - risiko upload Shopee menimpa Stok produk
+dengan angka yang salah/nyasar. **WAJIB kosongkan eksplisit kolom di luar
+yang benar-benar kita isi**, jangan asumsikan kolom lain sudah kosong dari
+sono cuma karena headernya tidak kita pakai.
+
+**Bug kedua, lebih halus - openpyxl `.cell(row, col, value=None)` adalah
+NO-OP, BUKAN mengosongkan sel**: percobaan pertama "kosongkan" pakai
+`ws.cell(r, c, value=None)` GAGAL DIAM-DIAM (nilai lama TETAP ada, bahkan
+di in-memory sebelum save) - openpyxl memperlakukan `value=None` sbg
+"jangan diisi apa-apa" (parameter default sentinel), BUKAN instruksi
+"set value jadi None". **Cara benar**: ambil dulu objek sel
+(`cell = ws.cell(r, c)`), baru assign atribut langsung
+(`cell.value = None`). **How to apply**: kapan pun perlu MENGOSONGKAN sel
+lewat openpyxl (bukan cuma ganti isi), selalu pakai assignment atribut
+langsung, JANGAN lewat parameter `value=` di pemanggilan `.cell()` -
+sudah kejadian nyaris lolos ke user krn verifikasi awal cuma cek
+"SKU kosong?"/"Harga kosong?" makanya luput, ketauan setelah user minta
+cek format lebih teliti dan verifikasi diperluas ke SEMUA kolom.
+
+File final (sudah benar): `UPDATE_SKU_SMARTPROTECTION.xlsx` - klon utuh
+struktur Shopee asli, 91 baris terisi (kolom 1-7), kolom 8+ eksplisit
+kosong, tidak ada baris/sel nyasar.
