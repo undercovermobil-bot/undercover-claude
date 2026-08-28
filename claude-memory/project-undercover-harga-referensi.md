@@ -1284,3 +1284,46 @@ tersinkron di katalog yang sama - kalau ada, pinjam skema generasinya
 (cocokkan dulu apakah label generasi/tahun di teks variannya identik,
 baru boleh pinjam). Kalau tidak ada sibling sama sekali, itu baru
 genuinely butuh master file/keputusan user, jangan ditebak.
+
+---
+
+## 2026-08-27: Xforce dapat prefix dari listing UA + Grandis migrasi penuh ke format modern
+
+User screenshot listing **Undercover Autocare (UA)** utk Mitsubishi
+Xforce - SUDAH py SKU modern `MTB-XFO-UA-R-G1-<warna>` (1 generasi saja,
+"Gen 1 2023-2026", wajar krn model masih baru). **Sumber prefix baru: cek
+listing TOKO LAIN (UA/OT/SP/OP) kalau ada yg SUDAH sinkron** - prefix SKU
+sama lintas toko (cuma segmen ke-3 "TOKO" yg beda per store, sesuai format
+`MEREK-MODEL-TOKO-KAT-GEN-WARNA`), jadi kalau UA sudah py, tinggal
+"disesuaikan" (ganti segmen toko UA->SP, generasi Gen1 SP jg 2023-2026 -
+SAMA PERSIS shg gcode G1 langsung dipakai tanpa perlu translate).
+**How to apply**: utk produk 0-SKU yg BUKAN py sibling body-style, coba
+minta user cek listing toko LAIN dulu sebelum simpulkan "butuh master
+file" - kadang toko lain sudah lebih dulu disinkron manual.
+
+Hasil: **15 baris Mitsubishi Xforce** terisi prefix `MTB-XFO` (toko SP).
+
+**Mitsubishi Grandis - user pilih migrasi PENUH ke format modern** (bukan
+cuma isi 2 baris kosong pakai skema legacy spt sebelumnya). Prefix modern
+`MTB-GRA` sudah KETEMU dari varian Transparan-nya sendiri
+(`MTB-GRA-SP-T-G1-TRP`, di luar cakupan harga tapi berguna sbg referensi
+prefix) - brand ini kelihatan lagi "setengah migrasi" (Transparan sudah
+pindah, Reguler/Strip belum). **30 baris (28 yg SUDAH py SKU legacy +
+2 yg kosong) SEMUA ditimpa** ke `MTB-GRA-SP-<KAT>-G1-<WARNA>` (G1 seragam,
+konsisten dgn kode Transparan & pola legacy lama yg jg TF=1 - 2 generasi
+asli 2011-2018/2018-2022 sama2 G1).
+
+**PENTING - ini beda jenis operasi dari batch2 sebelumnya**: 28 dari 30
+baris Grandis ini MENIMPA SKU yang SUDAH ADA (bukan cuma isi kosong) -
+ditandai terpisah "MIGRASI" (fill oranye di file update, beda dari kuning
+utk isi-baru biasa) supaya user sadar ini perubahan SKU pada baris yg
+sebelumnya sudah aktif dipakai (ada histori penjualan/stok terikat ke SKU
+lama), bukan sekadar mengisi yang kosong.
+
+**Total SKU final: 359** (314 sebelumnya - 2 Grandis-lama-legacy yg
+digantikan + 15 Xforce + 30 Grandis-migrasi). **Tersisa 2 produk blocked**:
+Daihatsu Espass (15, masih butuh prefix - user diminta cek listing UA/toko
+lain jg spt Xforce kalau ada) & Hyundai Elantra (9, bug skema-ganda,
+butuh master file). File final (sudah terverifikasi 0 sel nyasar, 0
+duplikat, 0 kosong): `UPDATE_SKU_SMARTPROTECTION.xlsx`,
+`USULAN_SKU_SMARTPROTECTION.xlsx`.
