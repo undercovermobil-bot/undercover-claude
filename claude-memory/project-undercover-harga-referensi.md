@@ -1360,3 +1360,49 @@ kompleksitas, bukan menyelesaikannya - tetap wajib master file.
 
 **Total SKU final: 374** (359 sebelumnya + 15 Espass). Tersisa HANYA
 Hyundai Elantra (9 baris) yang blocked.
+
+---
+
+## 2026-08-27: Elantra ternyata BISA - "skema ganda" itu bug penulisan, bukan 2 sistem valid
+
+User tidak terima kesimpulan "butuh master file" - curiga "ada bug di
+penulisan", minta diperbaiki. **User benar** - setelah re-analisis lebih
+teliti (bukan cuma voting kode dari SEMUA baris campur tier, tapi voting
+KHUSUS dari tier Reguler yg sudah terbukti bisa dipercaya): ternyata
+kode "GB20152020"/"GB20202024" itu MUSTAHIL valid - **1 kode bucket yg
+SAMA dipakai utk 3 GENERASI ASLI BERBEDA** (GB20152020 dipakai baik utk
+Gen2:1995-2000, Gen5:2010-2015, MAUPUN Gen6:2016-2020 - jelas salah,
+tidak mungkin 1 kode benar utk 3 rentang tahun yg beda total). Ini genuine
+bug, BUKAN skema kedua yang sah.
+
+**Metode fix**: hitung kode "benar" per generasi asli dari KONSENSUS tier
+Reguler SAJA (5-6 baris per generasi, semuanya SUDAH benar & konsisten
+KECUALI 2 baris "Orange" yang nyimpang sendiri - itu juga bug penulisan
+terpisah, ke-expose otomatis krn kalah suara vs 5 warna lain). **JEBAKAN
+yang sempat kejadian**: percobaan PERTAMA voting dari SEMUA baris (R+S
+digabung) - Strip py 9 baris/generasi vs Reguler cuma 5-6, jadi kode
+BUCKET YANG SALAH malah MENANG VOTING (menang jumlah baris) dan hasilnya
+JUSTRU mau nimpa kode Reguler yang BENAR jadi ikut kode bucket yang SALAH
+- arahnya kebalik. **Ketauan sebelum dikirim ke user** krn hasil awal
+"Orange,Gen6->GB20152020" kelihatan aneh dibanding pola yg sudah
+dikonfirmasi. **How to apply**: kalau voting mayoritas dipakai utk
+nentuin "kode benar", PASTIKAN sumber suara itu representatif/reliable
+dulu - jangan campur sumber yang levelnya beda kepercayaannya (di sini:
+Reguler = SUDAH terbukti bersih dari cross-check lain, Strip = JUSTRU
+yang dicurigai salah) dalam 1 kotak suara yang sama, nanti yang salah
+malah menang krn jumlah baris lebih banyak.
+
+Hasil: **47 baris Elantra diperbaiki** (2 koreksi di Reguler yg salah
+"Orange", 36 koreksi kode bucket Strip yg salah jadi kode Reguler yg
+benar per generasi, 9 isi baris Strip Gen4 yang kosong). **Total SKU
+final: 421** (374 + 47) - **SEMUA produk yang ketemu di listing SP kini
+sudah 0 gagal**, tidak ada lagi yang "blocked".
+
+**How to apply ke depan (paling penting)**: kalau ketemu lagi kasus
+"skema generasi kelihatan campur/tidak konsisten", JANGAN langsung
+simpulkan "butuh master file" - cek dulu apakah itu genuinely 2 sistem
+valid, atau cuma 1 sistem yang lagi RUSAK di sebagian baris (bukti: kode
+yang sama dipakai utk >1 generasi asli yang beda rentang tahunnya =
+mustahil valid, itu tanda bug bukan sistem paralel). Voting dari sumber
+yang SUDAH terbukti bersih (baris lain di produk yang sama, tier lain,
+dst) seringkali cukup - tidak selalu perlu file eksternal.
