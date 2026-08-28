@@ -110,10 +110,26 @@ def gen_text_key(variant):
     return parts[1].strip() if len(parts) > 1 else None
 
 
+# Alias manual - kasus yg BUKAN typo/salah ketik tapi keputusan bisnis
+# (listing pakai nama singkat/beda utk produk yg SAMA, dikonfirmasi lewat
+# prefix SKU yg sudah dipakai, mis. "Suzuki Vitara" listing prefix SZK-GVT
+# = persis "Grand Vitara"; "Toyota 86" listing prefix TYT-G86 = persis
+# "GR 86"). BEDA dari alias otomatis (brand/trim didrop) krn ini butuh
+# verifikasi manual per kasus - JANGAN tambah ke sini tanpa cek prefix SKU
+# eksisting dulu (2026-08-27, dicek user & Claude bareng).
+ALIAS_MANUAL_TERVERIFIKASI = {
+    'Suzuki Vitara': 'Suzuki Grand Vitara',
+    'Toyota 86': 'Toyota GR 86',
+}
+
+
 def build_alias_map(targets):
     key_to_target = {}
     for t in targets:
         key_to_target[normalize(t)] = t  # nama asli WAJIB menang (pass 1)
+    for listing_name, target in ALIAS_MANUAL_TERVERIFIKASI.items():
+        if target in targets:
+            key_to_target.setdefault(normalize(listing_name), target)
 
     def add_alias(key, target):
         nk = normalize(key)

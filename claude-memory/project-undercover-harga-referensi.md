@@ -1139,3 +1139,44 @@ Total SKU final yang diusulkan: **91** (89 skema modern + 2 Grandis legacy).
 File final: `AUDIT_SKU_SMARTPROTECTION.xlsx`, `USULAN_SKU_SMARTPROTECTION.xlsx`.
 Script `audit_dan_isi_sku_smartprotection.py` diupdate dgn fungsi
 `levenshtein()`+`match_fuzzy()`.
+
+**Lanjutan sama hari - scan lebih luas + file upload**: user minta cek
+produk LAIN dgn kasus serupa (typo/nama beda) sebelum lanjut apply SKU.
+Scan whole-name Levenshtein (bukan cuma kata brand) thd 101 sisa "tidak
+ditemukan" vs semua nama listing yg genuinely tidak match apapun (14 nama
+unik) - hasil 9 kandidat mirip, tapi **7 dari 9 adalah FALSE ALARM**
+(model REAL yang beda, cuma kebetulan mirip krn nomor/kode pendek):
+Peugeot 3008 vs 5008 (beda mobil), Mercedes GLB vs SLK Class (beda segmen
+total), Peugeot 306 vs 405, Hyundai Matrix vs Staria, Nissan Latio vs
+Note, Volkswagen Fox vs Scirocco, Wuling Darion vs Alvez - SEMUA dicek
+manual pengetahuan otomotif, BUKAN typo, jangan digabung.
+
+**2 kandidat TERVERIFIKASI benar** (dicek prefix SKU yg sudah dipakai
+listing, bukan cuma mirip nama):
+- **"Suzuki Vitara"** (listing) = target **"Suzuki Grand Vitara"** -
+  prefix listing `SZK-GVT`/`SZK-GVH` (Gen1-3/Gen4) + varian "e Vitara"
+  (`SZK-EVT`) semua di-bundle dlm 1 produk - persis "Grand Vitara" cuma
+  judul listing dipendekkan. SUDAH lengkap semua SKU-nya (tidak perlu
+  usulan baru).
+- **"Toyota 86"** (listing) = target **"Toyota GR 86"** - prefix listing
+  `TYT-G86` utk Gen1(2012-2021)/Gen2(2021-2023). Sudah lengkap juga
+  (blank yg ada semua "Tahun Lain", sengaja dikosongkan).
+
+Ditambahkan sbg `ALIAS_MANUAL_TERVERIFIKASI` di script (terpisah dari
+alias otomatis krn butuh verifikasi prefix manual per kasus, JANGAN
+tambah alias baru ke situ tanpa cek prefix SKU eksisting dulu). Hasil
+akhir: **149 lengkap, 38 sebagian kosong, 5 semua kosong, 99 tidak
+ditemukan**. (Catatan: Toyota GR 86 kehitung "sebagian kosong" bukan
+"lengkap" krn 14 baris "Tahun Lain"-nya tetap kehitung "kosong" di
+status kategori audit, walau itu memang sengaja dikosongkan - bukan
+gap beneran, cuma cara kategorisasi status yg belum bedakan alasan.)
+
+**File upload dibuat**: `UPDATE_SKU_SMARTPROTECTION.xlsx` - format PERSIS
+sama dgn file sumber (`sales_info` Shopee, kolom Kode Produk/Nama Produk/
+Kode Variasi/Nama Variasi/SKU Induk/SKU/Harga, header baris 1-6 disalin
+dari file asli), 91 baris = 91 SKU yg diusulkan di atas, Harga TIDAK
+diubah (disalin apa adanya dari sumber, cuma kolom SKU yang beda).
+Diverifikasi independen: 91 baris, 91 Kode Variasi unik (no duplikat),
+0 baris SKU kosong, 0 baris Harga kosong. User belum konfirmasi hasil
+upload-nya ke Shopee - kalau upload gagal (mis. "sku not allow delete"
+spt kasus TikTok Hilux sebelumnya), catat di sini juga.
