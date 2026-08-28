@@ -1105,3 +1105,37 @@ Biru Benhur=BRU/Merah=MRH/Hijau Army=GRN/Orange=ORG; Strip: Epic=S1/
 Elite=S2/Warior=S3 + Abu=A/Biru=B/Merah=M, mis. "Epic Biru"->S1B) berlaku
 umum, diverifikasi puluhan contoh lintas-brand - bisa dipakai lagi kalau
 ada audit SKU serupa utk OP/OT/UA.
+
+**Revisi sama hari - fallback typo brand ditambahkan**: user tunjukkan
+LAGI 1 kasus via screenshot Shopee - "Mitsubishi Grandis" dilaporkan
+"tidak ditemukan" padahal listingnya ADA (28/30 baris malah sudah py SKU,
+cuma FORMAT LAMA "CVR0029-STP-RPA" dst, bukan format MEREK-MODEL-TOKO-KAT-
+GEN-WARNA modern). Root cause: listing riilnya TYPO "Mistubishi Grandis"
+(huruf ketuker), sama pola dgn "Mitshubishi Xforce" yg sudah ketemu
+sebelumnya tapi belum di-generalisasi jadi perbaikan matching.
+
+Ditambah fallback fuzzy (Levenshtein) KHUSUS kata pertama (brand): jarak
+edit <=2, panjang kata asli >=5 huruf, DAN kata-kata lain + JUMLAH kata
+WAJIB sama persis. **Sempat false-positive** sebelum syarat "jumlah kata
+sama" ditambah: "Ford Fusion" (2 kata) kepancing cocok ke alias "Forsa"
+(1 kata, hasil brand-didrop dari target "Suzuki Forsa") krn cuma
+bandingkan kata pertama tanpa cek sisa kata ada/tidak. **How to apply**:
+fuzzy-match brand HARUS disertai syarat jumlah-kata-sama, jangan cuma
+"kata pertama mirip" - kalau tidak, alias pendek (hasil brand/trim-didrop)
+gampang menyedot listing yang secara kebetulan py kata pertama mirip tapi
+sebenarnya model yang SAMA SEKALI beda.
+
+Hasil setelah fix: **148 lengkap, 37 sebagian kosong, 5 semua kosong** (naik
+dari 4 - Mitsubishi Xforce ketemu listingnya tapi ternyata 0 SKU sama
+sekali, masuk daftar "perlu prefix dari luar" bareng Civic H/TypeR/Mazda2
+Sedan/Espass), **101 tidak ditemukan**. Grandis: 2 baris Orange
+diusulkan pakai pola LEGACY 1-huruf yang sama persis skemanya dgn tabel
+warna modern cuma disingkat 1 huruf (A/H/B/M/G utk 5 warna Reguler yang
+sudah ada) -> Orange = "O", jadi "CVR0029-STP-RPO" (medium confidence,
+beda dari sibling-copy yang high-confidence krn ini skema legacy yg baru
+pertama kali ditemukan, bukan yang sudah divalidasi berulang spt ORG).
+
+Total SKU final yang diusulkan: **91** (89 skema modern + 2 Grandis legacy).
+File final: `AUDIT_SKU_SMARTPROTECTION.xlsx`, `USULAN_SKU_SMARTPROTECTION.xlsx`.
+Script `audit_dan_isi_sku_smartprotection.py` diupdate dgn fungsi
+`levenshtein()`+`match_fuzzy()`.

@@ -15,6 +15,17 @@ atau trim/suffix didrop ("Mitsubishi Pajero" utk "Mitsubishi Pajero
 Sport"). User (2026-08-27) menunjukkan 2 contoh ini via screenshot Shopee
 setelah laporan audit pertama salah bilang "tidak ditemukan" utk keduanya.
 
+**Fallback fuzzy (typo brand)**: setelah itu user tunjukkan LAGI kasus
+"Mitsubishi Grandis" tidak ketemu padahal ADA di listing - ternyata listing
+riilnya typo "Mistubishi Grandis" (huruf ketuker). Ditambah fallback
+Levenshtein KHUSUS kata pertama (brand), WAJIB kata lain SAMA PERSIS & JUMLAH
+KATA SAMA (jangan cuma "kata pertama mirip" - awalnya sempat false-positive
+cocokkan "Ford Fusion" ke target "Suzuki Forsa" krn alias brand-didrop
+"Forsa" cuma 1 kata vs listing 2 kata, tidak divalidasi panjang kata sama).
+Threshold: jarak edit <=2, panjang kata brand asli >=5 huruf. Ditandai
+"[FUZZY]" di kolom produk-matched output - hasil MASIH perlu spot-check
+manual krn ini bukan match pasti 100%, beda dari alias exact.
+
 Cara ngisi SKU kosong (URUTAN prioritas, TANPA nebak):
 1. **"Tahun Lain"/"Model Lain"** -> SENGAJA dilewati, TETAP kosong (aturan
    #4 sku-sync-rules.md, bukan bug).
@@ -65,6 +76,23 @@ WARNA_STRIP = {'abu': 'A', 'biru': 'B', 'merah': 'M'}
 def normalize(s):
     s = s.lower().replace('-', '').replace('/', ' ').replace(':', ' ')
     return re.sub(r'\s+', ' ', s).strip()
+
+
+def levenshtein(a, b):
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    if la == 0:
+        return lb
+    if lb == 0:
+        return la
+    prev = list(range(lb + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i] + [0] * lb
+        for j, cb in enumerate(b, 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb))
+        prev = cur
+    return prev[lb]
 
 
 def tier_dan_warna(variant):
@@ -120,6 +148,24 @@ def match_target(base_name_norm, key_to_target, keys_sorted):
     return key_to_target[max(good, key=len)] if good else None
 
 
+def match_fuzzy(base_name_norm, key_to_target, keys_sorted):
+    """Fallback typo-brand: kata pertama boleh beda tipis (edit distance<=2,
+    panjang asli>=5), kata SISANYA + JUMLAH KATA wajib sama persis - jangan
+    longgarkan ini, gampang false-positive (mis. 'Ford Fusion' sempat
+    kepancing ke alias 1-kata 'Forsa' sebelum syarat jumlah-kata ditambah)."""
+    bwords = base_name_norm.split()
+    best = None
+    for k in keys_sorted:
+        kwords = k.split()
+        if len(kwords) != len(bwords) or kwords[1:] != bwords[1:]:
+            continue
+        d = levenshtein(kwords[0], bwords[0])
+        if len(kwords[0]) >= 5 and 0 < d <= 2:
+            if best is None or len(k) > len(best[0]):
+                best = (k, key_to_target[k], d)
+    return best
+
+
 def audit():
     ws = openpyxl.load_workbook(TARGET_PATH, data_only=True)['Harga Baru SP-OP']
     targets = [ws.cell(r, 2).value for r in range(2, ws.max_row + 1) if ws.cell(r, 2).value]
@@ -140,14 +186,21 @@ def audit():
             base = PREFIX_RE.sub('', SUFFIX_TRANSPARAN_RE.sub('', nm)).strip()
             if is_transparan:
                 continue
-            t = match_target(normalize(base), key_to_target, keys_sorted)
+            bn = normalize(base)
+            t = match_target(bn, key_to_target, keys_sorted)
+            via_fuzzy = False
+            if t is None:
+                fz = match_fuzzy(bn, key_to_target, keys_sorted)
+                if fz:
+                    t = fz[1]
+                    via_fuzzy = True
             if t is None:
                 unmatched_names[nm] += 1
                 continue
             sku = wsl.cell(r, 6).value
             d = per_target[t]
             d['rows'] += 1
-            d['produk_matched'].add(nm)
+            d['produk_matched'].add(nm + (' [FUZZY]' if via_fuzzy else ''))
             if sku and str(sku).strip():
                 d['sku_ok'] += 1
             else:
