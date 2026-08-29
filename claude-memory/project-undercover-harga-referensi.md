@@ -1627,5 +1627,80 @@ berubah, sisanya sudah benar dari awal), 144 sisa gap dilaporkan ke user
 grouped TF>1 shg tidak aman ditebak; sisanya produk yg 0 data di manapun,
 belum ditanyakan user).
 
+---
+
+## 2026-08-29 (lanjutan sama hari): User minta harga TikTok OP + daftar gap - membongkar bug bucket-code di 8 produk lain
+
+User minta 2 hal stlh menerima 6 file di atas: (1) "kenapa TikTok OP ngga
+sekalian harganya? sekalian update" (2) "TikTok OP yg masih belum ada
+SKUnya ini produk mobil apa aja?". Menjawab #2 (nge-list produk gap)
+JUSTRU membongkar bug baru: Hyundai Elantra & Hyundai Sonata muncul di
+daftar gap TikTok PADAHAL Elantra harusnya SUDAH 100% beres (439-row fix
+sebelumnya). Investigasi: **listing OP PUNYA SALINAN TERPISAH Elantra**
+yang TIDAK PERNAH disentuh 439-row fix itu (fix itu cuma nyentuh
+`sp_sku_fixed/*.xlsx`, bukan `op_src/fixed/*.xlsx`) - 42 baris OP masih
+pakai kode bucket lama (`GB20152020`, `GB20202024`) yang identik dgn bug
+Elantra yang sudah diperbaiki di SP.
+
+**Investigasi diperluas (bukan cuma Elantra)**: scan SEMUA produk SP yg
+tier Strip-nya py kode berawalan "GB" (pola bucket) - ketemu **9 produk**
+(termasuk Elantra yg sudah beres): Chevrolet Trooper, Hyundai Sonata,
+Jeep Cherokee, Kia Sedona/Carnival, Lexus LX, Lexus RX, Mercedes Benz CLS
+Class, Mercedes Benz GLA Class, Peugeot 3008. **Dicek ke file Total
+Formula - TIDAK SATU PUN dari 8 produk baru ini ada di situ**, jadi
+source of truth-nya cuma tier Reguler produk itu sendiri (kalau bersih)
+atau literal Gen->G<n>.
+
+**Metode perbaikan (general, otomatis, bukan hardcode per-produk)**:
+bangun peta `(gen_or_leftover_tahun) -> kode_generasi` dari tier REGULER
+produk itu sendiri (paling terpercaya krn historisnya sudah bersih/live),
+lalu timpa SEMUA baris tier Strip yg kode generasinya BEDA dari peta itu.
+**8 dari 9 aman** (Reguler-nya sendiri konsisten, tidak py kode bucket
+maupun tabrakan) - Chevrolet Trooper, Hyundai Sonata, Jeep Cherokee, Kia
+Sedona/Carnival, Lexus RX, Mercedes Benz CLS Class (walau angka
+generasinya kebalik dari kronologis - G2 utk yg lebih tua, G1 utk yg
+lebih baru - PROPAGASI TETAP AMAN krn tujuannya nyamain Strip ke Reguler,
+BUKAN membetulkan skema Reguler-nya, itu keputusan terpisah kalau memang
+salah), Mercedes Benz GLA Class. **1 DIFLAG, TIDAK diperbaiki**: **Lexus
+LX** - tier Reguler-nya SENDIRI py kode bucket (`GB20002007`), jadi tidak
+ada sumber bersih dalam produk itu utk jadi rujukan - butuh investigasi
+manual/tanya user, sama seperti Elantra dulu butuh file Total Formula.
+
+**Hasil**: SP dapat 135 baris tambahan diperbaiki (total SKU SP
+terkoreksi jadi 617), OP dapat 72 (bug sama, salinan independen) + 42
+(Elantra tidak sinkron) = 114 baris tambahan (total 666). TikTok OP
+sekarang 5.252/6.398 cocok (gap turun dari 144 ke 124 - Elantra & Sonata
+hilang dari daftar gap). **Harga TikTok OP ditambahkan** (kolom `price`
+TikTok, sama formula Reguler+Rp43rb utk Strip): 2.444 Reguler + 3.663
+Strip = 6.107 baris.
+
+**Jebakan teknis yang kejadian & harus diingat**: fungsi pembangun
+kandidat/master (`build_sp_master()`, `build_op_candidates()`,
+`build_sp_sku_overrides()`, `build_op_sku_overrides()` di
+`update_sku_harga_sp_op.py`) SEMUANYA baca override dari pickle hasil
+audit LAMA (`final_sku_fill7.pkl`/`op_audit_final.pkl`) yang HANYA
+mencakup baris yg ORIGINALNYA blank/legacy - begitu ketemu bug baru
+("baris yg dari awal SUDAH kelihatan py SKU valid, tapi ternyata salah"),
+override BARU (`bucket_fixes_final.pkl`, `elantra_op_fix.pkl`) harus
+ditambahkan ke **SEMUA SATU-SATUNYA titik pembangun override**, bukan cuma
+1-2 dari 4 - pertama kali cuma nambahin ke `build_sp_master()` &
+`build_op_candidates()` (utk TikTok) tapi LUPA `build_op_sku_overrides()`
+(utk file Shopee OP), akibatnya file Shopee OP yang sudah dikirim ke user
+MASIH py kode Elantra/Sonata lama walau TikTok & cross-reference-nya udah
+benar - ketauan dari verifikasi ulang manual per-file, BUKAN otomatis
+tertangkap. **How to apply**: kalau nemu bug baru yg butuh override
+tambahan di alur multi-tahap (banyak fungsi baca dari sumber yg sama),
+bikin CHECKLIST semua titik yg baca sumber itu SEBELUM mulai edit, jangan
+nambahin satu-satu sambil jalan - gampang kelewat kalau fungsinya
+strukturnya mirip tapi tersebar di file berbeda.
+
+Sisa gap TikTok OP (124, turun dari 144): 60 Toyota Corolla Gen1-4 (gap
+lama, formula grouped, tidak aman ditebak), 15 Nissan Latio "Model
+Lain/Custom" (skip sengaja, versi TikTok dari "Tahun Lain"), 14 Lexus RZ,
+14 Toyota FJ Cruiser, 14 Hummer H3, 5 Volkswagen Kombi, 1 Peugeot 306, 1
+Nissan Cedric - SEMUA 0 data di SP maupun OP, belum ditanyakan ke user.
+
+Script tambahan: `perbaiki_bucket_dan_harga_tiktok_op.py`.
+
 Script: `audit_dan_isi_sku_otoprotection.py`, `update_sku_harga_sp_op.py`,
 `propagasi_sku_tiktok_otoprotection.py`.

@@ -320,10 +320,19 @@ def resolve_with_special_cases(table, literal_bases, bn, tier, color, gen, lefto
 def build_sp_master():
     """Gabungkan SEMUA SKU SP yang sudah valid (modern, toko=SP) dari
     sp_sku_fixed/1-2.xlsx, ditimpa oleh hasil audit 439-row (final_sku_fill7)
-    di baris yg memang diperbaiki - ini SATU-SATUNYA sumber kebenaran utk
-    isi SKU OP (toko OP == SP)."""
+    DAN koreksi bug bucket-code (bucket_fixes_final.pkl['sp_fixes'], kalau
+    sudah ada - 8 produk selain Elantra yg ketemu py pola bucket sama saat
+    audit OP 2026-08-29) - ini SATU-SATUNYA sumber kebenaran utk isi SKU OP
+    (toko OP == SP). WAJIB include koreksi bucket, kalau tidak baris yg
+    "kelihatan py SKU valid" (padahal salah/bucket) akan dianggap benar."""
     d = pickle.load(open(FINAL_SKU_FILL_PKL, "rb"))
     overrides = {(path, r): sku for target, path, r, pid, varid, variant, sku, metode in d['ok']}
+    try:
+        bucket_d = pickle.load(open('bucket_fixes_final.pkl', 'rb'))
+        for path, r, nm, variant, old_sku, new_sku in bucket_d['sp_fixes']:
+            overrides[(path, r)] = new_sku
+    except FileNotFoundError:
+        pass
 
     master = defaultdict(set)
     base_display = {}
