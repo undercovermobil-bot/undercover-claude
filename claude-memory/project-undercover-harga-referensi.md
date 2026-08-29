@@ -1459,3 +1459,88 @@ tidak ada Tahun Lain di produk ini) kini konsisten literal.
    model tidak ketemu di situ, JANGAN diam2 pakai kode yang sudah ada di
    listing (bisa jadi warisan bug lama) - tanya user aturan default
    (literal) baru dipakai, seperti kasus ini.
+
+---
+
+## 2026-08-29: Propagasi 439 SKU final Smartprotection ke Lazada & TikTok
+
+Setelah 439 SKU final Shopee SP selesai (`UPDATE_SKU_SMARTPROTECTION.xlsx`),
+user upload export Lazada & batch-edit TikTok baru (SP juga) dan minta
+dibuatkan file update SKU utk 2 platform itu, dibundel bareng Shopee.
+
+**Beda mendasar dari pembuatan file Shopee**: file Shopee dibangun dgn
+KLON row dari 2 file sumber ke template baru (perlu null-out kolom lain,
+lihat lesson 2026-08-27 di `feedback-undercover-sku-sync-lessons.md`). Di
+Lazada/TikTok cukup EDIT IN-PLACE 1 file per-platform - isi ulang 1 kolom
+(`Seller SKU` Lazada = kolom 13 sheet `template`; `seller_sku` TikTok =
+kolom 11 sheet `Template`) di baris yg cocok, kolom lain tidak disentuh
+sama sekali (tidak ada operasi copy-row, jadi tidak ada risiko "kebawa
+data kolom lain").
+
+**Tantangan sebenarnya: MATCHING lintas platform**, krn teks
+varian/produk tidak seragam persis antar Shopee/Lazada/TikTok:
+1. Typo brand beda PER PLATFORM utk produk yg SAMA - Shopee (sumber
+   lookup) tulis "Mitshubishi Xforce" (typo), tapi Lazada/TikTok tulis
+   BENAR "Mitsubishi Xforce" - kalau key lookup dibangun mentah2 dari nama
+   Shopee, Xforce di Lazada/TikTok TIDAK AKAN PERNAH ketemu. Sebaliknya
+   "Mistubishi Grandis" (typo beda) KONSISTEN di ketiga platform, jadi
+   tidak masalah. Fix: normalisasi typo brand yg SUDAH diverifikasi
+   (`TYPO_FIX` di script) diterapkan ke SEMUA platform sebelum jadi key,
+   bukan cuma satu arah.
+2. Teks tahun beda platform utk GENERASI YANG SAMA - Shopee/TikTok bilang
+   Honda Civic Hatchback "Gen 10 (2015-2021)"/"Gen 10 : 2015-2021", tapi
+   Lazada utk baris yg SAMA malah "Gen 10 : 2016-2021" (beda 1 tahun).
+   Key lookup awal include teks tahun literal -> gagal cocok padahal
+   generasinya sama. Fix: key dibangun dari NOMOR GENERASI ("Gen N") kalau
+   ada, teks tahun/sisa cuma jadi disambiguator tambahan ("leftover")
+   utk produk yg TIDAK punya "Gen N" sama sekali (mis. Mini Cooper "3
+   Pintu" vs "5 Pintu").
+3. TikTok collapse variasi tahun jadi 1 baris per warna utk produk TF=1
+   (mis. Holden, Grandis di TikTok cuma py dimensi warna, tanpa tahun
+   sbg variasi terpisah - beda dari Shopee/Lazada yg pecah per generasi/
+   tahun meski kodenya toh sama semua). Valid, bukan bug - 1 baris TikTok
+   itu boleh nampung kode yg sama dgn banyak baris Shopee/Lazada. Fallback
+   "unique_sku": kalau grup produk+tier+warna itu di data sumber cuma py 1
+   kode SKU unik (walau row lookup sumber py >1 gen/tahun berbeda), pakai
+   itu tanpa perlu nomor generasi cocok persis.
+4. Sebagian baris Lazada/TikTok py "Gen N" yg TIDAK ada di 439 hasil fix
+   (krn baris itu di Shopee SUDAH BENAR sebelumnya, jadi tidak masuk
+   daftar "perlu diisi/diperbaiki") - mis. Hyundai Elantra Gen 1/4/5/6/7
+   Reguler (yg masuk 439 fix cuma Gen 2/3 Reguler & Gen 2-7 Strip). Krn
+   Elantra sudah dikonfirmasi TIDAK ada di file Total Formula & pakai
+   fallback literal Gen N->GN (lihat entri 2026-08-27 di atas), generasi
+   yg "hilang" ini AMAN dihitung ulang langsung dgn rumus yg SAMA (bukan
+   nebak formula baru) - prefix+toko-nya sudah pasti dari 439 hasil fix
+   yg ada. **Deteksi bukan hardcode per-nameplate**: script cek OTOMATIS
+   semua kode existing tiap produk beneran murni literal G<n> (fungsi
+   `build_literal_bases()`) - kalau ada SATU SAJA kode yg menyimpang dari
+   G<n> (tanda produk itu py formula TF>1/grouped), produk itu di-exclude
+   dari extrapolasi, supaya tidak keliru diterapkan ke model yg py
+   formula. Dari 157 grup produk+tier+warna, 5 produk terdeteksi otomatis
+   murni literal (Elantra, Civic Hatchback, Civic Type R, Xforce,
+   Chevrolet Optra Magnum).
+
+**Hasil akhir**: dari 157 grup (produk+tier+warna) hasil 439 fix, TikTok
+100% ketemu tempatnya (492 baris ditulis: 314 gen_match langsung, 118
+unique_sku/TF=1, 40 literal_extrapolated, 18 fallback TF=1-tanpa-gen, 2
+leftover Mini Cooper). Lazada 148/157 (520 baris ditulis) - 9 grup sisanya
+SEMUA "Holden Strip" & sudah dikonfirmasi via full-text scan katalog bahwa
+Holden memang TIDAK dijual di Lazada sama sekali (produk itu memang tidak
+ada, bukan bug matching - Holden Reguler juga tidak ada karena semua
+varian Holden yg masuk 439 fix kebetulan Strip semua, Reguler-nya sudah
+benar dari awal di Shopee).
+
+Verifikasi file hasil: reload & bandingkan tiap sel vs file sumber -
+SEMUA perubahan cuma di kolom SKU yg dimaksud (453/520 Lazada & sisanya
+TikTok beneran berubah nilainya, sisanya kebetulan nilai lama = nilai
+baru shg tidak "berubah" scr diff tapi tetap benar). Ada drift kosmetik
+'' (empty string) -> `None` di beberapa sel opsional (row header Lazada,
+kolom opsional TikTok spt parcel dimension) - **ini murni artefak
+load+save openpyxl, TERJADI JUGA di roundtrip TANPA edit sama sekali**
+(dites eksplisit: load lalu save ulang tanpa ubah apa2 menghasilkan diff
+yg SAMA) - bukan bug dari script propagasi ini, dan tidak berdampak krn
+kolom2 itu opsional/deskriptif (TikTok sendiri bilang di instruksi
+templatenya: "dikosongkan saat edit massal = dianggap tidak ada
+perubahan").
+
+Script: `hpp-per-merk-scripts/propagasi_sku_lazada_tiktok_smartprotection.py`.
