@@ -1544,3 +1544,88 @@ templatenya: "dikosongkan saat edit massal = dianggap tidak ada
 perubahan").
 
 Script: `hpp-per-merk-scripts/propagasi_sku_lazada_tiktok_smartprotection.py`.
+
+---
+
+## 2026-08-29: Audit SKU Otoprotection (OP) + update harga SP & OP sekaligus
+
+User upload 4 file listing Otoprotection (2 Shopee `1.xlsx`/`2.xlsx`, 2
+TikTok batch-edit terpecah `tiktok1.xlsx`/`tiktok2.xlsx`) minta dibuatkan
+update SKU-nya, SEKALIGUS minta update harga baru utk SP (belum pernah
+diupload sama sekali - SKU maupun harga) dan OP, pakai
+`Harga Baru SP-OP (matriks) FINAL.xlsx` (291 model) yang sudah dibuat
+sebelumnya.
+
+**Temuan kunci**: token TOKO di SKU Otoprotection **BUKAN "OP" tapi
+"SP"** - rule #1 `project-undercover-sku-sync-rules.md`: konsolidasi
+stok fisik `OP=SP` (`TARGET_STORE = {..., OP:SP, SP:SP}`, dibake ke
+master sejak 2026-07-08). Jadi SKU yang benar utk OP itu **identik**
+dgn SKU SP utk kombinasi produk+tier+warna+generasi yg sama - bukan
+skema terpisah. Ini mengubah total strategi audit: 552 baris OP
+kosong/legacy berhasil diisi terutama dgn cross-reference ke data SP yg
+SUDAH benar (295 `gen_match` langsung + 103 `ambiguous_pick_earliest_gen`
++ dst), BUKAN dgn menebak dari data OP sendiri yg lebih sedikit.
+
+**2 fallback baru (generalisasi dari preseden Nissan X-Trail yg sudah
+dikonfirmasi user)**, ditambahkan ke `audit_dan_isi_sku_otoprotection.py`:
+- `ambiguous_pick_earliest_gen`: listing OP SERING tidak memecah varian
+  per generasi (user sendiri bilang "otoprotection variannya lebih
+  sedikit") - kalau semua kode SKU yg py tier+warna SAMA di SP cuma beda
+  di kode generasi, pakai yg PALING AWAL (start-year terkecil) - berlaku
+  jg utk kode generasi NON-G<n> (chassis code kayak F2/F3, B5/B8, G1F/G2
+  - urutan diambil dari tahun, bukan asumsi format G<n>).
+- `uniform_base_new_combo` / `earliest_base_new_combo`: kombinasi
+  tier+warna yg SAMA SEKALI belum tercatat di manapun (mis. Ford Fusion
+  warna Orange, Toyota 86 warna Orange - SP sendiri gak py entri ini) -
+  aman diisi dari kode yg konsisten dipakai produk itu di kombinasi lain.
+
+**4 kasus khusus, hasil tanya-jawab eksplisit dgn user (AskUserQuestion,
+2026-08-29) - JANGAN diubah tanpa instruksi baru**, lihat
+`SPECIAL_CASES_UNIFORM`/`SPECIAL_CASES_CHRONO` di
+`audit_dan_isi_sku_otoprotection.py`:
+1. **Formula harga Strip**: user tolak opsi "pertahankan selisih/persen
+   lama" (selisih lama TIDAK seragam per model: +18rb/+20rb/+30rb/+60rb) -
+   pilih formula BARU seragam: **Strip = Reguler baru + Rp43.000 flat**,
+   utk SEMUA model, semua tier Strip (S1/S2/S3 sama).
+2. **"Toyota Altis" (OP) = Toyota Corolla mulai Gen 9** (bukan "generasi
+   paling awal Corolla" G7 - user eksplisit: nama trim Altis dipakai
+   mulai gen ke-9). Pinjam prefix `TYT-CRL`, generasi **G9 SERAGAM**
+   (listing OP cuma py 1 generasi varian, dikonfirmasi user).
+3. **Nissan Latio, Wuling Alvez, Wuling Darion**: 0 data SAMA SEKALI di
+   SP maupun OP - user eksplisit minta dibuatkan prefix baru, DAN dipakai
+   jg utk isi baris SP sendiri yg SAMA (ternyata Latio & Darion ADA
+   listingnya di SP juga, blank total - user yg nunjuk Darion, Latio
+   ketemu saat verifikasi). Prefix baru (dicek 0 tabrakan): `NSN-LAT`
+   (Latio, TF≠1 asli - 2 generasi murni dari rentang tahun bare tanpa
+   kata "Gen": "2004-2012"→G1, "2014-2016"→G2, urutan kronologis; baris
+   "Tahun Lain" tetap dilewati), `WLG-ALV` (Alvez, TF=1 dikonfirmasi via
+   `Data_Mobil_Lebih_dari_1_Formula_3.xlsx`), `WLG-DAR` (Darion, TF=1 by
+   inspection - cuma 1 label "Gen 1" di semua listing).
+
+**Hasil SKU**: OP 552/567 baris relevan terisi (15 sisanya "Tahun Lain",
+sengaja dilewati sesuai aturan #4). SP dapat TAMBAHAN 43 baris
+(Latio+Darion, di luar 439 sebelumnya) - total SKU SP yg dikoreksi
+sekarang 482.
+
+**Hasil harga**: 291 target, 192/291 model ketemu match di SP maupun OP
+(99 sisanya genuinely tidak dijual, dicek silang: sama persis dgn "99
+Tidak Ditemukan" dari audit SKU SP sebelumnya - cross-check independen yg
+konsisten). SP: 6.963 baris harga diupdate (2.742 Reguler, 4.221 Strip).
+OP: 5.891 baris (2.354 Reguler, 3.537 Strip). SEMUA formula diverifikasi
+ulang dari file hasil: 0 mismatch diff≠43000 dari 195 produk per toko.
+
+**File digabung SKU+harga JADI SATU** (lihat lesson 2026-08-15) krn
+SP & OP dua-duanya belum pernah diupload - `UPDATE_SKU_HARGA_
+SMARTPROTECTION_{1,2}.xlsx`, `UPDATE_SKU_HARGA_OTOPROTECTION_{1,2}.xlsx`
+(klon in-place dari file sumber asli, cuma kolom SKU+Harga yg berubah,
+diverifikasi via `iter_rows` - 0 diff non-blank di luar 2 kolom itu).
+TikTok OP (`UPDATE_SKU_OTOPROTECTION_TIKTOK_{1,2}.xlsx`) SKU-only (tidak
+diminta update harga TikTok di fase ini) - dipropagasi dari 552 hasil OP
+Shopee + fallback yg sama, 5.207/6.398 baris relevan cocok (858 beneran
+berubah, sisanya sudah benar dari awal), 144 sisa gap dilaporkan ke user
+(60 Toyota Corolla Gen1-4 - gap lama di master SP sendiri yg formula-nya
+grouped TF>1 shg tidak aman ditebak; sisanya produk yg 0 data di manapun,
+belum ditanyakan user).
+
+Script: `audit_dan_isi_sku_otoprotection.py`, `update_sku_harga_sp_op.py`,
+`propagasi_sku_tiktok_otoprotection.py`.
