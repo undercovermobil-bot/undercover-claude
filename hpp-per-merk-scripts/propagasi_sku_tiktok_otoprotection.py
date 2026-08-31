@@ -53,25 +53,14 @@ def tier_warna_tiktok_op(variant):
 def build_op_candidates():
     """(base_norm, tier, warna) -> {(gen, leftover, sku)} dari SEMUA baris
     OP yg SUDAH py SKU modern benar: baris yg sudah bagus dari awal + 552
-    hasil audit_dan_isi_sku_otoprotection.py + koreksi bug bucket-code
-    (bucket_fixes_final.pkl['op_fixes']) + koreksi Elantra OP tidak sinkron
-    (elantra_op_fix.pkl) - KEDUANYA WAJIB di-load juga, kalau tidak baris2
-    yg SUDAH kelihatan "py SKU valid" (tapi ternyata salah/bucket) akan
-    lolos tanpa dikoreksi krn dianggap "sudah bagus dari awal"."""
+    hasil audit_dan_isi_sku_otoprotection.py + SEMUA
+    op_audit.EXTRA_OVERRIDE_PICKLES (bug bucket-code, Elantra OP tidak
+    sinkron, koreksi formula/Lexus LX round 3) - WAJIB di-load, kalau
+    tidak baris2 yg SUDAH kelihatan "py SKU valid" (tapi ternyata salah)
+    akan lolos tanpa dikoreksi krn dianggap "sudah bagus dari awal"."""
     d = pickle.load(open('op_audit_final.pkl', 'rb'))
     overrides = {(path, r): sku for nm, path, r, sku, reason in d['ok']}
-    try:
-        bucket_d = pickle.load(open('bucket_fixes_final.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in bucket_d['op_fixes']:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
-    try:
-        elantra_fix = pickle.load(open('elantra_op_fix.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in elantra_fix:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
+    overrides.update(op_audit.load_extra_overrides('op_fixes'))
 
     candidates = defaultdict(set)
     base_display = {}

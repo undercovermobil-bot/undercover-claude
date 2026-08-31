@@ -97,12 +97,7 @@ def build_sp_sku_overrides():
     supplement = pickle.load(open('sp_supplement_latio_darion.pkl', 'rb'))
     for nm, path, r, sku, reason in supplement:
         overrides[(path, r)] = sku
-    try:
-        bucket_d = pickle.load(open('bucket_fixes_final.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in bucket_d['sp_fixes']:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
+    overrides.update(op_audit.load_extra_overrides('sp_fixes'))
     return overrides
 
 
@@ -111,20 +106,9 @@ def build_op_sku_overrides():
     overrides = {(path, r): sku for nm, path, r, sku, reason in d['ok']}
     # Baris yg SUDAH "kelihatan py SKU valid" dari awal (bukan blank/legacy)
     # jadi TIDAK masuk cakupan audit di atas, tapi ternyata salah (bug
-    # bucket-code / Elantra OP tidak sinkron) - WAJIB ditambah manual,
-    # kalau tidak baris ini lolos tanpa dikoreksi.
-    try:
-        bucket_d = pickle.load(open('bucket_fixes_final.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in bucket_d['op_fixes']:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
-    try:
-        elantra_fix = pickle.load(open('elantra_op_fix.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in elantra_fix:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
+    # bucket-code / Elantra OP tidak sinkron / koreksi formula round 3) -
+    # WAJIB ditambah manual, kalau tidak baris ini lolos tanpa dikoreksi.
+    overrides.update(op_audit.load_extra_overrides('op_fixes'))
     return overrides
 
 

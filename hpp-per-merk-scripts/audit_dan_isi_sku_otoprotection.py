@@ -258,6 +258,17 @@ def resolve(table, literal_bases, bn, tier, color, gen, leftover, uniform_bases=
             skus = set(v[2] for v in vals)
             if len(skus) == 1:
                 return next(iter(skus)), 'unique_sku'
+            # Platform lain (Lazada/TikTok) kadang py TAHUN AKHIR beda tipis
+            # utk generasi yg SAMA (mis. Shopee "2008-2022" vs Lazada
+            # "2008-2024") - preseden Civic Hatchback Gen10 (lesson
+            # 2026-08-29). Cocokkan dari TAHUN AWAL SAJA (4 digit pertama)
+            # SEBELUM jatuh ke fallback "pilih paling awal" - jauh lebih
+            # presisi drpd asumsi selalu generasi tertua.
+            leftover_start = re.match(r'^(\d{4})', leftover)
+            if leftover_start:
+                ym = [v for v in vals if re.match(r'^(\d{4})', v[1]) and v[1][:4] == leftover_start.group(1)]
+                if len(ym) == 1:
+                    return ym[0][2], 'leftover_start_year_match'
             others = set(s.rsplit('-', 2)[0] + '-' + s.rsplit('-', 1)[1] for s in skus)
             if len(others) == 1 and len(vals) > 1:
                 def start_year(v):
@@ -317,22 +328,41 @@ def resolve_with_special_cases(table, literal_bases, bn, tier, color, gen, lefto
     return resolve(table, literal_bases, bn, tier, color, gen, leftover, uniform_bases, earliest_bases)
 
 
+# Semua pickle override TAMBAHAN (di luar final_sku_fill7/op_audit_final)
+# yg pernah ditemukan sesudahnya - key 'sp_fixes'/'op_fixes' isinya list
+# (path, r, nm, variant, old_sku, new_sku). WAJIB didaftarkan di SINI SAJA
+# (satu tempat) lalu dipakai oleh SEMUA fungsi builder override (sp_master,
+# op_candidates, sp_sku_overrides, op_sku_overrides) - lesson 2026-08-29:
+# pernah kelewat nambahin ke sebagian fungsi doang, hasilnya file yg sudah
+# dikirim ke user masih py nilai lama krn functionnya baca sumber beda2.
+EXTRA_OVERRIDE_PICKLES = ['bucket_fixes_final.pkl', 'elantra_op_fix.pkl', 'round3_corrections.pkl']
+
+
+def load_extra_overrides(key):
+    """key: 'sp_fixes' atau 'op_fixes'. Baca semua pickle di
+    EXTRA_OVERRIDE_PICKLES yg py key itu, gabung jadi 1 dict override."""
+    overrides = {}
+    for fname in EXTRA_OVERRIDE_PICKLES:
+        try:
+            d = pickle.load(open(fname, 'rb'))
+        except FileNotFoundError:
+            continue
+        for path, r, nm, variant, old_sku, new_sku in d.get(key, []):
+            overrides[(path, r)] = new_sku
+    return overrides
+
+
 def build_sp_master():
     """Gabungkan SEMUA SKU SP yang sudah valid (modern, toko=SP) dari
     sp_sku_fixed/1-2.xlsx, ditimpa oleh hasil audit 439-row (final_sku_fill7)
-    DAN koreksi bug bucket-code (bucket_fixes_final.pkl['sp_fixes'], kalau
-    sudah ada - 8 produk selain Elantra yg ketemu py pola bucket sama saat
-    audit OP 2026-08-29) - ini SATU-SATUNYA sumber kebenaran utk isi SKU OP
-    (toko OP == SP). WAJIB include koreksi bucket, kalau tidak baris yg
-    "kelihatan py SKU valid" (padahal salah/bucket) akan dianggap benar."""
+    DAN semua EXTRA_OVERRIDE_PICKLES (bug bucket-code, Elantra OP tidak
+    sinkron, koreksi formula/Lexus LX 2026-08-29 round 3) - ini
+    SATU-SATUNYA sumber kebenaran utk isi SKU OP (toko OP == SP). WAJIB
+    include semua koreksi, kalau tidak baris yg "kelihatan py SKU valid"
+    (padahal salah) akan dianggap benar."""
     d = pickle.load(open(FINAL_SKU_FILL_PKL, "rb"))
     overrides = {(path, r): sku for target, path, r, pid, varid, variant, sku, metode in d['ok']}
-    try:
-        bucket_d = pickle.load(open('bucket_fixes_final.pkl', 'rb'))
-        for path, r, nm, variant, old_sku, new_sku in bucket_d['sp_fixes']:
-            overrides[(path, r)] = new_sku
-    except FileNotFoundError:
-        pass
+    overrides.update(load_extra_overrides('sp_fixes'))
 
     master = defaultdict(set)
     base_display = {}

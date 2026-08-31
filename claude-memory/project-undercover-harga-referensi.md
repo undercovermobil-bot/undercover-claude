@@ -1702,5 +1702,124 @@ Nissan Cedric - SEMUA 0 data di SP maupun OP, belum ditanyakan ke user.
 
 Script tambahan: `perbaiki_bucket_dan_harga_tiktok_op.py`.
 
+---
+
+## 2026-08-31: Lexus LX diperbaiki, Toyota Corolla + "kasus serupa" dari Total Formula, semua file SP/OP final dikirim ulang
+
+User minta 3 hal: (1) perbaiki Lexus LX + kasus serupa, (2) isi Toyota Corolla Gen1-dst yg kosong sesuai formula asli (kirim screenshot formula Corolla) + kasus serupa, (3) kirim ULANG SEMUA file upload SP+OP (Shopee/TikTok/Lazada) krn belum ada satu pun yg diupload.
+
+**Lexus LX**: dikonfirmasi TIDAK ada di file Total Formula. Data SP: 2
+generasi asli ("2000-2007" jadi kode bucket `GB20002007`, "2008-2022"
+jadi kode "G1" bersih tapi SALAH kalau dianggap "generasi pertama").
+Diperbaiki jadi kronologis murni: 2000-2007->**G1**, 2008-2022->**G2**
+(28 baris SP, tier R+S). **Scan kasus serupa** (produk lain yg tier
+MANAPUN py kode bucket "GB"): Lexus LX SATU-SATUNYA, tidak ada yg lain.
+OP tidak disentuh (listing OP Lexus LX itu sendiri sudah collapse jadi 1
+bucket tanpa info tahun - `G1` di situ tetap benar krn convention "label
+gabungan = generasi PALING AWAL").
+
+**Toyota Corolla**: BLOCKER TEKNIS ditemukan - Gen 1-6 (yg kosong di
+screenshot user) **TIDAK ADA SEBAGAI BARIS SAMA SEKALI** di file export
+`sp_sku_fixed/1.xlsx` (cuma py 90 baris = Gen7-12 x 15 tier/warna,
+verifikasi via hitung baris+PID). Artinya listing LIVE Shopee sudah py
+lebih banyak varian (sampai Gen 1) drpd yg tertangkap di export terakhir
+- kemungkinan export lama/sebelum varian baru ditambah. **Tidak bisa
+diisi via edit spreadsheet krn tidak ada Kode Variasi utk ditarget** -
+butuh export BARU dari Shopee, atau user isi manual di UI pakai kode yg
+sudah dihitung: Gen1->G1, Gen2->G1 (1 grup sama, "Corolla Betawi"),
+Gen3->G3, Gen4->G4 (Gen5 dst sudah benar/G5,G6,G7,G8,G9(x3: 9,10,12),G11
+- constant dgn Total Formula: TYT-CRL-SP-{tier}-G<kode>-{warna}).
+
+**Total Formula file DIBACA ULANG scr terprogram** (bukan cuma dicari
+manual per-produk), 213 entri, 2 pola grouping: (a) TF == jumlah baris ->
+tiap baris grup sendiri (kode = gen TERKECIL di baris itu) - preseden
+Corolla/Avanza; (b) **TF == 1 dgn baris > 1** -> SEMUA baris gabung jadi
+1 grup (kode = gen TERKECIL dari SELURUH baris, bukan per-baris) -
+preseden Hyundai Excel (3 baris Gen1/2/3, TF=1 -> semua G1, CONFIRM sama
+dgn keputusan lama). 187/213 entri numerik murni berhasil diparse; 3
+py TF="?" (eksplisit tidak pasti di filenya sendiri: Honda Civic
+Hatchback, Nissan Livina X-Gear) atau data ganjil (Hyundai Stargazer
+TF=2 tapi cuma 1 baris) - DILEWATI, tidak dipaksa.
+
+**Koreksi "kasus serupa" yg AMAN diterapkan** (blank-gap fill, tidak ada
+resiko nimpa yg sudah benar krn baris asalnya kosong):
+- Isuzu Mux (2 baris, TF=1 -> G1)
+- Hyundai Excel (9 SP + 9 OP, TF=1 -> G1, CONFIRM keputusan lama sudah
+  benar meski dari metode beda)
+
+**Koreksi yg MENGUBAH nilai yg sebelumnya SUDAH diisi (borrow-sibling,
+ternyata salah setelah dicek ke TF file asli)** - preseden Elantra lagi,
+"metode sibling-borrow" TERBUKTI BUKAN pengganti sah utk file Total
+Formula begitu bisa dicek langsung:
+- **Honda Civic Type R**: py entri TF SENDIRI terpisah dari "Honda Civic"
+  (yg TF=11, per-generasi G1-G11 - dipakai keliru sbg basis borrow
+  sebelumnya). Entri asli Civic Type R: **TF=1**, Gen6-11 SEMUA jadi
+  **G6** (bukan G6,G7,G8,G9,G10,G11 spt yg di-borrow dari Civic Sedan).
+  90 baris SP + 90 baris OP dikoreksi.
+- **Mazda 2 Sedan**: py entri TF SENDIRI (bukan perlu borrow dari Mazda 2
+  Hatchback spt sebelumnya) - "Gen 2 (2007-2014)"/"Gen 3 (2014-2019)"
+  TF=1 (catatan di file: "Baru Ada di Toko Undercover saja") -> SEMUA
+  jadi **G2** (bukan G1 hasil borrow Hatchback). Gen 1 (2002-2007) TIDAK
+  masuk entri TF ini sama sekali - tetap G1 by literal fallback (karena
+  utk gen yg gak ke-cover TF, default literal tetap berlaku). 30 baris SP
+  + 30 baris OP dikoreksi.
+- Mitsubishi Xforce: py entri TF sendiri (TF=1, cuma "Gen 1") - dicek,
+  TIDAK ADA perubahan (sudah G1 dari awal, konsisten).
+
+**4 kandidat "mismatch" DIFLAG, SENGAJA TIDAK diubah** (ambigu/berisiko,
+beda dari kasus di atas yg baris asalnya blank) - Toyota Veloz, Toyota
+Voxy, Honda HRV, Honda City Hatchback. Detail knp tidak aman:
+- Toyota Veloz: py entri TF SENDIRI (Gen1/2026, TF=1->G1) TAPI listing SP
+  py "Toyota Veloz" pakai kode G3 - kemungkinan krn "Veloz" listing SP
+  itu maksudnya "varian Veloz dari Avanza Gen3" (liat entri Avanza:
+  "Gen 3 (2021-2026) VELOZ" -> G3), BUKAN mobil "Toyota Veloz" versi
+  nomor generasi sendiri (nama yg sama dipakai 2 konteks beda di file
+  formula). Butuh konfirmasi user, bukan tebakan.
+- Toyota Voxy, Honda HRV: entri TF py DATA GANJIL (HRV: baris "Gen 2"
+  ditulis 2 KALI identik - typo/duplikat data entry, bukan makna asli;
+  Voxy Gen3/Gen4 TF=1 tapi listing SP py kode berbeda) - kualitas data
+  filenya sendiri diragukan, jangan dipaksa jadi rujukan.
+- Honda City Hatchback: TF eksplisit **"?"** di file (penulis filenya
+  sendiri tidak yakin) - source resminya SENDIRI bilang tidak pasti,
+  jangan dipakai override keputusan lama (G1 seragam, borrow dari Mazda
+  2 Hatchback-style sibling, sudah dikonfirmasi user 2026-07-18 sbg
+  benar).
+
+**Lesson teknis baru**: fallback "cocokkan by tahun AWAL saja" (`leftover
+_start_year_match`, ditambahkan ke `resolve()`) - Lazada py kasus "Lexus
+LX 2008-2024" vs kanonis SP "2008-2022" (beda TAHUN AKHIR doang, platform
+lain nulis rentang aktif "sampai sekarang" beda2) - sebelum ada fallback
+ini, sistem jatuh ke "pilih generasi PALING AWAL" scr membabi-buta,
+hasilnya SALAH nempelkan G1 (generasi 2000-an) ke baris yg jelas2 tahun
+awalnya 2008 (generasi kedua). Fallback baru cocokkan 4-digit tahun AWAL
+dulu SEBELUM nyerah ke "pilih paling awal" - jauh lebih presisi.
+
+**File FINAL yg dikirim (8 file, revisi terakhir)**:
+- `UPDATE_SKU_HARGA_SMARTPROTECTION_{1,2}.xlsx` (Shopee SP, SKU+harga)
+- `UPDATE_SKU_HARGA_OTOPROTECTION_{1,2}.xlsx` (Shopee OP, SKU+harga)
+- `UPDATE_SKU_OTOPROTECTION_TIKTOK_{1,2}.xlsx` (TikTok OP, SKU+harga)
+- `UPDATE_SKU_HARGA_SMARTPROTECTION_LAZADA.xlsx` (Lazada SP, SKU+harga -
+  **DIBANGUN ULANG dari `build_sp_master()`** yg sudah termasuk SEMUA
+  koreksi di atas, BUKAN dari `final_sku_fill7.pkl` mentah spt versi
+  2026-08-29 pertama - kalau pakai yg lama, file ini bakal BAWA BALIK
+  nilai yg baru saja dikoreksi)
+- `UPDATE_SKU_HARGA_SMARTPROTECTION_TIKTOK.xlsx` (TikTok SP, SKU+harga,
+  sama - dibangun ulang)
+
+Semua 8 file diverifikasi ulang via `iter_rows` (0 diff non-blank di
+luar kolom SKU/Harga yg dimaksud) dan cek formula harga (Strip-Reguler =
+43rb utk SEMUA produk yg match target, mismatch yg tersisa SEMUA
+produk non-target/harga lama).
+
+Script: `update_sku_harga_lazada_tiktok_smartprotection.py` (versi final
+Lazada/TikTok SP, superseded
+`propagasi_sku_lazada_tiktok_smartprotection.py` yg cuma SKU dari
+439-fix mentah). Semua override tambahan (bucket-fix, Elantra-OP-sync,
+formula-correction, Lexus LX) didaftarkan terpusat di SATU list
+`op_audit.EXTRA_OVERRIDE_PICKLES` + fungsi `load_extra_overrides()`,
+dipakai oleh SEMUA fungsi builder (sp_master, op_candidates,
+sp_sku_overrides, op_sku_overrides) - supaya tidak berulang lagi
+lesson "lupa 1 dari 4 titik" dari fix sebelumnya.
+
 Script: `audit_dan_isi_sku_otoprotection.py`, `update_sku_harga_sp_op.py`,
 `propagasi_sku_tiktok_otoprotection.py`.
