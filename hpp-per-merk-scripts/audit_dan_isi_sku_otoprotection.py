@@ -90,6 +90,86 @@ def clean_base(nm):
     return nm
 
 
+def clean_base_transparan(nm):
+    """clean_base() cuma strip pola SUFFIX '...X Transparan' (gaya SP) -
+    utk produk Transparan sendiri, base name jg perlu strip pola PREFIX
+    'Transparan X' (gaya OP) supaya KEDUA gaya penamaan normalize ke nama
+    mobil yg SAMA (mis. 'Cover Mobil Transparan Mercedes Benz G Class'
+    dan 'Mercedes Benz G Class Transparan' harus jadi bn yg sama)."""
+    nm = PREFIX_RE.sub('', nm)
+    nm = SUFFIX_TRANSPARAN_RE.sub('', nm)
+    nm = PREFIX_TRANSPARAN_RE.sub('', nm)
+    nm = nm.strip()
+    for pat, rep in TYPO_FIX:
+        nm = pat.sub(rep, nm)
+    return nm
+
+
+def gen_and_leftover_transparan(variant):
+    """Beda dari gen_and_leftover() biasa: produk Transparan TIDAK py
+    axis warna/tier sama sekali (selalu 1 warna: transparan) jadi teks
+    varian TIDAK diawali 'warna,' spt Reguler/Strip - kadang cuma
+    'Gen 1 : 2015-2022', kadang cuma trim/sub-model tanpa gen sama
+    sekali (mis. 'Navara PRO-4X'), kadang cuma 'Default'. Proses SELURUH
+    teks varian langsung (bukan potong stlh koma dulu)."""
+    rest = variant.strip()
+    m = GEN_RE.search(rest)
+    gen = m.group(1) if m else None
+    if gen is not None:
+        leftover = YEAR_RE.sub('', GEN_RE.sub('', rest))
+    else:
+        leftover = rest
+    return gen, re.sub(r'[^a-z0-9]', '', leftover.lower())
+
+
+TRANSPARAN_SOURCES = [
+    ("sp_sku_fixed/1.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("sp_sku_fixed/2.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("op_src/fixed/1.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("op_src/fixed/2.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("sp_lazada_tiktok_src/lazada.xlsx", "template", 3, 14, 13, 5),
+    ("sp_lazada_tiktok_src/tiktok.xlsx", "Template", 3, 6, 11, 6),
+    ("op_src/tiktok1.xlsx", "Template", 3, 6, 11, 6),
+    ("op_src/tiktok2.xlsx", "Template", 3, 6, 11, 6),
+]
+
+
+def build_transparan_master():
+    """Referensi SKU Transparan (kategori tetap 'T', 'warna' tetap 'TRP'
+    krn tidak py axis warna) - digabung dari SEMUA sumber SEKALIGUS
+    (Shopee SP+OP, Lazada SP, TikTok SP+OP), BEDA dari build_sp_master()
+    yg cuma scan Shopee SP - krn coverage Transparan per-platform jauh
+    lebih jarang/timpang drpd Reguler/Strip (banyak produk cuma py
+    Transparan valid di 1 platform doang, lihat investigasi 2026-08-31)."""
+    master = defaultdict(set)
+    base_display = {}
+    for path, sheet, namecol, varcol, skucol, startrow in TRANSPARAN_SOURCES:
+        try:
+            wb = openpyxl.load_workbook(path, data_only=True)
+        except FileNotFoundError:
+            continue
+        ws = wb[sheet]
+        for r in range(startrow, ws.max_row + 1):
+            nm = ws.cell(r, namecol).value
+            if not nm or not is_transparan_product(nm):
+                continue
+            variant = ws.cell(r, varcol).value
+            if not variant:
+                continue
+            sku = ws.cell(r, skucol).value
+            if not sku or not str(sku).strip():
+                continue
+            segs = str(sku).split('-')
+            if len(segs) != 6 or segs[2] != 'SP' or segs[3] != 'T':
+                continue
+            base = clean_base_transparan(nm)
+            bn = norm(base)
+            base_display[bn] = base
+            gen, leftover = gen_and_leftover_transparan(variant)
+            master[(bn, 'T', 'TRP')].add((gen, leftover, sku))
+    return master, base_display
+
+
 def norm(s):
     s = s.lower().replace('-', '').replace('/', ' ').replace(':', ' ')
     return re.sub(r'\s+', ' ', s).strip()
