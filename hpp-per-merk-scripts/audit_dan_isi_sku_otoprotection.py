@@ -170,6 +170,64 @@ def build_transparan_master():
     return master, base_display
 
 
+REGULAR_STRIP_SOURCES = [
+    ("UPDATE_SKU_HARGA_SMARTPROTECTION_1.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("UPDATE_SKU_HARGA_SMARTPROTECTION_2.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("UPDATE_SKU_HARGA_OTOPROTECTION_1.xlsx", "Sheet1", 2, 4, 6, 7),
+    ("UPDATE_SKU_HARGA_SMARTPROTECTION_LAZADA.xlsx", "template", 3, 14, 13, 5),
+    ("UPDATE_SKU_HARGA_SMARTPROTECTION_TIKTOK.xlsx", "Template", 3, 6, 11, 6),
+    ("UPDATE_SKU_OTOPROTECTION_TIKTOK_1.xlsx", "Template", 3, 6, 11, 6),
+    ("UPDATE_SKU_OTOPROTECTION_TIKTOK_2.xlsx", "Template", 3, 6, 11, 6),
+]
+
+
+def build_model_gen_map():
+    """Peta (bn -> {nomor_gen_asli: kode_gen}), diturunkan dari baris
+    Reguler/Strip yg SUDAH FINAL (pasca SEMUA koreksi sesi ini: bucket-fix,
+    Elantra sync, Lexus LX, Total Formula Corolla/Civic Type R/Mazda 2
+    Sedan, dst) - dipakai utk isi kode generasi Transparan produk yg 0
+    referensi Transparan-nya SENDIRI di semua platform (investigasi user
+    2026-08-31: 'apa tidak bisa disesuaikan dari format Reguler/Strip yg
+    baru?'). Prinsipnya: kode generasi itu properti FISIK MOBIL, bukan
+    milik tier - Corolla Gen 3 kodenya G3 baik itu Reguler, Strip, ATAU
+    Transparan, jadi aman diturunkan lintas tier utk model yg SAMA."""
+    m = defaultdict(lambda: defaultdict(set))
+    prefix_by_bn = {}
+    for fname, sheet, namecol, varcol, skucol, startrow in REGULAR_STRIP_SOURCES:
+        try:
+            wb = openpyxl.load_workbook(fname, data_only=False)
+        except FileNotFoundError:
+            continue
+        ws = wb[sheet]
+        for r in range(startrow, ws.max_row + 1):
+            nm = ws.cell(r, namecol).value
+            if not nm or is_transparan_product(nm):
+                continue
+            variant = ws.cell(r, varcol).value
+            if not variant:
+                continue
+            sku = ws.cell(r, skucol).value
+            if not sku:
+                continue
+            segs = str(sku).split('-')
+            if len(segs) != 6 or segs[2] != 'SP':
+                continue
+            gm = GEN_RE.search(variant)
+            if not gm:
+                continue
+            real_gen = gm.group(1)
+            base = clean_base(nm)
+            bn = norm(base)
+            m[bn][real_gen].add(segs[4])
+            prefix_by_bn[bn] = ('-'.join(segs[:2]), segs[2])
+    gen_map = {}
+    for bn, gens in m.items():
+        clean = {g: next(iter(codes)) for g, codes in gens.items() if len(codes) == 1}
+        if clean:
+            gen_map[bn] = clean
+    return gen_map, prefix_by_bn
+
+
 def norm(s):
     s = s.lower().replace('-', '').replace('/', ' ').replace(':', ' ')
     return re.sub(r'\s+', ' ', s).strip()

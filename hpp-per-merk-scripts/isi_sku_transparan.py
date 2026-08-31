@@ -33,11 +33,23 @@ krn pola yg sama (_TRP_G2/_TRP_G3) sudah ketemu di data yg sudah valid.
 Pemakaian: python3 isi_sku_transparan.py
 """
 import re
+import pickle
 from collections import Counter, defaultdict
 
 import openpyxl
 
 import audit_dan_isi_sku_otoprotection as op_audit
+
+# Peta generasi mentah hasil parse langsung file Total Formula (Sheet2),
+# lebih LENGKAP drpd build_model_gen_map() (yg cuma bisa nurunin dari
+# baris Reguler/Strip yg BENERAN ADA sbg baris) - dipakai kalau generasi
+# yg dicari GENUINELY tidak py baris Reguler/Strip sama sekali (mis.
+# Toyota Corolla Gen1-6: export Shopee stale, barisnya sendiri tidak ada
+# sama sekali - lihat lesson 2026-08-31 soal file export basi).
+try:
+    FORMULA_MAP = pickle.load(open('formula_map2.pkl', 'rb'))
+except FileNotFoundError:
+    FORMULA_MAP = {}
 
 FILES = [
     ("UPDATE_SKU_HARGA_SMARTPROTECTION_1.xlsx", "Sheet1", 2, 4, 6, 7, False),
@@ -77,7 +89,9 @@ def main():
     literal_bases = op_audit.build_literal_bases(candidates)
     uniform_bases = op_audit.build_uniform_bases(candidates)
     earliest_bases = op_audit.build_earliest_bases(candidates)
+    gen_map, prefix_by_bn = op_audit.build_model_gen_map()
     print(f"Kandidat Transparan: {len(candidates)} grup dari {len(base_display)} model")
+    print(f"Peta gen dari Reguler/Strip (fallback): {len(gen_map)} model")
 
     for fname, sheet, namecol, varcol, skucol, startrow, needs_dedup in FILES:
         wb = openpyxl.load_workbook(fname, data_only=False)
@@ -106,8 +120,30 @@ def main():
             base = op_audit.clean_base_transparan(nm)
             bn = op_audit.norm(base)
             gen, leftover = op_audit.gen_and_leftover_transparan(variant)
-            sku, reason = op_audit.resolve(
+            sku, reason = op_audit.resolve_with_special_cases(
                 candidates, literal_bases, bn, 'T', 'TRP', gen, leftover, uniform_bases, earliest_bases)
+            if not sku:
+                gm = gen_map.get(bn)
+                if gm:
+                    codes = set(gm.values())
+                    gencode = None
+                    if gen is not None and gen in gm:
+                        gencode = gm[gen]
+                    elif len(codes) == 1:
+                        # TF=1: semua generasi collapse ke 1 kode - aman
+                        # dipakai walau nomor gen Transparan-nya sendiri
+                        # tidak diketahui/tidak disebutkan di teks varian.
+                        gencode = next(iter(codes))
+                    if gencode:
+                        prefix2, toko = prefix_by_bn[bn]
+                        sku = f"{prefix2}-{toko}-T-{gencode}-TRP"
+                        reason = 'derived_from_regular_strip_gen'
+            if not sku and gen is not None and bn in prefix_by_bn:
+                fm = FORMULA_MAP.get(bn)
+                if fm and int(gen) in fm:
+                    prefix2, toko = prefix_by_bn[bn]
+                    sku = f"{prefix2}-{toko}-T-{fm[int(gen)]}-TRP"
+                    reason = 'derived_from_total_formula_file'
             if not sku:
                 stats['tidak_ketemu_' + reason] += 1
                 continue
