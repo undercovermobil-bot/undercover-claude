@@ -18,7 +18,7 @@ Strip = Reguler + Rp43.000 flat.
 Pemakaian: python3 update_sku_harga_lazada_tiktok_smartprotection.py
 """
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 import openpyxl
 from openpyxl.styles import PatternFill
@@ -58,12 +58,30 @@ def tier_warna_lazada_tiktok(variant):
     return None, None
 
 
+def dedup_suffix(gen, leftover):
+    """Token pembeda dari generasi/tahun baris ybs, dipakai saat SKU 'bersih'
+    hasil resolve() bentrok dgn baris lain di produk yg sama (collapse
+    TF=1 lintas beberapa baris gen berbeda) - lihat lesson 2026-08-31 soal
+    duplikat SKU Lazada."""
+    if gen is not None:
+        return f"_G{gen}"
+    if leftover:
+        m = re.match(r'^(\d{4})', leftover)
+        if m:
+            return f"_{m.group(1)}"
+        m2 = re.match(r'^([a-z]{2,4})\d', leftover)
+        if m2:
+            return f"_{m2.group(1).upper()}"
+    return None
+
+
 def match_and_write(path_in, path_out, sheet, name_col, variant_col, sku_col, price_col,
                      startrow, candidates, literal_bases, uniform_bases, earliest_bases,
-                     key_to_target, keys_sorted, price_by_target):
+                     key_to_target, keys_sorted, price_by_target, dedup_per_product=False):
     wb = openpyxl.load_workbook(path_in, data_only=False)
     ws = wb[sheet]
     stats = Counter()
+    used = defaultdict(set)
     for r in range(startrow, ws.max_row + 1):
         nm = ws.cell(r, name_col).value
         if not nm or op_audit.is_transparan_product(nm):
@@ -75,13 +93,30 @@ def match_and_write(path_in, path_out, sheet, name_col, variant_col, sku_col, pr
         bn = op_audit.norm(base)
         tier, color = tier_warna_lazada_tiktok(variant)
 
+        gen, leftover = (None, None)
         if tier is not None:
             gen, leftover = op_audit.gen_and_leftover(variant)
             sku, reason = op_audit.resolve_with_special_cases(
                 candidates, literal_bases, bn, tier, color, gen, leftover, uniform_bases, earliest_bases)
             if sku:
-                ws.cell(r, sku_col).value = sku
+                candidate = sku
+                if dedup_per_product and candidate in used[nm]:
+                    suf = dedup_suffix(gen, leftover)
+                    if suf and (candidate + suf) not in used[nm]:
+                        candidate = candidate + suf
+                    else:
+                        i = 2
+                        while f"{sku}_{i}" in used[nm]:
+                            i += 1
+                        candidate = f"{sku}_{i}"
+                    stats['sku_dedup_suffixed'] += 1
+                ws.cell(r, sku_col).value = candidate
                 stats['sku_' + reason] += 1
+
+        if dedup_per_product:
+            final_val = ws.cell(r, sku_col).value
+            if final_val:
+                used[nm].add(final_val)
 
         t = harga_sp_op.sp_audit.match_target(bn, key_to_target, keys_sorted)
         if t is None:
@@ -111,7 +146,7 @@ def main():
 
     stats_l = match_and_write(LAZADA_IN, LAZADA_OUT, 'template', 3, 14, 13, 9, 5,
                                candidates, literal_bases, uniform_bases, earliest_bases,
-                               key_to_target, keys_sorted, price_by_target)
+                               key_to_target, keys_sorted, price_by_target, dedup_per_product=True)
     print(f"\nLAZADA -> {LAZADA_OUT}")
     print(" ", dict(stats_l))
 
