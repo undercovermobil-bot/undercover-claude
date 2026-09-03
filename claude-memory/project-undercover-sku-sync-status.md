@@ -1676,3 +1676,48 @@ cadangan (utk baris MASTER yang memang hanya menulis nama bodi).
   yang sudah benar, bukan dikarang.
 - Lazada: yang bentrok diberi akhiran `_G5`/`_G6`/dst mengikuti konvensi yang
   sudah ada di data mereka; diverifikasi 0 SKU kembar per listing.
+
+
+## Pengisian SKU massal UA 3 channel (2026-09-03) -- `scripts/isi_sku_massal.py`
+
+User minta isi SEMUA yang kosong + perbaiki format lama, yang sudah benar jangan
+disentuh, hasilnya file siap upload, Mini Cooper digabung sekalian.
+
+**Hasil: 951 baris** (Shopee 223, TikTok 278, Lazada 450) = 842 isi-kosong +
+23 format-lama + 86 Mini Cooper. Diverifikasi 0 masalah: tidak ada baris dobel,
+tidak ada prefix dikarang, tidak ada baris yang sudah benar ikut tersentuh,
+tidak ada SKU kembar di Lazada.
+
+**Prinsip: tidak mengarang kode.** Tiap segmen wajib punya sumber --
+MEREK-MODEL dipelajari dari baris lain model yang sama yang sudah benar (lintas
+tier & lintas channel), GENERASI dari `formula_config` (kalau model ada di
+daftar 213) atau dari saudara dengan teks generasi identik, KATEGORI+WARNA dari
+tier listing + teks varian.
+
+**Kenapa cuma 951 dari ~14.400 baris bermasalah** -- ini angka yang penting utk
+sesi depan, jangan kaget:
+
+| Alasan dilewati | Baris | Status |
+|---|---|---|
+| Model belum py SKU di MANA PUN | ~6.216 | **BLOKIR: butuh kode model baru dari master** |
+| Varian generik, model >1 formula | ~7.063 | Sesuai aturan #4, memang tidak boleh ditebak |
+| Warna/generasi tak terbaca | ~130 | Perlu lihat manual |
+| Produk luar cakupan | 24 | Sesuai aturan #6 |
+
+Yang **~6.216 baris** itu ratusan model (Audi A6, Kia Sorento, Audi RS4 Avant,
+Peugeot 2008/5008, Renault Duster, Infiniti QX80, MINI Hatch, dll) yang belum
+pernah punya SKU di listing manapun -- konsisten dgn kategori "TANPA_SIBLING /
+gap master" yang sudah dicatat sebelumnya. **Tidak bisa maju tanpa file master
+atau daftar kode merek-model dari user.** Jangan coba mengarang prefix sendiri.
+
+**Penyempurnaan aturan #4 (varian generik)**: aturan aslinya "jangan ditebak",
+tapi kalau modelnya cuma SATU formula tidak ada yang perlu ditebak -- semua
+generasi memang satu kode. Preseden: eksekusi 2026-08-14 `isi_catchall_kosong.py`
+mode `only_listed`. Di script ini syaratnya `CFG[model]['collapse'] is True`.
+Menambah 314 baris yang tadinya kelewat.
+
+**Jebakan yang ketemu**: saat menggabungkan file perbaikan terpisah (Mini
+Cooper) ke output, baris Mini Cooper sempat DOBEL -- diisi proses massal DAN
+ikut dari file gabungan. Fix: `baris_di_extra()` mengumpulkan
+(channel, nama listing, teks varian) dari file extra, lalu proses massal
+melewatinya. Kalau nanti menggabungkan file perbaikan lain, pakai pola yang sama.
