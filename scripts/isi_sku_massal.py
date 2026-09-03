@@ -58,6 +58,9 @@ MASTERFMT = AF.MASTERFMT
 ORANGE = PatternFill('solid', fgColor='FFC000')
 
 LUAR_SCOPE = ('karpet', 'cover motor', 'travel pouch', 'pouch')
+# varian custom/aksesori: produk terpisah dgn kode sendiri -- JANGAN dibuatkan
+# kode model baru otomatis, laporkan saja supaya diputuskan manusia
+CUSTOM_RE = re.compile(r'\b(custom|roofbox|logo|bumper|spoiler|besi)\b', re.I)
 # aturan bisnis #4 -- varian generik sengaja dibiarkan kosong
 GENERIK = ('tahun lain', 'model lain', 'model/tahun lain', 'custom', 'lainnya')
 
@@ -68,6 +71,8 @@ WARNA_STRIP = {
     'strip 1 abu': 'PAB', 'strip 1 biru': 'PBR', 'strip 1 merah': 'PMR',
     'strip 2 abu': 'EAB', 'strip 2 biru': 'EBR', 'strip 2 merah': 'EMR',
     'strip 3 abu': 'WAB', 'strip 3 biru': 'WBR', 'strip 3 merah': 'WMR',
+    # salah ketik yang ada di data listing mereka sendiri
+    'warior abu': 'WAB', 'warior biru': 'WBR', 'warior merah': 'WMR',
 }
 WARNA_DASAR = {
     'abu-abu': 'ABU', 'abu abu': 'ABU', 'hitam': 'HTM', 'biru benhur': 'BRU',
@@ -75,7 +80,8 @@ WARNA_DASAR = {
 }
 
 TIER_RE = re.compile(r'\b(reguler|regular|premium|exclusive|transparan)\b', re.I)
-BOIL_RE = re.compile(r'(undercover autocare|cover mobil|selimut mobil|/|-)', re.I)
+BOIL_RE = re.compile(r'(undercover\s+aut[o]?care|undercover|autocare|autcare|'
+                     r'body cover|cover mobil|selimut mobil|\bmobil\b|\bbody\b|/|-)', re.I)
 SUFFIX_LZ = re.compile(r'_[A-Za-z0-9]+$')
 
 
@@ -126,6 +132,98 @@ def perlu_diproses(sku):
     if MASTERFMT.match(AUD.normalisasi_sku(s)):
         return False, None
     return True, 'format lama'
+
+
+def baca_master(path):
+    """master -> (model_key->prefix, (model_key,teks generasi)->kode generasi,
+    nama sheet merek->kode merek, semua prefix yang sudah terpakai)"""
+    from openpyxl import load_workbook
+    wb = load_workbook(path, data_only=True, read_only=True)
+    m2p, mg2g, b2c, dipakai = defaultdict(Counter), defaultdict(Counter), defaultdict(Counter), set()
+    for sn in wb.sheetnames:
+        ws = wb[sn]
+        mulai = False
+        for row in ws.iter_rows(values_only=True):
+            if not mulai:
+                # Sheet Suzuki kolom A-nya KOSONG di baris header, jadi syarat
+                # row[0]=='No' membuat seluruh sheet (3.372 baris) terlewat --
+                # bug lama yang sudah pernah tercatat. Kenali dari 'Nama Produk'.
+                if row and any(str(v).strip() == 'Nama Produk' for v in row if v):
+                    mulai = True
+                continue
+            if not row or len(row) < 9:
+                continue
+            nama, generasi, sku = row[1], row[5], row[8]
+            if not (nama and sku and isinstance(sku, str)):
+                continue
+            b = sku.strip().split('-')
+            if len(b) < 6:
+                continue
+            pfx = f'{b[0]}-{b[1]}'
+            mk = model_key(nama)
+            m2p[mk][pfx] += 1
+            b2c[sn][b[0]] += 1
+            dipakai.add(pfx)
+            if generasi:
+                mg2g[(mk, str(generasi).strip().lower())][b[4]] += 1
+    wb.close()
+    return m2p, mg2g, {k: v.most_common(1)[0][0] for k, v in b2c.items()}, dipakai
+
+
+STOPWORD_MODEL = {'plus', 'new', 'all', 'the'}
+
+
+def kode_model_baru(nama_listing, brand_code, terpakai, brand_name=None):
+    """buat kode MEREK-MODEL baru mengikuti konvensi master:
+    - penanda alfanumerik dipertahankan (A6, QX80, 2008, BJ40)
+    - "Seri N" -> SN
+    - kata biasa -> singkatan 3 huruf
+    Ditolak kalau bentrok dgn kode yang sudah ada."""
+    nm = TIER_RE.sub(' ', BOIL_RE.sub(' ', str(nama_listing)))
+    kata = [w for w in re.sub(r'[^A-Za-z0-9]+', ' ', nm).split()
+            if w.lower() not in STOPWORD_MODEL]
+    # buang nama merek di depan secara eksplisit (kode merek sudah mewakilinya).
+    # Sebelumnya ditebak dari posisi kata, akibatnya "MG ZS" jadi MZ (inisial
+    # merek+model) bukan ZS.
+    if brand_name:
+        bw = [w for w in re.sub(r'[^A-Za-z0-9]+', ' ', re.split(r'[(/]', brand_name)[0]).split()]
+        while bw and kata and kata[0].lower() == bw[0].lower():
+            kata = kata[1:]
+            bw = bw[1:]
+    if not kata:
+        return None
+    if len(kata) >= 2 and kata[0].lower() in ('seri', 'series'):
+        kand = f'S{kata[1]}'
+    else:
+        idx = next((i for i, w in enumerate(kata) if any(c.isdigit() for c in w)), None)
+        if idx is not None:
+            tok = kata[idx].upper()
+            if tok.isdigit() and idx > 0:
+                # angka telanjang ("Ioniq 6", "EV 6", "Tiggo 9") tidak informatif
+                # sendirian -- gabungkan dgn awalan kata sebelumnya
+                kand = kata[idx - 1][:2].upper() + tok
+            else:
+                kand = tok
+            # kata sesudah angka jadi pembeda ("720S Spider" -> 720SS)
+            if idx + 1 < len(kata):
+                kand += kata[idx + 1][0].upper()
+        elif len(kata) >= 2:
+            kand = ''.join(w[0] for w in kata[:3]).upper()
+        else:
+            w = kata[0]
+            kons = [c for c in w[1:] if c.lower() not in 'aeiou']
+            kand = (w[0] + ''.join(kons[:2])).upper() if len(kons) >= 2 else w[:3].upper()
+    kand = re.sub(r'[^A-Z0-9]', '', kand.upper())[:5]
+    if not kand:
+        return None
+    pfx = f'{brand_code}-{kand}'
+    if pfx in terpakai:                      # cegah tabrakan dgn kode yang sudah ada
+        for i in range(2, 9):
+            alt = f'{brand_code}-{kand}{i}'
+            if alt not in terpakai:
+                return alt
+        return None
+    return pfx
 
 
 def kumpulkan(folders):
@@ -196,11 +294,68 @@ def baris_di_extra(extra_files):
     return kunci
 
 
-def proses(out_dir, folders, extra_files=()):
+def proses(out_dir, folders, extra_files=(), master_path=None):
     os.makedirs(out_dir, exist_ok=True)
     semua = kumpulkan(folders)
     m2p, mg2g = bangun_pengetahuan(semua)
     sudah_ditangani = baris_di_extra(extra_files)
+
+    # MASTER = sumber kebenaran. Dipakai sbg cadangan utk model yang belum punya
+    # SKU di listing manapun. Tidak menimpa yang sudah ada di listing, karena
+    # baris yang sudah benar memang tidak boleh disentuh.
+    mm_p, mm_g, brand2code, prefix_terpakai = ({}, {}, {}, set())
+    if master_path:
+        mm_p, mm_g, brand2code, prefix_terpakai = baca_master(master_path)
+    prefix_terpakai = set(prefix_terpakai)
+    for c in m2p.values():
+        prefix_terpakai.update(c)
+
+    # merek diurut dari yang paling panjang supaya "Mercedes-Benz" menang atas "MG"
+    brand_urut = sorted(brand2code, key=len, reverse=True)
+
+    def _rata(t):
+        return ' '.join(re.sub(r'[^a-z0-9]+', ' ', str(t).lower()).split())
+
+    def cari_brand_name(nm):
+        low = _rata(nm)
+        for b in brand_urut:
+            inti = _rata(re.split(r'[(/]', b)[0])
+            if inti and re.search(rf'(?<![a-z0-9]){re.escape(inti)}(?![a-z0-9])', low):
+                return b
+        return None
+
+    def cari_brand_code(nm):
+        b = cari_brand_name(nm)
+        return brand2code[b] if b else None
+
+    kode_baru = {}          # model_key -> prefix yang baru dibuat
+    asal_kode = Counter()
+
+    # Pra-pass: tentukan dulu SEMUA model yang butuh kode baru, lalu berikan
+    # kodenya urut dari nama TERPENDEK. Tanpa ini urutan pemberian kode
+    # bergantung urutan baris, sehingga varian bisa merebut kode dasar milik
+    # model induknya (mis. "Mclaren 720S Spider" dapat MCL-720S, lalu
+    # "Mclaren 720S" terpaksa jadi MCL-720S2).
+    butuh = {}
+    for ch0, p0, r0, nm0, var0, sku0 in semua:
+        ya, _ = perlu_diproses(sku0)
+        if not ya:
+            continue
+        low0 = nm0.lower()
+        if any(k in low0 for k in LUAR_SCOPE) or CUSTOM_RE.search(nm0):
+            continue
+        mk0 = model_key(nm0)
+        if mk0 in m2p or mk0 in mm_p:
+            continue
+        butuh.setdefault(mk0, nm0)
+    for mk0 in sorted(butuh, key=lambda k: (len(k.split()), len(k), k)):
+        bc0 = cari_brand_code(butuh[mk0])
+        if not bc0:
+            continue
+        pfx0 = kode_model_baru(butuh[mk0], bc0, prefix_terpakai, cari_brand_name(butuh[mk0]))
+        if pfx0:
+            kode_baru[mk0] = pfx0
+            prefix_terpakai.add(pfx0)
 
     rencana = defaultdict(list)      # path -> [(row, sku_baru, alasan)]
     lewat = Counter()
@@ -238,10 +393,28 @@ def proses(out_dir, folders, extra_files=()):
 
         mk = model_key(nm)
         kand = m2p.get(mk)
-        if not kand:
-            lewat['model belum punya SKU di mana pun (gap master)'] += 1
-            contoh_lewat['gap master'][nm] += 1
+        sumber = 'listing'
+        if not kand and mk in mm_p:          # 2) cari di MASTER
+            kand = mm_p[mk]
+            sumber = 'master'
+        if not kand and mk in kode_baru:     # 3) kode baru yang sudah dibuat tadi
+            kand = Counter({kode_baru[mk]: 1})
+            sumber = 'kode baru'
+        if not kand and CUSTOM_RE.search(nm):
+            lewat['varian custom/aksesori (perlu kode sendiri, diputuskan manual)'] += 1
+            contoh_lewat['custom'][nm] += 1
             continue
+        if not kand:                         # 4) belum ada di mana pun -> buat kode baru
+            bc = cari_brand_code(nm)
+            pfx_baru = kode_model_baru(nm, bc, prefix_terpakai, cari_brand_name(nm)) if bc else None
+            if not pfx_baru:
+                lewat['merek tidak dikenal / kode baru gagal dibuat'] += 1
+                contoh_lewat['tanpa kode'][nm] += 1
+                continue
+            kode_baru[mk] = pfx_baru
+            prefix_terpakai.add(pfx_baru)
+            kand = Counter({pfx_baru: 1})
+            sumber = 'kode baru'
         if len(kand) > 1:
             # ambigu (mis. mobil kembar) -> pakai yg dipakai di listing ini sendiri
             lokal = Counter()
@@ -259,6 +432,7 @@ def proses(out_dir, folders, extra_files=()):
                 continue
         else:
             pfx = next(iter(kand))
+        asal_kode[sumber] += 1
 
         warna, is_strip = warna_dari(var)
         kat = tier(nm)
@@ -282,6 +456,26 @@ def proses(out_dir, folders, extra_files=()):
             c = mg2g.get((mk, gen_key(var)))
             if c and len(c) == 1:
                 gen = next(iter(c))
+        if not gen and mm_g:                  # dari MASTER (kolom Generasi)
+            gk = gen_key(var)
+            for (mk2, g2), cc in mm_g.items():
+                if mk2 == mk and g2 and (g2 in gk or gk.startswith(g2)):
+                    if len(cc) == 1:
+                        gen = next(iter(cc))
+                        break
+        if not gen:
+            # model di luar daftar 213 & tidak ada di master: pakai nomor
+            # generasi yang tertulis di varian apa adanya
+            mg = re.search(r'gen\s*([0-9]+)', var, re.I)
+            if mg:
+                gen = f'G{mg.group(1)}'
+            else:
+                # sebagian model Eropa memakai kode sasis sbg generasi
+                # (Audi B5/B9, BMW E39, Mercedes W203) -- dipakai apa adanya,
+                # konsisten dgn cara master menuliskannya
+                ms = re.search(r'(?<![A-Za-z0-9])([A-Z]{1,2}\d{1,3})(?![A-Za-z0-9])', var)
+                if ms:
+                    gen = ms.group(1).upper()
         if not gen:
             lewat['kode generasi tak bisa ditentukan'] += 1
             contoh_lewat['generasi'][f'{nm[:40]} | {var[:30]}'] += 1
@@ -362,7 +556,7 @@ def proses(out_dir, folders, extra_files=()):
         out = os.path.join(out_dir, f'SIAP_UPLOAD_SKU_UA_{ch.upper()}.xlsx')
         wb_o.save(out)
         hasil[ch] = out
-    return hasil, hasil_laporan, lewat, contoh_lewat
+    return hasil, hasil_laporan, lewat, contoh_lewat, kode_baru, asal_kode
 
 
 if __name__ == '__main__':
@@ -371,12 +565,26 @@ if __name__ == '__main__':
     folders = [a for a in args if os.path.isdir(a)]
     extra = [a for a in args if os.path.isfile(a)]
 
-    hasil, laporan, lewat, contoh = proses(out_dir, folders, extra)
+    master = None
+    for a in list(extra):
+        low = os.path.basename(a).lower()
+        if 'master' in low or 'tracking' in low:
+            master = a
+            extra.remove(a)
+    hasil, laporan, lewat, contoh, kode_baru, asal = proses(out_dir, folders, extra, master)
 
     print('=== DIISI / DIPERBAIKI ===')
     for (ch, jenis), n in sorted(laporan.items()):
         print(f'  {ch:7s} {jenis:28s} {n:5,}')
     print(f'  TOTAL {sum(laporan.values()):,}')
+
+    print('\n=== ASAL KODE MEREK-MODEL ===')
+    for k, n in asal.most_common():
+        print(f'  {n:6,}  {k}')
+    if kode_baru:
+        print(f'\n=== KODE MODEL BARU DIBUAT: {len(kode_baru)} ===')
+        for mk, pfx in sorted(kode_baru.items(), key=lambda x: x[1]):
+            print(f'  {pfx:14s} <- {mk[:52]}')
 
     print('\n=== DILEWATI (beserta alasannya) ===')
     for alasan, n in lewat.most_common():

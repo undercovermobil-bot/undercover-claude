@@ -1721,3 +1721,61 @@ Cooper) ke output, baris Mini Cooper sempat DOBEL -- diisi proses massal DAN
 ikut dari file gabungan. Fix: `baris_di_extra()` mengumpulkan
 (channel, nama listing, teks varian) dari file extra, lalu proses massal
 melewatinya. Kalau nanti menggabungkan file perbaikan lain, pakai pola yang sama.
+
+
+## Pengisian SKU massal PAKAI MASTER (2026-09-03, lanjutan) -- 7.007 baris
+
+User mengunggah dua file master: `MASTER_from_drive_20260715.xlsx` (64.248
+baris, 414 model) dan `SKU_Price_Tracking_Cover_Mobil_UPDATED.xlsx` (66.110
+baris, 427 model). **Pakai yang UPDATED** -- lebih lengkap.
+
+Hasil naik dari 951 -> **7.007 baris** (Shopee 2.325, TikTok 2.239, Lazada
+2.443), 0 masalah saat verifikasi. Asal kode: 1.433 dari master, 971 dari
+listing, 4.693 dari kode model baru.
+
+### DUA CACAT DI FILE MASTER (penting, bikin data hilang diam-diam)
+
+1. **Sheet `Suzuki` kolom A KOSONG di baris header.** Pembaca yang mensyaratkan
+   `row[0] == 'No'` melewatkan SELURUH sheet (3.372 baris) tanpa error. Ini
+   PERSIS bug yang pernah tercatat sebelumnya dan terulang lagi. **Cara aman:
+   kenali header dari sel bernilai 'Nama Produk', jangan dari kolom A.**
+   Dampak nyata: sebelum diperbaiki, semua model Suzuki dianggap "belum ada di
+   master" dan nyaris dibuatkan kode baru padahal sudah ada.
+2. **Master menulis "Mercedes-Benz" (tanda hubung), listing menulis "Mercedes
+   Benz" (spasi)** -> tidak ketemu. Samakan dulu (buang non-alfanumerik) sebelum
+   mencocokkan nama merek.
+
+### Kode model baru: 53 kode dibuat (file `KODE_MODEL_BARU_untuk_MASTER.xlsx`)
+
+Dibuat mengikuti konvensi master: penanda alfanumerik dipertahankan (AUD-A6,
+PEU-2008, KIA-EV6), kata biasa disingkat 3 huruf (REN-DST, KIA-SRN, POR-MCN),
+"Seri N" -> SN. Semua dicek tidak bentrok. **Perlu ditambahkan user ke master.**
+
+### LIMA BUG di generator kode yang sempat lolos (jangan diulang)
+
+Versi pertama menghasilkan kode yang SALAH dan sempat mau dikirim:
+1. `MG-BAG` utk "Mercedes Benz AMG GT" -- pencocokan merek pakai substring, "mg"
+   ke-match di dalam "a**mg**". **Wajib pakai batas kata.**
+2. `PEU-PE206` utk "Peugeot 206" yang SUDAH ADA di master -- kata "Mobil" bocor
+   dari "Body Cover Mobil  X" (dua spasi) sehingga model_key tidak cocok.
+   Boilerplate harus termasuk `\bmobil\b` dan `\bbody\b`.
+3. `MG-MZ` utk "MG ZS" -- nama merek dibuang lewat tebakan posisi kata. Harus
+   dibuang EKSPLISIT pakai nama merek yang ketemu.
+4. `MCL-720S2` utk "Mclaren 720S" (base) karena varian "720S Spider" merebut
+   kode dasar duluan. **Butuh pra-pass: tentukan semua kode sekaligus, urut
+   nama TERPENDEK dulu.**
+5. `HYN-6`/`KIA-6`/`CHR-9` utk Ioniq 6 / EV 6 / Tiggo 9 -- angka telanjang
+   diambil tanpa konteks. Gabungkan dgn awalan kata sebelumnya -> IO6/EV6/TI9.
+
+Selain itu: listing memuat salah ketik **"Warior"** (seharusnya Warrior) dan
+**"Undercover Autcare"** -- dua-duanya perlu ditoleransi di mapping, kalau tidak
+puluhan baris gagal terbaca warnanya.
+
+### Sisa yang BELUM dikerjakan
+
+| Alasan | Baris |
+|---|---|
+| Varian "Tahun Lain" model >1 formula | 7.063 (sesuai aturan, jangan ditebak) |
+| Generasi tak terbaca (kode sasis tak lazim) | 121 |
+| Merek tak dikenal / warna tak terbaca | 116 |
+| Varian custom (Roofbox/Custom Besi/Spoiler) | 26 (produk terpisah, perlu keputusan user) |
