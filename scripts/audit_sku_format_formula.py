@@ -46,28 +46,52 @@ AF.BLK_TOK = {m: set(AF._toks(m)) for m in BLOCKED}
 AF._cache = {}
 
 MASTERFMT = AF.MASTERFMT
+DIKECUALIKAN = getattr(FC, 'DIKECUALIKAN', {})
 
-# kolom Shopee: nama=2, varian=4, sku=6 ; data mulai baris 7
-NAMA, VAR, SKU, START = 2, 4, 6, 7
+# deteksi channel & kolom dipakai ulang dari update_harga_per_sku (berbasis NAMA
+# header, bukan nomor kolom tetap) supaya audit jalan di Shopee/TikTok/Lazada
+# sekaligus, termasuk varian template TikTok yg urutan kolomnya beda
+import update_harga_per_sku as UH   # noqa: E402
 
 # produk di luar cakupan cover mobil -- aturan bisnis #6, kalau ikut dicocokkan
 # judulnya yang kebetulan menyebut nama mobil akan salah match
 LUAR_SCOPE = ('karpet', 'cover motor', 'travel pouch', 'pouch')
 
+# Lazada mewajibkan SKU UNIK per varian, sedangkan skema formula justru sengaja
+# membuat banyak varian berbagi satu kode. Solusinya di listing Lazada: kode
+# master + akhiran pembeda `_G3`. Itu TETAP format master -- kalau akhirannya
+# tidak dilucuti dulu, 6.729 baris Lazada salah dihitung sbg "format lama".
+SUFFIX_LAZADA = re.compile(r'_[A-Za-z0-9]+$')
+
+# SKU bawaan Lazada (dibuat otomatis sistem, bukan kode master): "8663336150-
+# 1752049417990-1". Di Lazada kolom SKU tidak pernah benar-benar kosong, jadi
+# pola inilah padanan "SKU kosong" di channel lain.
+AUTO_ID_LAZADA = re.compile(r'^\d{6,}-\d{6,}-\d+$')
+
+
+def normalisasi_sku(s):
+    """buang akhiran pembeda khas Lazada supaya bisa dinilai sbg kode master"""
+    return SUFFIX_LAZADA.sub('', s) if not MASTERFMT.match(s) else s
+
 
 def baca(folders):
+    from openpyxl import load_workbook
     rows = []
     for f in folders:
         for path in sorted(glob.glob(os.path.join(f, '*.xlsx'))):
-            from openpyxl import load_workbook
-            ws = load_workbook(path, data_only=True)['Sheet1']
-            for r in range(START, ws.max_row + 1):
-                nm = ws.cell(row=r, column=NAMA).value
+            wb = load_workbook(path, data_only=True)
+            ch = UH.deteksi_channel(wb)
+            if ch is None:
+                continue
+            ws = UH.cari_sheet(wb, ch)
+            col = UH.resolve_cols(ws, ch)
+            for r in range(UH.STARTROW[ch], ws.max_row + 1):
+                nm = ws.cell(row=r, column=col['nama']).value
                 if not nm:
                     continue
-                rows.append((os.path.basename(path), r, str(nm),
-                             str(ws.cell(row=r, column=VAR).value or ''),
-                             ws.cell(row=r, column=SKU).value))
+                rows.append((f'{ch}:{os.path.basename(path)}', r, str(nm),
+                             str(ws.cell(row=r, column=col['var']).value or ''),
+                             ws.cell(row=r, column=col['sku']).value))
     return rows
 
 
@@ -76,10 +100,12 @@ def audit(rows):
     contoh_lama = Counter()
     for _, _, nm, var, sku in rows:
         s = str(sku).strip() if sku not in (None, '') else ''
-        if not s:
+        if not s or AUTO_ID_LAZADA.match(s):
             fmt['kosong'] += 1
-        elif MASTERFMT.match(s):
+        elif MASTERFMT.match(normalisasi_sku(s)):
             fmt['format_master'] += 1
+            if s != normalisasi_sku(s):
+                fmt['_pakai_akhiran_lazada'] += 1
         else:
             fmt['format_lama'] += 1
             contoh_lama[s.split('-')[0][:12]] += 1
@@ -104,14 +130,18 @@ def cek_formula(rows):
         if tag == 'blocked':
             per_model[model]['ditunda'] += 1
             continue
-        if not s:
+        if model in DIKECUALIKAN:
+            per_model[model]['dikecualikan'] += 1
+            continue
+        if not s or AUTO_ID_LAZADA.match(s):
             per_model[model]['sku_kosong'] += 1
             continue
-        if not MASTERFMT.match(s):
+        s_norm = normalisasi_sku(s)
+        if not MASTERFMT.match(s_norm):
             per_model[model]['format_lama'] += 1
             continue
 
-        aktual = s.split('-')[4]
+        aktual = s_norm.split('-')[4]
         harus = FC.seg_for_variant(CFG[model], var)
         if harus is None:
             per_model[model]['tak_tentu'] += 1
@@ -130,13 +160,16 @@ if __name__ == '__main__':
     print(f'Total baris varian dibaca: {len(rows):,}\n')
 
     fmt, contoh_lama = audit(rows)
-    tot = sum(fmt.values())
+    tot = sum(v for k, v in fmt.items() if not k.startswith('_'))
     print('=== A. STATUS FORMAT SKU ===')
     for k, label in [('format_master', 'Sudah format terbaru'),
                      ('format_lama', 'Masih format lama'),
                      ('kosong', 'SKU kosong')]:
         n = fmt.get(k, 0)
         print(f'  {label:24s} {n:6,}  ({n/tot*100:5.1f}%)')
+    n_suffix = fmt.get('_pakai_akhiran_lazada', 0)
+    if n_suffix:
+        print(f'    (termasuk {n_suffix:,} baris Lazada berakhiran pembeda _G#, tetap kode master)')
     if contoh_lama:
         print('  contoh awalan kode lama:', dict(contoh_lama.most_common(6)))
 
@@ -164,6 +197,7 @@ if __name__ == '__main__':
                      ('tak_tentu', 'Tak bisa ditentukan (varian generik/ambigu)'),
                      ('sku_kosong', 'SKU kosong'),
                      ('format_lama', 'Format lama'),
+                     ('dikecualikan', 'Dikecualikan (sudah dikonfirmasi user benar)'),
                      ('ditunda', 'Model ditunda (aturan belum final)')]:
         n = agg.get(k, 0)
         if n:

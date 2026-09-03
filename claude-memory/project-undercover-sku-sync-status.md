@@ -1602,3 +1602,77 @@ Mitsubishi Pajero (Pajero Sport), Nissan XTrail (X-Trail), Suzuki APV (APV
 Arena), Toyota Hardtop / Land Cruiser (dua listing terpisah). Baris2 model ini
 belum ikut terverifikasi -- kalau mau lengkap, tambahkan alias di `ALIAS_RE`
 (`apply_formula_sku.py`).
+
+
+## AUDIT 3 CHANNEL + perbaikan Mini Cooper (2026-09-03)
+
+`audit_sku_format_formula.py` diperluas ke Shopee/TikTok/Lazada sekaligus
+(deteksi channel & kolom dipakai ulang dari `update_harga_per_sku.py`, berbasis
+NAMA header).
+
+**Hasil status format SKU (UA):**
+
+| Channel | Format master | Belum ada SKU master | Format lama |
+|---|---|---|---|
+| Shopee (5 file, 19 Agu) | 17.979 (78,8%) | 4.476 (19,6%) | 366 (1,6%) |
+| TikTok (3 file, 3 Sep)  | 17.947 (79,2%) | 4.621 (20,4%) | 104 (0,5%) |
+| Lazada (1 file, 3 Sep)  | 16.398 (77,4%) | 4.792 (22,6%) | 0 |
+
+Kesesuaian formula dlm cakupan 213 model: Shopee 96,3% / TikTok 95,7% /
+Lazada 95,2%. Pekerjaan terbesar BUKAN migrasi format, tapi ~4.500-4.800 baris
+per channel yang SKU-nya masih kosong.
+
+### JEBAKAN: dua pola khas Lazada yang bikin salah hitung
+
+Versi pertama audit melaporkan Lazada "54,4% format lama" -- SALAH. Dua pola:
+1. **Akhiran pembeda `_G3`** (6.729 baris): Lazada mewajibkan SKU UNIK per varian
+   sedangkan skema formula sengaja bikin banyak varian berbagi kode, jadi
+   listing Lazada memakai `MNI-COO-UA-E-3P-ABU_G2`. Itu TETAP kode master --
+   harus dilucuti akhirannya dulu sebelum dinilai (`normalisasi_sku()`).
+2. **SKU bawaan sistem Lazada** (4.792 baris) berbentuk
+   `8663336150-1752049417990-1`. Di Lazada kolom SKU tidak pernah benar-benar
+   kosong, jadi pola inilah padanan "SKU kosong" di channel lain
+   (`AUTO_ID_LAZADA`).
+Tanpa dua penanganan itu, angka Lazada menyesatkan total.
+
+### Klarifikasi user 2026-09-03 (4 pertanyaan audit sebelumnya)
+
+1. **"6 model referensi tidak ketemu" = BUKAN celah cakupan.** Ternyata file
+   referensi punya BARIS DUPLIKAT: versi generik + versi spesifik untuk mobil
+   yang sama -- "Honda City" vs "Honda City Sedan"/"City Hatchback", "Mazda 2"
+   vs "Mazda 2 Sedan"/"Hatchback", "Mitsubishi Pajero" vs "Pajero Sport",
+   "Nissan XTrail" vs "Nissan X-Trail" (beda ejaan saja), "Suzuki APV" vs "APV
+   Arena"/"APV Luxury", "Toyota Hardtop / Land Cruiser" vs "Toyota Hardtop" +
+   "Toyota Land Cruiser". Yang generik tidak match listing, tapi versi
+   spesifiknya SUDAH teraudit dan SEMUANYA sesuai. Jadi tidak ada yang perlu
+   diperbaiki -- yang perlu dirapikan justru file referensinya.
+2. **Hyundai Santa Fe: listing SUDAH BENAR** (user: "dulu sudah pernah
+   dibahas"). File formula bilang TF=1 (collapse G1) tapi listing pakai 2 kode
+   (G1 utk Gen 1-3, G2 utk Gen 4/4F). Dicatat di `formula_config.DIKECUALIKAN`
+   supaya audit & apply TIDAK mengubahnya lagi. 102 baris.
+3. **Toyota Veloz bukan masalah listing.** Listing pakai `TYT-AVZ-...-G3` dan
+   itu BENAR: di file formula, grup Gen 3 milik "Toyota Avanza" labelnya
+   tertulis eksplisit "VELOZ". Masalahnya file referensi JUGA punya baris
+   "Toyota Veloz" sendiri (TF=1 -> G1) yang bertentangan. **Tidak ada judul
+   Veloz yang pakai G1 di listing** (user sudah cek, cocok dgn temuan ini).
+   Yang perlu diperbaiki = file referensi, bukan listing.
+
+### Mini Cooper: aturan "jumlah pintu menang" belum konsisten di config
+
+`MANUAL_GROUPS['Mini Cooper']` versi lama menaruh nama bodi SEBARIS dengan
+jumlah pintu, jadi utk teks yang memuat KEDUANYA nama bodi yang menang:
+"Clubman,3 Pintu" -> 5P (salah) dan "Paceman,5 Pintu" -> 3P (salah). Padahal
+aturan user: "penentunya MURNI jumlah pintu, tipe bodi diabaikan". **Diperbaiki
+2026-09-03**: jumlah pintu dicek DULU sbg grup terpisah, nama bodi turun jadi
+cadangan (utk baris MASTER yang memang hanya menulis nama bodi).
+
+**Eksekusi** (`scripts/fix_sku_mini_cooper.py`, 86 baris di 3 channel):
+- 12 baris koreksi segmen: Clubman/Countryman "3 Pintu" -> 3P, DAN
+  Paceman/Roadster "5 Pintu" -> 5P (arah sebaliknya, ikut ketemu saat aturan
+  diperbaiki).
+- 74 baris isi kosong: ternyata bukan cuma Hatch Exclusive -- SELURUH listing
+  **Premium** (4 varian) kosong di 3 channel, dan SELURUH listing **Reguler
+  TikTok** (28 varian) kosong. Pola SKU diturunkan dari listing Shopee Reguler
+  yang sudah benar, bukan dikarang.
+- Lazada: yang bentrok diberi akhiran `_G5`/`_G6`/dst mengikuti konvensi yang
+  sudah ada di data mereka; diverifikasi 0 SKU kembar per listing.

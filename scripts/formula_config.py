@@ -38,6 +38,17 @@ BLOCKED = {
     "Mitsubishi Strada Triton": "duplikat Mitsubishi Triton (ditandai ungu user)",
 }
 
+# Model yg kode SKU-nya SENGAJA berbeda dari hitungan Total Formula di file, sudah
+# dikonfirmasi user bahwa listing-nya yang benar -- JANGAN diubah, JANGAN di-flag
+# lagi sbg pelanggaran di audit berikutnya.
+DIKECUALIKAN = {
+    "Hyundai Santa Fe": (
+        "File formula bilang TF=1 (semua generasi collapse ke G1), tapi listing "
+        "memakai 2 kode (G1 utk Gen 1-3, G2 utk Gen 4/4F). User konfirmasi "
+        "2026-09-03: 'sudah benar seperti itu, dulu sudah pernah dibahas'."
+    ),
+}
+
 # Total Formula yang di file masih '?' tapi sudah dijawab user secara lisan.
 # Tanpa ini model-nya otomatis masuk BLOCKED ("Total Formula tidak terbaca").
 TF_OVERRIDE = {
@@ -70,10 +81,17 @@ MANUAL_GROUPS = {
     # Label "Hatch" polos TIDAK dipetakan di sini: user konfirmasi (2026-07-28) Hatch
     # punya versi 3 pintu MAUPUN 5 pintu, jadi satu baris master "Hatch" harus DIPECAH
     # jadi dua baris (3P & 5P) — ditangani `pecah_mini_hatch.py`, bukan oleh mapping ini.
+    # Urutan PENTING: jumlah pintu yang ditulis eksplisit HARUS menang atas tipe
+    # bodi. User 2026-09-03 mempertegas utk kasus "Clubman,3 Pintu" -> 3P. Kalau
+    # tipe bodi dicek duluan (versi lama), "Clubman,3 Pintu" jadi 5P dan
+    # "Paceman,5 Pintu" jadi 3P -- dua-duanya melawan aturan "penentu MURNI
+    # jumlah pintu". Tipe bodi tinggal jadi cadangan utk baris MASTER yang memang
+    # hanya menulis nama bodi tanpa jumlah pintu.
     "Mini Cooper": [
-        ("3P", ["3 pintu", "3pintu", "3-pintu",
-                "roadster", "paceman", "coupe", "coupé", "cabrio", "convertible"]),
-        ("5P", ["5 pintu", "5pintu", "5-pintu", "clubman", "countryman"]),
+        ("3P", ["3 pintu", "3pintu", "3-pintu"]),
+        ("5P", ["5 pintu", "5pintu", "5-pintu"]),
+        ("3P", ["roadster", "paceman", "coupe", "coupé", "cabrio", "convertible"]),
+        ("5P", ["clubman", "countryman"]),
     ],
     # Nissan Livina X-Gear (user 2026-07-29): "2 formula dibagi untuk 5 seater dan
     # 7 seater". Teks varian di listing menuliskannya dgn dua gaya — "5 Seater :
