@@ -1551,3 +1551,54 @@ karena harga di sel tersimpan sbg TEKS sedangkan pembandingnya int. Kalau tidak
 diperiksa, ini bisa memicu "perbaikan" 308 baris yang sebenarnya sudah benar. Selalu
 normalkan `int(float(v))` sebelum membandingkan nilai sel numerik dari export
 marketplace — tipe datanya tidak konsisten antar channel maupun antar export.
+
+
+## AUDIT 2026-08-19: status format SKU + kesesuaian formula (UA Shopee)
+
+Script baru `scripts/audit_sku_format_formula.py` -- TIDAK menulis ulang aturan,
+memakai ulang `formula_config.py` (config formula) + `apply_formula_sku.py`
+(`match_model`, regex `MASTERFMT`) supaya audit menilai pakai definisi yang SAMA
+dengan yang dipakai saat menerapkan perubahan.
+
+**Jebakan teknis**: `FC.load(path=FORMULA_XLSX)` mengikat nilai default saat
+fungsi didefinisikan, jadi mengganti `FC.FORMULA_XLSX` saja TIDAK cukup ketika
+file referensi pindah lokasi -- harus ikut menimpa `FC.load.__defaults__`.
+
+**Hasil (5 file UA Shopee, 22.821 baris varian, snapshot 2026-08-19):**
+
+A. Format SKU:
+- 17.979 (78,8%) sudah format master `MEREK-MODEL-TOKO-KAT-GEN-WARNA`
+- 4.476 (19,6%) SKU KOSONG
+- 366 (1,6%) bukan format master -> ternyata 2 jenis berbeda: **183 baris berisi
+  teks literal "SKU"** (placeholder/sampah, bukan kode lama) + 183 baris kode
+  lama `CVR####`.
+
+B. Kesesuaian formula (cakupan 213 model referensi; 208 siap dicek, 3 ditunda):
+- 202/208 model referensi ketemu di listing; 10.163 baris masuk cakupan
+- **9.837 (96,8%) sudah sesuai formula**
+- 87 baris flagged tidak sesuai, TAPI setelah diverifikasi satu-satu:
+  - **Hyundai Santa Fe 51 baris = PELANGGARAN ASLI**. TF=1 (semua generasi
+    collapse ke G1) tapi listing masih terbagi G1 (51) + G2 (51).
+  - **Toyota Veloz 34 baris = FALSE POSITIVE**. Listing pakai `TYT-AVZ-...-G3`
+    yang JUSTRU BENAR: di file formula, grup Gen 3 milik "Toyota Avanza"
+    labelnya eksplisit tertulis "VELOZ". Masalahnya file referensi juga punya
+    baris "Toyota Veloz" SENDIRI (TF=1 -> G1) yang BERTENTANGAN dengan itu.
+    **Ini cacat di file referensi, bukan di listing** -- perlu keputusan user
+    mana yang dipakai sebelum ada yang diubah.
+  - **Mini Cooper 2 baris = data varian kontradiktif**: teks varian
+    "Clubman,3 Pintu" & "Countryman,3 Pintu" (bodi 5-pintu tapi ditulis 3 pintu),
+    SKU pakai 5P, aturan user ("penentu MURNI jumlah pintu") menghendaki 3P.
+    Perlu dilihat manusia, jangan auto-fix.
+- 32 baris tak bisa ditentukan (varian generik), 196 SKU kosong, 11 format lama
+
+**Cakupan yang TIDAK terverifikasi**: 10.900 baris (48% dari total) milik model
+di LUAR daftar 213 (Hyundai Grand i10/Elantra/Sonata, Lexus RX, VW Passat/Golf,
+dll) -- konsisten dgn catatan lama soal mobil niche/import di luar scope. Angka
+96,8% itu berlaku utk cakupan 213 model, BUKAN seluruh katalog.
+
+**6 model referensi tidak ke-match gara-gara beda penamaan** (produknya ADA di
+listing): Honda City (listing: City Hatchback), Mazda 2 (Mazda 2 Hatchback),
+Mitsubishi Pajero (Pajero Sport), Nissan XTrail (X-Trail), Suzuki APV (APV
+Arena), Toyota Hardtop / Land Cruiser (dua listing terpisah). Baris2 model ini
+belum ikut terverifikasi -- kalau mau lengkap, tambahkan alias di `ALIAS_RE`
+(`apply_formula_sku.py`).
