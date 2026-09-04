@@ -1852,3 +1852,50 @@ lagi tiap kali ada toko yang listingnya kosong. Juga masih menunggu keputusan:
 sudah berjalan biasanya lebih benar (master bisa ketinggalan). Jangan otomatis
 menganggap master sebagai kebenaran mutlak untuk kode model -- terutama untuk
 mobil kembar yang berbagi cover.
+
+
+## Penyeragaman kode mobil kembar (2026-09-04) -- `scripts/samakan_kode_kembar.py`
+
+Audit menyeluruh "kode di listing vs kode di master" menemukan **14 model
+berbeda**. Dikelompokkan jadi 4 sifat:
+
+**A. Mobil kembar -- listing pakai kode INDUK, master simpan kode sendiri yang
+menganggur (6 model, SUDAH DIKERJAKAN, 778 baris master):**
+
+| Model | Kode master lama | Jadi | Induk |
+|---|---|---|---|
+| Daihatsu Terios | DHT-TRS | TYT-RSH | Toyota Rush |
+| Toyota Veloz | TYT-VLZ | TYT-AVZ | Toyota Avanza |
+| Daihatsu Sigra | DHT-SGR | TYT-CLY | Toyota Calya |
+| Toyota Vellfire | TYT-VLF | TYT-ALP | Toyota Alphard |
+| Daihatsu Luxio | DHT-LXO | DHT-GMX | Gran Max Minibus |
+| Daihatsu Taft GT | DHT-TG | DHT-FRZ | Daihatsu Feroza |
+
+Diverifikasi dulu sebelum dieksekusi: (a) kode induk memang milik model induk di
+master, (b) set generasi anak tercakup induk (keenamnya cuma G1).
+
+**C. Belum seragam antar toko/channel (SUDAH DIKERJAKAN, 223 baris listing):**
+- Xenia Lazada `DHT-XNA` -> `TYT-AVZ` (42) -- Shopee & TikTok sudah benar
+- Agya Lazada `TYT-AGY` -> `DHT-AYL` (28) -- Shopee & TikTok sudah benar
+- Mazda 2 Hatchback UA `MZD-2H` -> `MZD-MZ2` (153, 3 channel). **Keputusan
+  Claude, belum dikonfirmasi user**: master + OT sudah MZD-MZ2, hanya UA beda,
+  jadi yang minoritas diubah. Tapi `MZD-2H` sebenarnya lebih rapi krn
+  berpasangan dgn `MZD-2S` (Mazda 2 Sedan). Bisa dibalik kalau user mau.
+
+**B. Ferrari 488 -- BELUM dikerjakan, menunggu user.** TIGA produk berbeda
+semuanya memakai `FER-4PS`: 488 Pista Spider (33 baris, memang miliknya),
+488 Spider (94 baris, master bilang FER-488S), 488 Pista (163 baris, **tidak
+ada di master sama sekali**). Beda sifat dari grup A: ini bukan konsolidasi
+kembar, tapi tiga mobil berbagi satu SKU sehingga stok tercampur.
+
+**D. Bukan masalah** (jangan "diperbaiki" di sesi depan): Daihatsu Rocky punya 2
+kode karena listingnya memuat DUA mobil (Rocky modern=kembaran Raize TYT-RZE,
+Rocky klasik F70=kembaran Feroza DHT-FRZ); Toyota HiAce 2 kode karena Commuter
+(TYT-HAC) & Premio (TYT-HAL) submodel berbeda.
+
+### JEBAKAN: master bisa punya LEBIH DARI SATU entri untuk model yang sama
+
+Versi pertama mencocokkan lewat NAMA PRODUK persis -> 66 baris tertinggal karena
+master punya "Daihatsu Terios" DAN "Daihatsu Terios / New Terios", dua-duanya
+DHT-TRS. **Cocokkan lewat KODE SKU**, bukan nama -- setelah memastikan tiap kode
+lama memang hanya dipakai modelnya sendiri (dicek dulu, jangan diasumsikan).
