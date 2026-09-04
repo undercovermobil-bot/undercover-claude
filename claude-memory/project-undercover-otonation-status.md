@@ -152,3 +152,62 @@ kategorinya belum dibuang, bukan tanda katalognya memang baru.
 `SZK-FE` dibuat untuk listing "Suzuki Forsa Esteem", padahal master sudah punya
 "Suzuki Forsa" (`SZK-FOR`). Forsa & Esteem generasi berurutan mobil yang sama --
 bisa jadi harusnya ikut SZK-FOR. TIDAK ditebak, dilaporkan ke user.
+
+---
+
+## 2026-09-04 — Penyeragaman kode kembar (grup A & C) + file upload final OT
+
+Lanjutan dari kasus Taft GT. Setelah dicek menyeluruh, ada 3 kelompok kasus:
+
+**Grup A — master punya kode sendiri padahal semua listing pakai kode induk.**
+Kode master yang tidak terpakai itu jadi jebakan: begitu ada toko yang
+listingnya kosong, pengisian otomatis jatuh ke master dan menghasilkan kode
+salah (persis yang terjadi pada Taft GT di Otonation). Diseragamkan ke kode
+induk di master:
+
+| Model | kode master lama | -> kode induk | baris |
+|---|---|---|---|
+| Daihatsu Terios | DHT-TRS | TYT-RSH | 132 |
+| Toyota Veloz | TYT-VLZ | TYT-AVZ | 132 |
+| Daihatsu Sigra | DHT-SGR | TYT-CLY | 66 |
+| Toyota Vellfire | TYT-VLF | TYT-ALP | 330 |
+| Daihatsu Luxio | DHT-LXO | DHT-GMX | 66 |
+| Daihatsu Taft GT | DHT-TG | DHT-FRZ | 52 |
+| Mazda 2 Hatchback | MZD-MZ2 | MZD-2H | 198 |
+
+Total **976 baris master**. Verifikasi: 0 sisa kode lama di 76.212 SKU master.
+
+**Grup B — Ferrari 488 (belum dikerjakan, menunggu keputusan user).** Tiga
+listing (488 Spider 94 baris, 488 Pista 163, 488 Pista Spider 33) semuanya
+memakai `FER-4PS`; master menyebut `FER-488S` untuk 488 Spider dan tidak punya
+entri sama sekali untuk 488 Pista.
+
+**Grup C — kode beda antar channel/toko.** Diperbaiki di listing:
+- UA Lazada: Xenia 42 baris `DHT-XNA` -> `TYT-AVZ`, Agya 28 baris `TYT-AGY` ->
+  `DHT-AYL` (Shopee & TikTok sudah benar, hanya Lazada yang menyimpang).
+- OT Shopee: Mazda 2 Hatchback 51 baris `MZD-MZ2` -> `MZD-2H`.
+
+### Keputusan user: Mazda 2 Hatchback pakai MZD-2H
+
+Undercover memakai `MZD-2H`, Otonation & master memakai `MZD-MZ2`. User memilih
+**MZD-2H** karena berpasangan rapi dengan `MZD-2S` (Mazda 2 Sedan). Jadi yang
+diubah adalah master + Otonation, BUKAN Undercover.
+
+### File upload final Otonation (Shopee)
+
+`SIAP_UPLOAD_SKU_OTONATION_SHOPEE.xlsx` — **925 baris / 103 produk**, gabungan:
+- 874 baris pengisian SKU massal (SKU kosong / format lama)
+- 51 baris penyeragaman kode Mazda 2 Hatchback
+
+Digabung karena template Shopee-nya identik (shop id 407202910) dan irisan
+varian = 0, jadi satu kali upload cukup. Stok & harga disalin apa adanya dari
+export, hanya kolom SKU yang disentuh.
+
+### Temuan sampingan: master "Daihatsu Feroza Long" belum lengkap
+
+`DHT-FRL` cuma punya 34 baris dan semuanya berlabel toko Undercover Autocare —
+tiga toko lain (Otonation/Smartprotection/Otoprotection) tidak ada barisnya.
+Ini **cacat lama di master asli**, bukan akibat penambahan model baru
+(dicek di `SKU_Price_Tracking_UPDATED.xlsx` asli, sudah begitu). Tidak
+mempengaruhi hasil pengisian SKU karena segmen toko OT memang `UA`
+(aturan konsolidasi #1), tapi pembukuan masternya perlu dilengkapi.

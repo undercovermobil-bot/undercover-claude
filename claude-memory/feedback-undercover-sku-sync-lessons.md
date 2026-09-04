@@ -160,3 +160,43 @@ diagnosis hampir dibelokkan ke arah yang salah.
 curigai dulu alat pemeriksanya -- khususnya nomor kolom, apalagi kalau
 membandingkan file HASIL (ada kolom err_info tambahan) dengan file sumber.
 Selalu resolusi kolom lewat NAMA header, jangan nomor tetap.
+
+---
+
+## Keunikan SKU di Lazada itu PER LISTING, bukan per toko (2026-09-04)
+
+Catatan lama "Lazada butuh SKU unik" ternyata terlalu luas dan sempat bikin
+salah alarm. Dibuktikan dari export UA Lazada (21.190 baris berSKU):
+
+- SKU ganda **di dalam satu listing**: **0** — ini yang benar-benar dilarang,
+  dan inilah alasan konvensi akhiran `_G2`/`_G3` ada.
+- SKU dipakai **lebih dari satu listing**: **261** — dan itu memang praktik yang
+  sudah berjalan untuk mobil kembar (Terios/Rush, Ayla/Agya, Gran Max/Luxio,
+  Feroza/Rocky).
+
+**How to apply**: saat menyeragamkan kode mobil kembar di Lazada, jangan panik
+melihat SKU hasil bentrok dengan listing lain — justru itu tujuannya. Yang
+wajib dicek adalah simulasi *setelah* perubahan: terapkan perubahan ke salinan
+export, lalu hitung duplikat per nama listing. Kalau 0, aman.
+
+## Satu file upload = satu toko, walau channel-nya sama (2026-09-04)
+
+UA dan Otonation sama-sama Shopee. Script yang mengumpulkan hasil "per channel"
+akan menumpuk baris dua toko ke SATU file, dan file itu tidak bisa dipakai —
+tiap toko punya akun & product_id sendiri (metadata baris 2 template Shopee
+memuat shop id, mis. `407202910`). `samakan_kode_kembar.py` sekarang menerima
+argumen `<nama_toko>` dan menamai output `FIX_KODE_SERAGAM_{toko}_{channel}`,
+dan dijalankan terpisah per toko (master hasil run pertama dipakai sebagai
+input run berikutnya supaya perbaikan master tidak dobel).
+
+Sebaliknya, dua file untuk toko + channel yang SAMA boleh digabung jadi satu
+upload — asal irisan (product_id, variation_id)-nya 0. Itu yang dilakukan pada
+Otonation: 874 baris isi SKU + 51 baris kode Mazda 2 -> 925 baris, satu file.
+
+## Mencocokkan kode kembar di master: lewat KODE, bukan nama model
+
+Master bisa memuat lebih dari satu entri untuk model yang sama — terbukti ada
+"Daihatsu Terios" DAN "Daihatsu Terios / New Terios", dua-duanya `DHT-TRS`.
+Percobaan pertama mencocokkan nama persis dan menyisakan 66 baris berkode lama.
+Aman mencocokkan lewat prefix kode setelah diverifikasi tiap kode lama hanya
+dipakai modelnya sendiri.

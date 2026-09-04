@@ -18,7 +18,11 @@ model induk di master, dan set generasi anak harus tercakup oleh induk (dicek
 2026-09-04: keenam pasangan grup A semuanya cuma G1, induknya punya G1).
 
 Pemakaian:
-  python3 samakan_kode_kembar.py <master.xlsx> <folder_out> <folder_listing...>
+  python3 samakan_kode_kembar.py <master.xlsx> <folder_out> <nama_toko> <folder_listing...>
+
+CATATAN: jalankan TERPISAH per toko. UA dan Otonation sama-sama channel Shopee,
+kalau folder keduanya dicampur dalam satu run, barisnya masuk ke SATU file dan
+tidak bisa diupload (tiap toko punya akun & product_id sendiri).
 """
 import sys, os, glob, copy, warnings
 from collections import defaultdict, Counter
@@ -42,6 +46,8 @@ KEMBAR_MASTER = [
     ('Toyota Vellfire',  'TYT-VLF', 'TYT-ALP', 'Toyota Alphard'),
     ('Daihatsu Luxio',   'DHT-LXO', 'DHT-GMX', 'Daihatsu Gran Max Minibus'),
     ('Daihatsu Taft GT', 'DHT-TG',  'DHT-FRZ', 'Daihatsu Feroza'),
+    # bukan mobil kembar -- murni menyamakan kode ke yang dipakai Undercover
+    ('Mazda 2 Hatchback', 'MZD-MZ2', 'MZD-2H', 'kode Undercover (pasangan MZD-2S)'),
 ]
 
 # --- C. kode yang belum seragam antar toko/channel ---------------------------
@@ -51,8 +57,11 @@ SERAGAM_LISTING = [
      'kembaran Avanza; Shopee & TikTok sudah TYT-AVZ, hanya Lazada berbeda'),
     ('agya',              'TYT-AGY', 'DHT-AYL',
      'kembaran Ayla; Shopee & TikTok sudah DHT-AYL, hanya Lazada berbeda'),
-    ('mazda 2 hatchback', 'MZD-2H',  'MZD-MZ2',
-     'master dan Otonation memakai MZD-MZ2; hanya Undercover memakai MZD-2H'),
+    # User memilih MZD-2H (dipakai Undercover) -- lebih rapi karena berpasangan
+    # dengan MZD-2S untuk Mazda 2 Sedan. Jadi yang diubah justru master &
+    # Otonation, bukan Undercover.
+    ('mazda 2 hatchback', 'MZD-MZ2', 'MZD-2H',
+     'user memilih kode Undercover; berpasangan dengan MZD-2S (Mazda 2 Sedan)'),
 ]
 
 
@@ -122,7 +131,7 @@ def perbaiki_master(master_path, out_path):
     return ubah
 
 
-def perbaiki_listing(out_dir, folders, sah):
+def perbaiki_listing(out_dir, folders, sah, nama_toko='UA'):
     os.makedirs(out_dir, exist_ok=True)
     per_channel = {}
     laporan = Counter()
@@ -192,15 +201,15 @@ def perbaiki_listing(out_dir, folders, sah):
 
     hasil = {}
     for ch, (wb_o, _, _) in per_channel.items():
-        out = os.path.join(out_dir, f'FIX_KODE_SERAGAM_{ch.upper()}.xlsx')
+        out = os.path.join(out_dir, f'FIX_KODE_SERAGAM_{nama_toko}_{ch.upper()}.xlsx')
         wb_o.save(out)
         hasil[ch] = out
     return hasil, laporan, gagal
 
 
 if __name__ == '__main__':
-    master_path, out_dir = sys.argv[1], sys.argv[2]
-    folders = sys.argv[3:]
+    master_path, out_dir, nama_toko = sys.argv[1], sys.argv[2], sys.argv[3]
+    folders = sys.argv[4:]
     os.makedirs(out_dir, exist_ok=True)
 
     # kumpulkan SKU listing utk validasi
@@ -227,7 +236,7 @@ if __name__ == '__main__':
         print(f'  {m_nama:20s} {lama:9s} -> {baru:9s} ({induk}) : {ubah.get(m_nama,0):4d} baris')
     print(f'  TOTAL {sum(ubah.values()):,} baris  -> {os.path.basename(out_master)}')
 
-    hasil, laporan, gagal = perbaiki_listing(out_dir, folders, sah)
+    hasil, laporan, gagal = perbaiki_listing(out_dir, folders, sah, nama_toko)
     print('\n=== C. LISTING: kode diseragamkan ===')
     for (ch, kw), n in sorted(laporan.items()):
         print(f'  {ch:7s} {kw:20s} {n:4d} baris')
