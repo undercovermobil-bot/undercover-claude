@@ -77,11 +77,24 @@ WARNA_STRIP = {
 WARNA_DASAR = {
     'abu-abu': 'ABU', 'abu abu': 'ABU', 'hitam': 'HTM', 'biru benhur': 'BRU',
     'merah': 'MRH', 'hijau army': 'GRN', 'silver': 'SLV', 'transparan': 'TRP',
+    # Otonation menulis warna dasar dalam bentuk pendek ("Abu", "Biru").
+    # Aman ditaruh di sini karena WARNA_STRIP selalu dicek LEBIH DULU, jadi
+    # "Strip 2 Abu"/"Elite Abu" tidak akan salah jatuh ke sini.
+    'abu': 'ABU', 'biru': 'BRU',
 }
 
-TIER_RE = re.compile(r'\b(reguler|regular|premium|exclusive|transparan)\b', re.I)
+# Kosakata kategori DUA toko sekaligus: UA memakai Reguler/Premium/Exclusive,
+# Otonation memakai Outdoor/Semi Outdoor/Extreme Outdoor/Indoor dan Outdoor.
+# Kalau kosakata OT tidak ikut dibuang, kata kategorinya bocor ke nama model dan
+# menghasilkan kode sampah (BMW-X5O utk "BMW X5 Outdoor", CHR-OM5S utk
+# "Chery Omoda 5 Semi Outdoor") sekaligus membuat model yang SAMA tidak saling
+# ketemu antar tier.
+TIER_RE = re.compile(r'\b(reguler|regular|premium|exclusive|transparan|'
+                     r'extreme\s+outdoor|semi\s+outdoor|indoor\s+dan\s+outdoor|'
+                     r'outdoor|indoor)\b', re.I)
 BOIL_RE = re.compile(r'(undercover\s+aut[o]?care|undercover|autocare|autcare|'
-                     r'body cover|cover mobil|selimut mobil|\bmobil\b|\bbody\b|/|-)', re.I)
+                     r'body cover|cover mobil|selimut mobil|sarung mobil|\bsarung\b|'
+                     r'\bmobil\b|\bbody\b|/|-)', re.I)
 SUFFIX_LZ = re.compile(r'_[A-Za-z0-9]+$')
 
 
@@ -103,15 +116,38 @@ def gen_key(var):
     return ' '.join(sisa).strip()
 
 
+# Otonation memakai kosakata kategori sendiri di nama listing. Pemetaan di bawah
+# BUKAN tebakan -- diverifikasi ke baris OT yang SKU-nya sudah benar (2026-09-04):
+#   Extreme Outdoor      -> E  (520/520 baris)
+#   Outdoor (polos)      -> P  (718/718 baris)
+#   Semi Outdoor         -> R/S (5.745 baris, tidak ada P/E sama sekali)
+#   Indoor dan Outdoor   -> R/S (692 baris)
 def tier(nm):
-    n = str(nm).lower()
+    n = ' '.join(str(nm).lower().split())
     if 'transparan' in n:
         return 'T'
+    # kata tier eksplisit selalu menang (banyak listing OT menulis dua-duanya,
+    # mis. "Cover Mobil Honda CRV - Premium - Outdoor")
     if 'exclusive' in n:
         return 'E'
     if 'premium' in n:
         return 'P'
+    if re.search(r'\breguler|\bregular', n):
+        return 'R'
+    if 'extreme outdoor' in n:
+        return 'E'
+    if 'semi outdoor' in n or 'indoor dan outdoor' in n:
+        return 'R'
+    if 'outdoor' in n:
+        return 'P'      # "Outdoor" polos di OT setara Premium
     return 'R'          # Reguler (bisa jadi S kalau warnanya strip)
+
+
+# Listing OT berjudul "Cover Mobil / Sarung Mobil X" tanpa akhiran kategori dan
+# variannya cuma warna = LISTING ARSIP LAMA (dikonfirmasi user 2026-07-10).
+# Versi aktifnya ada di listing terpisah ber-akhiran "Semi Outdoor" dst.
+# Jangan diisi SKU-nya.
+ARSIP_RE = re.compile(r'sarung\s+mobil', re.I)
 
 
 def warna_dari(var):
@@ -171,6 +207,14 @@ def baca_master(path):
 
 
 STOPWORD_MODEL = {'plus', 'new', 'all', 'the'}
+
+# Nama model di listing yang menyebut mobil yang SAMA dengan master tapi
+# tulisannya beda. Tanpa ini, model yang sudah ada di master dianggap baru lalu
+# dibuatkan kode duplikat (mis. "Toyota Altis" -> TYT-ALT2 padahal master sudah
+# punya "Toyota Corolla Altis" -> TYT-ALT).
+ALIAS_MODEL = {
+    'toyota altis': 'toyota corolla altis',
+}
 
 
 def kode_model_baru(nama_listing, brand_code, terpakai, brand_name=None):
@@ -344,7 +388,7 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
         low0 = nm0.lower()
         if any(k in low0 for k in LUAR_SCOPE) or CUSTOM_RE.search(nm0):
             continue
-        mk0 = model_key(nm0)
+        mk0 = ALIAS_MODEL.get(model_key(nm0), model_key(nm0))
         if mk0 in m2p or mk0 in mm_p:
             continue
         butuh.setdefault(mk0, nm0)
@@ -377,6 +421,9 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
         if any(k in low for k in LUAR_SCOPE):
             lewat['produk luar cakupan'] += 1
             continue
+        if ARSIP_RE.search(nm) and 'outdoor' not in low:
+            lewat['listing arsip lama OT (sengaja tidak disentuh)'] += 1
+            continue
         if any(k in str(var).lower() for k in GENERIK):
             # Aturan #4 melarang MENEBAK generasi utk varian generik. Tapi kalau
             # modelnya cuma punya SATU formula (collapse), tidak ada yang perlu
@@ -391,7 +438,7 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
                 lewat['varian generik, model >1 formula (tidak boleh ditebak)'] += 1
                 continue
 
-        mk = model_key(nm)
+        mk = ALIAS_MODEL.get(model_key(nm), model_key(nm))
         kand = m2p.get(mk)
         sumber = 'listing'
         if not kand and mk in mm_p:          # 2) cari di MASTER

@@ -97,3 +97,58 @@ py SKU tersasar R/S padahal harusnya P) kemungkinan berulang -- jalankan
 `fix_sku_outdoor_polos.py` yg sama, tapi WAJIB verifikasi ulang tiap hasil ke
 set SKU master (jangan asumsikan otomatis benar tanpa cross-check, spt yg
 dilakukan di sini).
+
+
+## (2026-09-04) Pengisian SKU massal OT -- 874 baris, `scripts/isi_sku_massal.py`
+
+Script yang sama dengan UA, diperluas supaya mengerti kosakata OT. Hasil: **874
+baris** (844 isi-kosong + 30 format lama), 0 masalah. Sumber kode: 498 dari
+listing OT sendiri, 491 dari master, cuma **3 kode model baru**.
+
+### Pemetaan kategori OT -- DIBUKTIKAN dari data, bukan ditebak
+
+Dicek ke baris OT yang SKU-nya SUDAH benar (n=7.714):
+
+| Nama listing | Segmen SKU | Bukti |
+|---|---|---|
+| Extreme Outdoor | **E** | 520/520 |
+| Outdoor (polos) | **P** | 718/718 |
+| Semi Outdoor | R/S | 5.745 (tidak ada P/E) |
+| Indoor dan Outdoor | R/S | 692 |
+
+Kata tier eksplisit ("- Premium - Outdoor") selalu menang atas kosakata Outdoor.
+Hasil akhir file konsisten 100% dengan tabel ini.
+
+### JEBAKAN BESAR: pembersih nama model harus tahu kosakata KEDUA toko
+
+Percobaan pertama menghasilkan **109 kode model baru yang SAMPAH** -- `BMW-X5O`
+("BMW X5 Outdoor"), `CHR-OM5S` ("Chery Omoda 5 Semi Outdoor"), `AUD-A42`
+("Sarung Audi A4"), `HND-CHS2`, dst. Sebabnya `TIER_RE`/`BOIL_RE` cuma
+membuang kosakata UA (Reguler/Premium/Exclusive), sedangkan OT memakai
+Outdoor/Semi Outdoor/Extreme Outdoor/Sarung Mobil. Akibatnya kata kategori
+bocor ke nama model, sehingga (a) kode barunya salah dan (b) model yang SAMA
+tidak saling ketemu antar tier maupun ke master. Setelah kosakata OT ikut
+dibuang: 109 -> **3** kode baru.
+
+**How to apply**: kalau memproses toko dengan penamaan listing berbeda, PERIKSA
+dulu berapa kode model baru yang dihasilkan. Angka yang melonjak (puluhan model
+umum seperti BMW X5 / Honda Civic dianggap "baru") = tanda kuat kosakata
+kategorinya belum dibuang, bukan tanda katalognya memang baru.
+
+### Hal lain yang ditemukan
+
+- **Warna bentuk pendek**: OT menulis warna dasar "Abu"/"Biru" (bukan
+  "Abu-abu"/"Biru Benhur"). Ditambahkan ke `WARNA_DASAR`; aman karena
+  `WARNA_STRIP` selalu dicek lebih dulu sehingga "Elite Abu" tidak salah jatuh.
+- **Listing arsip lama** ("Cover Mobil / Sarung Mobil X" tanpa akhiran
+  kategori) -- 351 baris, sengaja TIDAK disentuh sesuai keputusan user
+  2026-07-10. Ditangani lewat `ARSIP_RE`.
+- **"Toyota Altis" vs master "Toyota Corolla Altis"** -- sempat dibuatkan kode
+  duplikat TYT-ALT2. Diperbaiki lewat `ALIAS_MODEL`. Pola ini kemungkinan
+  berulang di toko lain: nama listing lebih pendek dari nama master.
+
+### Perlu keputusan user
+
+`SZK-FE` dibuat untuk listing "Suzuki Forsa Esteem", padahal master sudah punya
+"Suzuki Forsa" (`SZK-FOR`). Forsa & Esteem generasi berurutan mobil yang sama --
+bisa jadi harusnya ikut SZK-FOR. TIDAK ditebak, dilaporkan ke user.
