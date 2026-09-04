@@ -1779,3 +1779,41 @@ puluhan baris gagal terbaca warnanya.
 | Generasi tak terbaca (kode sasis tak lazim) | 121 |
 | Merek tak dikenal / warna tak terbaca | 116 |
 | Varian custom (Roofbox/Custom Besi/Spoiler) | 26 (produk terpisah, perlu keputusan user) |
+
+
+## 50 model baru DIMASUKKAN ke master (2026-09-03) -- `scripts/tambah_model_baru_ke_master.py`
+
+Kode model baru yang dibuat sebelumnya (53) akhirnya ditulis ke master, bukan
+cuma didaftar. Hasil: **50 model, 6.732 baris** ditambahkan ke SALINAN master
+(`MASTER_SKU_Price_Tracking_PLUS_53_MODEL_BARU.xlsx`, baris baru ditandai biru).
+Master asli tidak disentuh, sesuai aturan kerja.
+
+**Pola master per model (diverifikasi dari Audi A4 = 408 baris)** -- ini yang
+harus diikuti kalau menambah model lagi:
+- per GENERASI per TOKO = **17 baris**: Exclusive 1 warna (Abu-abu), Premium 2
+  (Abu-abu, Silver), Reguler 5 (Abu-abu, Biru Benhur, Hijau Army, Hitam,
+  Merah), Strip 9 (Elite/Epic/Warrior x Abu/Biru/Merah)
+- **4 baris toko** per kombinasi (aturan #7, master tidak dedupe toko)
+- segmen toko di SKU ikut aturan konsolidasi #1: Undercover Autocare & Otonation
+  -> `UA`; Smartprotection & Otoprotection -> `SP`
+- kolom "Nama Produk Bigseller" = `{Model}-{Toko}-{Kategori}-{Warna}-{Generasi}`
+- jumlah baris = 17 x jumlah_generasi x 4
+
+**Sumber generasi & rentang tahun = TEKS VARIAN LISTING** (satu-satunya yang ada
+utk model yg belum pernah masuk master). Konsekuensi: cakupan generasi sebatas
+yang dijual sekarang; generasi lain yang belum pernah dilisting tetap harus
+ditambah manual.
+
+**Verifikasi**: 76 sheet utuh, 0 baris lama hilang, 0 SKU bentrok dgn yang sudah
+ada, 0 format salah.
+
+**3 model TIDAK bisa dimasukkan** (kodenya sudah ada, tinggal menunggu listing):
+Hyundai Verna (HYN-VRN), Kia Cerato (KIA-CRT), Proton Suprima S (PRT-SS) --
+listing ketiganya TIDAK punya pilihan generasi sama sekali, variannya cuma
+warna. Pola "bare-variant" yang sama seperti Mercedes CLA Class di OT: pilihan
+generasi harus ditambahkan di listing dulu.
+
+**Catatan angka**: master terbaca 69.480 baris (bukan 66.110 seperti dilaporkan
+sebelum perbaikan) -- selisihnya persis sheet Suzuki yang tadinya terlewat gara-
+gara header kolom A kosong. Kalau ada laporan jumlah baris master yang beda
+jauh, curigai dulu sheet yang ke-skip diam-diam.
