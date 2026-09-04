@@ -1817,3 +1817,38 @@ generasi harus ditambahkan di listing dulu.
 sebelum perbaikan) -- selisihnya persis sheet Suzuki yang tadinya terlewat gara-
 gara header kolom A kosong. Kalau ada laporan jumlah baris master yang beda
 jauh, curigai dulu sheet yang ke-skip diam-diam.
+
+
+## Rujukan lintas toko + kasus Taft GT (2026-09-04)
+
+**Masalah**: memproses OT sendirian membuat Daihatsu Taft GT dapat `DHT-TG`
+(dari master), padahal di listing UA Taft GT memakai **`DHT-FRZ`** (kode
+Feroza -- cover-nya memang sama, pola kembar seperti Rush/Terios). User
+konfirmasi: Taft GT HARUS ikut Feroza.
+
+**Kenapa UA benar tapi OT salah**: di UA sebagian baris Taft GT sudah terisi
+`DHT-FRZ`, jadi terpelajari dari listing itu sendiri. Di OT semua barisnya
+kosong -> jatuh ke master -> `DHT-TG`.
+
+**Perbaikan akar (bukan tambal per-kasus)**: `isi_sku_massal.py` sekarang
+menerima folder "pengetahuan" lewat awalan `tahu:` -- listing toko lain yang
+sudah benar dipakai sebagai RUJUKAN tapi tidak ikut ditulis ke file hasil.
+Sah karena kode SKU dipakai bersama antar toko. Efek di run OT: sumber kode
+bergeser dari 498 listing + 491 master menjadi **989 dari listing** --
+praktik yang sudah berjalan diutamakan daripada master kalau keduanya beda.
+
+```
+python3 isi_sku_massal.py <formula.xlsx> <out> <folder_toko> \
+    tahu:<folder_toko_lain> ... <master.xlsx>
+```
+
+**PR untuk user**: master masih mencatat "Daihatsu Taft GT" = `DHT-TG`
+(52 baris). Kalau Taft GT selalu ikut Feroza, baris itu tidak terpakai dan
+sebaiknya diarahkan ke `DHT-FRZ` di master -- kalau dibiarkan, akan menjebak
+lagi tiap kali ada toko yang listingnya kosong. Juga masih menunggu keputusan:
+`SZK-FE` (Suzuki Forsa Esteem) apakah harusnya ikut `SZK-FOR`.
+
+**Pelajaran umum**: kalau master dan praktik listing BERBEDA, listing yang
+sudah berjalan biasanya lebih benar (master bisa ketinggalan). Jangan otomatis
+menganggap master sebagai kebenaran mutlak untuk kode model -- terutama untuk
+mobil kembar yang berbagi cover.

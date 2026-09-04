@@ -338,10 +338,17 @@ def baris_di_extra(extra_files):
     return kunci
 
 
-def proses(out_dir, folders, extra_files=(), master_path=None):
+def proses(out_dir, folders, extra_files=(), master_path=None, folder_tahu=()):
     os.makedirs(out_dir, exist_ok=True)
     semua = kumpulkan(folders)
-    m2p, mg2g = bangun_pengetahuan(semua)
+    # Folder "pengetahuan": listing toko LAIN yang SKU-nya sudah benar, dipakai
+    # sebagai rujukan tapi TIDAK ikut ditulis ke file hasil. Perlu karena kode
+    # SKU dipakai bersama antar toko (OT memakai kode UA), jadi praktik yang
+    # sudah berjalan di listing UA lebih tepat daripada isi master kalau
+    # keduanya berbeda. Contoh nyata: Daihatsu Taft GT -- master bilang DHT-TG,
+    # tapi listing UA memakai DHT-FRZ (kode Feroza, cover-nya memang sama).
+    rujukan = kumpulkan(folder_tahu) if folder_tahu else []
+    m2p, mg2g = bangun_pengetahuan(semua + rujukan)
     sudah_ditangani = baris_di_extra(extra_files)
 
     # MASTER = sumber kebenaran. Dipakai sbg cadangan utk model yang belum punya
@@ -654,7 +661,7 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
 if __name__ == '__main__':
     out_dir = sys.argv[2]
     args = sys.argv[3:]
-    folders = [a for a in args if os.path.isdir(a)]
+    folders = [a for a in args if os.path.isdir(a) or a.startswith('tahu:')]
     extra = [a for a in args if os.path.isfile(a)]
 
     master = None
@@ -663,7 +670,10 @@ if __name__ == '__main__':
         if 'master' in low or 'tracking' in low:
             master = a
             extra.remove(a)
-    hasil, laporan, lewat, contoh, kode_baru, asal = proses(out_dir, folders, extra, master)
+    # folder yang diawali "tahu:" hanya jadi rujukan, tidak ikut ditulis
+    tahu = [a[5:] for a in list(folders) if a.startswith('tahu:')]
+    folders = [a for a in folders if not a.startswith('tahu:')]
+    hasil, laporan, lewat, contoh, kode_baru, asal = proses(out_dir, folders, extra, master, tahu)
 
     print('=== DIISI / DIPERBAIKI ===')
     for (ch, jenis), n in sorted(laporan.items()):
