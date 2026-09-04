@@ -493,6 +493,50 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
             dipakai.add(baru)
         rencana[path].append((r, baru, jenis))
 
+    # TikTok: template `all_information` diperlakukan sbg DAFTAR VARIAN LENGKAP
+    # per produk. Kalau hanya sebagian varian yang dikirim, sisanya dianggap
+    # permintaan HAPUS dan seluruh unggahan ditolak dgn "sku not allow delete"
+    # (terbukti 2026-09-04: 1.997 baris gagal, 207/207 produk cuma terkirim
+    # sebagian variannya). Jadi untuk TikTok, setiap produk yang punya minimal
+    # satu baris berubah HARUS diikutkan SEMUA barisnya -- yang tidak berubah
+    # ikut apa adanya.
+    for path, items in list(rencana.items()):
+        wbc = openpyxl.load_workbook(path, data_only=True)
+        chc = UH.deteksi_channel(wbc)
+        if chc != 'tiktok':
+            wbc.close()
+            continue
+        wsc = UH.cari_sheet(wbc, chc)
+        kol_pid = next((c for c in range(1, wsc.max_column + 1)
+                        if str(wsc.cell(row=1, column=c).value).strip() == 'product_id'), 1)
+        colc = UH.resolve_cols(wsc, chc)
+        berubah = {r for r, _, _ in items}
+        pid_kena = {str(wsc.cell(row=r, column=kol_pid).value) for r in berubah}
+        # Produk yang barisnya datang dari file perbaikan TERPISAH (mis. Mini
+        # Cooper) juga ikut tersentuh, padahal barisnya tidak ada di `rencana`.
+        # Tanpa ini produk tsb terkirim sebagian variannya dan tetap ditolak.
+        for r in range(UH.STARTROW[chc], wsc.max_row + 1):
+            nm_c = wsc.cell(row=r, column=colc['nama']).value
+            if not nm_c:
+                continue
+            kunci = (chc, str(nm_c), str(wsc.cell(row=r, column=colc['var']).value or ''))
+            if kunci in sudah_ditangani:
+                pid_kena.add(str(wsc.cell(row=r, column=kol_pid).value))
+        tambahan = []
+        for r in range(UH.STARTROW[chc], wsc.max_row + 1):
+            nm_c = wsc.cell(row=r, column=colc['nama']).value
+            if r in berubah or not nm_c:
+                continue
+            # baris yang sudah dibawa file perbaikan terpisah jangan ditambah
+            # lagi dari sini -- nanti dobel
+            kunci = (chc, str(nm_c), str(wsc.cell(row=r, column=colc['var']).value or ''))
+            if kunci in sudah_ditangani:
+                continue
+            if str(wsc.cell(row=r, column=kol_pid).value) in pid_kena:
+                tambahan.append((r, None, 'ikut supaya varian produk lengkap'))
+        rencana[path] = sorted(items + tambahan)
+        wbc.close()
+
     # tulis file hasil
     per_channel = {}
     hasil_laporan = Counter()
@@ -506,9 +550,10 @@ def proses(out_dir, folders, extra_files=(), master_path=None):
 
         items.sort()
         for r, baru, jenis in items:
-            sel = ws.cell(row=r, column=col['sku'])
-            sel.value = baru
-            sel.fill = ORANGE
+            if baru is not None:            # None = baris pelengkap, jangan diubah
+                sel = ws.cell(row=r, column=col['sku'])
+                sel.value = baru
+                sel.fill = ORANGE
             hasil_laporan[(ch, jenis)] += 1
 
         n_kol = ws.max_column

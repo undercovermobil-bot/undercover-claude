@@ -117,3 +117,46 @@ Lihat [[project-undercover-sku-sync-rules]] untuk aturan bisnis final yang jadi 
 - **(2026-08-31) `clean_base()` yg tidak preserve suffix TRIM/sub-model (mis. "PRO-4X", "Rubicon", "Commuter") bisa bikin baris trim spesifik ke-mapping ke prefix GENERIK-nya, lewat fallback `unique_sku` di `resolve()`.** Kejadian: user kasih screenshot TikTok Otoprotection Honda City Hatchback (nanya soal prefix "HND-JAZ" - itu ternyata state LAMA sblm upload, sudah benar `HND-CHB` di file yg dikirim) - investigasi lanjut utk cek "kasus serupa" nemu row 725 `UPDATE_SKU_OTOPROTECTION_TIKTOK_2.xlsx`: varian "Hijau, Navara PRO-4X" seharusnya `NSN-NVP-...` (prefix Navara PRO-4X, beda dari Navara biasa `NSN-NVR` - ini pembeda YG DISENGAJA, lihat entri 2026-07-19 soal 19 produk "kode model beda antar toko" di `project-undercover-sku-sync-status.md`) tapi pipeline nulis `NSN-NVR-...` (prefix Navara BIASA, salah) krn `clean_base()` tidak mempertahankan token "PRO-4X" saat membangun nama dasar utk lookup, sehingga baris ini ikut ke-bucket bareng base model "Nissan Navara" biasa & menang lewat fallback `unique_sku`. **Scan pembuktian**: dicek ulang SEMUA baris di 8 file yg dikirim yg py kata kunci trim (`pro-4x/pro4x/rubicon/commuter/facelift`) dibanding SKU sumber asli - HANYA 1 baris ini yg kena, bukan pola sistemik luas (beda dari bug bucket-code yg nyebar ke 9 produk). Diperbaiki via patch langsung ke sel yg sudah terlanjur dikirim (blm masuk ke reusable pipeline code krn scope-nya kecil & terisolasi). **How to apply**: kalau base model py trim/sub-model yg SUDAH established py prefix SKU sendiri (dicek dari SKU yg SUDAH BENAR di baris lain produk yg sama), sebelum percaya hasil `unique_sku`/fallback matching apa pun, WAJIB grep manual "apakah nama variannya sendiri menyebut trim/sub-model" dan verifikasi prefix hasil resolve cocok dgn precedent trim itu, bukan cuma cocok dgn base model generiknya.
 
 - **(2026-08-31) Membersihkan/menyeragamkan format SKU (strip suffix "sampah" spt `_G1`/`_ELIT`/`_MERA`) itu BISA menghasilkan SKU DUPLIKAT lintas-baris utk platform yg wajib SKU unik per varian (Lazada) - suffix yg kelihatan "sampah legacy" itu kadang justru sengaja jadi PEMBEDA supaya baris2 dgn kode kanonis SAMA (produk TF=1 yg beberapa generasi aslinya collapse jadi 1 kode) tetap py string unik.** Ketemu saat regenerasi `UPDATE_SKU_HARGA_SMARTPROTECTION_LAZADA.xlsx`: 137 dari 376 produk (5288 baris) jadi py SKU KEMBAR dlm 1 listing yg sama setelah pipeline nulis ulang kolom SKU pakai kode "bersih" 6-segmen tanpa suffix - padahal file SUMBER (sebelum disentuh) 0 duplikat (suffix macam `_G1`/`_ELIT` yg kelihatan berantakan itu ternyata berfungsi jaga keunikan per baris, meski skema penamaan suffix-nya sendiri tidak konsisten/rapi - kadang berbasis gen, kadang berbasis tier). Root cause: `resolve()` mengembalikan kode kanonis TANPA memperhitungkan apakah kode itu SUDAH DIPAKAI baris lain dlm produk yg sama. **Fix**: tambah post-write dedup pass KHUSUS utk output Lazada (parameter `dedup_per_product=True` di `match_and_write`, TIDAK dipasang di TikTok krn Shopee/TikTok memang boleh SKU kembar) - lacak SKU yg sudah dipakai per nama-produk sambil iterasi baris, kalau tabrakan baru tambahkan suffix pembeda dari data varian baris itu sendiri (nomor gen `_G<n>`, tahun awal `_<YYYY>`, atau kode chassis alfabetik `_JK`/`_TJ` kalau leftover-nya bukan angka/gen - fallback counter `_2`/`_3` kalau semua itu gagal juga). **How to apply**: sebelum nulis ulang/"membersihkan" kolom SKU utk platform yg wajib unik-per-varian (Lazada, bukan Shopee/TikTok), WAJIB cek dulu apakah source file punya 0 duplikat SKU dlm listing yg sama (baseline) - kalau ya, verifikasi ULANG angka itu SETELAH ditulis, JANGAN asumsikan "kode kanonis pasti benar jadi pasti aman" - kode yg secara BISNIS benar (collapse TF=1) bisa tetap butuh disambiguator TEKNIS terpisah demi syarat platform.
+
+
+## TikTok menolak unggahan sebagian varian: "sku not allow delete" (2026-09-04)
+
+**Gejala**: unggah `all_information` ke TikTok, SEMUA baris gagal (1.997/1.997)
+dengan alasan seragam `sku not allow delete` di kolom `err_info`.
+
+**Sebab**: TikTok memperlakukan template `all_information` sebagai **daftar
+varian LENGKAP per produk**. Varian milik produk itu yang TIDAK ikut dikirim
+dianggap permintaan HAPUS -- dan SKU yang punya riwayat/aktif tidak boleh
+dihapus, jadi seluruh unggahan ditolak. File yang dikirim hanya memuat baris
+yang PERLU DIUBAH (mis. Audi TT Coupe cuma 14 dari 28 varian), sehingga semua
+207 produk kena.
+
+**Perbaikan** (`isi_sku_massal.py`): khusus TikTok, setiap produk yang punya
+minimal SATU baris berubah harus diikutkan SEMUA barisnya; baris yang tidak
+berubah ikut apa adanya (nilai SKU-nya tidak disentuh). Hasil: 2.239 -> 3.568
+baris, 0 produk dengan varian tak lengkap.
+
+**Shopee & Lazada TIDAK kena** -- keduanya memproses per baris varian
+(`variation_id` / `sku.skuId`), bukan per produk. Jangan menyamakan perilaku
+tiga channel ini.
+
+**Jebakan lanjutan yang sempat lolos**: pelengkap varian dijalankan SEBELUM
+file perbaikan terpisah (Mini Cooper) digabung, jadi produk yang barisnya
+datang dari file terpisah itu tidak ikut dilengkapi dan tetap akan ditolak.
+Pelengkap harus tahu produk mana saja yang tersentuh file lain (pakai
+`sudah_ditangani`), dan jangan menambah baris yang sudah dibawa file itu
+(nanti dobel).
+
+### Pelajaran soal cara MEMERIKSA, bukan cuma soal datanya
+
+Saat mendiagnosis ini, hipotesis pertama (varian tidak lengkap) sempat
+DITOLAK oleh cek buatan sendiri yang bilang "207/207 produk variannya lengkap".
+Itu keliru karena salah nomor kolom: di template TikTok `all_information`,
+`sku_id` ada di kolom **5** (kolom 4 = `product_status`), sedangkan di file
+HASIL semua kolom bergeser +1 karena ada `err_info` di depan. Akibatnya
+diagnosis hampir dibelokkan ke arah yang salah.
+
+**How to apply**: kalau hasil pemeriksaan membantah hipotesis yang masuk akal,
+curigai dulu alat pemeriksanya -- khususnya nomor kolom, apalagi kalau
+membandingkan file HASIL (ada kolom err_info tambahan) dengan file sumber.
+Selalu resolusi kolom lewat NAMA header, jangan nomor tetap.
