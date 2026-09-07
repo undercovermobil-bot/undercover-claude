@@ -1941,3 +1941,31 @@ APA ADANYA (14 baris) -> 574 baris. Diverifikasi: 20/20 produk lengkap.
 - Verifikasi tiap file dilakukan **kolom per kolom terhadap ekspor sumber**
   (kunci: Shopee `Kode Produk`+`Kode Variasi`, TikTok `sku_id`, Lazada
   `sku.skuId`): 0 perbedaan nyata di luar kolom harga, 0 harga meleset target.
+
+### Revisi 2026-09-07 (jawaban user) — 616 baris per channel
+
+Tiga koreksi dari user setelah file pertama dikirim:
+
+1. **HiAce Premio ikut naik.** Formula & Pcs/Roll-nya sama dengan Commuter, jadi
+   `ALIAS['TYT-HAL'] = 'TYT-HAC'`. 14 baris/channel ikut ke Rp583rb/626rb.
+   Efek sampingnya bagus: produk HiAce jadi lengkap variannya di TikTok tanpa
+   perlu baris pelengkap.
+2. **Mazda 2 Hatchback (#99) ikut diupdate** — Rp291rb->335rb, strip
+   Rp351rb->378rb, 42 baris/channel. Karena nomornya di luar 1-60, dijalankan
+   RUN TERPISAH (`99 99`) lalu digabung pakai script baru
+   `scripts/gabung_file_upload.py` (cek header identik + irisan kunci = 0).
+   Menaikkan rentang jadi 1-99 SALAH — ikut menyeret produk 61-98.
+3. **Suzuki Ignis Pcs/Roll = 6, bukan 5.** Harga jadi **Rp333.000**
+   (strip Rp376.000), turun dari Rp382.000 di v4. Angka 333rb dipilih supaya
+   tangga City Car tetap urut menurut panjang: Karimun 3600mm Rp332rb ->
+   **Ignis 3700mm Rp333rb** -> Splash 3715mm Rp334rb. File harga disimpan
+   sebagai `HARGA_BARU_TOP100_v5.xlsx` (v4 TIDAK diubah).
+
+**Alphard & Vellfire memang SATU SKU** (pertanyaan user): dicek di listing
+Shopee, keduanya `TYT-ALP-UA-...` persis sama sampai segmen terakhir —
+Alphard 28 baris (2 generasi, kode sama), Vellfire 14 baris. Jadi harganya
+wajib satu angka, dan file ini sudah begitu (Rp460rb/503rb).
+
+Hasil akhir: **616 baris per channel, 21 produk/22 model** (Shopee, TikTok,
+Lazada). Diverifikasi ulang kolom-per-kolom: 0 perbedaan nyata di luar kolom
+harga, 0 harga meleset, TikTok 21/21 produk lengkap variannya.

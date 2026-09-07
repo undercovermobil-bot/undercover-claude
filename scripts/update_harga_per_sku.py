@@ -73,12 +73,11 @@ HEADER_KEY = {
 #   SKU). SKU F70/F300 (Rocky klasik 1984-2002, DHT-FRZ, kembar Feroza) sudah
 #   otomatis kebagian harga lewat entri 'Daihatsu Feroza' sendiri -- tidak
 #   perlu entri terpisah.
-# - Toyota HiAce -> TYT-HAC (varian "Commuter") SAJA. Varian "Premio" (prefix
-#   TYT-HAL, kemungkinan "HiAce Long") SENGAJA TIDAK disentuh -- beda dari
-#   kasus Rush/Terios/Calya/Sigra (rebadge identik, kembar SEHARUSNYA sama
-#   harga), Commuter vs Premio/Long bisa jadi beda ukuran fisik asli, harga
-#   file cuma py 1 baris "Toyota HiAce" tanpa keterangan. Perlu konfirmasi
-#   user kalau mau Premio ikut disamakan.
+# - Toyota HiAce: listing "HiAce Reguler" memuat DUA produk -- "Commuter"
+#   (TYT-HAC) dan "Premio" (TYT-HAL). User konfirmasi 2026-09-07 keduanya
+#   pakai formula & Pcs/Roll yang sama, jadi TYT-HAL diarahkan ke TYT-HAC
+#   lewat ALIAS{} dan ikut naik. (Sebelumnya sengaja dilewati sampai ada
+#   konfirmasi, karena harga di file cuma 1 baris "Toyota HiAce".)
 PREFIX = {
     'Toyota Avanza':                       'TYT-AVZ',
     'Honda Brio Satya / RS':               'HND-BRI',
@@ -199,6 +198,10 @@ PREFIX = {
 # Ini TAMBALAN harga, bukan perbaikan SKU -- konsolidasi SKU-nya perlu dikerjakan
 # terpisah di proyek SKU Sync.
 ALIAS = {
+    # HiAce Premio punya kode sendiri (TYT-HAL) tapi menumpang di listing
+    # "HiAce Reguler" yang sama dgn Commuter. User konfirmasi 2026-09-07:
+    # formula & Pcs/Roll-nya sama, jadi harganya ikut TYT-HAC.
+    'TYT-HAL': 'TYT-HAC',
     'DHT-SGR': 'TYT-CLY',
     'DHT-TRS': 'TYT-RSH',
     'TYT-VLZ': 'TYT-AVZ',
