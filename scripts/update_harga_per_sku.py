@@ -132,7 +132,11 @@ PREFIX = {
     'Toyota Veloz':                        'TYT-AVZ',
     'Toyota Alphard':                      'TYT-ALP',
     'Toyota Starlet':                      'TYT-STR',
-    'Daihatsu Luxio':                      'DHT-LXO',
+    # Luxio & Gran Max Minibus kembar -- listing SEMUA channel memakai kode
+    # induk DHT-GMX; DHT-LXO sudah tidak ada di listing mana pun (dicek
+    # 2026-09-07 di Shopee/TikTok/Lazada). Kalau tetap DHT-LXO, script
+    # tidak error, cuma menemukan 0 baris lalu diam-diam melewatkan Luxio.
+    'Daihatsu Luxio':                      'DHT-GMX',
     'Toyota Etios Valco':                  'TYT-ETV',
     'Honda WR-V':                          'HND-WRV',
     'Suzuki Splash':                       'SZK-SPL',
@@ -178,7 +182,8 @@ PREFIX = {
     'Suzuki Aerio Hatchback':              'SZK-ARH',
     'Hyundai Palisade':                    'HYN-PLS',
     'Timor':                               'TIM-TIM',
-    'Mazda 2 Hatchback':                   'MZD-MZ2',
+    # sda: kode diseragamkan ke MZD-2H (2026-09-04), MZD-MZ2 sudah pensiun
+    'Mazda 2 Hatchback':                   'MZD-2H',
     'Wuling Confero':                      'WLG-CNF',
 }
 
@@ -311,7 +316,12 @@ def baca_harga(path, no_awal, no_akhir):
 def salin(ws_s, r_s, ws_d, r_d, n_kol):
     for c in range(1, n_kol + 1):
         s = ws_s.cell(row=r_s, column=c)
-        d = ws_d.cell(row=r_d, column=c, value=s.value)
+        # JANGAN pakai cell(..., value=s.value): openpyxl mengabaikan value=None,
+        # jadi sel tujuan yang sudah terisi TIDAK ikut dikosongkan dan baris hasil
+        # membawa nilai sisa baris yang digeser (terbukti 2026-09-07: kolom
+        # "Min. Jumlah Pembelian" Shopee ikut kebawa). Set .value eksplisit.
+        d = ws_d.cell(row=r_d, column=c)
+        d.value = s.value
         d.fill = copy.copy(s.fill)
         d.number_format = s.number_format
 

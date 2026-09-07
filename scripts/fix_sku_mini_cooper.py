@@ -102,7 +102,12 @@ def sku_seharusnya(nama_listing, var):
 def salin(ws_s, r_s, ws_d, r_d, n_kol):
     for c in range(1, n_kol + 1):
         s = ws_s.cell(row=r_s, column=c)
-        d = ws_d.cell(row=r_d, column=c, value=s.value)
+        # JANGAN pakai cell(..., value=s.value): openpyxl mengabaikan value=None,
+        # jadi sel tujuan yang sudah terisi TIDAK ikut dikosongkan dan baris hasil
+        # membawa nilai sisa baris yang digeser (terbukti 2026-09-07: kolom
+        # "Min. Jumlah Pembelian" Shopee ikut kebawa). Set .value eksplisit.
+        d = ws_d.cell(row=r_d, column=c)
+        d.value = s.value
         d.fill = copy.copy(s.fill)
         d.number_format = s.number_format
 

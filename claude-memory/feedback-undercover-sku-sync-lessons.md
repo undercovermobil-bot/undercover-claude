@@ -200,3 +200,43 @@ Master bisa memuat lebih dari satu entri untuk model yang sama — terbukti ada
 Percobaan pertama mencocokkan nama persis dan menyisakan 66 baris berkode lama.
 Aman mencocokkan lewat prefix kode setelah diverifikasi tiap kode lama hanya
 dipakai modelnya sendiri.
+
+---
+
+## BUG DIAM-DIAM: `ws.cell(row, col, value=None)` TIDAK mengosongkan sel (2026-09-07)
+
+Semua script pembuat file upload memakai helper `salin()` untuk memadatkan
+baris (baris yang berubah digeser ke atas, sisanya dihapus). Isinya:
+
+```python
+d = ws_d.cell(row=r_d, column=c, value=s.value)   # SALAH
+```
+
+openpyxl **mengabaikan `value=None`** — sel tujuan yang sudah berisi sesuatu
+TIDAK ikut dikosongkan. Akibatnya baris hasil membawa **nilai sisa baris yang
+tergeser** di setiap kolom yang di sumbernya kosong. Tidak ada error, tidak ada
+tanda apa pun di file; ketahuan hanya karena verifikasi membandingkan SETIAP
+kolom hasil vs sumber.
+
+Terbukti di dua file yang sudah dikirim:
+- `UPDATE_HARGA_UA_SHOPEE` (versi pertama): 101 baris kolom "Min. Jumlah
+  Pembelian" jadi `1` padahal sumbernya kosong.
+- `SIAP_UPLOAD_SKU_OTONATION_SHOPEE`: **33 baris kolom "SKU Induk" terisi SKU
+  induk milik produk lain** (mis. `CVR0079-OTN-EX` nyasar ke produk lain) +
+  53 baris "Min. Jumlah Pembelian" salah. Yang SKU Induk ini berbahaya — kolom
+  itu ikut tertulis ke Shopee.
+
+**Perbaikan** (sudah diterapkan ke 8 script):
+```python
+d = ws_d.cell(row=r_d, column=c)
+d.value = s.value
+```
+
+**How to apply**:
+1. Jangan pernah pakai bentuk `cell(..., value=x)` untuk menyalin baris — nilai
+   kosong adalah data juga.
+2. Verifikasi file upload **kolom per kolom terhadap sumber**, bukan cuma kolom
+   yang sengaja diubah. Cara cepat: cocokkan baris lewat kunci unik per channel
+   (Shopee `Kode Produk`+`Kode Variasi`, TikTok `sku_id`, Lazada `sku.skuId`)
+   lalu bandingkan semua kolom kecuali kolom target. Pemeriksaan "jumlah baris
+   benar + kolom target benar" TIDAK cukup dan sudah dua kali meloloskan bug.
