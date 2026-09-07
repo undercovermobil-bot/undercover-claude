@@ -1969,3 +1969,29 @@ wajib satu angka, dan file ini sudah begitu (Rp460rb/503rb).
 Hasil akhir: **616 baris per channel, 21 produk/22 model** (Shopee, TikTok,
 Lazada). Diverifikasi ulang kolom-per-kolom: 0 perbedaan nyata di luar kolom
 harga, 0 harga meleset, TikTok 21/21 produk lengkap variannya.
+
+### KOREKSI 2026-09-07: override Brio & Jazz TIDAK ikut terbawa ke file HARGA_BARU_TOP100
+
+Keputusan 2026-08-26 (Brio & Jazz dipatok di lantai **Rp332.000/375.000**, bukan
+hasil spread Rp335.000/378.000) ternyata cuma diterapkan ke
+`Harga Baru UC Top 100 (matriks).xlsx`. File `HARGA_BARU_TOP100_v2..v4.xlsx` —
+yang justru dipakai semua eksekusi UA/OT sejak Agustus — **masih memuat angka
+spread Rp335.000**. Akibatnya:
+
+- Audit 2026-09-07 salah menyimpulkan Brio & Jazz "kurang Rp3.000". Harga live
+  UA (Rp332rb/375rb) sebenarnya SUDAH BENAR. Hitungan yang benar untuk audit
+  itu: **43/100 produk sudah harga baru, bukan 41**.
+- File update batch 1-60 versi pertama & kedua ikut menaikkan Brio & Jazz
+  56 baris/channel — salah, dan ditarik sebelum diupload.
+
+**Diperbaiki**: `HARGA_BARU_TOP100_v5.xlsx` sekarang memuat Brio & Jazz di
+Rp332.000/375.000 (sekaligus Ignis Rp333.000). Setelah itu keduanya otomatis
+hilang dari file update karena harga live-nya sudah sama. Hasil akhir batch
+1-60 + Mazda 2 Hatchback: **560 baris/channel, 20 model**.
+
+**How to apply**: setiap override harga manual WAJIB ditulis balik ke file
+harga yang jadi sumber eksekusi berikutnya, bukan cuma ke file yang kebetulan
+sedang dipakai saat itu. Kalau ada beberapa file harga beredar
+(`matriks`, `TOP100_v*`), samakan dulu atau tetapkan satu yang jadi rujukan.
+Pengecualian manual seperti ini tidak akan ketahuan dari data — script cuma
+melihat selisih angka dan menganggapnya "belum diupdate".
