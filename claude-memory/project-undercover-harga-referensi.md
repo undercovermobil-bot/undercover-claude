@@ -1890,3 +1890,54 @@ Rp382.000 (selisih 0), jadi memang tidak perlu naik.
 Produk 21-40 ternyata SUDAH live juga — dikerjakan di sesi/device lain yang
 snapshot memory-nya belum masuk ke sini. Kalau menghitung "sudah sampai mana",
 ukur dari ekspor live seperti audit ini, jangan dari catatan batch.
+
+## Eksekusi UA produk 1-60 (2026-09-07): 20 model, 560 baris per channel
+
+Dijalankan sekali untuk rentang **1-60** (bukan 41-60) supaya sisa selisih
+Rp3.000 di Brio & Jazz ikut terkoreksi. Script melewati baris yang harganya
+sudah benar, jadi produk 1-40 yang sudah live tidak ikut masuk file.
+
+Sumber: Shopee ekspor 3 Sep (5 file), TikTok & Lazada 3 Sep.
+Hasil: **Shopee 560 baris, Lazada 560, TikTok 574** (560 + 14 baris pelengkap,
+lihat di bawah). 20 listing tersentuh, semuanya listing "Reguler" — tier
+Premium/Exclusive/Transparan tidak disentuh sesuai aturan.
+
+Kenaikan terbesar: HiAce 337->583rb (+246rb), Alphard & Vellfire 317->460rb,
+Ignis 282->382rb, BMW Seri 3 304->384rb.
+
+### Perbaikan `PREFIX{}` yang mencegah dua model terlewat diam-diam
+
+- `Daihatsu Luxio`: `DHT-LXO` -> **`DHT-GMX`**. Luxio & Gran Max Minibus kembar
+  dan seluruh listing sudah memakai kode induk; `DHT-LXO` sudah tidak ada di
+  channel mana pun. Efeknya Gran Max Minibus ikut naik ke harga Luxio
+  (Rp383.000) — benar, karena satu SKU = satu harga.
+- `Mazda 2 Hatchback`: `MZD-MZ2` -> **`MZD-2H`** (untuk batch berikutnya).
+
+### Toyota HiAce: satu listing, DUA produk berbeda
+
+Listing "HiAce Reguler" memuat dua tipe bodi dengan SKU berbeda:
+`TYT-HAC` (Commuter) dan **`TYT-HAL` (Premio)**. Daftar harga cuma punya satu
+entri "Toyota HiAce" (5265mm, Pcs/Roll 3), jadi **Premio TIDAK dinaikkan** —
+14 baris dibiarkan Rp337.000 sampai user memutuskan. Ini kebalikan dari jebakan
+Grand Livina Roofbox: bukan produk lain yang ikut kena, tapi produk lain yang
+ikut menumpang di listing yang sama.
+
+### TikTok: file WAJIB memuat seluruh varian tiap produk yang disentuh
+
+Ekspor TikTok 3 Sep bertemplate `all_information` (45 kolom, ada sheet `Brand`).
+Karena HiAce Premio tidak ikut berubah, produk itu jadi tidak lengkap variannya
+dan berisiko dibaca sebagai permintaan hapus. Ditambal script baru
+`scripts/lengkapi_varian_tiktok.py` yang menyalin balik varian yang kurang
+APA ADANYA (14 baris) -> 574 baris. Diverifikasi: 20/20 produk lengkap.
+
+### Temuan sampingan
+
+- **Mazda 2 Sedan** punya 1 varian salah harga sejak awal: "Hitam, Gen 2"
+  Rp356.000 sedangkan 14 varian Reguler lain Rp296.000. Ikut ternormalisasi.
+- **Suzuki Ignis** naik paling tidak proporsional di kelasnya (Rp382.000,
+  sementara city car lain Rp332-334rb) karena `Pcs/Roll`-nya 5 (bukan 6) di
+  data HPP user. Bukan salah hitung — angkanya dari data produksi sendiri —
+  tapi layak dicek ulang kalau terasa kemahalan.
+- Verifikasi tiap file dilakukan **kolom per kolom terhadap ekspor sumber**
+  (kunci: Shopee `Kode Produk`+`Kode Variasi`, TikTok `sku_id`, Lazada
+  `sku.skuId`): 0 perbedaan nyata di luar kolom harga, 0 harga meleset target.
