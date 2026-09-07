@@ -1899,3 +1899,46 @@ Versi pertama mencocokkan lewat NAMA PRODUK persis -> 66 baris tertinggal karena
 master punya "Daihatsu Terios" DAN "Daihatsu Terios / New Terios", dua-duanya
 DHT-TRS. **Cocokkan lewat KODE SKU**, bukan nama -- setelah memastikan tiap kode
 lama memang hanya dipakai modelnya sendiri (dicek dulu, jangan diasumsikan).
+
+## 2026-09-07 — Daftar varian generik ("Model/Tahun Lain") toko Undercover
+
+Script baru `scripts/daftar_varian_generik.py` (hanya MELAPORKAN, tidak
+mengubah apa pun). Sumber: ekspor UA Shopee 5 file + TikTok + Lazada 3 Sep.
+
+**244 model** punya varian catch-all, **10.809 baris** di 3 channel
+(Shopee 3.649 · TikTok 3.608 · Lazada 3.552).
+
+Delapan ejaan label yang benar-benar dipakai — jangan cari satu string saja:
+`Model/Tahun Lain` (8.791) · `Model Lain/Custom` (1.845) ·
+`Model Lain / Custom` (76) · `Model Lain` (59) · `Custom` (14) ·
+`Model Lainnya` (14) · `Model lain/Custom` (9) · `Model Lain / Custome` (1).
+
+### Status pengisian SKU
+
+| | baris |
+|---|---|
+| SKU terisi | 3.679 |
+| SKU kosong | 4.660 |
+| "SKU" auto-Lazada (`8663336150-1752049417990-1`) = setara kosong | 2.470 |
+
+**202 dari 244 model** masih ada baris catch-all yang belum ber-SKU
+(7.130 baris). Terbanyak: Land Rover Discovery (100), Range Rover Sport (99),
+lalu ~50 model @51 baris (Kia EV 6, Kia Sorento, Ford Fusion, Hyundai Grand
+i10, Range Rover Evoque, Tesla Model 3, Lexus ES/LM, dst) — pola 51 = 17 varian
+x 3 channel, artinya model itu belum tersentuh sama sekali di ketiga channel.
+
+### Dua hal yang perlu diingat saat memakai daftar ini
+
+1. **Tidak ada satu pun listing yang HANYA berisi catch-all.** Ke-244 model
+   punya generasi asli juga, catch-all-nya cuma opsi tambahan. Jadi tidak ada
+   kasus "listing tanpa pilihan tahun sama sekali".
+2. **0 model masuk kategori "perlu ditinjau"** (Total Formula > 1 DAN memakai
+   lebih dari satu kode generasi DAN catch-all-nya sudah diisi). Semua model
+   ber-TF>1 di daftar ini ternyata cuma memakai SATU kode generasi di
+   listing-nya, jadi catch-all yang sudah terisi tidak ambigu. Tidak ada
+   pelanggaran aturan #4 yang perlu dibereskan.
+
+Catatan: Total Formula hanya ketemu untuk 40 dari 244 model — sisanya (204)
+tidak terdaftar di `Data_Mobil_Lebih_dari_1_Formula`. Sesuai pelajaran lama,
+absen dari file itu TIDAK otomatis berarti 1 formula; kolom Catatan di file
+hasil sengaja menulis "kemungkinan 1 formula, harus dipastikan dulu".
