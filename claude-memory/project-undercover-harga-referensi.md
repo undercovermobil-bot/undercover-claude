@@ -1852,3 +1852,41 @@ Script: `audit_dan_isi_sku_otoprotection.py`, `update_sku_harga_sp_op.py`,
 - Juga ganti pemanggilan dari `resolve()` polos ke `resolve_with_special_cases()` - sempat kelewat menangkap Wuling Alvez/Darion & Toyota Altis->Corolla-G9 (special case yg sudah established) di iterasi pertama.
 - **Hasil kumulatif**: 401 -> 138 baris bermasalah (263 baris tambahan diperbaiki, TERMASUK Toyota Corolla full-resolved lewat fallback Total Formula). **Sisa 138 baris/27 model** genuinely 0 referensi SKU Transparan/Reguler/Strip di SEMUA 7-8 sumber DAN tidak ada di file Total Formula: **Mini Cooper (50 baris) sendirian hampir separuh sisa** - ini BUKAN kasus baru, sudah dari dulu didokumentasikan sbg "IN-BETWEEN" TF case yg DITUNDA user ("logic menyusul", formula=2 tp 5 grup, belum pernah diberi aturan) bahkan utk Reguler/Strip-nya sendiri; sisanya 26 model kecil (Mitsubishi Eclipse 12, Mercedes G Class 12, Peugeot 306 10, VW Passat 7, Ford Fusion 6, Civic Hatchback 6, Mazda CX9 5, Espass 5, Timor 5, VW Fox 4, + 17 model 1-baris) genuinely tidak py jejak SKU valid apa pun utk dijadikan rujukan.
 - Diverifikasi ulang: 0 duplikat Lazada, 0 diff kolom lain, row count utuh di semua 8 file.
+
+## Audit status harga UA per ekspor 3 September 2026: 41/100 produk sudah harga baru
+
+Diukur langsung dari ekspor live (Shopee 5 file `ua_cek_0819`, TikTok & Lazada
+3 Sep), bukan dari catatan pekerjaan — dicocokkan lewat prefix SKU + tier
+(R = "Harga Baru (Reguler)", S = reguler + Rp43.000) ke `HARGA_BARU_TOP100_v4.xlsx`.
+
+| Status | Jumlah produk |
+|---|---|
+| Sudah harga baru (3 channel konsisten) | **41** |
+| Belum | **59** |
+
+Yang sudah: **#1–#40 kecuali #2 Brio & #4 Jazz**, ditambah #49 Feroza, #50 Veloz,
+#58 Rocky (dua terakhir ikut naik karena SKU kembar: Veloz→`TYT-AVZ`,
+Rocky→`TYT-RZE`). #21 Terios, #30 Sigra, #8 Ayla, #9 Xenia juga ikut lewat SKU
+kembar. Status Shopee/TikTok/Lazada **identik di semua 41 produk** — tidak ada
+lagi channel yang tertinggal seperti kasus Veloz-Lazada Agustus.
+
+**#49 Feroza bukan hasil update** — harga lamanya kebetulan sudah persis
+Rp382.000 (selisih 0), jadi memang tidak perlu naik.
+
+### Dua temuan yang perlu ditindaklanjuti
+
+1. **#2 Brio & #4 Jazz kurang Rp3.000** (live Rp332rb, target Rp335rb; strip
+   Rp375rb vs Rp378rb). Semua produk lain yang belum, kurangnya Rp13.000–246.000
+   (rata-rata Rp73.000). Pola beda-tipis ini khas sisa versi harga sebelum v4 /
+   selisih strip lama Rp40.000 — bukan produk yang belum dikerjakan.
+2. **#53 Luxio & #99 Mazda 2 Hatchback tidak akan tersentuh script apa adanya.**
+   `PREFIX{}` memetakan keduanya ke `DHT-LXO` / `MZD-MZ2`, padahal listing UA
+   memakai kode induk `DHT-GMX` / `MZD-2H` (hasil penyeragaman SKU kembar).
+   Script tidak error — hanya menemukan 0 baris, diam-diam terlewat. Perbaiki
+   `PREFIX{}`/`ALIAS{}` dulu sebelum batch 41-100. Harga live keduanya masih
+   lama (Luxio Rp296–300rb vs target Rp383rb; Mazda 2 HB Rp291rb vs Rp335rb).
+
+**Catatan riwayat**: memory repo ini hanya mencatat UA batch 1-10 & 11-20.
+Produk 21-40 ternyata SUDAH live juga — dikerjakan di sesi/device lain yang
+snapshot memory-nya belum masuk ke sini. Kalau menghitung "sudah sampai mana",
+ukur dari ekspor live seperti audit ini, jangan dari catatan batch.
