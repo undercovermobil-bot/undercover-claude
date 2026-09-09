@@ -97,3 +97,62 @@ Hatcback (belum berkode; dua terakhir kemungkinan typo).
 
 File: `BEDA_KATALOG_UA_vs_SP.xlsx` (4 sheet: Hanya di Undercover, Hanya di
 Smartprotection, Perlu dicek, Dikecualikan).
+
+## 2026-09-09 — Penyesuaian kode SKU SP ke konvensi Undercover (856 baris)
+
+Script baru `scripts/samakan_sku_smartprotection.py`. Dua jenis pekerjaan:
+
+**A. Ganti prefix** (SKU sudah ada, kodenya beda dari UA) — 263 baris:
+`MZD-MZ2`→`MZD-2H`, `WLG-DAR`→`WLG-DRN`, `JEP-WR`→`JEP-WRA`.
+
+**B. Isi SKU** (listing ada di SP tapi SKU kosong; di Lazada terlihat "terisi"
+karena auto-ID `8890956509-1788758253245-10`) — 593 baris untuk 7 model:
+BYD Seal, Chery Omoda 5, Feroza Long, Ford Ranger, Hyundai Getz, Mazda CX-7,
+Suzuki APV Luxury. Semua ber-TF=1 (diverifikasi di file formula) → satu kode
+generasi `G1` untuk semua generasi.
+
+Total: Shopee 289 · TikTok 274 · Lazada 293.
+
+### Kosakata SKU SP BEDA dari UA — jangan disalin
+
+| | UA/OT | SP/OP |
+|---|---|---|
+| Strip 1 (Epic) | PAB/PBR/PMR | **S1A/S1B/S1M** |
+| Strip 2 (Elite) | EAB/EBR/EMR | **S2A/S2B/S2M** |
+| Strip 3 (Warrior) | WAB/WBR/WMR | **S3A/S3B/S3M** |
+| Warna dasar | ABU HTM BRU MRH GRN | sama + **ORG (Orange)** |
+| Tier | R S P E T | **hanya R S T** (tidak ada Premium/Exclusive) |
+
+### Ejaan varian di SP tidak konsisten — wajib ditoleransi
+
+Dipindai dari data: **"Warior" (satu R) dipakai 1.367 baris**, ditambah
+"Elita Merah", "Elite  Merah" (spasi ganda), "Elite BIru". Percobaan pertama
+melewatkan 13 baris sebagai "warna tak terbaca" karena cuma mengenali
+"Warrior". Pola ini kemungkinan ada juga di toko lain — selalu pindai dulu
+seluruh penulisan varian sebelum menetapkan daftar kata kunci.
+
+### Hyundai Avega: satu kode dipakai dua bodi
+
+SP memakai `HYN-AVG` untuk **Avega Hatchback DAN Avega Sedan** sekaligus.
+Diperbaiki mengikuti UA: Hatchback → `HYN-AVH` (33 baris), Sedan tetap
+`HYN-AVG`. Ini bukan sekadar penyeragaman lintas toko — di dalam SP sendiri
+dua produk berbeda memang tidak boleh berbagi satu kode.
+
+Diverifikasi: 0 duplikat SKU per listing di Lazada, 0 sisa kode lama, TikTok
+20/20 produk lengkap variannya, 0 perbedaan nyata di luar kolom SKU.
+
+### Koreksi laporan beda katalog: "belum ada SKU" itu status SNAPSHOT
+
+Laporan pertama menandai 70 model UA sebagai "belum punya kode SKU" — user
+spot-check Chery Tiggo 9 dan menemukan SKU-nya SUDAH ada di Shopee
+(`CHR-TI9-UA-R-G1-ABU`). Sebabnya: ekspor UA yang dipakai tertanggal
+**3 September**, sebelum file `SIAP_UPLOAD_SKU_UA_*` diupload. Setelah dicek
+silang ke file yang sudah dikirim: **64 dari 70 sudah punya SKU di situ**,
+cuma **6 yang benar-benar belum** (Hyundai Verna, Kia Cerato, Proton Suprima S
+— ketiganya menunggu opsi generasi di listing — plus Neta V, Daewoo Ssangyong
+Musso, Mitsubishi Colt T120SS Pick Up).
+
+**How to apply**: kalau melaporkan "belum ada SKU/harga", sebutkan TANGGAL
+ekspor yang dipakai, dan cross-check dulu ke file yang sudah dikirim tapi
+mungkin sudah diupload — status listing bisa berubah di antara ekspor dan
+laporan.
