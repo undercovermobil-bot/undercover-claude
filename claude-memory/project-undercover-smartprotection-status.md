@@ -55,3 +55,45 @@ How to apply: baca file ini dulu sblm lanjut SP. Script kunci scratchpad (`scan_
 **Belum dikerjakan**: tidak ada file SP yang tersisa dari 4 file utama (2 Shopee+TikTok+Lazada) — semua sudah disentuh sesi ini. Sisa PR murni di level "butuh keputusan manual" (lihat tracker), bukan file yg belum disentuh.
 
 How to apply: script terbaru `scan_sp_full.py` di scratchpad (tidak persisten) — arsitektur identik dgn `scan_op_full.py` OP, ditambah `tier_to_strip_color()` utk konversi Epic/Elite/Warrior→Strip-N (kebalikan dari OT yg convert Strip-N→EEW), dan `resolve_ambiguous_model()` khusus utk kasus "Suzuki Vitara" gabungan 3-model.
+
+## 2026-09-09 — Beda katalog Undercover vs Smartprotection
+
+Dibandingkan dari ekspor live: UA (Shopee 5 file 3 Sep + TikTok + Lazada) vs
+SP (4 file 8 Sep). Identitas model dipakai **kode SKU MEREK-MODEL**, bukan nama
+listing — nama listing terlalu berisik (typo "Undervover", "Mobil BMW X5",
+"Cover Honda BRV", 448 varian nama untuk ~340 model).
+
+| | UA | SP |
+|---|---|---|
+| model berkode | 335 | 204 |
+| model belum berkode | 82 | 14 |
+
+**Hanya di Undercover: 196 model** (126 sudah berkode + 70 belum).
+Terkonsentrasi di segmen premium/eksotik/EV yang SP memang tidak jual:
+BMW 19 model, Volvo 9, Mazda 7, Lexus 6, Toyota 6, Chery 5, MG 5 — ditambah
+Aston Martin, Bentley, Ferrari, Rolls-Royce, McLaren, Porsche, Audi (semuanya
+belum berkode).
+
+**Hanya di Smartprotection: 7 model** — Peugeot 306, Peugeot 406, Kia Sedona
+Carnival, Holden (berkode) + Mitsubishi Lantis, Volswagen Polo, Honda Civic
+Hatcback (belum berkode; dua terakhir kemungkinan typo).
+
+### Jebakan yang ditemukan saat membandingkan
+
+1. **Jangan bandingkan lewat nama listing.** Perbandingan berbasis nama
+   menghasilkan 214 "hanya di UA" — inflated oleh typo & variasi penulisan.
+   Berbasis kode: 126. Selisihnya murni noise penamaan.
+2. **Kode kembar belum seragam antar toko.** SP masih memakai `MZD-MZ2`,
+   `WLG-DAR`, `JEP-WR` untuk model yang di UA sudah jadi `MZD-2H`, `WLG-DRN`,
+   `JEP-WRA`. Tanpa peta padanan ini, ketiganya salah dihitung sebagai
+   "hanya ada di satu toko".
+3. **Model tanpa SKU tidak kelihatan di perbandingan kode.** 9 model yang
+   awalnya terlihat UA-only (BYD Seal, Chery Omoda 5, Ford Ranger, Hyundai
+   Getz, Suzuki APV Luxury, dst) ternyata ADA di SP tapi listing-nya belum
+   ber-SKU. Perbandingan kode saja akan melaporkan gap palsu — wajib
+   cross-check ke nama listing yang SKU-nya kosong.
+4. Listing non-mobil ikut terjaring (Glass Polish, Bahan Kain, Tas Portable,
+   Logo Custom, iCar V23) — aturan #6 tetap harus dipasang.
+
+File: `BEDA_KATALOG_UA_vs_SP.xlsx` (4 sheet: Hanya di Undercover, Hanya di
+Smartprotection, Perlu dicek, Dikecualikan).
