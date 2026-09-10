@@ -156,3 +156,47 @@ Musso, Mitsubishi Colt T120SS Pick Up).
 ekspor yang dipakai, dan cross-check dulu ke file yang sudah dikirim tapi
 mungkin sudah diupload — status listing bisa berubah di antara ekspor dan
 laporan.
+
+## 2026-09-10 — Audit harga SP: mana yang belum berubah
+
+User melihat "beberapa yang belum berubah". Dicek per baris (bukan per model)
+ke ekspor 8 Sep. Ada TIGA kelompok berbeda, dan cuma kelompok A yang selama ini
+dilaporkan:
+
+### A. 11 model seluruhnya masih harga lama — 729 baris
+
+Ford Fusion 261rb · Hyundai Matrix 298rb · Mercedes Benz GLB 309rb ·
+Mitsubishi Eclipse 248rb · Nissan Cedric 271rb · Nissan Latio 291rb ·
+Peugeot 3008 267rb · Peugeot 306 258rb · VW Fox 271rb · VW Passat 256rb ·
+Wuling Darion 319rb. Semuanya **tidak ada di file HPP** (dicek ke keempat
+sheet), jadi harga barunya memang belum bisa dihitung.
+
+### B. Satu kode SKU, dua harga berbeda — 690 baris, 4 kode
+
+| Kode | Listing A | Listing B | Selisih |
+|---|---|---|---|
+| DHT-FRZ | Feroza 370rb | **Daihatsu Rocky 324rb** | 46rb |
+| DHT-GMX | Luxio 371rb | **Gran Max Minibus 443rb** | 72rb |
+| HYN-AVG | Avega Sedan 370rb | **Avega Hatchback 325rb** | 45rb |
+| TYT-AVZ | Avanza & Xenia 370rb | **Veloz 374rb** | 4rb |
+
+Satu SKU = satu barang = wajib satu harga (preseden Calya/Sigra di UA).
+HYN-AVG selesai sendiri begitu file pemisahan `HYN-AVH` diupload — Hatchback
+memang produk lain. Tiga sisanya butuh keputusan angka mana yang dipakai.
+
+### C. 18 baris nyangkut karena TYPO teks varian — semuanya TikTok
+
+`Biru Benhru` (Panther 2, Outlander 4, Starlet 2, Voxy 2) · `Eltie Biru/Merah`
+(Camry 6, Ciaz 1) · `Wrior Merah` (Datsun Go Plus 1). Baris lain di model yang
+sama sudah harga baru; hanya baris bertypo yang tertinggal di harga lama
+(mis. Voxy Rp297rb sedangkan standar modelnya Rp445rb).
+
+**Kenapa typo bisa bikin terlewat**: update harga SP dijalankan lewat
+pencocokan TEKS VARIAN (warna + generasi), bukan lewat prefix SKU seperti di
+UA. Begitu warnanya salah tulis, barisnya tidak ketemu dan diam-diam dilewati.
+Ini pola yang sama dengan "Warior" (1.367 baris) yang ditemukan saat mengisi
+SKU SP — **kosakata varian SP memang penuh salah ketik**, dan setiap proses
+yang bergantung pada teks varian harus memindai ejaan yang benar-benar ada di
+data dulu, bukan memakai daftar kata baku.
+
+File: `SP_HARGA_BELUM_BERUBAH.xlsx` (3 sheet A/B/C, lengkap per baris).
