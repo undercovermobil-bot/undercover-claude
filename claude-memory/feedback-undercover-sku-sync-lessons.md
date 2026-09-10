@@ -240,3 +240,43 @@ d.value = s.value
    (Shopee `Kode Produk`+`Kode Variasi`, TikTok `sku_id`, Lazada `sku.skuId`)
    lalu bandingkan semua kolom kecuali kolom target. Pemeriksaan "jumlah baris
    benar + kolom target benar" TIDAK cukup dan sudah dua kali meloloskan bug.
+
+---
+
+## TikTok menambah atribut WAJIB baru — ekspor lama jadi tidak bisa dipakai (2026-09-10)
+
+Upload `PERBAIKAN_SP_TIKTOK.xlsx` ditolak **seluruhnya** (588/588 baris) dengan
+pesan identik:
+
+> `atribut produk is missing, include it and try again. ID:100530, nama: Tahun`
+
+**Bukan soal isi editan.** Baris yang ditolak termasuk 251 baris pelengkap yang
+sama sekali tidak diubah. Penyebabnya struktural:
+
+| | kolom |
+|---|---|
+| Ekspor SP 8 Sep (dipakai membangun file) | 41 |
+| Template TikTok saat upload 10 Sep | 43 |
+
+Dua kolom baru: **`product_property/100530` (Tahun)** dan
+`product_property/102755`. Template `all_information` memperlakukan kolom yang
+tidak ada sebagai atribut hilang, dan Tahun sekarang wajib untuk kategori
+"Cover & Shelter Mobil (931592)".
+
+Bandingkan: ekspor TikTok UA 3 Sep punya `101734` & `102752` tapi TIDAK punya
+`100530` — jadi perubahan atributnya terjadi setelah tanggal itu.
+
+**How to apply**:
+1. File upload TikTok HARUS dibangun dari ekspor yang BARU DIAMBIL, bukan
+   ekspor beberapa hari lalu. Set atribut kategori bisa berubah kapan saja
+   tanpa pemberitahuan.
+2. Kalau ada file TikTok lama yang belum sempat diupload, anggap basi —
+   bangun ulang dari ekspor segar. (Berlaku juga untuk file harga UA TikTok
+   yang dibuat 7 Sep kalau belum diupload.)
+3. File hasil (`..._result.xlsx`) memuat template TERBARU lengkap dengan
+   kolom baru, tapi nilai atributnya KOSONG — jadi tidak bisa dipakai
+   langsung sebagai pengganti ekspor.
+4. Daftar nilai yang sah untuk tiap atribut ada di sheet `HiddenAttr`
+   (pasangan kolom kategori/nilai). Untuk Tahun contohnya: `2024`, `2016`,
+   `2000 – 2020`, `1980 – 2000`, `2020   present`.
+5. Shopee & Lazada tidak terpengaruh — ini khusus TikTok.
