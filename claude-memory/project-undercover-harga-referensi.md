@@ -1995,3 +1995,39 @@ sedang dipakai saat itu. Kalau ada beberapa file harga beredar
 (`matriks`, `TOP100_v*`), samakan dulu atau tetapkan satu yang jadi rujukan.
 Pengecualian manual seperti ini tidak akan ketahuan dari data — script cuma
 melihat selisih angka dan menganggapnya "belum diupdate".
+
+## 2026-09-10 — Perbaikan 18 baris SP yang tertinggal + usulan Pcs/Roll 11 model
+
+**Kelompok C selesai**: 18 baris TikTok SP yang harganya tertinggal karena typo
+teks varian diperbaiki ke harga modus model+tier-nya. File
+`PERBAIKI_HARGA_SP_TIKTOK.xlsx` — 269 baris (18 berubah + sisanya pelengkap,
+karena template all_information TikTok butuh varian lengkap per produk).
+Diverifikasi: 0 perubahan di luar kolom harga, 7/7 produk lengkap variannya.
+
+**Usulan Pcs/Roll untuk 11 model kelompok A** (BELUM dikonfirmasi user —
+Pcs/Roll itu data produksi, bukan turunan dimensi):
+
+| Model | Generasi yg dijual | Usul P/R | Pembanding di daftar HPP |
+|---|---|---|---|
+| Volkswagen Fox | 2003-2009 | 6 | Datsun Go, BYD Atto 1 |
+| Peugeot 306 | 1997-2002 | 6 | Toyota Yaris, Suzuki Swift |
+| Hyundai Matrix | 2001-2010 | 6 | Honda Jazz, Toyota Agya |
+| Mitsubishi Eclipse | 1999-2011 | 5 | Toyota Vios, Honda City |
+| Nissan Latio | 2004-2016 | 5 | Toyota Vios |
+| Peugeot 3008 | 2007-2024 | 5 | Honda HR-V, Chery Tiggo |
+| Mercedes Benz GLB | 2020-2024 | 5 | Honda CR-V |
+| Wuling Darion | 2025-2026 | 5 | Wuling Almaz |
+| Volkswagen Passat | 1996-2024 | 5 | Toyota Camry, Honda Accord |
+| Nissan Cedric | 1965-2004 | 5 (bisa 4) | Toyota Crown |
+| Ford Fusion | 2005-2024 | **perlu dipastikan** | Fusion Eropa (MPV kecil, P/R 6) vs Fusion Amerika (sedan, P/R 5) |
+
+Dasar: pita Pcs/Roll di daftar HPP cuma 5 nilai — P/R 7 (mobil mikro, 287rb),
+6 (city car/hatchback, 322rb), 5 (sedan/MPV/SUV compact, 370rb), 4 (SUV/MPV
+besar, 443rb), 3 (HiAce, 565rb). Generasi yang dijual diambil dari teks varian
+listing SP sendiri, jadi bukan tebakan model mana yang dimaksud.
+
+**Harga lama TIDAK bisa dipakai sbg petunjuk ukuran**: urutan harga lama
+ke-11 model itu tidak berkorelasi dengan ukuran sama sekali (Passat Rp256rb
+lebih murah dari Hyundai Matrix Rp298rb). Dicek juga ke Undercover — kesebelas
+model itu **harga lama juga di UA**, jadi tidak ada rujukan harga baru dari
+toko lain.
