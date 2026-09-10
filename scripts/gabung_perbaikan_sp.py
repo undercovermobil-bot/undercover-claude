@@ -41,12 +41,22 @@ HARGA_TETAP = {                      # keputusan user 2026-09-10
     'DHT-GMX': {'R': 371000, 'S': 414000},
     'TYT-AVZ': {'R': 370000, 'S': 413000},
 }
-# model yang harganya memang masih skema lama / belum diputuskan -> jangan
-# ikut dinormalkan ke modus
-LEWATI_MODUS = {
-    'FRD-FUS', 'HYN-MAT', 'MBZ-GLB', 'MTB-ECL', 'NSN-CED', 'NSN-LAT',
-    'PEU-M3008', 'PEU-M306', 'VLK-FOX', 'VLK-PAS', 'WLG-DAR',   # skema lama
-    'DHT-FRZ', 'HYN-AVG',                                        # belum diputuskan
+# Normalisasi "samakan ke harga modus" HANYA untuk model yang memang disepakati
+# (7 model kelompok C -- baris yang tertinggal karena typo teks varian).
+#
+# JANGAN dibalik jadi daftar-pengecualian: begitu sebuah model baru dapat SKU,
+# baris-barisnya tiba-tiba masuk grup (kode, tier) dan ikut "dinormalkan" tanpa
+# pernah diminta. Terbukti 2026-09-10: Hyundai Getz Shopee mau diubah
+# 322rb->365rb dan Chery Omoda 5 Lazada 413rb->415rb, dua-duanya di luar
+# permintaan user.
+NORMALKAN_KE_MODUS = {
+    'ISZ-PTH',   # Isuzu Panther      "Biru Benhru"
+    'MTB-OUT',   # Mitsubishi Outlander
+    'TYT-STR',   # Toyota Starlet
+    'TYT-VOX',   # Toyota Voxy
+    'SZK-CIA',   # Suzuki Ciaz        "Eltie Merah"
+    'TYT-CMY',   # Toyota Camry       "Eltie Biru"
+    'DTN-DGP',   # Datsun Go Plus     "Wrior Merah"
 }
 
 
@@ -165,10 +175,10 @@ def proses(out_dir, folders):
                 if cur is not None:
                     if pfx in HARGA_TETAP:
                         mau = HARGA_TETAP[pfx][kat]
-                    elif pfx in LEWATI_MODUS:
-                        mau = cur
-                    else:
+                    elif pfx in NORMALKAN_KE_MODUS:
                         mau = modus.get((pfx, kat), cur)
+                    else:
+                        mau = cur
                     if mau != cur:
                         harga_baru = mau
 

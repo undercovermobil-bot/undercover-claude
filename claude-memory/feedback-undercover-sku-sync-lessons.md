@@ -280,3 +280,40 @@ Bandingkan: ekspor TikTok UA 3 Sep punya `101734` & `102752` tapi TIDAK punya
    (pasangan kolom kategori/nilai). Untuk Tahun contohnya: `2024`, `2016`,
    `2000 – 2020`, `1980 – 2000`, `2020   present`.
 5. Shopee & Lazada tidak terpengaruh — ini khusus TikTok.
+
+### Lanjutan: upload TikTok yang "gagal" ternyata separuh berhasil (2026-09-10)
+
+Ekspor TikTok SP yang baru (10 Sep, 43 kolom) menunjukkan **semua 274 perubahan
+SKU SUDAH masuk** — `MZD-2H`, `WLG-DRN`, `BYD-SEA`, `HYN-AVH`, `FRD-RAN`, dst
+sudah terpasang, 0 sisa kode lama, 0 baris target yang masih kosong. Yang TIDAK
+masuk cuma 63 perubahan harga (Gran Max Minibus masih 443rb, Veloz masih 374rb).
+
+Jadi pesan "atribut produk is missing" di 588/588 baris **bukan berarti seluruh
+file ditolak**. Jangan menyimpulkan "semua gagal" dari kolom `err_info` saja —
+selalu cek ekspor berikutnya untuk tahu apa yang benar-benar berubah, kalau
+tidak file perbaikan berikutnya akan menerapkan ulang perubahan yang sudah
+masuk.
+
+Kolom `product_property/100530` (Tahun) di ekspor baru **hampir seluruhnya
+kosong** (terisi cuma 64 dari 7.333 baris, semuanya nilai `2026`, di 4 produk
+baru: Hyundai Kona & Geely EX2). Jadi belum bisa dipastikan apakah TikTok minta
+KOLOM-nya ada saja atau minta NILAI-nya terisi. File berikutnya dikirim dengan
+kolom ada tapi nilai kosong (mengikuti ekspor); kalau ditolak lagi dgn pesan
+yang sama, berarti nilainya wajib.
+
+### BUG DESAIN: "samakan ke harga modus" jangan pakai daftar-pengecualian
+
+`gabung_perbaikan_sp.py` versi pertama menormalkan SEMUA model ke harga modus
+kecuali yang masuk daftar pengecualian. Begitu 7 model dapat SKU baru,
+baris-barisnya mendadak masuk grup (kode, tier) dan ikut ternormalkan tanpa
+pernah diminta: **Hyundai Getz Shopee 322rb→365rb** dan **Chery Omoda 5 Lazada
+413rb→415rb**. Diperbaiki jadi daftar-IZIN eksplisit (`NORMALKAN_KE_MODUS`,
+7 model kelompok C saja).
+
+**How to apply**: untuk perubahan massal yang menyentuh harga, pakai
+allowlist — bukan blocklist. Menambah data (mis. mengisi SKU) bisa mengubah
+pengelompokan dan menyeret baris yang tidak ada hubungannya.
+
+**Temuan sampingan yang BELUM ditindaklanjuti** (harga beda antar channel,
+bukan bagian permintaan user): Hyundai Getz Shopee Rp322rb vs TikTok/Lazada
+Rp365rb; Chery Omoda 5 Lazada Rp413rb vs channel lain Rp415rb.
