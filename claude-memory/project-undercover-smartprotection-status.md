@@ -200,3 +200,42 @@ yang bergantung pada teks varian harus memindai ejaan yang benar-benar ada di
 data dulu, bukan memakai daftar kata baku.
 
 File: `SP_HARGA_BELUM_BERUBAH.xlsx` (3 sheet A/B/C, lengkap per baris).
+
+## 2026-09-10 — Semua perbaikan SP digabung jadi SATU file per channel
+
+Script `scripts/gabung_perbaikan_sp.py`. Menggantikan
+`SAMAKAN_SKU_SMARTPROTECTION_*` dan `PERBAIKI_HARGA_SP_TIKTOK` yang dikirim
+sebelumnya (dua-duanya belum sempat diupload).
+
+**Kenapa wajib digabung**: file update marketplace menimpa SEMUA kolom yang ada
+di dalamnya. File SKU membawa harga LAMA, file harga membawa SKU LAMA — upload
+yang belakangan akan mengembalikan kolom yang baru saja dibetulkan (pelajaran
+2026-08-15, sudah pernah kejadian di Undercover).
+
+| File | Baris | SKU berubah | Harga berubah |
+|---|---|---|---|
+| PERBAIKAN_SP_SHOPEE | 334 | 289 | 45 |
+| PERBAIKAN_SP_LAZADA | 338 | 293 | 45 |
+| PERBAIKAN_SP_TIKTOK | 588 | 274 | 63 |
+
+TikTok 588 = 337 baris berubah + 251 pelengkap (template all_information wajib
+memuat seluruh varian tiap produk yang disentuh).
+
+### Keputusan harga user 2026-09-10
+
+- **DHT-GMX** (Luxio + Gran Max Minibus) → **R 371.000 / S 414.000**.
+  Gran Max Minibus turun dari 443/486. Alasan user: SP memang sedikit lebih
+  murah dari UA, dan angka 443rb itu yang menyimpang, bukan 371rb.
+- **TYT-AVZ** (Avanza + Xenia + Veloz) → **R 370.000 / S 413.000**.
+  Veloz turun dari 374/417.
+- **DHT-FRZ** (Feroza 370rb vs Daihatsu Rocky 324rb) **BELUM diputuskan** —
+  sengaja tidak disentuh, masih menunggu user.
+- Usulan Pcs/Roll untuk 11 model harga-lama **ditunda** atas permintaan user.
+
+**HYN-AVG selesai sendiri**: begitu Avega Hatchback dipisah ke `HYN-AVH`,
+harga 325rb-nya sah karena produknya memang beda dari Avega Sedan (370rb).
+
+Diverifikasi ketiga file: 0 perbedaan nyata di luar kolom SKU & harga,
+0 duplikat SKU per listing di Lazada, TikTok 29/29 produk lengkap variannya,
+harga akhir DHT-GMX 371/414 (36+54 baris) dan TYT-AVZ 370/413 (126+189 baris)
+seragam di semua listing & channel.
