@@ -1147,14 +1147,25 @@ def build_output(agg, diag, out_path, root, period_days=None):
         wl = (warna or "").strip().lower()
         if tipe == "Strip" or wl.startswith(STRIP_MARK):
             continue
-        if is_junk_warna(warna):
-            continue
-        fam = color_family(warna)
-        if fam is None:
-            continue
-        if fam == "Silver":
-            continue  # Silver = penanda tier Premium itu sendiri, bukan warna polos
-                      # yg tersedia lintas tier spt Abu-abu/Hitam/dll - lihat Detail Premium
+        if tipe == "Transparan":
+            # Produk Transparan biasanya tak punya varian warna asli - field
+            # "warna"-nya sering kepakai utk gen/tahun/"Default" dsb, yg lolos
+            # is_junk_warna tapi tak dikenal color_family -> dulu diam-diam
+            # KEHILANGAN qty-nya (tak masuk blok manapun). Kalau memang ada
+            # warna asli yg dikenali (bukan Silver), tetap pakai itu; kalau
+            # tidak, masukkan ke kolom "Transparan" sendiri.
+            fam = color_family(warna)
+            if fam is None or fam == "Silver":
+                fam = "Transparan"
+        else:
+            if is_junk_warna(warna):
+                continue
+            fam = color_family(warna)
+            if fam is None:
+                continue
+            if fam == "Silver":
+                continue  # Silver = penanda tier Premium itu sendiri, bukan warna polos
+                          # yg tersedia lintas tier spt Abu-abu/Hitam/dll - lihat Detail Premium
         fam_tot[fam] += rec["qty"]
         fam_cell[(model, fam)] += rec["qty"]
     fam_cols = [f for f, _ in sorted(fam_tot.items(), key=lambda x: (-x[1], x[0]))]
