@@ -252,3 +252,56 @@ bikin baris duplikat dgn isi beda. Output: Shopee 619 baris (557 SKU + 62
 harga), TikTok 894 baris (619 SKU + 70 harga + 1.186 sel atribut wajib).
 Diverifikasi: 0 kolom lain berubah, 58/58 produk TikTok lengkap variannya,
 0 duplikat sku_id.
+
+## Lanjutan 2026-09-11: pisah Rocky lawas dari kode Feroza (DHT-FRZ)
+
+User klarifikasi soal isu DHT-FRZ (Feroza 370rb/413rb vs Rocky lawas
+324rb/367rb tabrakan satu kode) yang sempat dilaporkan "belum diputuskan":
+**"Yang feroza kan emang harganya tergantung dari kode SKU nya, jadi kalo
+yg feroza sama dengan yg kode skunya feroza juga, taft ya kalo tidak
+salah, kalo varian yg rocky samakan dengan sku yg rocky juga."** Dibaca
+sebagai prinsip: harga mengikuti kode SKU, jadi kalau harga BEDA maka
+kodenya HARUS dipisah, bukan dipaksa satu.
+
+Cek data mentah 3 file sumber (`Shopee_1.xlsx`, `TT_1.xlsx`) — listing
+"Daihatsu Rocky" ternyata berisi DUA chassis beda dlm SATU produk,
+dibedakan lewat teks varian (bukan nama listing):
+- **Rocky lawas** (teks varian selalu memuat `F70/F300` atau `F79/F300` +
+  rentang tahun **1984-2002**) -- SALAH pakai kode `DHT-FRZ-SP-*-G1-*`
+  (nyasar ikut Feroza), harga 324rb (R) / 367rb (S) / 168rb (T).
+- **Rocky modern A200** (teks varian `Gen 2 : 2019-2026`) -- SUDAH BENAR
+  pakai `TYT-RZE-SP-*-G1-*` (kembar Toyota Raize), harga 324rb/367rb --
+  kebetulan sama persis dgn Rocky lawas tapi kode SUDAH benar, **tidak
+  disentuh sama sekali**.
+- **Daihatsu Taft GT** (chassis F70, teks varian **1985-1995**, beda
+  rentang tahun dari Rocky lawas) -- SKU kosong semua tapi harganya di
+  data SUDAH 370rb/413rb/188rb (sama persis Feroza) -- tidak perlu ubah
+  harga, cuma perlu diisi kode `DHT-FRZ` (sudah ditangani rule lama,
+  `KODE_BARU['daihatsu taft gt']`).
+
+**Keputusan**: Rocky lawas dipisah ke kode BARU `DHT-RCK` (dicek tidak
+tabrakan dgn kode manapun di 4 file OP), harga TETAP punya Rocky sendiri
+(324rb/367rb/168rb, TIDAK ikut turun ke harga Feroza). Taft GT tetap
+`DHT-FRZ` (memang sudah cocok harganya). Rocky modern tetap `TYT-RZE`.
+Ini KOREKSI thd rule #8 lama (2026-08-20) yang dulu menetapkan Rocky
+lawas+Taft GT sama-sama ikut `DHT-FRZ` untuk toko UA -- koreksi ini
+**KHUSUS toko Otoprotection**, tidak otomatis berlaku ke UA (lihat catatan
+di `project-undercover-sku-sync-rules.md` aturan #8). Alasan tidak
+menyamakan ke UA: selisih harga OP (46rb) jauh lebih besar & konsisten di
+semua warna drpd kasus UA dulu (4rb, waktu itu diduga salah input).
+
+Implementasi: 1 baris logika baru (ATURAN 3) di
+`perbaikan_otoprotection_final.py`, deteksi via `'rocky' in nama` DAN
+`lama.startswith('DHT-FRZ-')` DAN `'1984-2002' in teks_varian` -- sangat
+sempit, tidak menyentuh Feroza/Taft-GT/Rocky-modern. Dijalankan ulang dari
+4 file sumber asli (bukan tempel ke file yg sudah jadi) supaya satu pass
+utuh. Hasil: 16 baris Shopee + 16 baris TikTok berubah kode (harga tetap
+sama, tidak berubah), + 16 baris pelengkap TikTok (sibling Rocky-modern
+yg ikut kebawa krn kelengkapan produk, tidak diubah). Diverifikasi lewat
+diff penuh terhadap file yang sudah dikirim sebelumnya: 0 baris lain
+berubah/hilang di luar Rocky, kedua produk TikTok Rocky (listing biasa +
+listing Transparan) lengkap variannya, 0 duplikat sku_id, atribut TikTok
+wajib (100530/102755) terisi di semua baris yang disentuh. File final:
+Shopee 635 baris (573 SKU + 62 harga), TikTok 926 baris (635 SKU + 70
+harga + baris pelengkap) -- menggantikan file yang dikirim sebelumnya
+(619/894 baris), belum diupload user jadi langsung dikirim versi gabungan.

@@ -99,6 +99,26 @@ def proses(out_dir, folders):
                         gen = SK.GEN_KHUSUS.get(kode1, 'G1')
                         sku_baru = f'{kode1}-SP-{kat}-{gen}-{warna}'
 
+            # --- ATURAN 3 (khusus Rocky lawas, instruksi user 2026-09-11):
+            # listing "Daihatsu Rocky" berisi 2 chassis beda dalam SATU produk
+            # -- lawas (F70/F300 : 1984-2002) nyasar ikut kode Feroza DHT-FRZ
+            # (harga 324rb/367rb, BEDA jauh dari Feroza 370rb/413rb), modern
+            # (A200, Gen 2 : 2019-2026) SUDAH benar kode TYT-RZE (kembar
+            # Raize). User: harga Feroza+Taft GT tetap satu kode DHT-FRZ
+            # (Taft GT memang kembar chassis F70 dgn Feroza, harganya di data
+            # SUDAH sama dgn Feroza jadi tidak perlu diubah -- cuma perlu
+            # diisi kodenya, sudah ditangani ATURAN 2/KODE_BARU). Rocky lawas
+            # dipisah ke kode SENDIRI (`DHT-RCK`, baru, belum dipakai model
+            # lain) supaya harganya TIDAK ikut ketarik ke harga Feroza --
+            # ini KOREKSI thd aturan #8 lama (2026-08-20) yang dulu
+            # menggabungkan Rocky lawas ke DHT-FRZ; koreksi ini KHUSUS utk
+            # grup Otoprotection krn selisih harganya jauh lebih besar
+            # (46rb, vs UA dulu cuma 4rb yg diduga salah input).
+            if sku_baru is None and 'rocky' in nm.lower() \
+                    and lama.startswith('DHT-FRZ-') and '1984-2002' in var:
+                sku_baru = 'DHT-RCK-' + '-'.join(lama.split('-')[2:])
+                lap[(ch, 'Rocky lawas -> DHT-RCK sendiri')] += 1
+
             # --- ATURAN 2 (perbaikan_otoprotection2.py): legacy CVR-OTP atau
             # kosong tanpa match aturan 1 -- pakai KODE_BARU/SIBLING_GEN_TUNGGAL
             legacy = lama.startswith('CVR') and '-OTP-' in lama
