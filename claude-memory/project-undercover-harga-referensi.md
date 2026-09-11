@@ -2031,3 +2031,81 @@ ke-11 model itu tidak berkorelasi dengan ukuran sama sekali (Passat Rp256rb
 lebih murah dari Hyundai Matrix Rp298rb). Dicek juga ke Undercover — kesebelas
 model itu **harga lama juga di UA**, jadi tidak ada rujukan harga baru dari
 toko lain.
+
+## Harga baru Transparan (2026-09-11) — pakai ulang PANJANG_MM/KATEGORI yang sudah ada
+
+Sesi lain (fresh container, `claude-memory/` sempat ketinggalan) dapat
+tugas baru: user upload `DATA_UC_HPP_Top_100_Terlaris.xlsx`, minta harga
+baru KATEGORI TRANSPARAN (beda dari Reguler/Strip yang sudah dikerjakan
+sebelumnya). Sheet `Transparan` di file itu cuma py 4 baris kategori
+generik (City Car/SUV/MPV/Hiace-tak lengkap) + 3 baris contoh per-model
+(Avanza/Brio/Innova) — **bukan daftar ukuran per-model lengkap**.
+
+**Instruksi user**: kolom `Harga Jual Terbaru` dibulatkan ribuan ke atas
+dari 2 baris relevan → City Car/SUV (195716.1981→**196.000**) & MPV
+(430175.4386→**431.000**) — 2 tingkat: "3 pcs/roll" (mobil di bawah
+ukuran Fortuner/Pajero) vs "1 pcs/roll" (se-Fortuner/Pajero ke atas).
+Tiap tingkat py rentang toleransi +Rp3.000 tergantung ukuran (kecil:
+196-199rb, besar: 431-434rb). User pilih klasifikasi & posisi tiap model
+ditentukan sendiri oleh Claude (bukan dari sumber data lain).
+
+**Ketemu solusi lebih baik drpd klasifikasi manual dari nol**: dataset
+`PANJANG_MM`/`KATEGORI` (291 model, panjang bodi mm per model) yang
+SUDAH ADA di `harga_baru_sp_op_matriks_v2.py` (dipakai utk hasilkan
+`Harga Baru SP-OP (matriks) FINAL.xlsx` — sumber harga Reguler/Strip SP-OP
+yang dipakai sesi-sesi sebelumnya) **COCOK PERSIS 100/100 nama produk**
+dgn daftar Top 100 Terlaris ini (file sumbernya sama persis). Drpd
+menebak segmen bodi 100 model dari nol (rawan salah & tidak
+reproducible), pakai ulang data panjang mm yang SUDAH TERVALIDASI itu.
+
+**Metode** (`harga_transparan_top100.py`, adaptasi `kalibrasi_grup()`/
+`posisi()` dari v2/v3 tapi `MAX_SPREAD` diperkecil 5000→**3000** sesuai
+batas yg diminta user utk Transparan):
+1. Ambang tingkat = panjang Toyota Fortuner (**4795mm** — LEBIH KECIL
+   dari Pajero Sport 4825mm, dipilih krn "se-Fortuner **DAN** Pajero ke
+   atas" berarti pakai yg terkecil dari keduanya sbg batas bawah).
+   >=4795mm → tingkat Besar (lantai 431rb); <4795mm → tingkat Kecil
+   (lantai 196rb).
+2. Dalam tiap tingkat: kalibrasi (lo, rentang, n_langkah) dari SEMUA
+   anggota tingkat itu (bukan per Pcs/Roll×Kategori spt v2/v3, krn sheet
+   Transparan tidak py Pcs/Roll lengkap per-model) — tiap ~100mm selisih
+   panjang = +Rp1.000, dibatasi +Rp3.000. Posisi tiap mobil proporsional
+   thd panjangnya dlm rentang tingkat itu.
+
+**Hasil**: 85 model tingkat Kecil (2974mm Wuling Air EV → 4751mm Mercedes
+C Class, harga 196-199rb), 15 model tingkat Besar (4795mm Fortuner →
+5325mm Hilux, harga 431-434rb). Fortuner & Pajero Sport sendiri tepat di
+lantai 431rb (sesuai definisi ambang batas dari user).
+
+**Catatan penting utk user**: **Toyota Innova (4735mm) jatuh di tingkat
+KECIL (199rb, bukan 431rb)** — meski sekelas dealership/positioning dgn
+Fortuner, panjang bodi aktualnya (Innova Zenix ±4735mm) SEDIKIT LEBIH
+PENDEK dari Fortuner (4795mm), jadi scr definisi ukuran murni tidak masuk
+"se-Fortuner ke atas". Ini bukan bug, tapi boundary case yg layak
+di-flag krn kemungkinan besar di luar ekspektasi user (Innova biasa
+dianggap "sekelas" Fortuner secara komersial, bukan fisik). Honda Odyssey
+(4840mm) sebaliknya JUST BARELY masuk tingkat Besar.
+
+**Scope**: cuma 100 model Top-Terlaris (sesuai file yg diupload). Belum
+diterapkan ke listing marketplace aktual (file kerja sesi sebelumnya di
+scratchpad HILANG krn container baru — user perlu upload ulang file
+listing SP/OP kalau mau harga ini benar2 ditulis ke SKU). Scope
+diputuskan user: **Smartprotection + Otoprotection saja**, bukan
+UA/OT.
+
+File dikirim: `Referensi_Harga_Baru_Transparan_Top100.xlsx` (kolom: No,
+Nama Produk, Kategori Bodi, Panjang mm, Tingkat, Harga Baru Transparan).
+
+**PENTING - proyek ini sedang dikerjakan PARALEL oleh sesi lain di
+branch yang SAMA** (`claude/repo-memory-access-4hthja`) - saat sesi ini
+mulai, ketemu 33 commit baru yang belum pernah dilihat sesi ini (kerjaan
+Otoprotection TikTok: atribut wajib `100530`/`102755`/`100177` yang
+HARUS terisi di SEMUA baris varian produk yang tersentuh -- bukan cuma
+baris yang diedit -- kalau tidak TikTok tolak SELURUH produk; Rocky
+lawas dipisah dari Feroza; dll -- detail lengkap di
+`project-undercover-otoprotection-status.md`). **How to apply**: SELALU
+`git fetch` + cek `git log HEAD..origin/<branch> --oneline` sebelum mulai
+kerja di sesi manapun utk proyek ini, JANGAN asumsikan riwayat lokal
+sudah paling baru — container fresh/sesi baru bisa checkout branch lama
+(`claude/sku-price-tracking-sheets-7ogdnv`, bukan branch konsolidasi)
+DAN ketinggalan commit meski sudah di branch yang benar.

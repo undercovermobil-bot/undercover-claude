@@ -11,172 +11,124 @@ Fortuner/Pajero) dan 431.000 (tingkat "1 pcs/roll", mobil ukuran SE-
 FORTUNER/PAJERO KE ATAS). Tiap tingkat punya rentang toleransi +Rp3.000
 ("tergantung ukurannya") - kecil: 196rb-199rb, besar: 431rb-434rb.
 
-User pilih: klasifikasi tiap model & posisi dlm rentang ditentukan
-sendiri (pakai pengetahuan segmen/tipe bodi mobil), bukan dari sumber
-data lain - TIDAK ADA daftar ukuran per-model di file yg diupload,
-cuma 4 baris kategori generik (City Car/SUV/MPV/Hiace-tak lengkap).
+**PAKAI DATA PANJANG_MM/KATEGORI YANG SUDAH ADA** (dari
+`harga_baru_sp_op_matriks_v2.py`, dipakai jg utk harga Reguler/Strip SP-OP
+"Harga Baru SP-OP (matriks) FINAL.xlsx") - BUKAN nebak manual dari nol.
+Semua 100 nama produk di file HPP Top 100 Terlaris COCOK PERSIS dgn key
+PANJANG_MM (dicek: 100/100 ketemu) - dataset panjang bodi (mm) per model
+ini sudah divalidasi & dipakai across proyek, jauh lebih presisi drpd
+klasifikasi segmen/tipe-bodi manual dari nol.
 
-Cakupan: 100 model di "Top 100 Terlaris" (sheet sumbernya) - LOGIKA
-SAMA bisa dipakai lagi utk model di luar top-100 begitu ketemu di
-listing SP/OP asli (blm ada di file ini).
+Metode (adaptasi `kalibrasi_grup()`/`posisi()` dari
+harga_baru_sp_op_matriks_v2/v3.py, MAX_SPREAD diperkecil dari Rp5.000 ke
+Rp3.000 sesuai batas yg diminta user utk Transparan):
+1. Ambang batas tingkat: PANJANG_MM Toyota Fortuner (4795mm, LEBIH KECIL
+   dari Pajero Sport 4825mm) - "se-Fortuner/Pajero ke atas" = >= 4795mm.
+   >=4795mm -> tingkat Besar (lantai 431rb). <4795mm -> tingkat Kecil
+   (lantai 196rb).
+2. Di dalam tiap tingkat, kalibrasi (lo, rentang, n_langkah) dari SEMUA
+   anggota tingkat itu (bukan per Pcs/Roll x Kategori spt v2/v3, krn
+   sheet Transparan cuma py 2 tingkat kasar bukan Pcs/Roll per-model
+   lengkap) - MAX_SPREAD=3000, MM_PER_STEP=100 (~100mm selisih panjang =
+   +Rp1.000, dibatasi +Rp3.000).
+3. Posisi tiap mobil dlm rentang tingkatnya PROPORSIONAL thd panjang
+   bodinya - mobil terpendek dapat harga lantai (196rb/431rb), makin
+   panjang makin naik sampai +3rb.
 
 Pemakaian: python3 harga_transparan_top100.py
 """
+import math
+import sys
+
 import openpyxl
+
+sys.path.insert(0, '.')
+from harga_baru_sp_op_matriks_v2 import KATEGORI, PANJANG_MM
 
 SRC = "Copy_of_DATA_UC_HPP_Top_100_Terlaris.xlsx"
 OUT = "Referensi_Harga_Baru_Transparan_Top100.xlsx"
 
-HARGA = {'A': [196000, 197000, 198000, 199000],
-         'B': [431000, 432000, 433000, 434000]}
+LANTAI_KECIL = 196000
+LANTAI_BESAR = 431000
+AMBANG_MM = PANJANG_MM['Toyota Fortuner']  # 4795, lebih kecil dari Pajero Sport (4825)
+MAX_SPREAD = 3000
+STEP = 1000
+MM_PER_STEP = 100
 
-# (nama persis dari kolom A sheet 'Top 100 Terlaris', tingkat, index 0-3
-# dlm rentang, segmen/tipe bodi utk transparansi alasan klasifikasi)
-KLASIFIKASI = [
-    ("Toyota Avanza", 'A', 2, "MPV kompak"),
-    ("Honda Brio Satya / RS", 'A', 1, "Hatchback"),
-    ("Toyota Innova", 'B', 1, "MPV menengah (Zenix/Reborn, sekelas Fortuner)"),
-    ("Honda Jazz", 'A', 1, "Hatchback"),
-    ("Suzuki Ertiga", 'A', 2, "MPV kompak"),
-    ("Honda HR-V / e:N1", 'A', 2, "SUV kompak"),
-    ("Toyota Agya", 'A', 0, "City car"),
-    ("Daihatsu Ayla", 'A', 0, "City car"),
-    ("Daihatsu Xenia", 'A', 2, "MPV kompak"),
-    ("Nissan Livina / Grand Livina", 'A', 2, "MPV kompak"),
-    ("Toyota Vios", 'A', 1, "Sedan kompak"),
-    ("Toyota Fortuner", 'B', 0, "SUV menengah (acuan batas bawah)"),
-    ("Honda BR-V", 'A', 2, "SUV/MPV kompak"),
-    ("Toyota Calya", 'A', 0, "MPV kompak (LCGC)"),
-    ("Toyota Rush", 'A', 2, "SUV kompak"),
-    ("Toyota Yaris", 'A', 1, "Hatchback"),
-    ("Toyota Kijang", 'A', 2, "MPV klasik (generasi lama, sekelas Avanza)"),
-    ("Honda CR-V", 'A', 3, "SUV kompak-menengah (crossover, bukan body-on-frame)"),
-    ("Honda Mobilio", 'A', 2, "MPV kompak"),
-    ("Honda Civic", 'A', 1, "Sedan kompak-menengah"),
-    ("Daihatsu Terios", 'A', 2, "SUV kompak"),
-    ("Mitsubishi Xpander", 'A', 2, "MPV kompak"),
-    ("Toyota Camry", 'A', 3, "Sedan menengah-besar"),
-    ("Honda Accord", 'A', 3, "Sedan menengah-besar"),
-    ("Toyota Corolla", 'A', 1, "Sedan kompak"),
-    ("Suzuki APV Arena / Blind Van", 'A', 2, "Van/MPV ringan"),
-    ("Toyota Raize", 'A', 2, "SUV kompak"),
-    ("Isuzu Panther", 'A', 2, "MPV klasik (sekelas Kijang lama)"),
-    ("Mitsubishi Pajero Sport", 'B', 0, "SUV menengah (acuan batas bawah)"),
-    ("Daihatsu Sigra", 'A', 0, "MPV kompak (LCGC)"),
-    ("Suzuki Baleno", 'A', 1, "Hatchback"),
-    ("Suzuki Fronx", 'A', 2, "SUV/crossover kompak"),
-    ("Honda Freed", 'A', 2, "MPV kompak"),
-    ("Toyota Hilux", 'B', 2, "Pickup double cabin (sekelas Fortuner+)"),
-    ("Suzuki Swift", 'A', 1, "Hatchback"),
-    ("Suzuki Karimun", 'A', 0, "City car"),
-    ("Mitsubishi Triton", 'B', 2, "Pickup double cabin (sekelas Pajero Sport+)"),
-    ("Honda City Sedan", 'A', 1, "Sedan kompak"),
-    ("Suzuki XL7", 'A', 2, "MPV/crossover kompak"),
-    ("Nissan March", 'A', 0, "City car/hatchback"),
-    ("Toyota HiAce", 'B', 3, "Van (commuter, tinggi & besar)"),
-    ("Mazda 2 Sedan", 'A', 1, "Sedan kompak"),
-    ("Toyota Hardtop", 'B', 3, "SUV 4x4 besar (Land Cruiser Hardtop/FJ40)"),
-    ("Suzuki Jimny", 'A', 2, "SUV mini/off-roader"),
-    ("Suzuki Ignis", 'A', 1, "Hatchback/crossover kompak"),
-    ("BMW Seri 3", 'A', 2, "Sedan kompak-menengah (premium)"),
-    ("Kia Picanto", 'A', 0, "City car"),
-    ("Daihatsu Sirion", 'A', 1, "Hatchback"),
-    ("Daihatsu Feroza", 'A', 2, "SUV kompak (klasik)"),
-    ("Toyota Veloz", 'A', 2, "MPV kompak (basis Avanza)"),
-    ("Toyota Alphard", 'B', 2, "MPV besar mewah"),
-    ("Toyota Starlet", 'A', 1, "Hatchback"),
-    ("Daihatsu Luxio", 'A', 2, "MPV/van kompak"),
-    ("Toyota Etios Valco", 'A', 1, "Hatchback"),
-    ("Honda WR-V", 'A', 2, "SUV kompak"),
-    ("Suzuki Splash", 'A', 0, "Hatchback kecil"),
-    ("Daihatsu Gran Max Pick Up", 'A', 2, "Pickup/van ringan (sekelas Avanza)"),
-    ("Daihatsu Rocky", 'A', 2, "SUV kompak"),
-    ("Nissan Juke", 'A', 2, "SUV/crossover kompak"),
-    ("Toyota Vellfire", 'B', 2, "MPV besar mewah"),
-    ("Ford Fiesta", 'A', 1, "Hatchback"),
-    ("MINI Cooper", 'A', 1, "Hatchback premium"),
-    ("Toyota Land Cruiser", 'B', 3, "SUV besar body-on-frame"),
-    ("Honda Odyssey", 'B', 1, "MPV besar (minivan)"),
-    ("Toyota Voxy", 'B', 1, "MPV/van menengah (tinggi, sekelas Alphard-lite)"),
-    ("Mercedes Benz E Class", 'A', 3, "Sedan menengah-besar (premium)"),
-    ("Suzuki Carry", 'A', 2, "Van/pickup ringan"),
-    ("Nissan Evalia", 'A', 2, "MPV/van kompak"),
-    ("Mitsubishi Mitsubishi Kuda", 'A', 2, "MPV kompak (klasik)"),
-    ("Nissan X-Trail", 'A', 3, "SUV/crossover kompak-menengah"),
-    ("Suzuki SX4", 'A', 1, "Crossover/hatchback kompak"),
-    ("Daihatsu Taruna", 'A', 2, "SUV kompak (klasik)"),
-    ("Mitsubishi Mitsubishi Xpander Cross", 'A', 2, "SUV/crossover MPV kompak"),
-    ("Toyota Sienta", 'A', 2, "MPV kompak"),
-    ("Mitsubishi Mitsubishi Destinator", 'A', 3, "SUV/crossover kompak-menengah"),
-    ("Honda City Hatchback RS", 'A', 1, "Hatchback"),
-    ("Datsun Go Plus", 'A', 0, "MPV/hatchback kompak"),
-    ("BYD Atto 1", 'A', 0, "City car (EV)"),
-    ("Nissan Terrano", 'A', 2, "SUV kompak"),
-    ("Hyundai Creta", 'A', 2, "SUV kompak"),
-    ("Mitsubishi Mirage", 'A', 0, "City car/hatchback"),
-    ("Mercedes Benz S Class", 'A', 3, "Sedan besar (premium)"),
-    ("Hyundai Stargazer", 'A', 2, "Crossover MPV kompak"),
-    ("Chevrolet Spin", 'A', 2, "MPV kompak"),
-    ("Mazda CX5", 'A', 3, "SUV/crossover kompak-menengah"),
-    ("Wuling Air EV", 'A', 0, "City car (EV)"),
-    ("BMW Seri 5", 'A', 3, "Sedan menengah-besar (premium)"),
-    ("Toyota Harrier", 'A', 3, "SUV/crossover kompak-menengah"),
-    ("Wuling Almaz", 'A', 2, "SUV/crossover kompak-menengah"),
-    ("Mercedes Benz C Class", 'A', 2, "Sedan kompak-menengah (premium)"),
-    ("Kia Rio Sedan", 'A', 1, "Sedan kompak"),
-    ("Suzuki S-Presso", 'A', 0, "City car"),
-    ("Datsun Go", 'A', 0, "City car/hatchback"),
-    ("Toyota Soluna", 'A', 1, "Sedan kompak (klasik)"),
-    ("Mitsubishi Mitsubishi Outlander", 'A', 3, "SUV menengah (crossover)"),
-    ("Suzuki Aerio Hatchback", 'A', 1, "Hatchback"),
-    ("Hyundai Palisade", 'B', 1, "SUV besar 3-baris (crossover, sekelas Fortuner+)"),
-    ("Timor", 'A', 1, "Sedan kompak (klasik)"),
-    ("Mazda 2 Hatchback", 'A', 1, "Hatchback"),
-    ("Wuling Confero", 'A', 2, "MPV kompak"),
-]
+
+def kalibrasi_grup(panjang_list):
+    unik = sorted(set(panjang_list))
+    lo, hi = unik[0], unik[-1]
+    rentang = hi - lo
+    if rentang == 0:
+        return lo, 0, 0
+    spread = min(int(math.floor(rentang / MM_PER_STEP + 0.5)) * STEP, MAX_SPREAD)
+    n_langkah = spread // STEP
+    return lo, rentang, n_langkah
+
+
+def posisi(panjang, kalib):
+    lo, rentang, n_langkah = kalib
+    if rentang == 0:
+        return 0
+    mentah = int(math.floor((panjang - lo) / rentang * n_langkah + 0.5)) * STEP
+    return max(0, min(mentah, MAX_SPREAD))
 
 
 def main():
     src = openpyxl.load_workbook(SRC, data_only=True)
     ws_src = src['Top 100 Terlaris']
-    rank_of = {}
+    names = []
     for r in range(2, ws_src.max_row + 1):
         nm = ws_src.cell(r, 1).value
         if nm:
-            rank_of[nm] = r - 1
+            names.append(nm)
+    assert len(names) == 100, f"harus 100 model, ada {len(names)}"
 
-    assert len(KLASIFIKASI) == 100, f"harus 100 baris, ada {len(KLASIFIKASI)}"
-    names_in = {k[0] for k in KLASIFIKASI}
-    names_src = set(rank_of.keys())
-    missing = names_src - names_in
-    extra = names_in - names_src
-    if missing or extra:
-        print("PERINGATAN - nama tidak cocok persis dgn sheet sumber:")
-        print(" hilang dari klasifikasi:", missing)
-        print(" tidak ada di sumber:", extra)
+    missing = [n for n in names if n not in PANJANG_MM]
+    if missing:
+        raise SystemExit(f"Model tanpa data PANJANG_MM: {missing}")
+
+    kecil = [n for n in names if PANJANG_MM[n] < AMBANG_MM]
+    besar = [n for n in names if PANJANG_MM[n] >= AMBANG_MM]
+    kalib_kecil = kalibrasi_grup([PANJANG_MM[n] for n in kecil])
+    kalib_besar = kalibrasi_grup([PANJANG_MM[n] for n in besar])
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Harga Transparan"
-    ws.append(["No", "Nama Produk", "Segmen/Tipe Bodi", "Tingkat",
-               "Rentang Tingkat", "Harga Baru Transparan"])
-    for nm, tingkat, idx, segmen in KLASIFIKASI:
-        harga = HARGA[tingkat][idx]
-        label_tingkat = ("Kecil (di bawah Fortuner/Pajero, basis 3 pcs/roll)"
-                          if tingkat == 'A' else
-                          "Besar (se-Fortuner/Pajero ke atas, basis 1 pcs/roll)")
-        rentang = "196.000 - 199.000" if tingkat == 'A' else "431.000 - 434.000"
-        ws.append([rank_of.get(nm, ''), nm, segmen, label_tingkat, rentang, harga])
+    ws.append(["No", "Nama Produk", "Kategori Bodi", "Panjang (mm)", "Tingkat",
+               "Harga Baru Transparan"])
 
-    for col, width in zip('ABCDEF', [4, 32, 45, 50, 20, 20]):
+    hasil = []
+    for i, nm in enumerate(names, start=1):
+        panjang = PANJANG_MM[nm]
+        if panjang >= AMBANG_MM:
+            harga = LANTAI_BESAR + posisi(panjang, kalib_besar)
+            tingkat = "Besar (se-Fortuner/Pajero ke atas, basis 1 pcs/roll)"
+        else:
+            harga = LANTAI_KECIL + posisi(panjang, kalib_kecil)
+            tingkat = "Kecil (di bawah Fortuner/Pajero, basis 3 pcs/roll)"
+        hasil.append((i, nm, KATEGORI.get(nm, ''), panjang, tingkat, harga))
+        ws.append([i, nm, KATEGORI.get(nm, ''), panjang, tingkat, harga])
+
+    for col, width in zip('ABCDEF', [4, 32, 16, 14, 50, 20]):
         ws.column_dimensions[col].width = width
 
     wb.save(OUT)
-    print(f"Tersimpan: {OUT} ({len(KLASIFIKASI)} model)")
-    tier_a = sum(1 for k in KLASIFIKASI if k[1] == 'A')
-    tier_b = sum(1 for k in KLASIFIKASI if k[1] == 'B')
-    print(f"Tingkat Kecil (196-199rb): {tier_a} model")
-    print(f"Tingkat Besar (431-434rb): {tier_b} model")
+    print(f"Tersimpan: {OUT} ({len(names)} model)")
+    print(f"Ambang batas: {AMBANG_MM}mm (panjang Toyota Fortuner)")
+    print(f"Tingkat Kecil: {len(kecil)} model, rentang panjang "
+          f"{min(PANJANG_MM[n] for n in kecil)}-{max(PANJANG_MM[n] for n in kecil)}mm, "
+          f"kalibrasi spread={kalib_kecil[2]*STEP}")
+    print(f"Tingkat Besar: {len(besar)} model, rentang panjang "
+          f"{min(PANJANG_MM[n] for n in besar)}-{max(PANJANG_MM[n] for n in besar)}mm, "
+          f"kalibrasi spread={kalib_besar[2]*STEP}")
+
+    print("\nContoh Fortuner/Pajero Sport (harus di lantai 431rb):")
+    for i, nm, kat, panjang, tingkat, harga in hasil:
+        if nm in ('Toyota Fortuner', 'Mitsubishi Pajero Sport'):
+            print(f"  {nm}: {panjang}mm -> Rp{harga:,}".replace(',', '.'))
 
 
 if __name__ == '__main__':
