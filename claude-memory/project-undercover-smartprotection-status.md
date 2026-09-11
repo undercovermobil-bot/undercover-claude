@@ -239,3 +239,50 @@ Diverifikasi ketiga file: 0 perbedaan nyata di luar kolom SKU & harga,
 0 duplikat SKU per listing di Lazada, TikTok 29/29 produk lengkap variannya,
 harga akhir DHT-GMX 371/414 (36+54 baris) dan TYT-AVZ 370/413 (126+189 baris)
 seragam di semua listing & channel.
+
+## 2026-09-11 — TikTok SP tuntas, plus 2 baris salah kategori yang ketahuan
+
+Ekspor TikTok SP 11 Sep memastikan semua perubahan sudah masuk:
+Gran Max Minibus R 371.000 / S 414.000 · Veloz R 370.000 / S 413.000 ·
+18 baris typo varian sudah di harga standar · atribut `2026` + `16:9`
+terpasang di 9 produk.
+
+### Cacat yang saya buat sendiri: ejaan strip "Eltie" tidak dikenali
+
+Pemindaian penuh teks varian SP menemukan **2 baris** yang kategori SKU-nya
+tidak cocok dengan teks variannya — dua-duanya di TikTok:
+
+| Produk | Varian | SKU salah | SKU benar | Harga |
+|---|---|---|---|---|
+| BYD Seal | `Eltie Biru` | `BYD-SEA-SP-R-G1-BRU` | `BYD-SEA-SP-S-G1-S2B` | 416.000 (sudah benar) |
+| Suzuki Ciaz | `Eltie Merah` | `SZK-CIA-SP-R-G1-MRH` | `SZK-CIA-SP-S-G1-S2M` | 371.000 → **414.000** |
+
+BYD Seal itu **kesalahan pengisian SKU saya**: `Eltie` tidak masuk daftar kata
+kunci strip, jadi jatuh ke pencocokan warna dasar ("biru" → BRU) dan dapat
+kategori R. Suzuki Ciaz SKU-nya memang sudah salah dari dulu, tapi **saya
+memperburuknya**: karena SKU-nya berkategori R, perbaikan harga kelompok C
+menariknya ke harga Reguler 371.000, padahal itu varian Strip yang seharusnya
+414.000.
+
+**Bug-nya diam-diam**: ejaan tak dikenal tidak memicu error, cuma jatuh ke
+cabang warna dasar. Ketahuan hanya karena memverifikasi silang kategori SKU
+vs teks varian, bukan dari proses pengisian itu sendiri.
+
+Daftar ejaan strip SP yang sekarang ditangani: epic/epik, elite/elita/elit/
+**eltie**/**eite**, warrior/warior/**wrior**, strip 1/2/3.
+
+**How to apply**: setelah mengisi SKU massal, WAJIB cek silang — kategori di
+SKU (R/S/T) harus cocok dengan yang tersirat dari teks varian. Jangan hanya
+menghitung "berapa baris terisi".
+
+### Sisa masalah harga SP (belum ditindaklanjuti)
+
+- **DHT-FRZ**: Feroza 370rb vs Daihatsu Rocky 324rb — belum ada keputusan user.
+- **HYN-GET** (Hyundai Getz): TikTok R 365rb **S juga 365rb** (selisih 0,
+  seharusnya 43rb); Shopee malah 322rb. Tiga angka berbeda untuk satu model.
+- **CHR-O5** (Chery Omoda 5): R 370rb S 415rb (selisih 45rb, bukan 43rb).
+- 11 model masih skema harga lama (menunggu Pcs/Roll).
+- 30 listing TikTok SP masih tanpa SKU format baru (395 baris) — BMW Seri 7,
+  Toyota Corolla, Hyundai Kona, dst.
+- Listing **Transparan** atribut TikTok-nya masih kosong semua → kalau nanti
+  diedit, akan kena error atribut wajib yang sama.

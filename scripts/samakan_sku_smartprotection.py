@@ -73,10 +73,17 @@ GEN_KHUSUS = {'JEP-WRA': 'YJ'}      # sisanya TF=1 -> G1
 # "Warior" (tanpa satu R) dipakai 1.367 baris, "Elita"/"Elite  Merah"/huruf
 # besar-kecil campur juga ada. Semua varian ejaan harus ikut, kalau tidak
 # barisnya diam-diam dilewati sebagai "warna tak terbaca".
+# Daftar ini HARUS dipindai ulang dari data tiap kali dipakai di toko lain.
+# Ejaan yang sudah terbukti ada di SP: Warior, Wrior, Elita, Eltie, Eite,
+# "Elite  Merah" (spasi ganda), huruf besar-kecil campur. Kalau ada ejaan yang
+# tidak masuk daftar, barisnya TIDAK error -- dia jatuh ke pencocokan warna
+# dasar ("Eltie Biru" -> "biru") dan menghasilkan SKU kategori R padahal
+# seharusnya Strip. Bug diam-diam, ketahuan 2026-09-11 lewat 2 baris di
+# BYD Seal & Suzuki Ciaz.
 WARNA_STRIP = [
-    (('epic', 'epik', 'strip 1'),              'S1'),
-    (('elite', 'elita', 'elit', 'strip 2'),    'S2'),
-    (('warrior', 'warior', 'strip 3'),         'S3'),
+    (('epic', 'epik', 'strip 1'),                        'S1'),
+    (('elite', 'elita', 'eltie', 'eite', 'elit', 'strip 2'), 'S2'),
+    (('warrior', 'warior', 'wrior', 'strip 3'),          'S3'),
 ]
 NUANSA = [(('abu',), 'A'), (('biru',), 'B'), (('merah',), 'M')]
 WARNA_DASAR = [(('abu-abu', 'abu abu'), 'ABU'), (('hitam',), 'HTM'),
