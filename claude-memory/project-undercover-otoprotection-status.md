@@ -305,3 +305,74 @@ wajib (100530/102755) terisi di semua baris yang disentuh. File final:
 Shopee 635 baris (573 SKU + 62 harga), TikTok 926 baris (635 SKU + 70
 harga + baris pelengkap) -- menggantikan file yang dikirim sebelumnya
 (619/894 baris), belum diupload user jadi langsung dikirim versi gabungan.
+
+## Lanjutan 2026-09-11 (2): bug atribut TikTok "terisi di semua baris yg
+## disentuh" TERNYATA SALAH -- upload 92 baris gagal semua
+
+User upload file hasil (`..._all_information_result_1.xlsx`) dari percobaan
+upload file TikTok di atas -- **92/92 baris gagal**, 2 pesan error beda:
+
+1. **90 baris: "atribut produk is missing ... ID:100530, nama: Tahun"**
+   (8 produk: Chery Omoda 5, Nissan Cedric, Mazda 3 Sedan, Peugeot 306,
+   Toyota Corona, Mazda CX30, + 2 Mercedes Transparan). Akar masalah:
+   klaim di catatan sebelumnya ("terisi di semua baris yg disentuh") itu
+   sendiri yang salah arah -- kode lama cuma isi atribut di baris yang
+   SKU/harganya berubah, TIDAK di baris "pelengkap" (sibling varian lain
+   dlm produk yang sama yang dibawa serta demi kelengkapan tapi nilainya
+   sendiri tidak diubah). TikTok menolak SELURUH produk kalau ADA SATU
+   baris saja yang atributnya kosong -- bukan cuma baris yang diedit.
+   Reproduksi: cek manual thd file yang dikirim, ketemu 8 produk dengan
+   sebagian baris `100530='2026'` dan sebagian `None` dalam SATU
+   product_id yang sama.
+   **Fix**: `perbaikan_otoprotection_final.py` — tambah `hitung_atribut()`
+   + fase baru sesudah baris utama diproses: cari semua product_id yang
+   tersentuh, lalu utk SETIAP baris produk itu yang atributnya masih
+   kosong (termasuk yang tidak diedit sama sekali), isi juga. Efeknya di
+   run ini: 221 baris "pelengkap" yang tadinya lewat tanpa isi atribut,
+   sekarang semua terisi (counter baru "atribut baris sibling").
+2. **2 baris (Mercedes Benz B Class & CLS Class, keduanya listing
+   Transparan): "atribut ... ID:100177, nama: Model"** -- atribut BEDA,
+   khusus muncul stlh 2 atribut pertama lolos. Dicari lewat metode yang
+   sama spt biasa (produk lain yang SUDAH lolos di kategori/brand yang
+   sama): Mercedes Benz A Class/C Class/GLE Class (tidak tersentuh,
+   sudah lama live) semuanya punya `product_property/100177` terisi
+   dengan pola **"<Kode> Class"** -- persis teks setelah "Mercedes Benz "
+   di nama produk. Kesimpulan: atribut "Model" ini kemungkinan wajib utk
+   SEMUA listing ber-brand Mercedes-Benz (bukan cuma Transparan), tapi
+   baru "ketahuan" pas listingnya benar-benar di-resubmit (pola yang sama
+   dgn Tahun/102755 dulu -- TikTok laporkan atribut wajib satu per satu,
+   bukan sekaligus). **Fix**: tambah deteksi `RE_MERCEDES_MODEL =
+   re.compile(r'mercedes\s*benz\s+(.+)$')`, isi otomatis dari nama produk
+   kalau brand Mercedes-Benz & kolom `product_property/100177` masih
+   kosong. Sekalian isi Mercedes Benz **G Class** (3 produk Mercedes yg
+   tersentuh fix ini: B Class, CLS Class, G Class) walau G Class belum
+   sempat gagal di batch ini -- supaya tidak kena ronde gagal ke-3.
+
+Diverifikasi ulang stlh fix: 0 produk TikTok lagi yang "campuran" (sebagian
+baris atribut kosong dlm 1 produk), Model terisi benar utk ke-3 produk
+Mercedes ('B Class'/'CLS Class'/'G Class'), 0 baris SKU/harga berubah
+dibanding versi sebelum fix (murni tambahan pengisian atribut), 60/60
+produk TikTok yang tersentuh lengkap variannya vs sumber asli. File final
+(menggantikan lagi): Shopee 635 baris (tidak berubah dari sebelumnya --
+Shopee tidak pakai mekanisme atribut wajib ini), TikTok 926 baris (sama
+jumlah baris, tapi sekarang 100% baris di tiap produk yang tersentuh punya
+atribut wajib terisi).
+
+**Catatan/risiko utk sesi lain**: script perbaikan SP (`gabung_perbaikan_sp.py`)
+TIDAK punya logika pengisian atribut TikTok sama sekali di kode tersimpan
+(`grep -rn "100530\|ATRIBUT" scripts/*.py` cuma nemu di file
+otoprotection). Versi SP TikTok yang sempat dikirim sebelumnya (v3,
+"Tahun+102755 filled") kemungkinan dikerjakan lewat skrip sekali-pakai yang
+tidak tersimpan -- **belum bisa dipastikan** apakah versi itu kena bug
+"campuran" yang sama (isi cuma di baris yang diedit, bukan semua baris
+produk). Kalau SP TikTok belum/gagal diupload, kemungkinan besar akar
+masalahnya sama seperti OP di atas -- cek dulu pola "campuran" ini sebelum
+menebak sebab lain.
+
+**How to apply (pola umum utk semua toko)**: kalau template TikTok
+`all_information` dipakai dan sebuah produk minimal 1 barisnya disentuh,
+WAJIB isi ulang/verifikasi atribut wajib produk itu di SEMUA baris varian
+produk tsb (bukan cuma baris yang benar-benar berubah SKU/harga) sebelum
+file dikirim ke user -- kelengkapan varian (baris pelengkap) dan
+kelengkapan atribut wajib adalah DUA hal terpisah yang harus dua-duanya
+dipenuhi, bukan cuma salah satu.

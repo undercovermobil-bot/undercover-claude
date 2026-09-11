@@ -24,6 +24,29 @@ import perbaikan_otoprotection2 as OP2
 
 ORANGE = PatternFill('solid', fgColor='FFC000')
 
+RE_MERCEDES_MODEL = re.compile(r'mercedes\s*benz\s+(.+)$', re.I)
+
+
+def hitung_atribut(nm, wsv, r, i_atr):
+    """Atribut wajib TikTok utk 1 baris: 2 nilai TETAP (Tahun/aspect-ratio,
+    dari OP1.ATRIBUT_TIKTOK_WAJIB) + 1 nilai DINAMIS khusus brand Mercedes-
+    Benz (Model, 100177 -- ditemukan lewat produk Mercedes lain yg sudah
+    lolos: nilainya persis teks setelah "Mercedes Benz " di nama produk,
+    mis. "B Class"/"CLS Class"/"GLE Class"). Cuma isi yg masih kosong.
+    """
+    atr = {}
+    for nmp, idx in i_atr.items():
+        if nmp == 'product_property/100177':
+            continue
+        if wsv.cell(row=r, column=idx).value in (None, ''):
+            atr[idx] = OP1.ATRIBUT_TIKTOK_WAJIB[nmp]
+    idx177 = i_atr.get('product_property/100177')
+    if idx177 and wsv.cell(row=r, column=idx177).value in (None, ''):
+        m = RE_MERCEDES_MODEL.search(nm)
+        if m:
+            atr[idx177] = m.group(1).strip()
+    return atr
+
 
 def salin(ws_s, r_s, ws_d, r_d, n_kol):
     for c in range(1, n_kol + 1):
@@ -63,7 +86,7 @@ def proses(out_dir, folders):
             h = {str(wsv.cell(row=1, column=c).value).strip().lower(): c
                  for c in range(1, wsv.max_column + 1)}
             pid_c = h.get('product_id')
-            for nmp in OP1.ATRIBUT_TIKTOK_WAJIB:
+            for nmp in list(OP1.ATRIBUT_TIKTOK_WAJIB) + ['product_property/100177']:
                 if nmp in h:
                     i_atr[nmp] = h[nmp]
 
@@ -162,9 +185,7 @@ def proses(out_dir, folders):
 
             atr_baru = {}
             if ch == 'tiktok' and (sku_baru or harga_baru):
-                for nmp, idx in i_atr.items():
-                    if wsv.cell(row=r, column=idx).value in (None, ''):
-                        atr_baru[idx] = OP1.ATRIBUT_TIKTOK_WAJIB[nmp]
+                atr_baru = hitung_atribut(nm, wsv, r, i_atr)
 
             if sku_baru or harga_baru or atr_baru:
                 ubah[r] = (sku_baru, harga_baru, atr_baru)
@@ -177,6 +198,27 @@ def proses(out_dir, folders):
 
         if not ubah:
             continue
+
+        # --- lengkapi atribut wajib TikTok utk SEMUA baris produk yg
+        # tersentuh, bukan cuma baris yg SKU/harganya berubah (2026-09-11,
+        # ketahuan dari upload gagal: TikTok tolak SELURUH produk kalau ADA
+        # 1 baris saja atribut wajibnya kosong -- baris "pelengkap" yg cuma
+        # dibawa krn kelengkapan varian TAPI atributnya kosong di sumber
+        # ikut bikin produk gagal walau baris itu sendiri tidak diubah).
+        if ch == 'tiktok' and pid_c and i_atr:
+            produk_tersentuh = {str(wsv.cell(row=r, column=pid_c).value) for r in ubah}
+            for r in range(start, wsv.max_row + 1):
+                if r in ubah:
+                    continue
+                nm_r = str(wsv.cell(row=r, column=col['nama']).value or '')
+                if not nm_r:
+                    continue
+                if str(wsv.cell(row=r, column=pid_c).value) not in produk_tersentuh:
+                    continue
+                atr_extra = hitung_atribut(nm_r, wsv, r, i_atr)
+                if atr_extra:
+                    ubah[r] = (None, None, atr_extra)
+                    lap[(ch, 'atribut baris sibling (baru)')] += 1
 
         for r, (s, hh, atr) in ubah.items():
             if s:
