@@ -92,16 +92,34 @@ WARNA_DASAR = [(('abu-abu', 'abu abu'), 'ABU'), (('hitam',), 'HTM'),
 
 
 def segmen_warna(var, transparan):
-    """-> (kode warna, kategori R/S/T) atau (None, None) kalau tak terbaca"""
+    """-> (kode warna, kategori R/S/T) atau (None, None) kalau tak terbaca.
+
+    Strip diputuskan lewat BUKTI POSITIF -- angka 1/2/3 di segmen pertama
+    (penanda paling stabil, independen dari ejaan kata "Strip"-nya sendiri:
+    Warior/Wrior/Eltie/Eite/Elita/Srip/Srtip/Stirp semua terbukti dipakai di
+    SP & OP) ATAU kata Epic/Elite/Warrior (+ typo-nya). Kalau tak ada bukti
+    strip sama sekali, DEFAULT ke pencocokan warna polos (perilaku asli,
+    lenient thd typo warna spt "Biru Binhur"/"Biru Bnehur") -- supaya baris
+    yg sudah lama valid tidak ikut kesenggol regresi.
+    """
     v = ' '.join(str(var).lower().replace(',', ' , ').split())
     if transparan:
         return 'TRP', 'T'
-    for kata, kode in WARNA_STRIP:                      # strip dicek DULU:
-        if any(k in v for k in kata):                   # "Epic Abu" mengandung
-            for kata2, n in NUANSA:                     # "abu" juga
-                if any(k in v for k in kata2):
-                    return kode + n, 'S'
-            return None, None
+    segmen = v.split(',')[0].strip()
+    n = None
+    m = re.search(r'[123]', segmen)                     # cakup jg "Strip1" tanpa spasi
+    if m:
+        n = {'1': 'S1', '2': 'S2', '3': 'S3'}[m.group(0)]
+    else:
+        for kata, kode in WARNA_STRIP:
+            if any(k in segmen for k in kata):
+                n = kode
+                break
+    if n:
+        for kata2, nu in NUANSA:
+            if any(k in v for k in kata2):
+                return n + nu, 'S'
+        return None, None
     for kata, kode in WARNA_DASAR:
         if any(k in v for k in kata):
             return kode, 'R'

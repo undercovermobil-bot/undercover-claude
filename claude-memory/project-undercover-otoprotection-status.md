@@ -164,3 +164,91 @@ OP kali ini MURNI dari konsistensi internal (Strip=Reguler+43rb, modus
 antar-baris/channel), bukan dicocokkan ke target resmi. Kalau file itu
 diupload ulang, cek lagi 12 model skema-lama & 59 listing tanpa kode
 terhadap Pcs/Roll di situ.
+
+## 2026-09-11 (lanjutan) — DHT-FRZ dijelaskan, 59 listing & 14 legacy diisi
+
+User tanya tiga hal soal laporan `OP_SISA_TEMUAN.xlsx`. Hasilnya: file
+`PERBAIKAN_OTOPROTECTION_{SHOPEE,TIKTOK}.xlsx` sebelumnya **digantikan**
+versi baru (619 baris Shopee, 894 baris TikTok) yang sudah termasuk semuanya
+jadi satu upload.
+
+### 1. DHT-FRZ — bukan bug, tapi konflik harga yang belum diputuskan
+
+Daihatsu Feroza dan Daihatsu Rocky (generasi lama, chassis F70/F300) itu
+**mobil kembar** — satu cover fisik, satu kode SKU (`DHT-FRZ`). Tapi di
+listing, dua-duanya dijual dengan harga BEDA: Feroza Rp370rb/413rb, Rocky
+Rp324rb/367rb. Sama seperti kasus Calya/Sigra di Undercover dulu — satu
+barang, dua harga, dan sistem tidak bisa menebak mana yang benar. Perlu
+kamu tentukan salah satu (atau angka baru) supaya konsisten.
+
+### 2. 59 listing (730 baris) SKU kosong — SEBAGIAN BESAR SUDAH BISA
+
+Ditelusuri satu per satu, bukan ditebak:
+
+**a) Cocok ke SIBLING dalam file OP itu sendiri** (paling aman, 0 tebakan) —
+19 model yang generasinya TUNGGAL (Daihatsu Espass, Ford Fusion, Hyundai
+Grand i10, Kia Sedona, Lexus LX, Mazda CX9, Mercedes Benz B/CLS/G Class,
+Mitsubishi Eclipse, Nissan Cedric, Peugeot 3008/306, Timor, Toyota 86/Crown,
+VW Fox/Passat/Kombi, Mazda CX30) + Toyota Corolla generasi 1-4 (1966-1983,
+literal Gen N->GN mengikuti pola Gen 9-12 yang sudah ada) + Mini Cooper
+Transparan (dipetakan 3 Pintu->3P/5 Pintu->5P dari teks varian, sama seperti
+formula Mini Cooper yang sudah dipakai di Undercover).
+
+**b) Kode baru, diverifikasi lewat kode yang SUDAH dipakai di export
+Undercover** (MEREK-MODEL universal lintas toko per aturan #1) — BMW Seri 7
+(`BMW-S7`), Hyundai Kona (`HYN-KON`), MG ZS Crossover (`MG-ZC`), Geely EX2
+(`GEL-EX2`), DFSK Glory i-Auto (`DFSK-GI`), Lamborghini Aventador
+(`LAM-AVE`), Mitsubishi L300 (`MTB-LP`) — kode-kode ini dihitung sesi
+2026-09-09 sebelum container reset, dipakai lagi di sini krn datanya masih
+ada di transkrip sesi (bukan ditulis ulang dari ingatan kasar).
+
+**c) Kembar mobil** — Daihatsu Taft GT pakai kode Feroza (`DHT-FRZ`), sama
+preseden yang sudah dipakai di Otonation.
+
+**MASIH genuinely tidak bisa** (96 baris): **Hummer H3** dan **Toyota FJ
+Cruiser** (dari dulu memang tidak ada di master mana pun — Hummer H1 ada,
+H3 tidak), **Lexus RZ** (model sangat baru, belum pernah muncul di toko
+manapun), **Nissan Latio** varian catch-all "Tahun Lain"/"Model Lain" (model
+ini py 2 generasi, aturan #4 melarang menebak generasi mana), **5 baris
+Transparan model multi-generasi tanpa keterangan generasi di variannya**
+(Hyundai Santa Fe, Lexus NX, Lexus RX, Mercedes Benz GLA, Mitsubishi Delica —
+listingnya cuma 1 baris polos, tidak tahu mewakili generasi yang mana), dan
+**1 baris "Custom tambah pengikat velg"** (aksesoris, bukan model mobil).
+
+### 3. 14 baris legacy CVR-OTP — SEMUA berhasil diisi
+
+Ke-14 nya ketemu SIBLING code dalam file OP sendiri (Timor, VW Fox, Mercedes
+CLA/B/CLS/G/GLB Class, Peugeot 306, Ford Fusion, VW Passat, Mitsubishi
+Eclipse, Mazda CX9, Nissan Cedric) — tidak ada yang perlu ditebak.
+
+### BUG BARU ditemukan & diperbaiki saat verifikasi: "Stirp" (transposisi huruf)
+
+Sewaktu mengisi kode baru, 2 baris (Peugeot 306 "Stirp 1 Biru", Nissan
+Cedric "Stirp 3 Biru") jatuh ke kategori R padahal harusnya S — ejaan
+"Stirp" (huruf 'i' dan 'r' tertukar dari "Strip") tidak dikenali daftar kata
+kunci. **Diperbaiki dengan mengubah strategi deteksi** di
+`samakan_sku_smartprotection.segmen_warna()`: dulu berbasis daftar kata kunci
+(gampang jebol tiap ada ejaan baru), sekarang berbasis BUKTI POSITIF — cari
+angka 1/2/3 di segmen pertama teks varian (penanda paling stabil, tidak
+peduli kata "Strip"-nya dieja apa), baru fallback ke kata Epic/Elite/Warrior
+kalau angkanya tak ada; kalau tak ada bukti Strip sama sekali, default ke
+pencocokan warna polos (perilaku lama, tetap lenient thd typo warna spt
+"Biru Binhur"/"Biru Bnehur"). Diverifikasi ulang ke SELURUH 12.375 baris
+R/S ber-SKU valid di OP: 0 kategori salah, 0 regresi.
+
+**How to apply**: pola "cari angka tier (1/2/3) sbg sinyal Strip, bukan kata
+'Strip'-nya sendiri" ini lebih robust dan sebaiknya jadi acuan default utk
+toko lain juga (SP kemungkinan py sisa kasus serupa yg belum ketemu, blm
+diverifikasi ulang).
+
+### File final
+
+`scripts/perbaikan_otoprotection_final.py` -- gabungan SATU PASS dari
+`perbaikan_otoprotection.py` (harga + 7 model reuse-SP + split Avega) dan
+`perbaikan_otoprotection2.py` (legacy + sibling + kode baru), krn ada produk
+TikTok (Toyota Corolla) yang kena KEDUA aturan sekaligus -- kalau diproses
+2 script terpisah lalu digabung file, completeness-pass tiap script bakal
+bikin baris duplikat dgn isi beda. Output: Shopee 619 baris (557 SKU + 62
+harga), TikTok 894 baris (619 SKU + 70 harga + 1.186 sel atribut wajib).
+Diverifikasi: 0 kolom lain berubah, 58/58 produk TikTok lengkap variannya,
+0 duplikat sku_id.
