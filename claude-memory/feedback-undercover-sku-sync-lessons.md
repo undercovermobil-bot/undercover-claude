@@ -317,3 +317,31 @@ pengelompokan dan menyeret baris yang tidak ada hubungannya.
 **Temuan sampingan yang BELUM ditindaklanjuti** (harga beda antar channel,
 bukan bagian permintaan user): Hyundai Getz Shopee Rp322rb vs TikTok/Lazada
 Rp365rb; Chery Omoda 5 Lazada Rp413rb vs channel lain Rp415rb.
+
+### Atribut "Tahun" TikTok: kolom ada saja tidak cukup, NILAI-nya wajib (2026-09-11)
+
+Percobaan kedua (kolom `product_property/100530` ADA tapi kosong, mengikuti
+ekspor) tetap ditolak 314/314 baris dengan pesan yang sama. Jadi TikTok minta
+nilainya terisi, bukan sekadar kolomnya hadir.
+
+**Sifat atributnya** (dibuktikan dari data toko sendiri):
+- Level **PRODUK**, bukan varian. Hyundai Kona punya varian Gen 1 (2017-2020),
+  Gen 1F (2021-2023), Gen 2 (2023-2026) — ketiganya Tahun = `2026`, nama
+  variannya tidak berubah. Di template all_information nilainya diulang di
+  tiap baris varian, sama seperti kolom Nama Produk.
+- **Satu nilai per produk**. Discan ke seluruh ekspor TikTok UA & SP: tidak ada
+  satu pun atribut berisi lebih dari satu nilai (tidak ada koma). Jadi cover
+  yang muat banyak generasi tetap cuma bisa diberi satu nilai.
+- Nilai yang sah cuma 14 (sheet `HiddenAttr` kolom 8): 2014, 2015, 2016, 2018,
+  2019, 2020, 2022, 2023, 2024, 2025, 2026, `1980 – 2000`, `2000 – 2020`,
+  `2020   present`.
+
+**Keputusan user 2026-09-11: pakai `2026`** — mengikuti pola toko sendiri
+(Hyundai Kona & Geely EX2 sudah `2026`). File final
+`PERBAIKAN_SP_TIKTOK_tahun2026.xlsx`: 314 baris, 63 sel harga + 314 sel Tahun,
+0 kolom lain tersentuh, 9/9 produk lengkap variannya.
+
+**How to apply**: untuk produk TikTok yang belum pernah diisi atributnya,
+cek dulu atribut wajib kategori SEBELUM membuat file update — kalau ada yang
+kosong, upload apa pun ke produk itu akan ditolak, termasuk perubahan harga
+yang sama sekali tidak berhubungan dengan atribut tsb.
