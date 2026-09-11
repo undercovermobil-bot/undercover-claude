@@ -345,3 +345,29 @@ nilainya terisi, bukan sekadar kolomnya hadir.
 cek dulu atribut wajib kategori SEBELUM membuat file update — kalau ada yang
 kosong, upload apa pun ke produk itu akan ditolak, termasuk perubahan harga
 yang sama sekali tidak berhubungan dengan atribut tsb.
+
+### TikTok melaporkan atribut wajib SATU per SATU — jangan tambal satu-satu (2026-09-11)
+
+Setelah `100530` (Tahun) diisi, upload ditolak lagi 314/314 baris dengan
+atribut BERIKUTNYA: `ID:102755, nama: Bile` (nilai sah cuma `16:9` dan `4:3`).
+Kalau ditambal satu per satu, tiap putaran = satu upload gagal lagi.
+
+**Cara menemukan SELURUH atribut wajib tanpa coba-coba**: lihat produk di toko
+yang SUDAH patuh — biasanya produk yang dibuat paling baru, karena mereka
+dipaksa mengisi atribut wajib saat dibuat. Di SP:
+
+| Produk | Atribut terisi |
+|---|---|
+| Geely EX2 (terbaru) | `100530=2026`, `102755=16:9` |
+| Hyundai Kona | `100530=2026`, `102755=16:9`, `100107=Tanpa Garansi` |
+
+Geely EX2 cuma punya DUA → itulah himpunan wajibnya; `100107` (Garansi)
+opsional. Jadi isi kedua-duanya sekaligus, bukan menunggu pesan error
+berikutnya.
+
+Border merah "wajib diisi" yang disebut sheet `Instruction` **tidak terbawa**
+di file ekspor (semua sel tanpa style), jadi tidak bisa dipakai untuk
+mendeteksi kolom wajib.
+
+File final: `PERBAIKAN_SP_TIKTOK_v3.xlsx` — 314 baris, 63 sel harga +
+628 sel atribut (2 kolom x 314 baris), 0 kolom lain tersentuh.
