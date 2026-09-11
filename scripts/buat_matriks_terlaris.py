@@ -728,6 +728,24 @@ def map_gen(model, gen_raw, sku, canonical):
 # =====================================================================
 #  PROSES 1 ITEM ORDER
 # =====================================================================
+def _net_qty_value(market, qty_raw, ret_raw, value_raw):
+    """Qty net (terjual - retur) & nilai net proporsional. None kalau net_qty<=0."""
+    if market == "lazada":
+        qty = 1
+    else:
+        qty = to_int(qty_raw) if qty_raw is not None else 1
+        if qty <= 0:
+            qty = 1
+    ret = to_int(ret_raw) if ret_raw is not None else 0
+    net_qty = qty - ret
+    if net_qty <= 0:
+        return None, None
+    value = to_num(value_raw)
+    if ret and qty:
+        value = value * net_qty / qty
+    return net_qty, value
+
+
 def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_raw, sku,
                date_raw, agg, diag, canonical, period, simple_models):
     diag["rows_%s" % market] += 1
@@ -739,6 +757,14 @@ def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_r
     model, tier_name, is_motor = parse_name(product)
     if is_motor:
         diag["rows_motor"] += 1
+        # Motor sengaja di luar cakupan ranking Top 300 (cover MOBIL), tapi
+        # qty/nilainya tetap direkap di sini supaya % kontribusi motor vs
+        # mobil bisa dilihat di sheet Metodologi (dulu cuma jumlah baris,
+        # bukan qty/nilai riil - tidak bisa dipakai hitung persentase).
+        net_qty, value = _net_qty_value(market, qty_raw, ret_raw, value_raw)
+        if net_qty is not None:
+            diag["motor_qty"] += net_qty
+            diag["motor_value"] += value
         return
     if not model:
         diag["skip_no_model"] += 1
@@ -759,20 +785,10 @@ def count_item(market, status_raw, product, variation, qty_raw, ret_raw, value_r
         diag["gen_merged"] += 1
     tipe = tier_w or tier_name or "Reguler"
 
-    if market == "lazada":
-        qty = 1
-    else:
-        qty = to_int(qty_raw) if qty_raw is not None else 1
-        if qty <= 0:
-            qty = 1
-    ret = to_int(ret_raw) if ret_raw is not None else 0
-    net_qty = qty - ret
-    if net_qty <= 0:
+    net_qty, value = _net_qty_value(market, qty_raw, ret_raw, value_raw)
+    if net_qty is None:
         diag["skip_returned"] += 1
         return
-    value = to_num(value_raw)
-    if ret and qty:
-        value = value * net_qty / qty
 
     sku_key = str(sku).strip() if sku else "%s|%s|%s|%s" % (model, tipe, gen, warna)
     rec = agg[(model, tipe, gen, warna)]
@@ -1436,7 +1452,12 @@ def build_output(agg, diag, out_path, root, period_days=None):
         "    Shopee: {:,} | TikTok: {:,} | Lazada: {:,}".format(
             diag.get("rows_shopee", 0), diag.get("rows_tiktok", 0), diag.get("rows_lazada", 0)),
         "- Baris dihitung (mobil, sukses): {:,}".format(diag.get("rows_counted", 0)),
-        "- Baris motor (dilewati): {:,}".format(diag.get("rows_motor", 0)),
+        "- Baris motor (di luar ranking Top {:d}, tidak masuk mobil di atas): {:,} baris, "
+        "{:,} pcs, Rp {:,} ({:.2%} dari total pcs mobil+motor)".format(
+            TOP_N, diag.get("rows_motor", 0), diag.get("motor_qty", 0),
+            round(diag.get("motor_value", 0)),
+            (diag.get("motor_qty", 0) / (grand_qty + diag.get("motor_qty", 0)))
+            if (grand_qty + diag.get("motor_qty", 0)) else 0),
         "- Dilewati krn status batal/refund/belum bayar: {:,}".format(diag.get("skip_status", 0)),
         "- Dilewati krn qty net <= 0 (retur penuh): {:,}".format(diag.get("skip_returned", 0)),
         "- Dilewati krn nama model tidak terbaca: {:,}".format(diag.get("skip_no_model", 0)),
