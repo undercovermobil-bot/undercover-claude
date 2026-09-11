@@ -703,3 +703,9 @@ File: `SKU Gudang Big Seller/impor_sku_gudang_Jaecoo_J5 (2026-09-01).xlsx`, 34 b
 **Wuling Darion, kode order SALAH**: order py SKU `WLG-DAR-SP-T-G1-TRP` (DAR) padahal kode benar di master `WLG-DRN` (DRN) -- kemungkinan typo/salah tempel manual pas linking order, BUKAN soal gudang. Dikirim ulang gudang sisi SP (16 baris, kode DRN yg benar) sbg jaga2 (file 08-20 blm kelihatan ke-apply di snapshot, walau itu bisa jadi krn staleness snapshot juga, lihat catatan infrastruktur di atas) + diinfokan user utk cek ulang kode di listing-nya.
 
 File: `impor_sku_gudang_Chery_Tiggo9 (2026-09-07).xlsx` (34, versi FINAL pasca-koreksi), `impor_sku_gudang_Hyundai_Stargazer_Gen2 (2026-09-07).xlsx` (33), `impor_sku_gudang_Wuling_Darion_SP_resend (2026-09-07).xlsx` (16), `impor_sku_gudang_Audi_Q8 (2026-09-08).xlsx` (34).
+
+## 2026-09-11: Audi A7 gudang import, UA+SP, 2 generasi -- pola 0%-gudang berlanjut
+
+Order gagal (Reguler Biru Benhur Gen 2, `AUD-A7-UA-R-G2-BRU`). Master lengkap 68 kode unik (Gen1 34 + Gen2 34, UA+SP), 0/68 pernah di gudang (snapshot 08-08). Dibangun pakai metode yg sudah diperbaiki (ambil sku+kategori+warna+gen LANGSUNG dari master per baris, bukan template generik -- lihat catatan koreksi Tiggo9 09-07) krn Audi A7 jg py pola SP unik yg gak bisa ditebak. File: `impor_sku_gudang_Audi_A7 (2026-09-11).xlsx`, 68 baris.
+
+**Pola yg makin jelas terbentuk sesi ini**: brand Eropa/mewah (Audi, BYD kelas atas) dan model2 relatif baru/kurang laris tampaknya SERING py gudang kosong sama sekali walau SKU listing-nya sendiri sudah rapi sesuai master -- kemungkinan besar krn gudang Big Seller cuma pernah di-setup utk model2 terlaris (top-215/331, lihat [[project-undercover-sku-sync-status]]), sedangkan model long-tail gak pernah kebagian. Kalau pola ini terus berulang, mungkin worth diusulkan ke user: sweep SEMUA sheet master vs gudang sekali jalan drpd nunggu 1-1 dilaporkan per order gagal.
