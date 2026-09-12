@@ -2109,3 +2109,65 @@ kerja di sesi manapun utk proyek ini, JANGAN asumsikan riwayat lokal
 sudah paling baru — container fresh/sesi baru bisa checkout branch lama
 (`claude/sku-price-tracking-sheets-7ogdnv`, bukan branch konsolidasi)
 DAN ketinggalan commit meski sudah di branch yang benar.
+
+## Eksekusi nyata: harga Transparan ditulis ke listing SP (2026-09-12)
+
+User revisi Toyota Innova -> paksa tingkat Besar (431rb, bukan hasil
+hitung murni dari panjang 4735mm yg jatuh di tingkat Kecil) - lihat
+`PAKSA_BESAR` di `harga_transparan_top100.py`, kalibrasi tingkat Besar
+TETAP dikunci dari 15 anggota asli (>=4795mm), Innova cuma diposisikan
+pakai skala yg sama & terklem ke lantai (431rb) krn panjangnya di bawah
+lantai lama.
+
+User upload listing SP aktual (Shopee 1-2, Lazada, TikTok - file sama
+persis format/kolom dgn sesi2 sebelumnya, 2 file Shopee kena bug XML
+`activePane` yg sama, diperbaiki via `repair_xlsx.py`). Total 1.807 baris
+Transparan ditemukan lintas 228 nama model unik (raw, sebelum alias).
+
+**Script final: `update_harga_transparan_sp.py`** - HANYA tulis kolom
+harga (kolom SKU sama sekali tidak disentuh, sesuai keputusan user
+2026-08-31 "SKU dulu, harga nanti" - SKU-nya sudah dikerjakan sesi lalu).
+Kalibrasi (lo, rentang, n_langkah) kedua tingkat DIKUNCI dari 100 model
+Top-Terlaris (BUKAN dihitung ulang dari seluruh 228 model yg ketemu di
+listing) - preseden sama spt v3: model tambahan diposisikan pakai skala
+yg sama, diklem 0..3000, supaya harga 100 model yg sudah "final" dari
+sesi sebelumnya TIDAK ikut geser cuma krn ada model baru ditemukan.
+
+**Pencocokan 228 model listing -> 291 model `PANJANG_MM`**: 192 model
+(1.555 baris) cocok PERSIS via `norm()`. 21 model lagi (164 baris)
+ketemu via lapisan tambahan yg SEMUANYA divetting manual satu-satu
+(BUKAN prefix-match generik - percobaan pertama pakai prefix-match
+otomatis SALAH mencocokkan "Mazda 3 Hatchback" ke entri "Mazda 3" yg
+ternyata Sedan-only, panjang beda jauh):
+- Typo/mismatch merek yg dikonfirmasi bukan mobil beda: "Honda Fortuner"
+  ->Toyota Fortuner, "Suzuki Agya"->Toyota Agya, "Suzuki Vitara"->Suzuki
+  Grand Vitara, "Toyota 86"->Toyota GR 86, "Honda Civic Hatcback" (typo
+  huruf h hilang)->Honda Civic Hatchback.
+- Sufiks/nama pendek yg body-style-nya SUDAH dicek sama persis via
+  kolom KATEGORI sebelum dialiaskan: Civic/Avega/Mazda3 "...Sedan" ->
+  entri bare (KATEGORI-nya emang Sedan), "...Pickup" varian Carry/L300,
+  dobel-brand Mitsubishi (Kuda/Destinator/Outlander/Xpander Cross - key
+  di PANJANG_MM SENDIRI py "Mitsubishi Mitsubishi X", ikut pola yg sama
+  spt di listing, BUKAN dibersihkan), gabungan '/' (Brio Satya/RS, HR-V/
+  e:N1, APV Arena/Blind Van, Gran Max Minibus/Blind Van, Livina/Grand
+  Livina, Kicks e-POWER, City Hatchback RS).
+- **SENGAJA TIDAK dialiaskan** krn body-style beda tanpa data sendiri:
+  "Mazda 3 Hatchback" (≠ "Mazda 3" yg Sedan-only), "Suzuki Aerio Sedan"
+  (≠ "Suzuki Aerio Hatchback" yg ada datanya), "Daihatsu Gran Max" bare
+  (ambigu Pick Up vs Minibus, cuma 1 baris).
+- **15 model genuinely 0 referensi** (88 baris, dilewati/harga lama
+  dibiarkan): Nissan Cedric(20), Mitsubishi Eclipse(10), Mazda 3
+  Hatchback(9), Peugeot 306(8), Peugeot 3008(6), Suzuki Aerio Sedan(6),
+  Volkswagen Passat(5), Mazda Lantis(4), Mercedes Benz GLB Class(4),
+  Ford Fusion(4), Wuling Darion(3), Hummer H3(3), Hyundai Matrix(3),
+  Volkswagen Fox(2), Daihatsu Gran Max bare(1).
+
+**Hasil**: 1.719 dari 1.807 baris Transparan berhasil diupdate harganya
+lintas 4 file (Shopee1 491, Shopee2 113, Lazada 510, TikTok 605).
+Diverifikasi: row count utuh & 0 diff di luar kolom harga di keempat
+file (dibandingkan thd file sumber asli).
+
+**Scope masih Smartprotection SAJA** - Otoprotection belum diupload
+user di titik ini, perlu diulang metode yang sama begitu file OP
+dikirim (kemungkinan besar coverage model serupa, tapi WAJIB dicek
+ulang - jangan asumsikan sama persis).
