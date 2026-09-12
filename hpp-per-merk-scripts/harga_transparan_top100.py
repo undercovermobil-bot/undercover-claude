@@ -55,6 +55,17 @@ MAX_SPREAD = 3000
 STEP = 1000
 MM_PER_STEP = 100
 
+# Override manual (2026-09-12, revisi user): Toyota Innova (4735mm, di
+# BAWAH ambang 4795mm scr panjang murni) tetap dianggap tingkat Besar -
+# user anggap sekelas Fortuner scr komersial/dealership walau panjang
+# fisiknya sedikit lebih pendek. Kalibrasi tingkat Besar TETAP dikunci
+# dari 15 anggota ASLI (>=AMBANG_MM) - bukan dihitung ulang dgn Innova
+# ikut serta - supaya tidak drift (preseden `harga_baru_sp_op_matriks_v3.py`
+# poin 1: anggota baru yg panjangnya di luar rentang lama dipetakan pakai
+# skala yg sama, DIBATASI 0..MAX_SPREAD). Innova di bawah lantai lama ->
+# posisi terklip ke 0 -> harga lantai (431rb).
+PAKSA_BESAR = {'Toyota Innova'}
+
 
 def kalibrasi_grup(panjang_list):
     unik = sorted(set(panjang_list))
@@ -89,8 +100,8 @@ def main():
     if missing:
         raise SystemExit(f"Model tanpa data PANJANG_MM: {missing}")
 
-    kecil = [n for n in names if PANJANG_MM[n] < AMBANG_MM]
-    besar = [n for n in names if PANJANG_MM[n] >= AMBANG_MM]
+    kecil = [n for n in names if PANJANG_MM[n] < AMBANG_MM and n not in PAKSA_BESAR]
+    besar = [n for n in names if PANJANG_MM[n] >= AMBANG_MM and n not in PAKSA_BESAR]
     kalib_kecil = kalibrasi_grup([PANJANG_MM[n] for n in kecil])
     kalib_besar = kalibrasi_grup([PANJANG_MM[n] for n in besar])
 
@@ -103,9 +114,11 @@ def main():
     hasil = []
     for i, nm in enumerate(names, start=1):
         panjang = PANJANG_MM[nm]
-        if panjang >= AMBANG_MM:
+        if panjang >= AMBANG_MM or nm in PAKSA_BESAR:
             harga = LANTAI_BESAR + posisi(panjang, kalib_besar)
             tingkat = "Besar (se-Fortuner/Pajero ke atas, basis 1 pcs/roll)"
+            if nm in PAKSA_BESAR and panjang < AMBANG_MM:
+                tingkat += " [override manual]"
         else:
             harga = LANTAI_KECIL + posisi(panjang, kalib_kecil)
             tingkat = "Kecil (di bawah Fortuner/Pajero, basis 3 pcs/roll)"
