@@ -2171,3 +2171,57 @@ file (dibandingkan thd file sumber asli).
 user di titik ini, perlu diulang metode yang sama begitu file OP
 dikirim (kemungkinan besar coverage model serupa, tapi WAJIB dicek
 ulang - jangan asumsikan sama persis).
+
+## Lanjutan 2026-09-14: 15 model estimasi, bug atribut TikTok "Tahun", dan file Lazada ternyata tidak lengkap
+
+- **User pilih "estimasi sekarang"** utk 15 model 0-referensi (lihat
+  `estimasi_15_model_transparan.py`) - semua panjang bodi dari
+  pengetahuan otomotif umum (BUKAN dataset tervalidasi), ditandai jelas
+  per model dgn alasan. Semua 15 jatuh di tingkat Kecil (197-199rb).
+  Catatan risiko: Ford Fusion diasumsikan versi Indonesia (hatchback
+  kompak basis Fiesta, BUKAN sedan Amerika - beda total ukurannya kalau
+  keliru asumsi pasar), Volkswagen Passat & Hummer H3 borderline dekat
+  ambang 4795mm.
+- **User tegur: file pertama yg dikirim masih bawa SELURUH katalog**
+  (baris non-Transparan yg tidak berubah ikut kebawa) - lupa terapkan
+  lesson 2026-07-11 (file mass-upload cuma boleh berisi baris yg
+  BENAR2 berubah). Fix: `trim_ke_transparan_saja.py` (pola sama spt
+  `buat_file_reupload_transparan.py` sesi sebelumnya, delete_rows per
+  rentang kontigu).
+- **Bug atribut wajib TikTok "Tahun" (100530) - SAMA PERSIS dgn bug yg
+  sudah ditemukan sesi lain utk Otoprotection**: user upload laporan
+  hasil percobaan upload TikTok, 218/222 produk gagal krn kolom
+  `product_property/100530` kosong (bawaan file sumber, 7020/7466
+  baris kosong SEJAK AWAL - bukan disebabkan perubahan harga sesi ini).
+  TikTok tolak SELURUH produk kalau ADA SATU baris kosong, bukan cuma
+  yg diedit. Fix: `fix_atribut_tahun_tiktok_sp.py`, isi blank dgn
+  **"2026"** (keputusan user yg sudah ada dari sesi lain). 3 baris
+  sisa (Toyota 86 Transparan, error "sku not allow add") BUKAN soal
+  data - kemungkinan status listing tidak aktif di TikTok, minta user
+  cek manual di Seller Center.
+- **PELAJARAN PENTING - file export marketplace bisa TIDAK LENGKAP
+  tanpa ada tanda apa pun**: user screenshot 2 listing LIVE Lazada
+  (Mercedes Benz SLK Class Transparan, Toyota 86 Transparan) yg masih
+  harga lama meski sudah "semua Transparan sudah diupdate" - dicek ke
+  file Lazada yg diberikan user SAMA SEKALI TIDAK ADA baris utk kedua
+  produk itu (bukan gagal cocok/gagal alias - barisnya genuinely tidak
+  ada). User re-export & upload ulang file Lazada (8580 baris, naik
+  dari 8544) - kedua produk MUNCUL di export baru, langsung berhasil
+  diproses (198rb keduanya, sudah ada di dataset PANJANG_MM sbg
+  'Mercedes Benz SLK Class' & 'Toyota GR 86'). **How to apply**: kalau
+  user tunjuk produk spesifik yg "belum keupdate" padahal seharusnya
+  ketemu di klasifikasi kita, JANGAN asumsikan itu bug matching/alias -
+  cek DULU apakah baris produk itu ada sama sekali di file sumber yg
+  dipegang. File export bisa senyap kehilangan produk (tidak ada
+  pesan error/warning apa pun) antara 1 waktu export ke waktu
+  berikutnya.
+- **Efek samping penting**: rerun `update_harga_transparan_sp.py` (utk
+  proses Lazada baru) MEREGENERASI ULANG SEMUA 4 FILE dari source
+  mentah masing2 (sp_src/1-2.xlsx, lazada_src.xlsx, tiktok_src.xlsx) -
+  ini MENIMPA BALIK hasil trim/estimasi/fix-atribut yg sudah dikerjakan
+  sblmnya utk Shopee 1-2 & TikTok (yg source-nya sendiri tidak berubah)
+  krn script base itu tidak tahu-menahu soal langkah post-processing
+  lanjutan. WAJIB jalankan ULANG ke-3 langkah post-processing
+  (`trim_ke_transparan_saja.py` -> `estimasi_15_model_transparan.py` ->
+  `fix_atribut_tahun_tiktok_sp.py`) SETIAP kali salah satu source
+  file diganti/diupload ulang, bukan cuma utk file yg berubah.
