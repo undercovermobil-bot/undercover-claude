@@ -66,6 +66,7 @@ ALIAS_MANUAL = {
     'nissan kicks': 'Nissan Kicks e-POWER',
     'mitsubishi l300': 'Mitsubishi L300 Pickup',
     'hyundai avega sedan': 'Hyundai Avega',                 # 'Hyundai Avega' = Sedan
+    'mercedes slk class': 'Mercedes Benz SLK Class',        # "Benz" hilang di nama listing OP
     # SENGAJA TIDAK dialiaskan (body-style beda, ada entri sendiri kalau
     # dipaksa disamakan bisa salah tingkat/harga): 'Mazda 3 Hatchback'
     # (beda dari 'Mazda 3'=Sedan, 4660mm vs Hatchback tak ada datanya),

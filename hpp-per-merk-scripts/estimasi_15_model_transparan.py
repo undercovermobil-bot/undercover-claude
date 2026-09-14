@@ -37,6 +37,7 @@ TOP100_SRC = "Copy_of_DATA_UC_HPP_Top_100_Terlaris.xlsx"
 # Estimasi panjang bodi (mm) - PENGETAHUAN OTOMOTIF UMUM, BUKAN dari
 # dataset PANJANG_MM tervalidasi. Ditandai sbg estimasi ke user.
 ESTIMASI_MM = {
+    'Mitsubishi Outlander Sport': (4350, "crossover kompak TERPISAH dari 'Mitsubishi Mitsubishi Outlander' reguler (4695mm) - basis platform ASX/RVR, jauh lebih kecil dari Outlander biasa, ketemu saat proses Otoprotection 2026-09-14"),
     'Nissan Cedric': (4720, 'sedan JDM besar (Y31-Y33), mirip kelas Toyota Crown tapi umumnya sedikit lebih pendek'),
     'Mitsubishi Eclipse': (4460, 'sports coupe 2-pintu kompak'),
     'Peugeot 306': (4200, 'hatchback/sedan kompak 90an'),
