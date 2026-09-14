@@ -2225,3 +2225,49 @@ ulang - jangan asumsikan sama persis).
   (`trim_ke_transparan_saja.py` -> `estimasi_15_model_transparan.py` ->
   `fix_atribut_tahun_tiktok_sp.py`) SETIAP kali salah satu source
   file diganti/diupload ulang, bukan cuma utk file yg berubah.
+- **TikTok laporkan atribut wajib SATU PER SATU, bukan sekaligus** -
+  terkonfirmasi lagi persis spt Otoprotection: setelah "Tahun"
+  (100530) diisi, upload gagal lagi 632 baris dgn atribut BERIKUTNYA
+  "Bile" (102755, nilai benar = **"16:9"**, sudah established dari
+  sesi lain). Fix: `fix_atribut_bile_tiktok_sp.py`, sekalian isi
+  preventif "Garansi" (100107="Tanpa Garansi") supaya tidak kena ronde
+  gagal ke-3 (kadang wajib kadang tidak per produk, aman diisi krn
+  cocok utk semua cover mobil). Kolom lain (100335, 100556-100579,
+  100701) SENGAJA tidak disentuh - 100% kosong tanpa 1 pun contoh
+  nilai terisi & tema tidak relevan (alat suspensi/ukur/perkakas
+  tangan) - kemungkinan kolom template kategori lain, isi tebakan
+  salah lebih berisiko drpd dibiarkan kosong & belum pernah
+  dilaporkan wajib.
+
+## Eksekusi Otoprotection (OP) - 2026-09-14
+
+Lanjutan langsung dari SP, metode & kalibrasi 100% SAMA (diimpor dari
+modul SP, bukan disalin - `update_harga_transparan_op.py`). OP: 4 file
+(Shopee 1-2, TikTok 1-2) - **OP TIDAK jualan di Lazada**.
+
+928 baris Transparan ditemukan, 227 model unik (raw). **100% resolved,
+0 model tidak ketemu** (jauh lebih baik dari SP yg 15 model gagal) -
+krn SP sudah membangun coverage besar (213 model + 15 estimasi) yg
+ternyata mayoritas overlap dgn katalog OP. Cuma 2 model BENAR2 baru
+ditemukan:
+- **"Mercedes SLK Class"** (listing OP hilang kata "Benz") -> alias ke
+  "Mercedes Benz SLK Class" yg sudah ada di PANJANG_MM.
+- **"Mitsubishi Outlander Sport"** (8 baris) - model TERPISAH dari
+  Outlander reguler (platform ASX/RVR, jauh lebih kecil dari Outlander
+  biasa 4695mm) - ditambahkan sbg estimasi baru (4350mm, kecil tier),
+  BUKAN dialiaskan ke Outlander biasa (sama prinsip spt Mazda 3
+  Hatchback vs Sedan - jangan samakan model bersufiks beda tanpa cek).
+
+**Catatan penting - template TikTok OP kali ini TIDAK py kolom
+product_property sama sekali** (cuma 11 kolom: product_id s/d
+seller_sku, TIDAK ada Tahun/Bile/Garansi) - BEDA dari template SP (43
+kolom). Belum bisa preventif isi atribut spt SP krn kolomnya tidak
+ada. Kemungkinan: user download versi template lebih ringkas, ATAU
+kategori TikTok OP genuinely beda konfigurasi atribut dari SP. Kalau
+user lapor gagal upload dgn "atribut wajib" lagi, kemungkinan perlu
+minta user re-download template "All_Information" yg lebih lengkap
+(py kolom product_property), bukan bisa ditambal dari file yg ada.
+
+File final: `SHOPEE_OTOPROTECTION_1.xlsx` (422 baris), `_2.xlsx` (45
+baris), `TIKTOK_OTOPROTECTION_1.xlsx` (1 baris), `_2.xlsx` (460
+baris) - semua sudah dipotong Transparan-saja.
