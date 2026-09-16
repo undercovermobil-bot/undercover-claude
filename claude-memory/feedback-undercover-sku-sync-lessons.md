@@ -373,3 +373,51 @@ File final: `PERBAIKAN_SP_TIKTOK_v3.xlsx` — 314 baris, 63 sel harga +
 628 sel atribut (2 kolom x 314 baris), 0 kolom lain tersentuh.
 
 - **(2026-09-14) TikTok bulk-edit template mencocokkan kolom BERDASARKAN POSISI, BUKAN teks header - menaruh kolom baru di posisi "kosong terdekat" dgn header teks yg benar TETAP GAGAL DIAM-DIAM (tidak error saat upload, tapi nilainya tidak pernah terbaca sbg atribut yg dimaksud).** Kejadian: file template TikTok Otoprotection yg diberikan user cuma 11 kolom (tidak py kolom `parcel_weight`/`product_property/*` sama sekali - beda dari template Smartprotection yg py 43 kolom lengkap). Ditambahkan 4 kolom atribut (Garansi/Model/Tahun/Bile) mulai kolom 12 dgn header teks yg PERSIS benar ("product_property/100530" dst) - upload GAGAL LAGI dgn hasil aneh: (a) atribut "Tahun" TETAP dilaporkan hilang, TIDAK berkurang sama sekali dari sebelumnya, (b) muncul error BARU "Berat produk tidak boleh nol" di puluhan baris yg SEBELUMNYA tidak pernah bermasalah. Ternyata kolom 12-15 itu POSISI ASLI utk `minimum_order_quantity`/`parcel_weight`/`parcel_length`/`parcel_width` (bukan slot kosong) - nilai "2026" (dimaksud utk Tahun) malah ketimpa/dibaca sbg `parcel_length`, dan nilai "Model" (teks non-angka) ketiban ke `parcel_weight` yg wajib berupa angka >0, menyebabkan validasi berat gagal. Ketauan lewat laporan hasil gagal upload TikTok berikutnya, yg py STRUKTUR KOLOM LENGKAP (47 kolom + err_info) sbg rujukan POSISI PERSIS mana kolom seharusnya berada. **How to apply**: (1) kalau template TikTok yg dipegang py LEBIH SEDIKIT kolom drpd yg genuinely dibutuhkan kategori itu (dicek dari laporan gagal upload yg biasanya py struktur lebih lengkap, ATAU dari template toko lain kategori sama yg sudah py struktur penuh), JANGAN asal tambah kolom baru di ujung/slot kosong dgn header teks yg benar - itu TIDAK CUKUP, posisi kolomnya jg harus PERSIS sama dgn urutan resmi TikTok; (2) kalau ragu urutan resminya, cek laporan hasil upload gagal (biasanya lebih lengkap strukturnya drpd template awal) ATAU file kerja toko lain kategori sama yg SUDAH py struktur lengkap (mis. Smartprotection py 43 kolom lengkap, jadi Otoprotection kategori sama seharusnya identik urutannya sampai titik yg sama); (3) verifikasi SETELAH isi kolom baru dgn cross-check ke laporan gagal upload SEBELUMNYA (kalau atribut yg SAMA masih dilaporkan hilang persis dgn jumlah baris SAMA persis kayak sebelum diperbaiki, itu tanda kuat kolomnya salah posisi, bukan "belum keupload").
+
+## File upload WAJIB dibangun dari file asli e-commerce (user menolak 2x: 2026-08-03 & 2026-08-07)
+
+**Jangan pernah** membuat file upload dengan `openpyxl.Workbook()` kosong lalu menyalin header seadanya. User menolak ini dua kali dengan kata-kata hampir sama: *"sama formatnya dibuat persis seperti upload ke shopee, termasuk layoutnya"* (08-03) dan *"formatnya tidak sesuai, samakan persis seperti upload ke masing masing ecommerce"* (08-07).
+
+**Pola yang benar** (dipakai di `ua_build_shopee_v3.py`): buka file ASLI hasil download → snapshot baris yang mau dipertahankan (nilai + style lengkap semua kolom) → `ws.delete_rows()` sekali → tulis ulang dari baris awal data → simpan. Semua sheet, kolom, header tersembunyi, dan freeze pane ikut terbawa otomatis.
+
+**Yang hilang kalau bikin workbook baru** (kasus nyata Shopee 08-07): nama sheet jadi `Sheet` bukan `Sheet1`; kolom cuma 6 dari **15** (Harga & GTIN hilang — padahal Harga bertanda "Wajib"); `freeze_panes` A5 hilang; baris 4-6 (label "Wajib" + teks instruksi) jadi kosong.
+
+**Struktur asli tiap channel** (verifikasi ulang tiap sesi, bisa berubah):
+| Channel | Sheet | Jml sheet | Kolom | Baris data mulai | Freeze |
+|---|---|---|---|---|---|
+| Shopee | `Sheet1` | 1 | 15 | 7 | A5 |
+| TikTok | `Template` | 8 | 44 | 6 | A6 |
+| Lazada | `template` | 4 | 15 | 5 | A5 |
+
+**Data validation**: TikTok WAJIB dikosongkan (`ws.data_validations.dataValidation = []`) — 182.732 aturan per-baris jadi basi setelah `delete_rows` dan bikin Excel minta "repair". Lazada JANGAN dikosongkan — cuma 6 aturan dan cakupannya se-kolom (`M5:M32768`), aman disalin balik pakai `copy(dv)`. Validasi Lazada kolom M bahkan menegakkan keunikan Seller SKU (`COUNTIF(M:M,M5)=1`), berguna sbg cek mandiri.
+
+**Selalu verifikasi hasil lawan file asli** sebelum lapor selesai: bandingkan `sheetnames`, header baris 1, `max_column`, `freeze_panes`, dan parse semua part XML. Kalau salah satu beda, formatnya belum sama.
+
+## TikTok: file upload WAJIB memuat SELURUH SKU tiap produk terdampak (bukan cuma baris berubah)
+
+Terbukti 2026-08-07. Upload TikTok berisi 645 baris yang berubah saja → **614 baris gagal, semuanya error `sku not allow delete`, di 117 produk**. Yang berhasil cuma 3 produk — tepat 3 produk yang kebetulan SELURUH SKU-nya ikut terkirim.
+
+**Sebabnya**: batch-edit TikTok memperlakukan daftar baris yang diunggah sebagai **daftar SKU lengkap** produk itu. SKU yang tidak ikut dikirim dianggap permintaan hapus, dan TikTok menolaknya.
+
+**Aturannya**: kalau satu SKU dari produk X perlu diubah, **semua SKU produk X harus ikut** di file. Untuk UA 08-07: 645 SKU berubah tersebar di 120 produk → file final 2.545 baris.
+
+**Beda per channel** (jangan disamaratakan):
+| Channel | Boleh kirim baris berubah saja? |
+|---|---|
+| Shopee (`sales_info`) | **Ya** — update per Kode Variasi |
+| TikTok (batch edit) | **TIDAK** — wajib lengkap per `product_id` |
+| Lazada (price/stock) | Ya — baris yang tidak dikirim tidak disentuh |
+
+Cara verifikasi sebelum kirim: bandingkan himpunan `sku_id` per `product_id` di file upload vs file sumber; harus identik untuk setiap produk. Kalau ada yang kurang, pasti kena `sku not allow delete`.
+
+**Catatan**: permintaan user "isinya produk yg memang perlu perubahan aja" tetap terpenuhi — yang difilter adalah **produk**-nya (120 dari ~1.900 produk), bukan barisnya. Jangan tafsirkan sebagai filter per-baris untuk TikTok.
+
+## Shopee 2-file source: JANGAN hardcode "baris ini dari file 1/file 2" — boundary split geser antar export (2026-08-22)
+
+Kasus: OT Shopee py 2 file source (`1.xlsx`+`2.xlsx`, total >9000 baris, Shopee otomatis pecah export jadi beberapa file kalau katalog besar). Builder yg nyatet `src` (file asal) per baris SAAT SWEEP AWAL, lalu pas rebuild cuma scan file yg tercatat di `src` itu → **17 dari 45 baris target hilang tanpa error/warning** krn di export BARU (user re-export stlh update harga), 17 baris itu geser posisi dr `2.xlsx` ke `1.xlsx` (Shopee split boundary bukan berdasarkan produk/SKU yg stabil, tampaknya cuma potong per-N-baris row-count, jadi geser tiap kali jumlah/urutan baris total berubah).
+
+**Gejala**: jumlah baris hasil build < jumlah baris di fixes.json, TANPA pesan error apapun (loop `if vid not in ov: continue` diam2 skip, gak pernah tau ada yg "harusnya ketemu tp kagak").
+
+**Aturan baru**: kalau source Shopee py >1 file DAN sedang REBUILD pakai file yg mungkin sudah di-re-export user (bukan file yg sama persis dgn saat sweep pertama) — JANGAN filter scan ke `paths = [p for p in SRC if p in by_src]` (pola lama, ngandelin atribusi `src` historis). Sebagai gantinya: flatten semua fix jadi 1 dict `{vid: target}` (gak peduli asalnya file mana), lalu **scan SEMUA file source tanpa kecuali**, cocokkan by vid apa adanya di file manapun ketemu. Di akhir, cek `set(target_vids) - set(found_vids)` dan **print WARNING eksplisit** kalau ada yg tetap gak ketemu (jangan diam2 skip) — supaya gap kayak gini ketauan sebelum file terkirim, bukan sesudah user upload & baru sadar sebagian produk gak ke-update.
+
+Pola generic ini berlaku bukan cuma Shopee OT — cek ulang tiap kali rebuild file yg sumbernya multi-file DAN sumbernya kemungkinan sudah di-refresh/re-export sejak fixes.json pertama kali dibuat.
