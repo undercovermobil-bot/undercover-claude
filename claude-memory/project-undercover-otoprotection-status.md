@@ -61,3 +61,318 @@ How to apply: sebelum lanjut OP, baca file ini dulu supaya tidak perlu re-discov
 **Belum dikerjakan**: TikTok OP file 2 (kosong, tidak perlu), Lazada OP (belum disentuh sama sekali sesi ini).
 
 How to apply (update): scan_op_full.py di scratchpad (tidak persisten) adalah versi terbaru — arsitekturnya: alias substring-replace dgn guard anti-dobel (skip replace kalau target ekspansi sudah ada di teks), `collapse_gen()` (buang tahun/parentheses, lowercase, buang non-alfanumerik, "facelift"→"f") sbg pencocokan generasi utama, baru fallback ke deteksi "^Gen\s*\d" mentah + numeric-fallback (slice & first-last-digit) kalau collapse gagal.
+
+## 2026-09-11 — Ada yang perlu diupdate: SKU + harga (SKU 530 baris, harga 132 baris)
+
+User upload 4 file terbaru (Shopee 1&2, TikTok 1&2 — TikTok 2 tetap placeholder
+kosong seperti dulu). Audit murni internal (tanpa file target harga eksternal —
+lihat catatan container-reset di bawah) menemukan pola yang HAMPIR IDENTIK
+dengan yang baru dibereskan di Smartprotection, karena OP & SP berbagi segmen
+toko "SP" dan sumber matriks harga yang sama.
+
+**Diperbaiki** (script baru `scripts/perbaikan_otoprotection.py`, gabung SKU+
+harga jadi satu file per channel — Shopee 334 baris/272 SKU/62 harga, TikTok
+362 baris/258 SKU/70 harga/656 sel atribut TikTok):
+
+1. **7 model isi-SKU-kosong pakai kode yang SUDAH dipastikan di SP** (tidak
+   ditebak baru): BYD Seal, Chery Omoda 5, Feroza Long, Ford Ranger, Hyundai
+   Getz, Mazda CX-7, Suzuki APV Luxury — reuse `samakan_sku_smartprotection
+   .kode_untuk()`/`segmen_warna()` apa adanya, sah karena kode MEREK-MODEL
+   universal lintas toko, cuma segmen toko yang beda (SP sama-sama).
+2. **Hyundai Avega Hatchback dipisah dari Avega Sedan** (`HYN-AVG`→`HYN-AVH`)
+   — persis kasus SP, listing-nya memang sudah terpisah by nama di OP juga,
+   harga masing-masing SUDAH konsisten sendiri (325rb/368rb vs 370rb/413rb),
+   jadi cuma soal kode, tidak perlu keputusan harga baru.
+3. **DHT-GMX (Luxio+Gran Max Minibus) → 371rb/414rb** dan **TYT-AVZ (Avanza+
+   Xenia+Veloz) → 370rb/413rb** — keputusan user 2026-09-10 di SP diterapkan
+   sama persis di OP (data sumbernya satu matriks).
+4. **3 model nyasar-harga karena duplikat/typo, disamakan ke harga mayoritas**:
+   - **Toyota Altis** meniru kode `TYT-CRL` Gen 9 milik "Toyota Corolla" tapi
+     harganya masih lama (285rb/325rb) sementara listing "Corolla" sendiri
+     sudah 372rb/415rb — 30 baris. **Baru ditemukan di sesi ini** (bukan
+     alias lama yg dikira sudah beres — listing "Altis" py NAMA sendiri jadi
+     lolos dari pencocokan berbasis kata "Corolla").
+   - **Nissan Latio**: 2 baris warna Orange (Shopee) kepasang harga Strip
+     (321rb) padahal harusnya Reguler (291rb).
+   - **Mazda 3 Sedan**: 1 baris "Biru **Binhur**" (typo dari "Benhur", TikTok)
+     masih 290rb sendirian di antara 5 baris lain 372rb.
+5. **Toyota Corona**: Strip Shopee 414rb vs TikTok 343rb (beda channel murni,
+   50/50 makanya tidak bisa pakai modus) — ditetapkan eksplisit 371rb/414rb.
+6. Atribut TikTok wajib (`Tahun=2026`, `102755=16:9`) diisi di SEMUA baris
+   produk yang disentuh — 0 dari baris target yang sebelumnya terisi, jadi
+   wajib sama seperti kasus SP 2026-09-11, kalau tidak upload ditolak.
+
+**SENGAJA TIDAK disentuh** (dilaporkan di `OP_SISA_TEMUAN.xlsx`, bukan
+ditebak):
+- **DHT-FRZ** (Feroza 370rb/413rb vs Daihatsu Rocky 324rb/367rb) — sama
+  seperti SP, masih menunggu keputusan user.
+- **730 baris SKU kosong / 59 listing** yang kodenya BELUM ada presedennya di
+  SP: BMW Seri 7 (195), Ford Ranger *(sudah, lihat #1)*, Toyota Corolla
+  Gen 1-4 tahun 1966-1983 (60, generasi di luar cakupan master yg cuma py
+  Gen 9-12), Hyundai Kona (90), MG ZS Crossover (60), Mini Cooper (20),
+  Geely EX2 (30), DFSK Glory i-Auto (15), Lamborghini Aventador (15),
+  Mitsubishi L300 (15), dst.
+- **14 baris SKU legacy kode toko "OTP"** (`CVR####-OTP-*`) — mayoritas
+  listing Transparan model yg SAMA SEKALI belum py target harga (Timor, VW
+  Fox, 5x Mercedes Benz *-Class, Peugeot 306, Ford Fusion, VW Passat,
+  Mitsubishi Eclipse, Mazda CX9) + 2 baris Strip (Peugeot 306, model Nissan).
+- **12 model masih skema harga lama** (selisih Strip-Reguler 30rb/40rb/60rb,
+  bukan 43rb) — SAMA PERSIS 11 model yg ditemukan di SP (Ford Fusion, Hyundai
+  Matrix, Mercedes GLB, Mitsubishi Eclipse, Nissan Cedric, Nissan Latio,
+  Peugeot 3008, Peugeot 306, VW Fox, VW Passat, Wuling Darion) **+1 model baru
+  yg tidak muncul di SP: Mazda Lantis (`MZD-LAN`)**. Catatan: entri lama di
+  `project-undercover-smartprotection-status.md` yg menyebut "Mitsubishi
+  Lantis" kemungkinan salah merek — mobil "Lantis" itu Mazda (323/Familia
+  JDM), bukan Mitsubishi; belum dikoreksi di file itu, cek ulang kalau
+  relevan.
+
+### Verifikasi
+
+Shopee: 0 perbedaan di luar kolom SKU+harga. TikTok: 0 perbedaan di luar
+kolom SKU+harga+2 atribut, 25/25 produk lengkap variannya. Kode legacy
+CVR-OTP dan model yg sengaja dilewati dicek TIDAK ikut kesenggol.
+
+### Catatan: kategori SKU (R/S) vs teks varian — SEMPAT false-positive
+
+Percobaan awal cross-check kategori SKU vs teks varian (pola yg berhasil
+nemu bug nyata di SP) sempat melaporkan "51 baris salah kategori" di OP —
+**ternyata SEMUA false positive**. Regex pertama cuma kenal pola "Strip N
+Warna", padahal OP JUGA pakai kosakata Epic/Elite/Warrior (sama seperti SP)
+di sebagian listing (VW Komando, Mazda CX-30, Chery Omoda 5, Toyota Corona)
+— plus typo "Srip"/"Srtip"/"Stirp"/"Elit"/"Warior". Update memory lama poin
+#3 ("OP SUDAH langsung pakai format 'Strip N Warna', SAMA PERSIS dgn master")
+**TIDAK sepenuhnya akurat lagi** — kemungkinan sudah berubah sejak listing OP
+terakhir diaudit (2026-07-15) atau memang selalu campuran. Setelah kosakata
+Epic/Elite/Warrior (+ typo) dimasukkan, 0 baris kategori benar-benar salah
+ditemukan — SKU R/S di OP genuinely bersih.
+
+### PENTING: container sesi ini sempat reset, riwayat kerja lain ditemukan
+
+Sebelum audit ini, repo lokal container ternyata checkout ke commit lama yg
+BUKAN hasil kerja sesi ini (branch sama `claude/repo-memory-access-4hthja`
+tapi history beda sejak 2026-08-03) — isinya 18 commit "gudang import" utk
+banyak model (Audi A7, Tiggo 9, Hyundai Verna, dst) yg TIDAK PERNAH ter-push
+ke origin. Dicadangkan ke branch baru `backup-local-gudang-import-0911` di
+GitHub SEBELUM local branch disamakan ulang ke origin (`git reset --hard`).
+**Kalau nanti nemu pekerjaan yg "hilang" (skrip/model yg pernah dibuat tapi
+tidak ada di riwayat sesi ini), cek branch itu dulu sebelum menyimpulkan
+hilang permanen.**
+
+Efek samping: file `HPP_STP_OTP.xlsx` (target harga SP+OP gabungan, dipakai
+sesi 2026-09-08) ikut hilang dari upload session krn reset ini — audit harga
+OP kali ini MURNI dari konsistensi internal (Strip=Reguler+43rb, modus
+antar-baris/channel), bukan dicocokkan ke target resmi. Kalau file itu
+diupload ulang, cek lagi 12 model skema-lama & 59 listing tanpa kode
+terhadap Pcs/Roll di situ.
+
+## 2026-09-11 (lanjutan) — DHT-FRZ dijelaskan, 59 listing & 14 legacy diisi
+
+User tanya tiga hal soal laporan `OP_SISA_TEMUAN.xlsx`. Hasilnya: file
+`PERBAIKAN_OTOPROTECTION_{SHOPEE,TIKTOK}.xlsx` sebelumnya **digantikan**
+versi baru (619 baris Shopee, 894 baris TikTok) yang sudah termasuk semuanya
+jadi satu upload.
+
+### 1. DHT-FRZ — bukan bug, tapi konflik harga yang belum diputuskan
+
+Daihatsu Feroza dan Daihatsu Rocky (generasi lama, chassis F70/F300) itu
+**mobil kembar** — satu cover fisik, satu kode SKU (`DHT-FRZ`). Tapi di
+listing, dua-duanya dijual dengan harga BEDA: Feroza Rp370rb/413rb, Rocky
+Rp324rb/367rb. Sama seperti kasus Calya/Sigra di Undercover dulu — satu
+barang, dua harga, dan sistem tidak bisa menebak mana yang benar. Perlu
+kamu tentukan salah satu (atau angka baru) supaya konsisten.
+
+### 2. 59 listing (730 baris) SKU kosong — SEBAGIAN BESAR SUDAH BISA
+
+Ditelusuri satu per satu, bukan ditebak:
+
+**a) Cocok ke SIBLING dalam file OP itu sendiri** (paling aman, 0 tebakan) —
+19 model yang generasinya TUNGGAL (Daihatsu Espass, Ford Fusion, Hyundai
+Grand i10, Kia Sedona, Lexus LX, Mazda CX9, Mercedes Benz B/CLS/G Class,
+Mitsubishi Eclipse, Nissan Cedric, Peugeot 3008/306, Timor, Toyota 86/Crown,
+VW Fox/Passat/Kombi, Mazda CX30) + Toyota Corolla generasi 1-4 (1966-1983,
+literal Gen N->GN mengikuti pola Gen 9-12 yang sudah ada) + Mini Cooper
+Transparan (dipetakan 3 Pintu->3P/5 Pintu->5P dari teks varian, sama seperti
+formula Mini Cooper yang sudah dipakai di Undercover).
+
+**b) Kode baru, diverifikasi lewat kode yang SUDAH dipakai di export
+Undercover** (MEREK-MODEL universal lintas toko per aturan #1) — BMW Seri 7
+(`BMW-S7`), Hyundai Kona (`HYN-KON`), MG ZS Crossover (`MG-ZC`), Geely EX2
+(`GEL-EX2`), DFSK Glory i-Auto (`DFSK-GI`), Lamborghini Aventador
+(`LAM-AVE`), Mitsubishi L300 (`MTB-LP`) — kode-kode ini dihitung sesi
+2026-09-09 sebelum container reset, dipakai lagi di sini krn datanya masih
+ada di transkrip sesi (bukan ditulis ulang dari ingatan kasar).
+
+**c) Kembar mobil** — Daihatsu Taft GT pakai kode Feroza (`DHT-FRZ`), sama
+preseden yang sudah dipakai di Otonation.
+
+**MASIH genuinely tidak bisa** (96 baris): **Hummer H3** dan **Toyota FJ
+Cruiser** (dari dulu memang tidak ada di master mana pun — Hummer H1 ada,
+H3 tidak), **Lexus RZ** (model sangat baru, belum pernah muncul di toko
+manapun), **Nissan Latio** varian catch-all "Tahun Lain"/"Model Lain" (model
+ini py 2 generasi, aturan #4 melarang menebak generasi mana), **5 baris
+Transparan model multi-generasi tanpa keterangan generasi di variannya**
+(Hyundai Santa Fe, Lexus NX, Lexus RX, Mercedes Benz GLA, Mitsubishi Delica —
+listingnya cuma 1 baris polos, tidak tahu mewakili generasi yang mana), dan
+**1 baris "Custom tambah pengikat velg"** (aksesoris, bukan model mobil).
+
+### 3. 14 baris legacy CVR-OTP — SEMUA berhasil diisi
+
+Ke-14 nya ketemu SIBLING code dalam file OP sendiri (Timor, VW Fox, Mercedes
+CLA/B/CLS/G/GLB Class, Peugeot 306, Ford Fusion, VW Passat, Mitsubishi
+Eclipse, Mazda CX9, Nissan Cedric) — tidak ada yang perlu ditebak.
+
+### BUG BARU ditemukan & diperbaiki saat verifikasi: "Stirp" (transposisi huruf)
+
+Sewaktu mengisi kode baru, 2 baris (Peugeot 306 "Stirp 1 Biru", Nissan
+Cedric "Stirp 3 Biru") jatuh ke kategori R padahal harusnya S — ejaan
+"Stirp" (huruf 'i' dan 'r' tertukar dari "Strip") tidak dikenali daftar kata
+kunci. **Diperbaiki dengan mengubah strategi deteksi** di
+`samakan_sku_smartprotection.segmen_warna()`: dulu berbasis daftar kata kunci
+(gampang jebol tiap ada ejaan baru), sekarang berbasis BUKTI POSITIF — cari
+angka 1/2/3 di segmen pertama teks varian (penanda paling stabil, tidak
+peduli kata "Strip"-nya dieja apa), baru fallback ke kata Epic/Elite/Warrior
+kalau angkanya tak ada; kalau tak ada bukti Strip sama sekali, default ke
+pencocokan warna polos (perilaku lama, tetap lenient thd typo warna spt
+"Biru Binhur"/"Biru Bnehur"). Diverifikasi ulang ke SELURUH 12.375 baris
+R/S ber-SKU valid di OP: 0 kategori salah, 0 regresi.
+
+**How to apply**: pola "cari angka tier (1/2/3) sbg sinyal Strip, bukan kata
+'Strip'-nya sendiri" ini lebih robust dan sebaiknya jadi acuan default utk
+toko lain juga (SP kemungkinan py sisa kasus serupa yg belum ketemu, blm
+diverifikasi ulang).
+
+### File final
+
+`scripts/perbaikan_otoprotection_final.py` -- gabungan SATU PASS dari
+`perbaikan_otoprotection.py` (harga + 7 model reuse-SP + split Avega) dan
+`perbaikan_otoprotection2.py` (legacy + sibling + kode baru), krn ada produk
+TikTok (Toyota Corolla) yang kena KEDUA aturan sekaligus -- kalau diproses
+2 script terpisah lalu digabung file, completeness-pass tiap script bakal
+bikin baris duplikat dgn isi beda. Output: Shopee 619 baris (557 SKU + 62
+harga), TikTok 894 baris (619 SKU + 70 harga + 1.186 sel atribut wajib).
+Diverifikasi: 0 kolom lain berubah, 58/58 produk TikTok lengkap variannya,
+0 duplikat sku_id.
+
+## Lanjutan 2026-09-11: pisah Rocky lawas dari kode Feroza (DHT-FRZ)
+
+User klarifikasi soal isu DHT-FRZ (Feroza 370rb/413rb vs Rocky lawas
+324rb/367rb tabrakan satu kode) yang sempat dilaporkan "belum diputuskan":
+**"Yang feroza kan emang harganya tergantung dari kode SKU nya, jadi kalo
+yg feroza sama dengan yg kode skunya feroza juga, taft ya kalo tidak
+salah, kalo varian yg rocky samakan dengan sku yg rocky juga."** Dibaca
+sebagai prinsip: harga mengikuti kode SKU, jadi kalau harga BEDA maka
+kodenya HARUS dipisah, bukan dipaksa satu.
+
+Cek data mentah 3 file sumber (`Shopee_1.xlsx`, `TT_1.xlsx`) — listing
+"Daihatsu Rocky" ternyata berisi DUA chassis beda dlm SATU produk,
+dibedakan lewat teks varian (bukan nama listing):
+- **Rocky lawas** (teks varian selalu memuat `F70/F300` atau `F79/F300` +
+  rentang tahun **1984-2002**) -- SALAH pakai kode `DHT-FRZ-SP-*-G1-*`
+  (nyasar ikut Feroza), harga 324rb (R) / 367rb (S) / 168rb (T).
+- **Rocky modern A200** (teks varian `Gen 2 : 2019-2026`) -- SUDAH BENAR
+  pakai `TYT-RZE-SP-*-G1-*` (kembar Toyota Raize), harga 324rb/367rb --
+  kebetulan sama persis dgn Rocky lawas tapi kode SUDAH benar, **tidak
+  disentuh sama sekali**.
+- **Daihatsu Taft GT** (chassis F70, teks varian **1985-1995**, beda
+  rentang tahun dari Rocky lawas) -- SKU kosong semua tapi harganya di
+  data SUDAH 370rb/413rb/188rb (sama persis Feroza) -- tidak perlu ubah
+  harga, cuma perlu diisi kode `DHT-FRZ` (sudah ditangani rule lama,
+  `KODE_BARU['daihatsu taft gt']`).
+
+**Keputusan**: Rocky lawas dipisah ke kode BARU `DHT-RCK` (dicek tidak
+tabrakan dgn kode manapun di 4 file OP), harga TETAP punya Rocky sendiri
+(324rb/367rb/168rb, TIDAK ikut turun ke harga Feroza). Taft GT tetap
+`DHT-FRZ` (memang sudah cocok harganya). Rocky modern tetap `TYT-RZE`.
+Ini KOREKSI thd rule #8 lama (2026-08-20) yang dulu menetapkan Rocky
+lawas+Taft GT sama-sama ikut `DHT-FRZ` untuk toko UA -- koreksi ini
+**KHUSUS toko Otoprotection**, tidak otomatis berlaku ke UA (lihat catatan
+di `project-undercover-sku-sync-rules.md` aturan #8). Alasan tidak
+menyamakan ke UA: selisih harga OP (46rb) jauh lebih besar & konsisten di
+semua warna drpd kasus UA dulu (4rb, waktu itu diduga salah input).
+
+Implementasi: 1 baris logika baru (ATURAN 3) di
+`perbaikan_otoprotection_final.py`, deteksi via `'rocky' in nama` DAN
+`lama.startswith('DHT-FRZ-')` DAN `'1984-2002' in teks_varian` -- sangat
+sempit, tidak menyentuh Feroza/Taft-GT/Rocky-modern. Dijalankan ulang dari
+4 file sumber asli (bukan tempel ke file yg sudah jadi) supaya satu pass
+utuh. Hasil: 16 baris Shopee + 16 baris TikTok berubah kode (harga tetap
+sama, tidak berubah), + 16 baris pelengkap TikTok (sibling Rocky-modern
+yg ikut kebawa krn kelengkapan produk, tidak diubah). Diverifikasi lewat
+diff penuh terhadap file yang sudah dikirim sebelumnya: 0 baris lain
+berubah/hilang di luar Rocky, kedua produk TikTok Rocky (listing biasa +
+listing Transparan) lengkap variannya, 0 duplikat sku_id, atribut TikTok
+wajib (100530/102755) terisi di semua baris yang disentuh. File final:
+Shopee 635 baris (573 SKU + 62 harga), TikTok 926 baris (635 SKU + 70
+harga + baris pelengkap) -- menggantikan file yang dikirim sebelumnya
+(619/894 baris), belum diupload user jadi langsung dikirim versi gabungan.
+
+## Lanjutan 2026-09-11 (2): bug atribut TikTok "terisi di semua baris yg
+## disentuh" TERNYATA SALAH -- upload 92 baris gagal semua
+
+User upload file hasil (`..._all_information_result_1.xlsx`) dari percobaan
+upload file TikTok di atas -- **92/92 baris gagal**, 2 pesan error beda:
+
+1. **90 baris: "atribut produk is missing ... ID:100530, nama: Tahun"**
+   (8 produk: Chery Omoda 5, Nissan Cedric, Mazda 3 Sedan, Peugeot 306,
+   Toyota Corona, Mazda CX30, + 2 Mercedes Transparan). Akar masalah:
+   klaim di catatan sebelumnya ("terisi di semua baris yg disentuh") itu
+   sendiri yang salah arah -- kode lama cuma isi atribut di baris yang
+   SKU/harganya berubah, TIDAK di baris "pelengkap" (sibling varian lain
+   dlm produk yang sama yang dibawa serta demi kelengkapan tapi nilainya
+   sendiri tidak diubah). TikTok menolak SELURUH produk kalau ADA SATU
+   baris saja yang atributnya kosong -- bukan cuma baris yang diedit.
+   Reproduksi: cek manual thd file yang dikirim, ketemu 8 produk dengan
+   sebagian baris `100530='2026'` dan sebagian `None` dalam SATU
+   product_id yang sama.
+   **Fix**: `perbaikan_otoprotection_final.py` — tambah `hitung_atribut()`
+   + fase baru sesudah baris utama diproses: cari semua product_id yang
+   tersentuh, lalu utk SETIAP baris produk itu yang atributnya masih
+   kosong (termasuk yang tidak diedit sama sekali), isi juga. Efeknya di
+   run ini: 221 baris "pelengkap" yang tadinya lewat tanpa isi atribut,
+   sekarang semua terisi (counter baru "atribut baris sibling").
+2. **2 baris (Mercedes Benz B Class & CLS Class, keduanya listing
+   Transparan): "atribut ... ID:100177, nama: Model"** -- atribut BEDA,
+   khusus muncul stlh 2 atribut pertama lolos. Dicari lewat metode yang
+   sama spt biasa (produk lain yang SUDAH lolos di kategori/brand yang
+   sama): Mercedes Benz A Class/C Class/GLE Class (tidak tersentuh,
+   sudah lama live) semuanya punya `product_property/100177` terisi
+   dengan pola **"<Kode> Class"** -- persis teks setelah "Mercedes Benz "
+   di nama produk. Kesimpulan: atribut "Model" ini kemungkinan wajib utk
+   SEMUA listing ber-brand Mercedes-Benz (bukan cuma Transparan), tapi
+   baru "ketahuan" pas listingnya benar-benar di-resubmit (pola yang sama
+   dgn Tahun/102755 dulu -- TikTok laporkan atribut wajib satu per satu,
+   bukan sekaligus). **Fix**: tambah deteksi `RE_MERCEDES_MODEL =
+   re.compile(r'mercedes\s*benz\s+(.+)$')`, isi otomatis dari nama produk
+   kalau brand Mercedes-Benz & kolom `product_property/100177` masih
+   kosong. Sekalian isi Mercedes Benz **G Class** (3 produk Mercedes yg
+   tersentuh fix ini: B Class, CLS Class, G Class) walau G Class belum
+   sempat gagal di batch ini -- supaya tidak kena ronde gagal ke-3.
+
+Diverifikasi ulang stlh fix: 0 produk TikTok lagi yang "campuran" (sebagian
+baris atribut kosong dlm 1 produk), Model terisi benar utk ke-3 produk
+Mercedes ('B Class'/'CLS Class'/'G Class'), 0 baris SKU/harga berubah
+dibanding versi sebelum fix (murni tambahan pengisian atribut), 60/60
+produk TikTok yang tersentuh lengkap variannya vs sumber asli. File final
+(menggantikan lagi): Shopee 635 baris (tidak berubah dari sebelumnya --
+Shopee tidak pakai mekanisme atribut wajib ini), TikTok 926 baris (sama
+jumlah baris, tapi sekarang 100% baris di tiap produk yang tersentuh punya
+atribut wajib terisi).
+
+**Catatan/risiko utk sesi lain**: script perbaikan SP (`gabung_perbaikan_sp.py`)
+TIDAK punya logika pengisian atribut TikTok sama sekali di kode tersimpan
+(`grep -rn "100530\|ATRIBUT" scripts/*.py` cuma nemu di file
+otoprotection). Versi SP TikTok yang sempat dikirim sebelumnya (v3,
+"Tahun+102755 filled") kemungkinan dikerjakan lewat skrip sekali-pakai yang
+tidak tersimpan -- **belum bisa dipastikan** apakah versi itu kena bug
+"campuran" yang sama (isi cuma di baris yang diedit, bukan semua baris
+produk). Kalau SP TikTok belum/gagal diupload, kemungkinan besar akar
+masalahnya sama seperti OP di atas -- cek dulu pola "campuran" ini sebelum
+menebak sebab lain.
+
+**How to apply (pola umum utk semua toko)**: kalau template TikTok
+`all_information` dipakai dan sebuah produk minimal 1 barisnya disentuh,
+WAJIB isi ulang/verifikasi atribut wajib produk itu di SEMUA baris varian
+produk tsb (bukan cuma baris yang benar-benar berubah SKU/harga) sebelum
+file dikirim ke user -- kelengkapan varian (baris pelengkap) dan
+kelengkapan atribut wajib adalah DUA hal terpisah yang harus dua-duanya
+dipenuhi, bukan cuma salah satu.

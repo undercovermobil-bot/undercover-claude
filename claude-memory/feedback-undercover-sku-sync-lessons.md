@@ -52,7 +52,327 @@ metadata:
 
 - **(2026-07-17) Warna bentuk pendek vs bentuk panjang bisa beda antara listing & master utk SEBAGIAN model, TAPI JANGAN blind-expand tanpa cek tabrakan dulu.** "Biru" (listing, singkat) vs "Biru Benhur" (master, sebagian model) dan "Hijau" vs "Hijau Army" — kalau expand semua "Biru"→"Biru Benhur" tanpa cek, berisiko salah utk model yg justru py KEDUA bentuk sbg warna BERBEDA yg valid (dicek eksplisit ke seluruh master: ternyata 0 model py kasus begini, jadi expand fallback aman dilakukan). How to apply: sebelum bikin alias/ekspansi warna bentuk-pendek→panjang scr global, WAJIB scan dulu apakah ada (model,kategori) yg py KEDUA bentuk sbg entri berbeda di master — kalau ada, itu tanda ekspansi blind akan salah, harus per-model bukan global.
 
+- **(2026-07-18) SKU yg "kelihatan aneh" (kode generasi panjang/tidak lazim kayak `GB20072016`) belum tentu bug sync — bisa jadi VALID tapi master-nya sendiri py skema generasi GANDA/tumpang-tindih.** Ketemu di Volkswagen Tiguan Smartprotection: SKU `VLK-TIG-SP-S-GB20072016-S2B` ADA di master (`rev[sku]` sukses resolve), bukan salah-cocok — cuma master py 2 skema paralel utk model yg sama: `Gen 1`/`Gen 2` (bersih) VS `Gen Baru (2007-2016)`/`Gen Baru (2016-2024)` (bucket kasar berbasis tahun). Meluas ke 27 model Smartprotection (862 baris), TIDAK ada di toko/channel lain. **How to apply**: sebelum menyimpulkan SKU aneh itu "salah", cek dulu apakah SKU itu genuinely ada di `rev` (reverse lookup master) — kalau ADA, itu bukan bug matching, tapi kemungkinan gejala skema-ganda di master. Cek `master_gens_by_model*.json` utk model itu: kalau ada >1 label generasi yg overlap rentang tahun sama, itu tandanya.
+- **(2026-07-18) Cara aman remap dari skema generasi "berantakan" (bucket tahun kasar) ke skema "bersih" — JANGAN tebak tahun, tarik dari file master 69-sheet asli.** File `master_lookup_*.json`/`master_gens_by_model*.json` (hasil ekstraksi scratchpad) TIDAK menyimpan rentang tahun per generasi bersih (cuma nama label `Gen N`), tapi file master ASLI (`MASTER_from_drive_20260715.xlsx`, kolom "Rentang Tahun") PUNYA. Metode: (1) EXACT match rentang tahun dulu (menangkap kode chassis kayak "W201"=1982-1993 yg persis sama dgn bucket "Gen Baru (1982-1993)"), (2) fallback ke generasi PALING AWAL yg overlap rentang bucket (konsisten dgn aturan lama "kode generasi terendah utk label gabungan", preseden Nissan X-Trail). **Verifikasi wajib sebelum apply**: cek collision (2 bucket beda dlm 1 listing jangan sampai dituju ke SKU sama), dan cek apakah target-nya BENERAN kepakai di listing nyata (kasus Jeep Wrangler Rubicon: master py skema duplikat juga tapi 0 baris listing yg pakai — ternyata listing "Jeep Wrangler" di-resolve ke model master TERPISAH "Jeep Wrangler" [SKU prefix beda: JEP-WRA vs JEP-WR utk "Jeep Wrangler Rubicon"], jadi entri Gen-Baru Rubicon itu basi/tidak terpakai, aman diabaikan tanpa fix).
+- **(2026-07-18) "Generasi tujuan sudah benar ketemu" TIDAK menjamin target SKU-nya ADA — cek `fwd.get()` sebelum lapor "beres".** Saat remap 862 baris skema-Tiguan-like, 490 dari 551 baris sisa (yg generasinya berhasil di-tentukan) ternyata TETAP tidak bisa di-apply krn `fwd[(model,kat,gen_baru,warna)]` mengembalikan `None` — master genuinely tidak py kode SKU utk kombinasi itu (pola sistemik: kategori Strip cuma lengkap di Gen 1, generasi lain kosong total). Ini BEDA dari kasus "generasi tidak ketemu" (61 baris, spt Opel Blazer) — di sini generasinya udah benar, cuma SKU utk kombinasi kategori/warna spesifik itu belum pernah dibuat di master. Investigasi bug skema-generasi bisa membongkar gap SKU yg jauh lebih besar & terpisah dari pertanyaan awal — laporkan sbg temuan baru terpisah, jangan campur sbg "belum kelar"-nya fix skema generasi.
+
+- **(2026-07-18) Lazada WAJIB Seller SKU unik per varian — Shopee/TikTok boleh kembar. Ini membatasi apa yg bisa diisi saat master py gap.** Kasus Jeep Wrangler: master SP Strip cuma py 'Gen 1' (tanpa chassis), jadi varian Strip 2 bucket-tahun berbeda dua-duanya menuju SKU Gen 1 yg SAMA. Di Shopee/TikTok itu OK (SKU varian boleh kembar), tapi di Lazada SKU kembar antar-varian = GAGAL UPLOAD (lihat catatan lama kolom "Seller SKU" Lazada: "tidak dapat digandakan dalam bentuk keseluruhan"). How to apply: sebelum mengisi SKU ke file Lazada, cek apakah target-nya akan kembar dgn varian lain dalam listing yg sama — kalau ya (biasanya karena gap master bikin banyak varian kolaps ke 1 SKU), JANGAN isi di Lazada (biarkan placeholder auto-id yg sudah unik), cukup isi di Shopee/TikTok. Flag sbg butuh SKU master baru.
+
+- **(2026-07-18) Model dgn kode chassis (Jeep YJ/TJ/JK/JL, Mercedes W201/W202) sering py DUA model master mirip (mis. "Jeep Wrangler" JEP-WRA vs "Jeep Wrangler Rubicon" JEP-WR) dgn coverage kategori/generasi yg BEDA & tidak konsisten antar-toko.** Listing "...Rubicon" bisa ke-map ke model non-Rubicon (JEP-WRA) di satu toko & ke Rubicon (JEP-WR) di toko lain, tergantung kelengkapan master toko itu (mis. Rubicon SP cuma py Strip → listing yg py warna Reguler terpaksa jatuh ke Wrangler). Bukti kanonik: cek Bigseller/screenshot user (SP Rubicon → JEP-WRA). How to apply: (1) saat listing pakai kode chassis di teks varian tapi SKU-nya `-G1-`/kosong, itu tanda classifier gagal cocokkan chassis — perbaiki dgn parse chassis eksplisit lalu lookup (model,kat,chassis,warna). (2) Cek coverage master PER TOKO PER KATEGORI dulu (`master xlsx` kolom Generasi) — chassis mungkin ada di Reguler tapi tidak di Strip (SP/OP), atau ada di UA/OT tapi tidak SP/OP. (3) Warna Strip beda format antar-toko: UA/OT = "Epic/Elite/Warrior", SP/OP = "Strip 1/2/3" — mapping Epic→Strip1/Elite→Strip2/Warrior→Strip3. (4) Ganti-prefix-model (JEP-WR↔JEP-WRA) utk banyak baris = keputusan bisnis, konfirmasi user dulu (apakah cover Rubicon = Wrangler biasa).
+
+- **(2026-07-18) Parser teks varian harus tahan BANYAK format pemisah tahun antar toko/channel.** Jeep chassis muncul sbg "YJ : 1986-1996" (SP Shopee, titik dua), "YJ (1986-1996)" (UA/OT/TikTok, kurung), "Abu-abu, YJ : ..." (spasi ekstra), atau cuma bucket tahun "2006-2017" tanpa kode chassis (Lazada). Regex strip harus buang BAIK " : ..." MAUPUN " (...)". Kalau parser cuma handle 1 format, baris toko lain diam-diam ke-skip "no target" padahal sebenernya bisa/perlu diperbaiki — mudah keliru simpulkan "toko itu sudah beres".
+
+- **(2026-07-28) Laporan angka dari script yang punya flag `--apply` TIDAK BOLEH dipakai sbg bukti file sudah berubah — angkanya identik antara DRY-RUN dan APPLY.** Kejadian: `jalankan_semua_baru.py` mencetak "diubah 33.554 / baris motor 3.227 siap 3.227 / dibuat_unik" persis sama di kedua mode, karena penghitung statistiknya di luar blok `if apply:`. Semua run pada 19 file export baru ternyata berakhir DRY-RUN (baris "mode:" cuma dicetak di AKHIR output, ke-skip saat baca sekilas), jadi 19 file yang sudah terlanjur dikirim ke user sbg "siap upload" isinya masih data mentah — bukan cuma motor yang tidak tertulis, TIDAK SATU PUN dari 3 tahap tertulis. Yang membuat ini lolos berlapis: (a) cek keutuhan `BARU_BASE` vs `BARU_FIX` melaporkan "0/19 masalah" dan itu dibaca sbg "integritas aman", padahal justru BUKTI tidak ada yang berubah; (b) sempat disimpulkan "bug di `step_motor()`" padahal fungsinya benar. How to apply: (1) cetak mode di AWAL run, bukan cuma di akhir; (2) statistik "diubah" harus dihitung dari penulisan yang benar-benar terjadi, atau diberi label eksplisit "(rencana)" saat dry-run; (3) verifikasi WAJIB dengan membandingkan isi sel file hasil vs salinan pristine pra-run (simpan `BARU_PRISTINE/` sebelum apply) — bukan dengan membaca ulang laporan script; (4) kalau pembanding melaporkan "tidak ada beda", pertanyaan pertama adalah "apakah proses menulis benar-benar jalan?", bukan "berarti aman".
+
+- **(2026-07-28) `master_lookup_*.json` adalah CACHE, wajib dibangun ulang setiap master berubah.** Lookup hasil ekstraksi 14 Juli masih memetakan ke segmen generasi PRA-formula (5.180 baris G1), sementara master terkini sudah berskema formula (42.319 baris G1). Kalau cache basi ini dipakai `resolve_sku()` untuk mengisi SKU yang kosong, hasil isiannya bertentangan dgn baris yang sudah diperbaiki skema formula — dan bentrokannya tidak akan kelihatan karena dua-duanya "format 6 segmen yang valid". How to apply: sebelum memakai `resolver_sync.resolve_sku()`, jalankan `rebuild_lookup.py` dulu; bandingkan distribusi segmen generasi lookup vs master sbg cek cepat kesegaran (kalau proporsi G1-nya jauh beda, cache-nya basi).
+
+- **(2026-08-13) Regex parser SKU yang menolak karakter di luar whitelist-nya BUKAN error yang ke-flag — baris itu diam-diam dilewati tanpa "gagal" ATAUPUN "diubah".** Konteks: script konsolidasi SKU lintas-marketplace (Xenia/Sigra/Terios/dst → Avanza/Calya/Rush/dst) punya `RE_SKU` yang cuma izinkan `[A-Za-z0-9$]` di segmen warna. Sebagian listing (khususnya Lazada) punya akhiran disambiguator `_G1`/`_G2` di SKU (dipakai krn skema Xenia G1/G2 sama-sama berkode "G1", jadi warna yg sama akan tabrakan Seller SKU kalau tanpa suffix — lihat entri Lazada-unique-SKU 2026-07-18). SKU ber-underscore ini gagal match regex → `transform_sku()` return `(None, None)` → baris dilewati TANPA masuk daftar gagal (beda dari kegagalan Rocky yg eksplisit lapor error). Akibatnya laporan "0 gagal" terlihat bersih padahal 85 dari 221 baris Lazada belum tersentuh — ketahuan dari spot-check user (screenshot listing Xenia: sebagian varian Gen2 masih prefix lama). Shopee & TikTok kebetulan 0 baris ber-underscore di produk ini, jadi bug sama sekali tidak muncul di kedua channel itu — false-negative per-channel. How to apply: kalau regex parser SKU dipakai utk transform massal, JANGAN percaya angka "0 gagal" sbg bukti lengkap — no-match diam-diam (return None tanpa masuk log gagal) itu MODE KEGAGALAN TERPISAH dari "gagal eksplisit". Cek dulu apakah ada SKU di file sumber yg tidak match regex sama sekali (`RE_SKU.match(sku) is None` utk semua baris kandidat), bukan cuma andalkan counter "diubah"+"gagal".
+
+- **(2026-08-13) Nomor kolom "teks varian" beda antar SHEET TikTok tergantung MAKSUD kolom (`sku_id` vs `variation_value`), gampang salah ambil krn keduanya sama-sama berdampingan & sama-sama terlihat "kolom identifier".** Template TikTok "All Information": kolom E(5)=`sku_id` (angka internal panjang, tidak berarti apa-apa scr manusiawi) vs kolom F(6)=`variation_value` (teks label varian yg dibaca manusia, mis. "Abu-abu, F70/F300 (1984-2002)"). Script sempat baca kolom E utk fungsi yg butuh teks varian (routing Rocky→Feroza/Raize berdasar era F70/F300 vs A200/Gen2) — karena kolom E isinya angka murni, keyword pencarian era ("f70","a200","gen 2",dst) tidak pernah match apa pun, 34/34 baris Rocky di file itu gagal ke-deteksi (masuk daftar "gagal" eksplisit, BUKAN silent-skip spt entri di atas — beda mode kegagalan). How to apply: sebelum pakai index kolom "hardcoded" utk teks varian di template baru/berbeda, WAJIB cetak header row (row 1 & row 3, berisi nama field & label Indonesia) dan cocokkan manual — jangan asumsikan index kolom dari channel lain (Shopee/Lazada) otomatis berlaku sama di TikTok atau sebaliknya.
+
+- **(2026-08-13) `ws.delete_rows(idx, 1)` dipanggil satu-per-satu dalam loop itu jebakan performa serius utk sheet besar (>10rb baris) — BUKAN cuma "agak lambat", tapi bisa >1 jam tak selesai.** Tiap panggilan `delete_rows` internal harus geser SEMUA baris di bawah index yg dihapus, jadi loop N-kali-hapus-1-baris = O(n) per panggilan × n panggilan = kuadratik. Kejadian nyata: filter TikTok 22.762-baris jadi 221-baris via loop hapus-per-baris (~22.500 panggilan) — proses jalan 69 menit CPU time tanpa selesai, terpaksa di-kill manual. Fix: padatkan (compact) baris yg MAU DIPERTAHANKAN ke slot teratas dulu secara in-place (copy cell-by-cell, target index selalu <= source index shg aman tidak menimpa baris yg belum kebaca), baru hapus SISA baris kosong di ujung bawah dgn SATU panggilan `delete_rows(start, count)`. Turun jadi ~1.5 menit utk file yg sama. How to apply: kalau mau menyaring sebagian kecil baris dari sheet besar (ribuan+), JANGAN PERNAH loop `delete_rows` per-baris satu-satu — selalu compact-in-place + 1 panggilan delete di akhir, atau alternatifnya tulis ke workbook baru dari nol.
+
+- **(2026-08-20) Audit "pelanggaran Total Formula" WAJIB dikelompokkan per ENTRI FORMULA (Sheet2), bukan per nama baris di master.** Kejadian: dilaporkan ke user "7 model melanggar TF" — setelah diaudit ulang ternyata **0 pelanggaran** dari 192 entri. Penyebabnya satu entri formula sering dipegang beberapa nama baris master: `Daihatsu Xenia` (TF=2) kelihatan "cuma pakai G1" karena kode `G3`-nya ada di baris bernama **`Daihatsu All New Xenia`**; `Nissan Navara` (TF=2) = `Nissan Navara` (G1) + `Nissan Navara PRO-4X` (G4); `Honda Civic` (TF=11) tersebar di `Honda Civic` + `Honda Civic Sedan` + `Honda Civic Sedan / RS` = pas 11; `Toyota Corolla` (TF=9) + `Corolla Altis` + `Corolla Cross` = 6 kode. Ini pengulangan jebakan yang sudah pernah menghasilkan "85 pelanggaran palsu". How to apply: bangun peta nama-master→entri-Sheet2 dengan **longest-match** (supaya "Toyota Corolla Cross" tidak salah ambil entri "Toyota Corolla" kalau entri sendiri ada) plus normalisasi awalan "All New"/"New", kumpulkan kode generasi dari SEMUA nama baris yang menunjuk entri yang sama, baru bandingkan ke TF. Jangan pernah lapor angka pelanggaran sebelum langkah pengelompokan ini.
+
+- **(2026-08-20) Satu prefix SKU bisa dipakai DUA mobil yang sama sekali berbeda kalau namanya kebetulan didaur ulang pabrikan.** `DHT-RCK-*-G1-*` di master dipakai bareng oleh Daihatsu Rocky F70/F300 (1984-2002, SUV kotak, sekelas Feroza/Taft GT) dan Daihatsu Rocky Gen 2 A200 (2021-2026, crossover kembaran Raize) — dua cover yang ukurannya jelas beda, satu SKU. Tidak ketahuan oleh cek "duplikat SKU" biasa karena namanya memang sama persis ("Daihatsu Rocky"), jadi kelihatan seperti kasus TF=1 yang sah. Yang membongkarnya: listing Shopee ternyata sudah membedakan (`F7` vs `G2`) — jadi justru MASTER yang salah menyamakan. How to apply: kalau satu nama model punya dua generasi dengan rentang tahun yang **terputus jauh** (mis. 1984-2002 lalu 2021-2026), curigai nama daur ulang; cek harga listing tiap generasi dan kode generasi yang dipakai listing sebelum menyimpulkan TF=1.
+
+- **(2026-08-20) Harga listing Reguler termurah = alat verifikasi murah untuk klaim "dua mobil ini kembar".** Semua pasangan kembar yang dikonfirmasi user ternyata harganya sama persis (Avanza=Xenia=Veloz 298rb, Agya=Ayla 287rb, Calya=Sigra 293rb, Rush=Terios 302rb, Raize=Rocky baru 292rb, Alphard=Vellfire 317rb, Feroza=Taft GT 288rb), sementara `Daihatsu Feroza Long` 295rb — beda, dan memang bukan anggota grup. How to apply: sebelum menggabungkan SKU dua model, bandingkan harga Reguler termurahnya; beda harga = jangan gabung dulu, tanya user. Sebaliknya kalau user sudah menyatakan kembar tapi harganya beda tipis (Rocky lawas 292rb vs Feroza 288rb), laporkan sebagai kemungkinan salah harga listing — jangan diam-diam digabung tanpa catatan.
+
 Lihat [[project-undercover-sku-sync-rules]] untuk aturan bisnis final yang jadi konteks di balik pelajaran-pelajaran ini.
+
+- **(2026-08-15) File update untuk marketplace itu MENIMPA SEMUA KOLOM yang ada di dalamnya, bukan cuma kolom yang sengaja diubah — dua file update yang dibuat dari basis berbeda akan saling me-revert.** Kejadian: file update HARGA dibangun dari folder `fix/` (export ASLI), padahal kolom SKU di situ masih kode lama (`DHT-XNA-...`). Begitu user upload, Shopee menulis balik kolom SKU tsb dan **konsolidasi SKU yang sudah diterapkan sebelumnya jadi ter-revert** — ketahuan dari screenshot Seller Center user ("kenapa Xenia jadi pakai SKU xenia lagi?"), bukan dari verifikasi sendiri. Kebalikannya juga berlaku dan sama berbahayanya: file konsolidasi SKU dibangun sebelum harga baru ada, jadi kolom harganya masih harga LAMA — meng-upload file itu untuk memperbaiki SKU akan menghapus harga baru. Verifikasi sebelumnya lolos karena cuma mengecek kolom yang jadi fokus tugas (harga benar? ya; SKU benar? ya) tanpa pernah mengecek **kolom lain yang ikut terbawa di file yang sama**. **How to apply**: (1) sebelum mengirim file update marketplace, cek SEMUA kolom bermakna yang ikut di file itu (minimal SKU + harga + stok), bukan hanya kolom yang sedang dikerjakan — bandingkan ke kondisi TERKINI yang diinginkan, bukan ke export asli; (2) kalau ada >1 perubahan yang belum diupload (mis. SKU dan harga), JANGAN buat file terpisah per perubahan — gabung jadi SATU file per toko/channel yang sudah benar di semua kolom, karena urutan upload apa pun akan membuat yang satu menghapus yang lain; (3) basis file update harus kondisi TERBARU yang diinginkan (folder `hasil/`), bukan export asli (`fix/`) — `fix/` hanya dipakai sebagai PEMBANDING untuk menentukan baris mana yang berubah. Script gabungannya: `scripts/gabung_sku_harga.py`.
+
+- **(2026-08-20) "Ini sudah pernah dibahas, cek branch lain" dari user itu sinyal kuat memory sudah pernah dikerjakan di sesi/branch lain — JANGAN simpulkan "tidak ada" hanya dari grep 1 branch.** Kejadian: melaporkan hasil audit "Toyota prefix selalu menang" untuk semua 7 grup mobil kembar (Agya→TYT-AGY, Rocky lawas→DHT-RCK) sebagai KEPUTUSAN FINAL, padahal itu generalisasi SENDIRI dari 1 contoh user ("Rush+Terios jadi TYT-RSH") — tidak pernah ditanyakan eksplisit per grup. User menunjuk ke branch `claude/repo-memory-access-4hthja` yang ternyata sudah punya riwayat kerja NYATA 2026-08-11 (dieksekusi & dikonfirmasi user): Agya justru ikut Ayla (`DHT-AYL` menang) dan Rocky lawas ikut Feroza (`DHT-FRZ`, bukan `DHT-RCK`) — 2 dari 7 grup arahnya kebalik dari asumsi. **How to apply**: (1) kalau menyimpulkan sebuah aturan dari SATU contoh yang dikonfirmasi user lalu men-generalisasi ke kasus lain yang TIDAK eksplisit ditanyakan, tandai jelas sebagai "asumsi, perlu konfirmasi" (bukan sebagai fakta final) — sudah dilakukan sebelumnya di README, tapi itu tidak cukup, harusnya juga dicek ke riwayat kerja lain dulu; (2) kalau user bilang "ini sudah pernah dibahas", JANGAN langsung menyimpulkan "tidak ada catatannya" hanya dari grep di branch yang sedang aktif — tanyakan/cek branch lain (`git branch -a`, `git log --all`) sebelum melapor "tidak ketemu"; user tahu riwayat kerjanya sendiri lebih baik dari grep sepihak.
+
+- **(2026-08-20) Proyek ini ternyata dikerjakan paralel di ≥2 branch git (`claude/sku-price-tracking-sheets-7ogdnv` dan `claude/repo-memory-access-4hthja`) yang TIDAK saling sinkron selama beberapa minggu** — masing-masing punya `claude-memory/` yang berkembang independen (satu py `project-undercover-bigseller-sync.md` & `project-undercover-analisa-penjualan.md` yang lain tidak py, sebaliknya satu py `project-undercover-harga-referensi.md` & riwayat kerja SKU-formula yang lain tidak py). Digabung 2026-08-20 via `git merge` (bukan cherry-pick/copy manual) ke `claude/repo-memory-access-4hthja` atas instruksi eksplisit user ("mulai sekarang pakai branch yg itu saja"), 3 file konflik (semua pola append-vs-append, gampang diresolve dengan mempertahankan KEDUA sisi). Bahkan menemukan 1 kasus fragmentasi separah ini SUDAH pernah terjadi sebelumnya (catatan "(CATATAN MERGE 2026-07-17)" di `project-undercover-sku-sync-status.md` yang merujuk konten yang cuma ada di branch lain) — pola berulang, bukan kejadian sekali. **How to apply**: dari 2026-08-20 seterusnya kerja di `claude/repo-memory-access-4hthja` saja. Kalau nanti user menyebut sesuatu "sudah pernah dibahas" tapi tidak ketemu di memory branch aktif, curigai ada branch/device lain lagi yang belum sinkron — tanya user, jangan asumsikan memori itu tidak pernah ada.
+
+- **(2026-08-27) 2 bug teknis saat bikin file upload marketplace dari campuran beberapa file sumber - keduanya nyaris lolos ke user:** (1) Kolom di luar yang benar-benar kita isi (mis. GTIN/Stok/Min-Maks Pembelian di template Shopee) TERNYATA ada isinya di file sumber (Stok="5" hampir di semua baris, bukan kosong) - kalau baris hasil gabungan berasal dari file BEDA dari file template dasar, kolom itu kebawa nilai milik baris LAIN yang tidak relevan (risiko salah timpa Stok dkk saat upload beneran). **How to apply**: kalau bikin file gabungan dari >1 sumber dengan cara "klon 1 file jadi dasar struktur, timpa baris data" (pola `salin()` yang sudah standar di proyek ini), WAJIB kosongkan eksplisit SEMUA kolom di luar yang benar-benar kita isi - jangan asumsikan kolom lain kosong dari sono cuma karena headernya tidak kita pakai, VERIFIKASI ke SEMUA kolom bukan cuma yang kita edit. (2) `openpyxl_worksheet.cell(row, col, value=None)` itu **NO-OP**, bukan "kosongkan sel" - openpyxl perlakukan `value=None` sbg parameter default/sentinel ("tidak diisi"), bukan instruksi "set jadi None". Percobaan pertama gagal DIAM-DIAM (nilai lama tetap ada, bahkan di in-memory sebelum save, jadi print/debug biasa pun bisa keliru kalau tidak sengaja dicek). **Cara benar**: `cell = ws.cell(row, col); cell.value = None` (assignment atribut langsung). Ketemu 2 bug ini justru karena user minta "cek format sama persis kayak Shopee" - verifikasi awal cuma cek "SKU kosong?"/"Harga kosong?" makanya luput, baru ketauan setelah verifikasi diperluas ke SEMUA kolom di file hasil.
+
+- **(2026-08-27) "Skema generasi kelihatan campur/tidak konsisten" JANGAN langsung disimpulkan "2 sistem valid, butuh master file" - cek dulu apakah itu genuinely bug 1 sistem yang rusak sebagian.** Kasus Hyundai Elantra Smartprotection: awalnya disimpulkan tier Reguler & Strip pakai 2 skema beda (blocked, minta master file). User curiga "ada bug di penulisan" - benar: kode bucket "GB20152020" yang dipakai tier Strip ternyata dipakai utk 3 GENERASI ASLI BERBEDA (1995-2000, 2010-2015, 2016-2020) - mustahil valid utk ketiganya sekaligus, itu tanda bug bukan skema paralel yang sah. **Cara pembeda cepat**: kalau 1 kode "misterius" (bucket/tidak lazim) muncul utk >1 rentang tahun/generasi ASLI yang beda dalam 1 produk yang SAMA, itu HAMPIR PASTI bug data, bukan konvensi kedua. **Jebakan saat memperbaiki**: voting mayoritas kode "benar" per generasi JANGAN dihitung dari SEMUA baris campur (tier Reguler + Strip) - Strip py lebih banyak baris/generasi (9) drpd Reguler (5-6), jadi kode BUCKET YANG SALAH itu malah MENANG VOTING krn jumlah baris lebih banyak, hasilnya kebalik (mau nimpa kode Reguler yang benar jadi ikut kode Strip yang salah). Voting harus dari SUMBER YANG SUDAH TERBUKTI BERSIH saja (di sini: tier Reguler, krn konsisten across generasi kecuali 2 baris "Orange" yang kalah suara wajar). **How to apply**: sebelum simpulkan "butuh file eksternal", cek dulu apakah ada bagian data (tier lain, baris lain, produk sibling) dalam file yang SAMA yang sudah cukup bersih utk jadi rujukan - banyak kasus "skema ganda" itu sebenarnya cukup diselesaikan dari data internal sendiri.
+
+  **KOREKSI (sama hari, beberapa jam kemudian)**: lesson di atas TERBUKTI SALAH ARAH utk kasus ini. User mempertanyakan lagi "kenapa Gen 3 kode SKU-nya -G1-, harusnya -G3-". Ternyata kode Reguler yang tadi saya anggap "sumber bersih" (G1 utk Gen3, G5F utk Gen2) itu SENDIRI SALAH - saya keliru menyamakan "konsisten/berulang" dengan "benar secara resmi". User upload `Data_Mobil_Lebih_dari_1_Formula_3.xlsx` (Sheet2) - Elantra TIDAK ADA di situ, dan aturan fallback dari user: kalau model tidak ada di file formula, **default-nya LITERAL** ("Gen N"->`GN`, "Gen N Facelift"->`GNF`), BUKAN "samakan ke pola yang kelihatan konsisten di data lain". Dihitung ulang: 65 dari 90 baris berubah (lebih banyak dari 47 sebelumnya, krn koreksi menyentuh JUGA baris Reguler yang tadinya dikira benar). **Pelajaran final yang menang**: source of truth SEBENARNYA cuma 2 tingkat - (1) file Total Formula kalau modelnya ada di situ, (2) literal Gen->G<n> kalau tidak ada. **"Konsistensi/voting dari data internal" BUKAN pengganti yang sah utk salah satu dari 2 itu** - itu cuma dipakai kalau MEMANG tidak ada cara sama sekali utk cek ke salah satu sumber di atas (mis. beda TIER dalam 1 produk yang sama, sama-sama tidak py sumber otoritatif) - dan bahkan itu pun berisiko keliru arah kalau sisi yang salah py baris lebih banyak. Jangan ulangi startpoint "asumsikan yang sudah ada di listing itu benar" lagi.
+
+- **(2026-08-29) Matching SKU lintas-platform (Shopee->Lazada->TikTok) JANGAN pakai key mentah dari nama/teks-varian salah satu platform sbg patokan tunggal - typo & format teks beda per platform utk hal yg SAMA persis.** Konteks: propagasi 439 SKU final Shopee SP ke listing Lazada & TikTok. 3 jebakan ketemu: (1) **Typo brand beda ARAH per platform** - Shopee (sumber key lookup) tulis "Mitshubishi Xforce" (typo), Lazada/TikTok tulis BENAR "Mitsubishi Xforce" -> key mentah dari Shopee TIDAK PERNAH ketemu di 2 platform lain (0 match, bukan cuma "kurang lengkap"). Sebaliknya "Mistubishi Grandis" (typo lain) justru KONSISTEN di ketiga platform jadi tidak masalah - jangan asumsikan semua typo berperilaku sama. (2) **Teks tahun beda platform utk generasi yg SAMA** - Honda Civic Hatchback "Gen 10" itu "(2015-2021)" di Shopee/TikTok tapi "2016-2021" di Lazada (beda 1 tahun, generasi & kodenya tetap sama) - key yg include teks tahun literal gagal cocok padahal seharusnya match. (3) **TikTok collapse dimensi tahun jadi 1 baris/warna utk produk TF=1** (Holden, Grandis) - baris TikTok yg "cuma warna tanpa tahun" itu BUKAN data kurang, itu 1 baris yg sengaja nampung banyak generasi asli yg semuanya toh 1 kode sama. **How to apply**: (a) key lookup harus dari NOMOR GENERASI ("Gen N" via regex), BUKAN teks tahun/rentang - teks tahun cuma dipakai sbg disambiguator sekunder utk produk yg tidak py "Gen N" sama sekali (mis. Mini Cooper "3 Pintu" vs "5 Pintu"); (b) normalisasi typo brand yg SUDAH diverifikasi manual (bukan tebakan) diterapkan ke SEMUA platform sebelum jadi key, jangan cuma benerin 1 arah; (c) kalau grup produk+tier+warna cuma py 1 kode SKU unik di data sumber (walau row-nya sendiri py >1 gen/tahun berbeda), pakai kode itu sbg fallback tanpa perlu nomor generasi cocok persis - itu tandanya TF=1 sudah terbukti dari data sumber sendiri, bukan tebakan baru. (d) Utk baris platform lain yg py nomor generasi yg TIDAK ada sama sekali di data sumber (krn baris itu di sumber SUDAH BENAR dari awal, jadi tidak masuk daftar "perlu fix") - kalau produk itu sudah terbukti pakai skema LITERAL murni (cek OTOMATIS: semua kode existing produk itu beneran `G<n>` tanpa kecuali, JANGAN hardcode per-nameplate), generasi yg "hilang" itu aman dihitung ulang langsung pakai rumus yg sama, bukan dibiarkan blank. Verifikasi coverage per grup (bandingkan SET kode yg seharusnya ada vs yg benar-benar ketemu di tiap platform) WAJIB sebelum lapor "selesai" - baru dari situ ketauan produk yg genuinely tidak dijual di 1 platform (valid, bukan bug) vs produk yg matching-nya masih bolong.
+
+- **(2026-08-29) Perbandingan sel-per-sel file xlsx SEBELUM vs SESUDAH edit (`ws.cell(r,c).value` diakses satu-satu dlm loop bersarang) itu bisa jadi SANGAT lambat (menit, bukan detik) utk sheet ribuan baris x banyak kolom - pakai `ws.iter_rows(values_only=True)` jauh lebih cepat utk baca-massal.** Ketemu saat verifikasi file TikTok (6890 baris x 23 kolom): loop `for r: for c: ws.cell(r,c).value` sampai >3 menit CPU blm selesai (harus dipindah ke background), sementara `list(ws.iter_rows(values_only=True))` selesai dlm hitungan detik utk file yg SAMA. **Juga ketemu saat itu**: openpyxl PUNYA artefak serialisasi - sel yg isinya string kosong `''` di file asli sering jadi `None` setelah di-load lalu di-save ULANG, **walau TIDAK ADA sel yang sengaja diubah sama sekali** (dites eksplisit: load->save tanpa edit apa pun menghasilkan puluhan ribu diff `''`->`None` utk file yg py banyak kolom opsional kosong). Kalau verifikasi "bandingkan file sebelum/sesudah" tidak mem-filter pola ini, angka "diff" akan kelihatan MASIF & menakutkan padahal isinya cuma noise kosmetik. **How to apply**: (1) pakai `iter_rows(values_only=True)` (atau `pandas`/`openpyxl` read-only mode) utk baca massal saat verifikasi, bukan akses `.cell()` satu-satu dlm loop besar; (2) saat membandingkan sel lama vs baru, treat `('' , None)` sbg pasangan "sama-sama kosong" (bukan diff), supaya sinyal asli (perubahan konten beneran) tidak tenggelam oleh noise; (3) sebelum curiga script sendiri yg salah tulis kolom lain, cek dulu apakah diff yg sama muncul di roundtrip TANPA edit - kalau iya, itu perilaku openpyxl bawaan, bukan bug dari logika penulisan.
+
+- **(2026-08-29) SKU Otoprotection (OP) pakai token TOKO "SP", BUKAN "OP" - konsolidasi stok fisik OP=SP (rule #1 sku-sync-rules.md, dibake ke master sejak 2026-07-08).** Baru ketahuan konkret saat audit SKU OP: SKU yg SUDAH ADA di listing OP semuanya berformat `MEREK-MODEL-SP-KAT-GEN-WARNA` (bukan `-OP-`) - awalnya kelihatan seperti data nyasar/salah toko, TERNYATA itu memang benar by design. Implikasi besar: SKU yg benar utk OP = SKU SP utk kombinasi produk+tier+warna+generasi yg SAMA, BUKAN diturunkan terpisah dari data OP sendiri. Cross-reference ke data SP yg sudah établished jauh lebih reliable drpd audit OP sendirian (OP py variasi produk lebih sedikit/kurang lengkap, konsisten dgn kata user "otoprotection variannya lebih sedikit"). **How to apply**: kalau ketemu toko lain yg SKU-nya kelihatan pakai token toko BEDA dari nama tokonya sendiri, JANGAN buru2 anggap itu bug - cek dulu tabel konsolidasi toko (`TARGET_STORE` di sku-sync-rules.md: UA=UA, OT=UA, OP=SP, SP=SP) - kalau memang terkonsolidasi, pakai toko HASIL KONSOLIDASI itu sbg sumber kebenaran utama, toko aslinya cuma differencing administratif (listing terpisah, kode SKU sama).
+
+- **(2026-08-29) Preseden "label gabungan pakai kode generasi TERENDAH" (Nissan X-Trail) berlaku UMUM utk kode generasi APAPUN, bukan cuma format G<n>.** Dulu preseden ini diterapkan ke kode literal G<n> saja. Saat generalisasi ke Otoprotection ketemu produk yg kode generasinya kode CHASSIS (Peugeot 306: F2/F3, Hyundai Grand i10: G1F/G2, VW Passat: B5/B8) - fallback "ambil G<n> terkecil" gagal krn kodenya bukan pola `G\d+`. **Fix**: jangan sortir dari ANGKA DI DALAM KODE, sortir dari TAHUN AWAL yg tersimpan di teks varian asli (mis. "1997-1999" vs "1999-2002" -> ambil yg mulai 1997) - kode generasi hasilnya ikut apa pun formatnya (F2, G1F, B5, dst), yg penting realistis kronologis. **How to apply**: fallback "pilih generasi paling awal/rendah utk label gabungan" harus generik thd FORMAT kode (jangan asumsikan semua kode itu `G<n>`) - urutkan dari tahun asli, bukan dari parsing angka di kode.
+
+- **(2026-08-29) Produk yg 100% blank di SEMUA toko (0 data historis di manapun) itu SATU-SATUNYA titik yg BENAR2 butuh keputusan user - jangan ditebak, jangan didiamkan tanpa laporan.** Saat audit OP ketemu 3 pola beda utk kasus "prefix SKU belum pernah ada": (1) Toyota Altis - user tau ini alias Corolla, tinggal konfirmasi generasi mana (jawaban: G9, BUKAN preseden "paling awal" yg biasa dipakai - detail bisnis yg cuma user tau); (2) Nissan Latio/Wuling Alvez/Wuling Darion - genuinely 0 data, user minta dibuatkan prefix baru DAN ternyata 2 dari 3 (Latio, Darion) ada listingnya jg di toko lain (SP) yg jg blank - user yg tau ini krn liat langsung di marketplace, bukan sesuatu yg bisa diketahui dari file yg diupload; (3) beberapa produk lain (Lexus RZ, Toyota FJ Cruiser, Hummer H3, dst, ketemu pas propagasi TikTok) - TIDAK ditanyakan krn di luar scope task yg diminta, dilaporkan sbg gap terbuka bukan ditebak. **How to apply**: kalau nemuin produk 0-data-di-manapun sebanyak >1 (bukan cuma 1 kasus kecil), JANGAN cicil tanya satu-satu atau tebak semua sekaligus - kumpulkan SEMUA kasus dulu (grep nama produk itu di SEMUA file toko yg available, bukan cuma yg sedang dikerjakan), baru satu putaran AskUserQuestion yg mencakup semuanya sekaligus, DAN eksplisit tanya "apakah ada di toko lain jg" krn user seringkali punya info visual (screenshot/marketplace langsung) yg tidak ada di file manapun.
+
+- **(2026-08-29) Bug "kode bucket dipakai utk >1 generasi asli" (pola Elantra yg sudah diperbaiki) BUKAN kasus terisolasi - begitu dicari sistematis (scan semua produk yg tier Strip-nya py kode berawalan "GB"), ketemu 8 PRODUK LAIN dgn bug identik (Chevrolet Trooper, Hyundai Sonata, Jeep Cherokee, Kia Sedona/Carnival, Lexus LX, Lexus RX, Mercedes Benz CLS Class, Mercedes Benz GLA Class, Peugeot 3008) yg TIDAK PERNAH disisir sebelumnya krn investigasi sebelumnya cuma reaktif ke 1 laporan user (Elantra).** Metode cepat cek "aman diperbaiki otomatis atau tidak" per produk: bangun peta `(gen_atau_tahun) -> kode` dari tier REGULER produk itu SENDIRI (paling terpercaya krn sudah live/konsisten) - kalau REGULER-nya sendiri bersih (tidak py kode bucket / tidak py 1 key mendua-kode), aman timpa SEMUA baris Strip yg kode-nya beda dari peta itu (8 dari 9 produk lolos cek ini). Kalau REGULER-nya SENDIRI py bucket/inkonsisten (Lexus LX doang dari 9), JANGAN ikut ditimpa - tidak ada sumber bersih dlm produk itu utk jadi rujukan, harus diinvestigasi terpisah (sama kayak Elantra dulu butuh file Total Formula). **How to apply**: begitu 1 bug kelas tertentu ketemu & pola deteksinya jelas (di sini: substring "GB" di kode generasi), JALANKAN scan yg SAMA ke SELURUH katalog sebelum menganggap kasus selesai - jangan cuma perbaiki produk yg baru dilaporkan lalu berhenti, krn kemungkinan besar bug yg sama ada di tempat lain yg belum pernah "diketuk" oleh user.
+
+- **(2026-08-29) Toko yg konsolidasi SKU-nya ke toko lain (OP->SP) py SALINAN DATA TERPISAH & TIDAK OTOMATIS SINKRON - benerin SKU di toko A TIDAK ikut benerin baris toko B walau kode SKU-nya seharusnya identik.** Elantra sudah diperbaiki 100% di SP (439-row fix) minggu lalu, tapi OP (yg SKU-nya per definisi = SP) py listing Elantra SENDIRI yg TIDAK PERNAH tersentuh fix itu - 42 baris masih pakai kode bucket lama. Ketauan TIDAK SENGAJA saat user minta daftar "produk apa aja yg masih gap di TikTok OP" - Elantra muncul di situ walau "harusnya sudah beres". **How to apply**: kalau toko A dikonsolidasi ke toko B (kode SKU identik by design), JANGAN asumsikan "sudah difix di B" berarti "otomatis benar di A juga" - A py listing FISIK terpisah yg bisa aja belum pernah diaudit/disentuh. Setiap kali toko baru (A) mulai diaudit, WAJIB bandingkan SEMUA baris "yg kelihatan sudah py SKU valid" (bukan cuma yg blank) terhadap kanonis dari toko B - baris yg formatnya valid (6 segmen, toko benar) tapi NILAINYA beda dari kanonis itu jenis kegagalan TERPISAH dari "blank"/"format salah", dan tidak akan ketangkap oleh cek format-shape biasa.
+
+- **(2026-08-29) Di alur multi-tahap dgn banyak fungsi yg SEMUA baca override dari pickle yg sama (mis. `build_sp_master()`, `build_op_candidates()`, `build_sp_sku_overrides()`, `build_op_sku_overrides()`), nemu bug baru yg butuh override TAMBAHAN itu gampang cuma ke-apply ke SEBAGIAN fungsi, bukan SEMUA.** Kejadian: bug bucket-code baru ditemukan, override baru (`bucket_fixes_final.pkl`) ditambahkan ke `build_sp_master()` (utk cross-reference) & `build_op_candidates()` (utk TikTok) - keduanya jalan lancar & keliatan "sudah selesai" - tapi LUPA `build_op_sku_overrides()` (utk file Shopee OP yg sudah/akan dikirim ke user), sehingga file Shopee OP yang dikirim MASIH py kode lama walau versi TikTok & cross-reference internal udah benar. Baru ketauan dari verifikasi manual per-file (grep kode "GB" tersisa), BUKAN otomatis kentara krn tiap fungsi individually jalan tanpa error. **How to apply**: begitu ketemu bug yg butuh sumber override baru dlm alur yg py >1 fungsi pembaca sumber sejenis, bikin daftar SEMUA fungsi yg baca sumber itu DULU (grep nama file pickle/fungsi builder di seluruh script terkait) sebelum mulai nambahin fix, baru tambahkan ke SEMUANYA sekaligus - jangan nambah 1 fungsi, tes, lanjut fungsi lain sambil asumsikan sudah lengkap.
+
+- **(2026-08-31) "Metode borrow dari sibling body-style" (Civic Type R dari Civic Sedan, Mazda 2 Sedan dari Mazda 2 Hatchback) TERBUKTI SALAH begitu produk itu ternyata PUNYA ENTRI TOTAL FORMULA SENDIRI yang belum pernah dicek.** Kejadian: Civic Type R diisi minggu lalu dgn skema literal per-generasi (G6,G7,...,G11) yg di-borrow dari "Honda Civic" (TF=11, per-generasi). Setelah file Total Formula lengkap dibaca ULANG scr terprogram (bukan cuma dicari manual per-nama), ternyata "Honda Civic Type R" py ENTRI SENDIRI terpisah dari "Honda Civic" dgn **TF=1** (SEMUA generasi Gen6-11 jadi 1 kode, G6) - beda TOTAL dari yg di-borrow. Sama polanya utk Mazda 2 Sedan (py entri sendiri, TF=1->G2, bukan G1 hasil borrow dari Mazda 2 Hatchback). **Kenapa borrow dipilih dulu**: saat itu file Total Formula BELUM diupload/dibaca (baru ada kemudian, saat kasus Elantra) - borrow adalah fallback terbaik yg tersedia SAAT ITU, bukan kesalahan proses, tapi begitu sumber lebih otoritatif tersedia WAJIB dicek ulang, bukan dibiarkan krn "sudah pernah diputuskan". **How to apply**: (1) begitu file Total Formula lengkap tersedia, JALANKAN scan ke SEMUA produk yg PERNAH diisi via metode non-TF (borrow-sibling, TF=1-internal-consensus, dsb) - jangan cuma pakai file itu utk kasus baru ke depan, exisiting decisions HARUS diperiksa ulang jg; (2) nama produk yg MIRIP tapi py trim/sub-model beda (Civic vs Civic Type R, Mazda 2 Hatchback vs Sedan) KEMUNGKINAN py entri Total Formula SENDIRI, terpisah dari nama induknya - jangan asumsikan "trim turunan otomatis ikut formula induk" tanpa cek nama exact match dulu di file.
+
+- **(2026-08-31) Parsing "Total Formula" (TF) py 2 pola beda tergantung apakah TF == jumlah baris sub-generasi atau tidak - keliru asumsikan "1 baris = 1 kode" utk SEMUA kasus menghasilkan kode yang salah utk produk dgn TF=1 tapi >1 baris.** Pola (a): TF == jumlah baris (mis. Toyota Corolla TF=9, 9 baris) -> tiap baris grup SENDIRI, kode = generasi TERKECIL di baris itu (baris boleh berisi multi-generasi via koma/range, mis. "Gen 9,10,12"). Pola (b): TF == 1 dgn baris > 1 (mis. Hyundai Excel TF=1, 3 baris "Gen 1"/"Gen 2"/"Gen 3" masing2 baris SENDIRI) -> SEMUA baris (bukan per-baris) gabung jadi SATU grup, kode = generasi TERKECIL dari SELURUH baris digabung. Percobaan pertama pakai asumsi "1 baris = 1 grup" utk SEMUA kasus tanpa terkecuali menghasilkan Hyundai Excel py 3 kode berbeda (G1,G2,G3) padahal harusnya 1 (G1) - ketauan dari cross-check ke keputusan lama yg SUDAH benar (TF=1-internal-consensus). **How to apply**: sebelum bangun peta generasi->kode dari file TF, HITUNG DULU apakah TF == jumlah baris entri itu - kalau ya pola (a), kalau TF==1 dan baris>1 pola (b), kalau TIDAK COCOK KEDUANYA (mis. TF=2 tapi 4 baris) JANGAN dipaksa, itu tanda data filenya sendiri ganjil/perlu dicek manual (kadang filenya sendiri eksplisit nulis TF="?" - itu sinyal jangan dipakai jadi rujukan pasti).
+
+- **(2026-08-31) File export marketplace yg jadi "sumber kebenaran" bisa STALE relatif ke listing LIVE - baris yg TIDAK ADA di export (bukan cuma kosong) tidak bisa diperbaiki lewat edit spreadsheet sama sekali.** User kasih screenshot halaman edit produk Shopee (Toyota Corolla) yg nunjukkin varian Gen1-5 ada di form dgn field qty (Gen1-4 qty=0, Gen5 qty=4, SKU keisi), tapi file export yg dipegang (`sp_sku_fixed/1.xlsx`) CUMA py 90 baris Corolla = Gen7-12 doang - Gen1-6 TIDAK ADA SAMA SEKALI SBG BARIS (bukan baris kosong yg tinggal diisi). Verifikasi: hitung total baris + PID unik utk produk itu di file, bandingkan ke jumlah varian yg semestinya ada (dari formula/screenshot) - kalau baris yg ada JAUH lebih sedikit drpd yg semestinya, itu tanda export basi, bukan "produk itu emang cuma py segitu varian". **How to apply**: Shopee/Lazada/TikTok bulk-edit itu MENARGET baris via Kode Variasi/Variation ID yg SUDAH ADA - tidak bisa "menciptakan" variasi baru dari spreadsheet kosong. Kalau baris yg dibutuhkan tidak ada di file manapun yg dipegang, WAJIB minta export baru dari user (atau minta mereka isi manual di UI) - JANGAN coba "nambah baris baru" sendiri ke file krn tidak akan py Variation ID yg valid utk di-upload.
+
+- **(2026-08-31) `clean_base()` yg tidak preserve suffix TRIM/sub-model (mis. "PRO-4X", "Rubicon", "Commuter") bisa bikin baris trim spesifik ke-mapping ke prefix GENERIK-nya, lewat fallback `unique_sku` di `resolve()`.** Kejadian: user kasih screenshot TikTok Otoprotection Honda City Hatchback (nanya soal prefix "HND-JAZ" - itu ternyata state LAMA sblm upload, sudah benar `HND-CHB` di file yg dikirim) - investigasi lanjut utk cek "kasus serupa" nemu row 725 `UPDATE_SKU_OTOPROTECTION_TIKTOK_2.xlsx`: varian "Hijau, Navara PRO-4X" seharusnya `NSN-NVP-...` (prefix Navara PRO-4X, beda dari Navara biasa `NSN-NVR` - ini pembeda YG DISENGAJA, lihat entri 2026-07-19 soal 19 produk "kode model beda antar toko" di `project-undercover-sku-sync-status.md`) tapi pipeline nulis `NSN-NVR-...` (prefix Navara BIASA, salah) krn `clean_base()` tidak mempertahankan token "PRO-4X" saat membangun nama dasar utk lookup, sehingga baris ini ikut ke-bucket bareng base model "Nissan Navara" biasa & menang lewat fallback `unique_sku`. **Scan pembuktian**: dicek ulang SEMUA baris di 8 file yg dikirim yg py kata kunci trim (`pro-4x/pro4x/rubicon/commuter/facelift`) dibanding SKU sumber asli - HANYA 1 baris ini yg kena, bukan pola sistemik luas (beda dari bug bucket-code yg nyebar ke 9 produk). Diperbaiki via patch langsung ke sel yg sudah terlanjur dikirim (blm masuk ke reusable pipeline code krn scope-nya kecil & terisolasi). **How to apply**: kalau base model py trim/sub-model yg SUDAH established py prefix SKU sendiri (dicek dari SKU yg SUDAH BENAR di baris lain produk yg sama), sebelum percaya hasil `unique_sku`/fallback matching apa pun, WAJIB grep manual "apakah nama variannya sendiri menyebut trim/sub-model" dan verifikasi prefix hasil resolve cocok dgn precedent trim itu, bukan cuma cocok dgn base model generiknya.
+
+- **(2026-08-31) Membersihkan/menyeragamkan format SKU (strip suffix "sampah" spt `_G1`/`_ELIT`/`_MERA`) itu BISA menghasilkan SKU DUPLIKAT lintas-baris utk platform yg wajib SKU unik per varian (Lazada) - suffix yg kelihatan "sampah legacy" itu kadang justru sengaja jadi PEMBEDA supaya baris2 dgn kode kanonis SAMA (produk TF=1 yg beberapa generasi aslinya collapse jadi 1 kode) tetap py string unik.** Ketemu saat regenerasi `UPDATE_SKU_HARGA_SMARTPROTECTION_LAZADA.xlsx`: 137 dari 376 produk (5288 baris) jadi py SKU KEMBAR dlm 1 listing yg sama setelah pipeline nulis ulang kolom SKU pakai kode "bersih" 6-segmen tanpa suffix - padahal file SUMBER (sebelum disentuh) 0 duplikat (suffix macam `_G1`/`_ELIT` yg kelihatan berantakan itu ternyata berfungsi jaga keunikan per baris, meski skema penamaan suffix-nya sendiri tidak konsisten/rapi - kadang berbasis gen, kadang berbasis tier). Root cause: `resolve()` mengembalikan kode kanonis TANPA memperhitungkan apakah kode itu SUDAH DIPAKAI baris lain dlm produk yg sama. **Fix**: tambah post-write dedup pass KHUSUS utk output Lazada (parameter `dedup_per_product=True` di `match_and_write`, TIDAK dipasang di TikTok krn Shopee/TikTok memang boleh SKU kembar) - lacak SKU yg sudah dipakai per nama-produk sambil iterasi baris, kalau tabrakan baru tambahkan suffix pembeda dari data varian baris itu sendiri (nomor gen `_G<n>`, tahun awal `_<YYYY>`, atau kode chassis alfabetik `_JK`/`_TJ` kalau leftover-nya bukan angka/gen - fallback counter `_2`/`_3` kalau semua itu gagal juga). **How to apply**: sebelum nulis ulang/"membersihkan" kolom SKU utk platform yg wajib unik-per-varian (Lazada, bukan Shopee/TikTok), WAJIB cek dulu apakah source file punya 0 duplikat SKU dlm listing yg sama (baseline) - kalau ya, verifikasi ULANG angka itu SETELAH ditulis, JANGAN asumsikan "kode kanonis pasti benar jadi pasti aman" - kode yg secara BISNIS benar (collapse TF=1) bisa tetap butuh disambiguator TEKNIS terpisah demi syarat platform.
+
+
+## TikTok menolak unggahan sebagian varian: "sku not allow delete" (2026-09-04)
+
+**Gejala**: unggah `all_information` ke TikTok, SEMUA baris gagal (1.997/1.997)
+dengan alasan seragam `sku not allow delete` di kolom `err_info`.
+
+**Sebab**: TikTok memperlakukan template `all_information` sebagai **daftar
+varian LENGKAP per produk**. Varian milik produk itu yang TIDAK ikut dikirim
+dianggap permintaan HAPUS -- dan SKU yang punya riwayat/aktif tidak boleh
+dihapus, jadi seluruh unggahan ditolak. File yang dikirim hanya memuat baris
+yang PERLU DIUBAH (mis. Audi TT Coupe cuma 14 dari 28 varian), sehingga semua
+207 produk kena.
+
+**Perbaikan** (`isi_sku_massal.py`): khusus TikTok, setiap produk yang punya
+minimal SATU baris berubah harus diikutkan SEMUA barisnya; baris yang tidak
+berubah ikut apa adanya (nilai SKU-nya tidak disentuh). Hasil: 2.239 -> 3.568
+baris, 0 produk dengan varian tak lengkap.
+
+**Shopee & Lazada TIDAK kena** -- keduanya memproses per baris varian
+(`variation_id` / `sku.skuId`), bukan per produk. Jangan menyamakan perilaku
+tiga channel ini.
+
+**Jebakan lanjutan yang sempat lolos**: pelengkap varian dijalankan SEBELUM
+file perbaikan terpisah (Mini Cooper) digabung, jadi produk yang barisnya
+datang dari file terpisah itu tidak ikut dilengkapi dan tetap akan ditolak.
+Pelengkap harus tahu produk mana saja yang tersentuh file lain (pakai
+`sudah_ditangani`), dan jangan menambah baris yang sudah dibawa file itu
+(nanti dobel).
+
+### Pelajaran soal cara MEMERIKSA, bukan cuma soal datanya
+
+Saat mendiagnosis ini, hipotesis pertama (varian tidak lengkap) sempat
+DITOLAK oleh cek buatan sendiri yang bilang "207/207 produk variannya lengkap".
+Itu keliru karena salah nomor kolom: di template TikTok `all_information`,
+`sku_id` ada di kolom **5** (kolom 4 = `product_status`), sedangkan di file
+HASIL semua kolom bergeser +1 karena ada `err_info` di depan. Akibatnya
+diagnosis hampir dibelokkan ke arah yang salah.
+
+**How to apply**: kalau hasil pemeriksaan membantah hipotesis yang masuk akal,
+curigai dulu alat pemeriksanya -- khususnya nomor kolom, apalagi kalau
+membandingkan file HASIL (ada kolom err_info tambahan) dengan file sumber.
+Selalu resolusi kolom lewat NAMA header, jangan nomor tetap.
+
+---
+
+## Keunikan SKU di Lazada itu PER LISTING, bukan per toko (2026-09-04)
+
+Catatan lama "Lazada butuh SKU unik" ternyata terlalu luas dan sempat bikin
+salah alarm. Dibuktikan dari export UA Lazada (21.190 baris berSKU):
+
+- SKU ganda **di dalam satu listing**: **0** — ini yang benar-benar dilarang,
+  dan inilah alasan konvensi akhiran `_G2`/`_G3` ada.
+- SKU dipakai **lebih dari satu listing**: **261** — dan itu memang praktik yang
+  sudah berjalan untuk mobil kembar (Terios/Rush, Ayla/Agya, Gran Max/Luxio,
+  Feroza/Rocky).
+
+**How to apply**: saat menyeragamkan kode mobil kembar di Lazada, jangan panik
+melihat SKU hasil bentrok dengan listing lain — justru itu tujuannya. Yang
+wajib dicek adalah simulasi *setelah* perubahan: terapkan perubahan ke salinan
+export, lalu hitung duplikat per nama listing. Kalau 0, aman.
+
+## Satu file upload = satu toko, walau channel-nya sama (2026-09-04)
+
+UA dan Otonation sama-sama Shopee. Script yang mengumpulkan hasil "per channel"
+akan menumpuk baris dua toko ke SATU file, dan file itu tidak bisa dipakai —
+tiap toko punya akun & product_id sendiri (metadata baris 2 template Shopee
+memuat shop id, mis. `407202910`). `samakan_kode_kembar.py` sekarang menerima
+argumen `<nama_toko>` dan menamai output `FIX_KODE_SERAGAM_{toko}_{channel}`,
+dan dijalankan terpisah per toko (master hasil run pertama dipakai sebagai
+input run berikutnya supaya perbaikan master tidak dobel).
+
+Sebaliknya, dua file untuk toko + channel yang SAMA boleh digabung jadi satu
+upload — asal irisan (product_id, variation_id)-nya 0. Itu yang dilakukan pada
+Otonation: 874 baris isi SKU + 51 baris kode Mazda 2 -> 925 baris, satu file.
+
+## Mencocokkan kode kembar di master: lewat KODE, bukan nama model
+
+Master bisa memuat lebih dari satu entri untuk model yang sama — terbukti ada
+"Daihatsu Terios" DAN "Daihatsu Terios / New Terios", dua-duanya `DHT-TRS`.
+Percobaan pertama mencocokkan nama persis dan menyisakan 66 baris berkode lama.
+Aman mencocokkan lewat prefix kode setelah diverifikasi tiap kode lama hanya
+dipakai modelnya sendiri.
+
+---
+
+## BUG DIAM-DIAM: `ws.cell(row, col, value=None)` TIDAK mengosongkan sel (2026-09-07)
+
+Semua script pembuat file upload memakai helper `salin()` untuk memadatkan
+baris (baris yang berubah digeser ke atas, sisanya dihapus). Isinya:
+
+```python
+d = ws_d.cell(row=r_d, column=c, value=s.value)   # SALAH
+```
+
+openpyxl **mengabaikan `value=None`** — sel tujuan yang sudah berisi sesuatu
+TIDAK ikut dikosongkan. Akibatnya baris hasil membawa **nilai sisa baris yang
+tergeser** di setiap kolom yang di sumbernya kosong. Tidak ada error, tidak ada
+tanda apa pun di file; ketahuan hanya karena verifikasi membandingkan SETIAP
+kolom hasil vs sumber.
+
+Terbukti di dua file yang sudah dikirim:
+- `UPDATE_HARGA_UA_SHOPEE` (versi pertama): 101 baris kolom "Min. Jumlah
+  Pembelian" jadi `1` padahal sumbernya kosong.
+- `SIAP_UPLOAD_SKU_OTONATION_SHOPEE`: **33 baris kolom "SKU Induk" terisi SKU
+  induk milik produk lain** (mis. `CVR0079-OTN-EX` nyasar ke produk lain) +
+  53 baris "Min. Jumlah Pembelian" salah. Yang SKU Induk ini berbahaya — kolom
+  itu ikut tertulis ke Shopee.
+
+**Perbaikan** (sudah diterapkan ke 8 script):
+```python
+d = ws_d.cell(row=r_d, column=c)
+d.value = s.value
+```
+
+**How to apply**:
+1. Jangan pernah pakai bentuk `cell(..., value=x)` untuk menyalin baris — nilai
+   kosong adalah data juga.
+2. Verifikasi file upload **kolom per kolom terhadap sumber**, bukan cuma kolom
+   yang sengaja diubah. Cara cepat: cocokkan baris lewat kunci unik per channel
+   (Shopee `Kode Produk`+`Kode Variasi`, TikTok `sku_id`, Lazada `sku.skuId`)
+   lalu bandingkan semua kolom kecuali kolom target. Pemeriksaan "jumlah baris
+   benar + kolom target benar" TIDAK cukup dan sudah dua kali meloloskan bug.
+
+---
+
+## TikTok menambah atribut WAJIB baru — ekspor lama jadi tidak bisa dipakai (2026-09-10)
+
+Upload `PERBAIKAN_SP_TIKTOK.xlsx` ditolak **seluruhnya** (588/588 baris) dengan
+pesan identik:
+
+> `atribut produk is missing, include it and try again. ID:100530, nama: Tahun`
+
+**Bukan soal isi editan.** Baris yang ditolak termasuk 251 baris pelengkap yang
+sama sekali tidak diubah. Penyebabnya struktural:
+
+| | kolom |
+|---|---|
+| Ekspor SP 8 Sep (dipakai membangun file) | 41 |
+| Template TikTok saat upload 10 Sep | 43 |
+
+Dua kolom baru: **`product_property/100530` (Tahun)** dan
+`product_property/102755`. Template `all_information` memperlakukan kolom yang
+tidak ada sebagai atribut hilang, dan Tahun sekarang wajib untuk kategori
+"Cover & Shelter Mobil (931592)".
+
+Bandingkan: ekspor TikTok UA 3 Sep punya `101734` & `102752` tapi TIDAK punya
+`100530` — jadi perubahan atributnya terjadi setelah tanggal itu.
+
+**How to apply**:
+1. File upload TikTok HARUS dibangun dari ekspor yang BARU DIAMBIL, bukan
+   ekspor beberapa hari lalu. Set atribut kategori bisa berubah kapan saja
+   tanpa pemberitahuan.
+2. Kalau ada file TikTok lama yang belum sempat diupload, anggap basi —
+   bangun ulang dari ekspor segar. (Berlaku juga untuk file harga UA TikTok
+   yang dibuat 7 Sep kalau belum diupload.)
+3. File hasil (`..._result.xlsx`) memuat template TERBARU lengkap dengan
+   kolom baru, tapi nilai atributnya KOSONG — jadi tidak bisa dipakai
+   langsung sebagai pengganti ekspor.
+4. Daftar nilai yang sah untuk tiap atribut ada di sheet `HiddenAttr`
+   (pasangan kolom kategori/nilai). Untuk Tahun contohnya: `2024`, `2016`,
+   `2000 – 2020`, `1980 – 2000`, `2020   present`.
+5. Shopee & Lazada tidak terpengaruh — ini khusus TikTok.
+
+### Lanjutan: upload TikTok yang "gagal" ternyata separuh berhasil (2026-09-10)
+
+Ekspor TikTok SP yang baru (10 Sep, 43 kolom) menunjukkan **semua 274 perubahan
+SKU SUDAH masuk** — `MZD-2H`, `WLG-DRN`, `BYD-SEA`, `HYN-AVH`, `FRD-RAN`, dst
+sudah terpasang, 0 sisa kode lama, 0 baris target yang masih kosong. Yang TIDAK
+masuk cuma 63 perubahan harga (Gran Max Minibus masih 443rb, Veloz masih 374rb).
+
+Jadi pesan "atribut produk is missing" di 588/588 baris **bukan berarti seluruh
+file ditolak**. Jangan menyimpulkan "semua gagal" dari kolom `err_info` saja —
+selalu cek ekspor berikutnya untuk tahu apa yang benar-benar berubah, kalau
+tidak file perbaikan berikutnya akan menerapkan ulang perubahan yang sudah
+masuk.
+
+Kolom `product_property/100530` (Tahun) di ekspor baru **hampir seluruhnya
+kosong** (terisi cuma 64 dari 7.333 baris, semuanya nilai `2026`, di 4 produk
+baru: Hyundai Kona & Geely EX2). Jadi belum bisa dipastikan apakah TikTok minta
+KOLOM-nya ada saja atau minta NILAI-nya terisi. File berikutnya dikirim dengan
+kolom ada tapi nilai kosong (mengikuti ekspor); kalau ditolak lagi dgn pesan
+yang sama, berarti nilainya wajib.
+
+### BUG DESAIN: "samakan ke harga modus" jangan pakai daftar-pengecualian
+
+`gabung_perbaikan_sp.py` versi pertama menormalkan SEMUA model ke harga modus
+kecuali yang masuk daftar pengecualian. Begitu 7 model dapat SKU baru,
+baris-barisnya mendadak masuk grup (kode, tier) dan ikut ternormalkan tanpa
+pernah diminta: **Hyundai Getz Shopee 322rb→365rb** dan **Chery Omoda 5 Lazada
+413rb→415rb**. Diperbaiki jadi daftar-IZIN eksplisit (`NORMALKAN_KE_MODUS`,
+7 model kelompok C saja).
+
+**How to apply**: untuk perubahan massal yang menyentuh harga, pakai
+allowlist — bukan blocklist. Menambah data (mis. mengisi SKU) bisa mengubah
+pengelompokan dan menyeret baris yang tidak ada hubungannya.
+
+**Temuan sampingan yang BELUM ditindaklanjuti** (harga beda antar channel,
+bukan bagian permintaan user): Hyundai Getz Shopee Rp322rb vs TikTok/Lazada
+Rp365rb; Chery Omoda 5 Lazada Rp413rb vs channel lain Rp415rb.
+
+### Atribut "Tahun" TikTok: kolom ada saja tidak cukup, NILAI-nya wajib (2026-09-11)
+
+Percobaan kedua (kolom `product_property/100530` ADA tapi kosong, mengikuti
+ekspor) tetap ditolak 314/314 baris dengan pesan yang sama. Jadi TikTok minta
+nilainya terisi, bukan sekadar kolomnya hadir.
+
+**Sifat atributnya** (dibuktikan dari data toko sendiri):
+- Level **PRODUK**, bukan varian. Hyundai Kona punya varian Gen 1 (2017-2020),
+  Gen 1F (2021-2023), Gen 2 (2023-2026) — ketiganya Tahun = `2026`, nama
+  variannya tidak berubah. Di template all_information nilainya diulang di
+  tiap baris varian, sama seperti kolom Nama Produk.
+- **Satu nilai per produk**. Discan ke seluruh ekspor TikTok UA & SP: tidak ada
+  satu pun atribut berisi lebih dari satu nilai (tidak ada koma). Jadi cover
+  yang muat banyak generasi tetap cuma bisa diberi satu nilai.
+- Nilai yang sah cuma 14 (sheet `HiddenAttr` kolom 8): 2014, 2015, 2016, 2018,
+  2019, 2020, 2022, 2023, 2024, 2025, 2026, `1980 – 2000`, `2000 – 2020`,
+  `2020   present`.
+
+**Keputusan user 2026-09-11: pakai `2026`** — mengikuti pola toko sendiri
+(Hyundai Kona & Geely EX2 sudah `2026`). File final
+`PERBAIKAN_SP_TIKTOK_tahun2026.xlsx`: 314 baris, 63 sel harga + 314 sel Tahun,
+0 kolom lain tersentuh, 9/9 produk lengkap variannya.
+
+**How to apply**: untuk produk TikTok yang belum pernah diisi atributnya,
+cek dulu atribut wajib kategori SEBELUM membuat file update — kalau ada yang
+kosong, upload apa pun ke produk itu akan ditolak, termasuk perubahan harga
+yang sama sekali tidak berhubungan dengan atribut tsb.
+
+### TikTok melaporkan atribut wajib SATU per SATU — jangan tambal satu-satu (2026-09-11)
+
+Setelah `100530` (Tahun) diisi, upload ditolak lagi 314/314 baris dengan
+atribut BERIKUTNYA: `ID:102755, nama: Bile` (nilai sah cuma `16:9` dan `4:3`).
+Kalau ditambal satu per satu, tiap putaran = satu upload gagal lagi.
+
+**Cara menemukan SELURUH atribut wajib tanpa coba-coba**: lihat produk di toko
+yang SUDAH patuh — biasanya produk yang dibuat paling baru, karena mereka
+dipaksa mengisi atribut wajib saat dibuat. Di SP:
+
+| Produk | Atribut terisi |
+|---|---|
+| Geely EX2 (terbaru) | `100530=2026`, `102755=16:9` |
+| Hyundai Kona | `100530=2026`, `102755=16:9`, `100107=Tanpa Garansi` |
+
+Geely EX2 cuma punya DUA → itulah himpunan wajibnya; `100107` (Garansi)
+opsional. Jadi isi kedua-duanya sekaligus, bukan menunggu pesan error
+berikutnya.
+
+Border merah "wajib diisi" yang disebut sheet `Instruction` **tidak terbawa**
+di file ekspor (semua sel tanpa style), jadi tidak bisa dipakai untuk
+mendeteksi kolom wajib.
+
+File final: `PERBAIKAN_SP_TIKTOK_v3.xlsx` — 314 baris, 63 sel harga +
+628 sel atribut (2 kolom x 314 baris), 0 kolom lain tersentuh.
+
+- **(2026-09-14) TikTok bulk-edit template mencocokkan kolom BERDASARKAN POSISI, BUKAN teks header - menaruh kolom baru di posisi "kosong terdekat" dgn header teks yg benar TETAP GAGAL DIAM-DIAM (tidak error saat upload, tapi nilainya tidak pernah terbaca sbg atribut yg dimaksud).** Kejadian: file template TikTok Otoprotection yg diberikan user cuma 11 kolom (tidak py kolom `parcel_weight`/`product_property/*` sama sekali - beda dari template Smartprotection yg py 43 kolom lengkap). Ditambahkan 4 kolom atribut (Garansi/Model/Tahun/Bile) mulai kolom 12 dgn header teks yg PERSIS benar ("product_property/100530" dst) - upload GAGAL LAGI dgn hasil aneh: (a) atribut "Tahun" TETAP dilaporkan hilang, TIDAK berkurang sama sekali dari sebelumnya, (b) muncul error BARU "Berat produk tidak boleh nol" di puluhan baris yg SEBELUMNYA tidak pernah bermasalah. Ternyata kolom 12-15 itu POSISI ASLI utk `minimum_order_quantity`/`parcel_weight`/`parcel_length`/`parcel_width` (bukan slot kosong) - nilai "2026" (dimaksud utk Tahun) malah ketimpa/dibaca sbg `parcel_length`, dan nilai "Model" (teks non-angka) ketiban ke `parcel_weight` yg wajib berupa angka >0, menyebabkan validasi berat gagal. Ketauan lewat laporan hasil gagal upload TikTok berikutnya, yg py STRUKTUR KOLOM LENGKAP (47 kolom + err_info) sbg rujukan POSISI PERSIS mana kolom seharusnya berada. **How to apply**: (1) kalau template TikTok yg dipegang py LEBIH SEDIKIT kolom drpd yg genuinely dibutuhkan kategori itu (dicek dari laporan gagal upload yg biasanya py struktur lebih lengkap, ATAU dari template toko lain kategori sama yg sudah py struktur penuh), JANGAN asal tambah kolom baru di ujung/slot kosong dgn header teks yg benar - itu TIDAK CUKUP, posisi kolomnya jg harus PERSIS sama dgn urutan resmi TikTok; (2) kalau ragu urutan resminya, cek laporan hasil upload gagal (biasanya lebih lengkap strukturnya drpd template awal) ATAU file kerja toko lain kategori sama yg SUDAH py struktur lengkap (mis. Smartprotection py 43 kolom lengkap, jadi Otoprotection kategori sama seharusnya identik urutannya sampai titik yg sama); (3) verifikasi SETELAH isi kolom baru dgn cross-check ke laporan gagal upload SEBELUMNYA (kalau atribut yg SAMA masih dilaporkan hilang persis dgn jumlah baris SAMA persis kayak sebelum diperbaiki, itu tanda kuat kolomnya salah posisi, bukan "belum keupload").
 
 ## File upload WAJIB dibangun dari file asli e-commerce (user menolak 2x: 2026-08-03 & 2026-08-07)
 
