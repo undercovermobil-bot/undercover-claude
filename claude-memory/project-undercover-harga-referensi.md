@@ -2271,3 +2271,68 @@ minta user re-download template "All_Information" yg lebih lengkap
 File final: `SHOPEE_OTOPROTECTION_1.xlsx` (422 baris), `_2.xlsx` (45
 baris), `TIKTOK_OTOPROTECTION_1.xlsx` (1 baris), `_2.xlsx` (460
 baris) - semua sudah dipotong Transparan-saja.
+
+---
+
+## Audit 2026-09-18: konfirmasi rollout UA Reguler "sampai rank 60" masih utuh
+
+User upload 5 file Shopee UA terbaru (`1.xlsx`-`5.xlsx`, snapshot 18
+September, kena bug XML `activePane` yg sama, diperbaiki `repair_xlsx.py`),
+tanya: "sudah berapa produk yg update harga terbaru, bener 60 produk
+Reguler?" - read-only audit, TIDAK menulis file apa pun.
+
+**Kendala teknis**: file target resmi (`HARGA_BARU_TOP100_v5.xlsx`, sumber
+kebenaran semua eksekusi sejak 2026-08-20) sudah tidak ada di kontainer
+sesi ini (fresh container). Dibangun ulang dari `harga_baru_matriks.py` +
+`Copy_of_DATA_UC_HPP_Top_100_Terlaris.xlsx` (file yg SAMA dipakai sesi
+Transparan sebelumnya) - hasil recompute cocok 100% ke 3 checkpoint yang
+tercatat di memory (Fortuner Rp457rb, BR-V Rp385rb, HiAce Rp583rb), jadi
+metodenya valid. Override manual yang WAJIB ditambahkan lagi di atas hasil
+mentah (tidak otomatis kebawa dari matrix, harus diterapkan manual tiap
+kali generate ulang - lihat pelajaran "override tidak ikut terbawa" di
+atas):
+- Brio & Jazz (`HND-BRI`/`HND-JAZ`) -> Rp332.000/375.000 (lantai, 2026-08-26)
+- Ignis (`SZK-IGN`) -> Rp333.000/376.000 (Pcs/Roll dikoreksi ke 6, 2026-09-07)
+- Alias tambahan (prefix listing riil beda dari `PREFIX{}` asli):
+  `DHT-GMX`->`DHT-LXO` (Luxio), `TYT-HAL`->`TYT-HAC` (HiAce Premio),
+  `MZD-2H`->`MZD-MZ2` (Mazda 2 Hatchback) - ketiganya sudah didokumentasikan
+  sebelumnya tapi belum masuk ke `ALIAS{}` permanen di `update_harga_per_sku.py`.
+
+**Metode cek**: `urai_sku()` per baris Reguler (segmen 'R') di 5 file live,
+bandingkan harga live vs target per prefix SKU (skip Premium/Exclusive/
+Strip/Transparan, skip KECUALI x-gear/custom/roofbox).
+
+**Hasil**: rank 1-60 di daftar Top-100 = **53 grup SKU unik** (beberapa
+rank dedup krn kembar berbagi SKU: Xenia/Veloz->`TYT-AVZ`, Sigra->`TYT-CLY`,
+Terios->`TYT-RSH`, Ayla->`DHT-AYL`, Rocky->`TYT-RZE`). **52/53 SUDAH
+Rp harga terbaru, konsisten 100% di semua baris ditemukan** (1295 baris
+Reguler dicek total, 755 sudah match persis) - artinya batch rank 1-60
+yang dieksekusi 2026-09-07 **masih utuh & tidak ada yang regresi** ke
+harga lama 11 hari kemudian. Rank 61-100 (40 model unik) **SEMUA masih
+harga lama, 0 tersentuh** - rollout belum dilanjutkan sejak rank 60.
+
+**Konfirmasi ke user: YA, benar sekitar 60 (rank 1-60) sudah di-update,
+boleh dianggap valid buat lanjut ke rank 61-100 kapan saja.**
+
+### Temuan sampingan: Toyota Agya/Daihatsu Ayla (`DHT-AYL`, rank 7-8) - Pcs/Roll ambigu, DIPUTUSKAN tetap Rp334rb
+
+1 pengecualian ketemu saat audit: live Rp334.000 (20 baris, seragam) tapi
+hasil recompute matrix pakai `Copy_of_DATA_UC_HPP_Top_100_Terlaris.xlsx`
+kasih Rp383.000, gara-gara Pcs/Roll Agya/Ayla di file itu skrg tercatat
+**5**, padahal Rp334rb yang live persis cocok kalau Pcs/Roll-nya **6**
+(tier Splash/Atto1/Go di City Car). Kemungkinan besar: pas batch rank 1-40
+asli dieksekusi, Pcs/Roll Agya/Ayla masih 6 (makanya Rp334rb yang
+ter-apply & sampai sekarang cocok), lalu source HPP diubah ke 5 belakangan
+TANPA ada keputusan/instruksi eksplisit soal ini (beda dari kasus Ignis
+5->6 yang MEMANG dikonfirmasi user 2026-09-07).
+
+**Ditanyakan ke user (AskUserQuestion) - jawaban: pertahankan Pcs/Roll=6,
+harga Rp334.000/377.000 TETAP FINAL, JANGAN dinaikkan ke Rp383rb.** Kalau
+generate ulang target dari `Copy_of_DATA_UC_HPP_Top_100_Terlaris.xlsx` lagi
+nanti dan Pcs/Roll Agya/Ayla masih tercatat 5 di sana, override manual ini
+WAJIB diterapkan lagi (tambahkan ke daftar override manual di atas):
+`DHT-AYL` -> Rp334.000/377.000, jangan ikut hasil mentah recompute.
+
+**Next step**: user pilih "belum, tunggu instruksi lanjut" untuk rank
+61-100 - JANGAN generate file update batch 61-100 sampai ada instruksi
+eksplisit baru dari user.
