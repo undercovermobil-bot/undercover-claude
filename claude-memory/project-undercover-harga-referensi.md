@@ -2336,3 +2336,24 @@ WAJIB diterapkan lagi (tambahkan ke daftar override manual di atas):
 **Next step**: user pilih "belum, tunggu instruksi lanjut" untuk rank
 61-100 - JANGAN generate file update batch 61-100 sampai ada instruksi
 eksplisit baru dari user.
+
+### Lanjutan sama hari (2026-09-18): TikTok & Lazada UA dicek juga, hasil identik
+
+User upload 3 file TikTok (`all_information` template, file 1=cover motor
+2 baris di luar scope, file 2=katalog utama 22.657 baris, file 3=lagi2 di
+luar scope 7 baris) + 1 file Lazada (`pricestock...xlsx`, terdeteksi lewat
+sheet `template_hide`). Audit read-only pakai target dict yang SAMA
+(termasuk override Agya/Ayla=Rp334rb yang baru diputuskan).
+
+**Hasil sama persis dengan Shopee**: rank 1-60 (53 grup SKU unik) **100%
+SUDAH di TikTok maupun Lazada** (termasuk Agya/Ayla, Mazda 2 Hatchback
+rank 99 juga sudah). Rank 61-100 **semua masih harga lama di kedua
+channel**, 0 tersentuh - identik dengan Shopee. **Kesimpulan: rollout
+rank 1-60 sudah 100% konsisten di SEMUA 3 channel (Shopee, TikTok,
+Lazada)**, aman jadi baseline buat lanjut ke rank 61-100 kapan pun user
+minta, tanpa perlu cek ulang channel mana yang "ketinggalan".
+
+Catatan kecil: Lazada tidak punya baris `TIM-TIM` (Timor, rank 98) sama
+sekali - kemungkinan produk itu genuinely tidak dijual di Lazada (di luar
+scope rank 1-60 jadi tidak relevan sekarang, cukup dicatat kalau nanti
+proses rank 61-100 sampai ke Timor).
