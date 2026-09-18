@@ -55,3 +55,234 @@ How to apply: baca file ini dulu sblm lanjut SP. Script kunci scratchpad (`scan_
 **Belum dikerjakan**: tidak ada file SP yang tersisa dari 4 file utama (2 Shopee+TikTok+Lazada) — semua sudah disentuh sesi ini. Sisa PR murni di level "butuh keputusan manual" (lihat tracker), bukan file yg belum disentuh.
 
 How to apply: script terbaru `scan_sp_full.py` di scratchpad (tidak persisten) — arsitektur identik dgn `scan_op_full.py` OP, ditambah `tier_to_strip_color()` utk konversi Epic/Elite/Warrior→Strip-N (kebalikan dari OT yg convert Strip-N→EEW), dan `resolve_ambiguous_model()` khusus utk kasus "Suzuki Vitara" gabungan 3-model.
+
+## 2026-09-09 — Beda katalog Undercover vs Smartprotection
+
+Dibandingkan dari ekspor live: UA (Shopee 5 file 3 Sep + TikTok + Lazada) vs
+SP (4 file 8 Sep). Identitas model dipakai **kode SKU MEREK-MODEL**, bukan nama
+listing — nama listing terlalu berisik (typo "Undervover", "Mobil BMW X5",
+"Cover Honda BRV", 448 varian nama untuk ~340 model).
+
+| | UA | SP |
+|---|---|---|
+| model berkode | 335 | 204 |
+| model belum berkode | 82 | 14 |
+
+**Hanya di Undercover: 196 model** (126 sudah berkode + 70 belum).
+Terkonsentrasi di segmen premium/eksotik/EV yang SP memang tidak jual:
+BMW 19 model, Volvo 9, Mazda 7, Lexus 6, Toyota 6, Chery 5, MG 5 — ditambah
+Aston Martin, Bentley, Ferrari, Rolls-Royce, McLaren, Porsche, Audi (semuanya
+belum berkode).
+
+**Hanya di Smartprotection: 7 model** — Peugeot 306, Peugeot 406, Kia Sedona
+Carnival, Holden (berkode) + Mitsubishi Lantis, Volswagen Polo, Honda Civic
+Hatcback (belum berkode; dua terakhir kemungkinan typo).
+
+### Jebakan yang ditemukan saat membandingkan
+
+1. **Jangan bandingkan lewat nama listing.** Perbandingan berbasis nama
+   menghasilkan 214 "hanya di UA" — inflated oleh typo & variasi penulisan.
+   Berbasis kode: 126. Selisihnya murni noise penamaan.
+2. **Kode kembar belum seragam antar toko.** SP masih memakai `MZD-MZ2`,
+   `WLG-DAR`, `JEP-WR` untuk model yang di UA sudah jadi `MZD-2H`, `WLG-DRN`,
+   `JEP-WRA`. Tanpa peta padanan ini, ketiganya salah dihitung sebagai
+   "hanya ada di satu toko".
+3. **Model tanpa SKU tidak kelihatan di perbandingan kode.** 9 model yang
+   awalnya terlihat UA-only (BYD Seal, Chery Omoda 5, Ford Ranger, Hyundai
+   Getz, Suzuki APV Luxury, dst) ternyata ADA di SP tapi listing-nya belum
+   ber-SKU. Perbandingan kode saja akan melaporkan gap palsu — wajib
+   cross-check ke nama listing yang SKU-nya kosong.
+4. Listing non-mobil ikut terjaring (Glass Polish, Bahan Kain, Tas Portable,
+   Logo Custom, iCar V23) — aturan #6 tetap harus dipasang.
+
+File: `BEDA_KATALOG_UA_vs_SP.xlsx` (4 sheet: Hanya di Undercover, Hanya di
+Smartprotection, Perlu dicek, Dikecualikan).
+
+## 2026-09-09 — Penyesuaian kode SKU SP ke konvensi Undercover (856 baris)
+
+Script baru `scripts/samakan_sku_smartprotection.py`. Dua jenis pekerjaan:
+
+**A. Ganti prefix** (SKU sudah ada, kodenya beda dari UA) — 263 baris:
+`MZD-MZ2`→`MZD-2H`, `WLG-DAR`→`WLG-DRN`, `JEP-WR`→`JEP-WRA`.
+
+**B. Isi SKU** (listing ada di SP tapi SKU kosong; di Lazada terlihat "terisi"
+karena auto-ID `8890956509-1788758253245-10`) — 593 baris untuk 7 model:
+BYD Seal, Chery Omoda 5, Feroza Long, Ford Ranger, Hyundai Getz, Mazda CX-7,
+Suzuki APV Luxury. Semua ber-TF=1 (diverifikasi di file formula) → satu kode
+generasi `G1` untuk semua generasi.
+
+Total: Shopee 289 · TikTok 274 · Lazada 293.
+
+### Kosakata SKU SP BEDA dari UA — jangan disalin
+
+| | UA/OT | SP/OP |
+|---|---|---|
+| Strip 1 (Epic) | PAB/PBR/PMR | **S1A/S1B/S1M** |
+| Strip 2 (Elite) | EAB/EBR/EMR | **S2A/S2B/S2M** |
+| Strip 3 (Warrior) | WAB/WBR/WMR | **S3A/S3B/S3M** |
+| Warna dasar | ABU HTM BRU MRH GRN | sama + **ORG (Orange)** |
+| Tier | R S P E T | **hanya R S T** (tidak ada Premium/Exclusive) |
+
+### Ejaan varian di SP tidak konsisten — wajib ditoleransi
+
+Dipindai dari data: **"Warior" (satu R) dipakai 1.367 baris**, ditambah
+"Elita Merah", "Elite  Merah" (spasi ganda), "Elite BIru". Percobaan pertama
+melewatkan 13 baris sebagai "warna tak terbaca" karena cuma mengenali
+"Warrior". Pola ini kemungkinan ada juga di toko lain — selalu pindai dulu
+seluruh penulisan varian sebelum menetapkan daftar kata kunci.
+
+### Hyundai Avega: satu kode dipakai dua bodi
+
+SP memakai `HYN-AVG` untuk **Avega Hatchback DAN Avega Sedan** sekaligus.
+Diperbaiki mengikuti UA: Hatchback → `HYN-AVH` (33 baris), Sedan tetap
+`HYN-AVG`. Ini bukan sekadar penyeragaman lintas toko — di dalam SP sendiri
+dua produk berbeda memang tidak boleh berbagi satu kode.
+
+Diverifikasi: 0 duplikat SKU per listing di Lazada, 0 sisa kode lama, TikTok
+20/20 produk lengkap variannya, 0 perbedaan nyata di luar kolom SKU.
+
+### Koreksi laporan beda katalog: "belum ada SKU" itu status SNAPSHOT
+
+Laporan pertama menandai 70 model UA sebagai "belum punya kode SKU" — user
+spot-check Chery Tiggo 9 dan menemukan SKU-nya SUDAH ada di Shopee
+(`CHR-TI9-UA-R-G1-ABU`). Sebabnya: ekspor UA yang dipakai tertanggal
+**3 September**, sebelum file `SIAP_UPLOAD_SKU_UA_*` diupload. Setelah dicek
+silang ke file yang sudah dikirim: **64 dari 70 sudah punya SKU di situ**,
+cuma **6 yang benar-benar belum** (Hyundai Verna, Kia Cerato, Proton Suprima S
+— ketiganya menunggu opsi generasi di listing — plus Neta V, Daewoo Ssangyong
+Musso, Mitsubishi Colt T120SS Pick Up).
+
+**How to apply**: kalau melaporkan "belum ada SKU/harga", sebutkan TANGGAL
+ekspor yang dipakai, dan cross-check dulu ke file yang sudah dikirim tapi
+mungkin sudah diupload — status listing bisa berubah di antara ekspor dan
+laporan.
+
+## 2026-09-10 — Audit harga SP: mana yang belum berubah
+
+User melihat "beberapa yang belum berubah". Dicek per baris (bukan per model)
+ke ekspor 8 Sep. Ada TIGA kelompok berbeda, dan cuma kelompok A yang selama ini
+dilaporkan:
+
+### A. 11 model seluruhnya masih harga lama — 729 baris
+
+Ford Fusion 261rb · Hyundai Matrix 298rb · Mercedes Benz GLB 309rb ·
+Mitsubishi Eclipse 248rb · Nissan Cedric 271rb · Nissan Latio 291rb ·
+Peugeot 3008 267rb · Peugeot 306 258rb · VW Fox 271rb · VW Passat 256rb ·
+Wuling Darion 319rb. Semuanya **tidak ada di file HPP** (dicek ke keempat
+sheet), jadi harga barunya memang belum bisa dihitung.
+
+### B. Satu kode SKU, dua harga berbeda — 690 baris, 4 kode
+
+| Kode | Listing A | Listing B | Selisih |
+|---|---|---|---|
+| DHT-FRZ | Feroza 370rb | **Daihatsu Rocky 324rb** | 46rb |
+| DHT-GMX | Luxio 371rb | **Gran Max Minibus 443rb** | 72rb |
+| HYN-AVG | Avega Sedan 370rb | **Avega Hatchback 325rb** | 45rb |
+| TYT-AVZ | Avanza & Xenia 370rb | **Veloz 374rb** | 4rb |
+
+Satu SKU = satu barang = wajib satu harga (preseden Calya/Sigra di UA).
+HYN-AVG selesai sendiri begitu file pemisahan `HYN-AVH` diupload — Hatchback
+memang produk lain. Tiga sisanya butuh keputusan angka mana yang dipakai.
+
+### C. 18 baris nyangkut karena TYPO teks varian — semuanya TikTok
+
+`Biru Benhru` (Panther 2, Outlander 4, Starlet 2, Voxy 2) · `Eltie Biru/Merah`
+(Camry 6, Ciaz 1) · `Wrior Merah` (Datsun Go Plus 1). Baris lain di model yang
+sama sudah harga baru; hanya baris bertypo yang tertinggal di harga lama
+(mis. Voxy Rp297rb sedangkan standar modelnya Rp445rb).
+
+**Kenapa typo bisa bikin terlewat**: update harga SP dijalankan lewat
+pencocokan TEKS VARIAN (warna + generasi), bukan lewat prefix SKU seperti di
+UA. Begitu warnanya salah tulis, barisnya tidak ketemu dan diam-diam dilewati.
+Ini pola yang sama dengan "Warior" (1.367 baris) yang ditemukan saat mengisi
+SKU SP — **kosakata varian SP memang penuh salah ketik**, dan setiap proses
+yang bergantung pada teks varian harus memindai ejaan yang benar-benar ada di
+data dulu, bukan memakai daftar kata baku.
+
+File: `SP_HARGA_BELUM_BERUBAH.xlsx` (3 sheet A/B/C, lengkap per baris).
+
+## 2026-09-10 — Semua perbaikan SP digabung jadi SATU file per channel
+
+Script `scripts/gabung_perbaikan_sp.py`. Menggantikan
+`SAMAKAN_SKU_SMARTPROTECTION_*` dan `PERBAIKI_HARGA_SP_TIKTOK` yang dikirim
+sebelumnya (dua-duanya belum sempat diupload).
+
+**Kenapa wajib digabung**: file update marketplace menimpa SEMUA kolom yang ada
+di dalamnya. File SKU membawa harga LAMA, file harga membawa SKU LAMA — upload
+yang belakangan akan mengembalikan kolom yang baru saja dibetulkan (pelajaran
+2026-08-15, sudah pernah kejadian di Undercover).
+
+| File | Baris | SKU berubah | Harga berubah |
+|---|---|---|---|
+| PERBAIKAN_SP_SHOPEE | 334 | 289 | 45 |
+| PERBAIKAN_SP_LAZADA | 338 | 293 | 45 |
+| PERBAIKAN_SP_TIKTOK | 588 | 274 | 63 |
+
+TikTok 588 = 337 baris berubah + 251 pelengkap (template all_information wajib
+memuat seluruh varian tiap produk yang disentuh).
+
+### Keputusan harga user 2026-09-10
+
+- **DHT-GMX** (Luxio + Gran Max Minibus) → **R 371.000 / S 414.000**.
+  Gran Max Minibus turun dari 443/486. Alasan user: SP memang sedikit lebih
+  murah dari UA, dan angka 443rb itu yang menyimpang, bukan 371rb.
+- **TYT-AVZ** (Avanza + Xenia + Veloz) → **R 370.000 / S 413.000**.
+  Veloz turun dari 374/417.
+- **DHT-FRZ** (Feroza 370rb vs Daihatsu Rocky 324rb) **BELUM diputuskan** —
+  sengaja tidak disentuh, masih menunggu user.
+- Usulan Pcs/Roll untuk 11 model harga-lama **ditunda** atas permintaan user.
+
+**HYN-AVG selesai sendiri**: begitu Avega Hatchback dipisah ke `HYN-AVH`,
+harga 325rb-nya sah karena produknya memang beda dari Avega Sedan (370rb).
+
+Diverifikasi ketiga file: 0 perbedaan nyata di luar kolom SKU & harga,
+0 duplikat SKU per listing di Lazada, TikTok 29/29 produk lengkap variannya,
+harga akhir DHT-GMX 371/414 (36+54 baris) dan TYT-AVZ 370/413 (126+189 baris)
+seragam di semua listing & channel.
+
+## 2026-09-11 — TikTok SP tuntas, plus 2 baris salah kategori yang ketahuan
+
+Ekspor TikTok SP 11 Sep memastikan semua perubahan sudah masuk:
+Gran Max Minibus R 371.000 / S 414.000 · Veloz R 370.000 / S 413.000 ·
+18 baris typo varian sudah di harga standar · atribut `2026` + `16:9`
+terpasang di 9 produk.
+
+### Cacat yang saya buat sendiri: ejaan strip "Eltie" tidak dikenali
+
+Pemindaian penuh teks varian SP menemukan **2 baris** yang kategori SKU-nya
+tidak cocok dengan teks variannya — dua-duanya di TikTok:
+
+| Produk | Varian | SKU salah | SKU benar | Harga |
+|---|---|---|---|---|
+| BYD Seal | `Eltie Biru` | `BYD-SEA-SP-R-G1-BRU` | `BYD-SEA-SP-S-G1-S2B` | 416.000 (sudah benar) |
+| Suzuki Ciaz | `Eltie Merah` | `SZK-CIA-SP-R-G1-MRH` | `SZK-CIA-SP-S-G1-S2M` | 371.000 → **414.000** |
+
+BYD Seal itu **kesalahan pengisian SKU saya**: `Eltie` tidak masuk daftar kata
+kunci strip, jadi jatuh ke pencocokan warna dasar ("biru" → BRU) dan dapat
+kategori R. Suzuki Ciaz SKU-nya memang sudah salah dari dulu, tapi **saya
+memperburuknya**: karena SKU-nya berkategori R, perbaikan harga kelompok C
+menariknya ke harga Reguler 371.000, padahal itu varian Strip yang seharusnya
+414.000.
+
+**Bug-nya diam-diam**: ejaan tak dikenal tidak memicu error, cuma jatuh ke
+cabang warna dasar. Ketahuan hanya karena memverifikasi silang kategori SKU
+vs teks varian, bukan dari proses pengisian itu sendiri.
+
+Daftar ejaan strip SP yang sekarang ditangani: epic/epik, elite/elita/elit/
+**eltie**/**eite**, warrior/warior/**wrior**, strip 1/2/3.
+
+**How to apply**: setelah mengisi SKU massal, WAJIB cek silang — kategori di
+SKU (R/S/T) harus cocok dengan yang tersirat dari teks varian. Jangan hanya
+menghitung "berapa baris terisi".
+
+### Sisa masalah harga SP (belum ditindaklanjuti)
+
+- **DHT-FRZ**: Feroza 370rb vs Daihatsu Rocky 324rb — belum ada keputusan user.
+- **HYN-GET** (Hyundai Getz): TikTok R 365rb **S juga 365rb** (selisih 0,
+  seharusnya 43rb); Shopee malah 322rb. Tiga angka berbeda untuk satu model.
+- **CHR-O5** (Chery Omoda 5): R 370rb S 415rb (selisih 45rb, bukan 43rb).
+- 11 model masih skema harga lama (menunggu Pcs/Roll).
+- 30 listing TikTok SP masih tanpa SKU format baru (395 baris) — BMW Seri 7,
+  Toyota Corolla, Hyundai Kona, dst.
+- Listing **Transparan** atribut TikTok-nya masih kosong semua → kalau nanti
+  diedit, akan kena error atribut wajib yang sama.

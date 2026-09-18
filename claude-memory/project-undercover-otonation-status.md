@@ -63,3 +63,151 @@ How to apply: sebelum lanjut kerja OT di sesi depan, baca file ini dulu lengkap 
 **Sisa ~1.000 baris NO_LOOKUP sekarang didominasi kasus GENUINE (bukan bug klasifier lagi)**: (a) gap kategori Transparan yg memang tidak ada di master utk banyak model (konsisten dgn gap lama yg sudah diketahui), (b) generasi sangat lawas yg gak pernah di-riset (mis. Toyota Corolla Gen1-5 thn 1966-1987), (c) skema generasi listing pakai kode chassis Eropa (Mercedes W-code, BMW E/F/G-code, VW B-code) yang TIDAK py pemetaan otomatis ke skema "Gen N" master — butuh riset manual per model kalau mau dikejar, TIDAK auto-fix karena resiko salah tebak tinggi.
 
 Why: dicatat detail supaya sesi depan tidak perlu re-discover bug yang sama (terutama guard anti-dobel-alias dan bug default-warna-Exclusive yang keduanya sempat bikin regresi kalau tidak hati-hati).
+
+
+## (2026-08-19) Bug SKU salah-tag di listing "Outdoor" polos -- DIPERBAIKI
+
+Ditemukan pas kerja update harga (lihat project-undercover-harga-referensi.md
+utk kronologi lengkap): 31 baris di 15 model, hidup di listing kategori
+**"Outdoor" POLOS** (setara tier Premium UA, dikonfirmasi user -- BUKAN
+"Semi Outdoor" yg setara Reguler), tapi SKU-nya bersegmen **'R' (Reguler)**
+padahal seharusnya **'P' (Premium)**. Semua kasus: warna Abu-abu, harga
+SENDIRI sudah benar Premium (Rp700rb-1,06jt) -- murni segmen SKU-nya yg keliru.
+
+Model kena: Terios(TYT-RSH), Xenia(TYT-AVZ), Vellfire(TYT-ALP), HR-V(HND-HRV),
+X-Trail(NSN-XTR), Suzuki XL7(SZK-XL7), Sirion(DHT-SRN), Camry(TYT-CMY),
+Nissan Serena(NSN-SRN), Corolla(TYT-CRL), Stargazer(HYN-SGZ), City
+Hatchback(HND-CHB), Mercedes S Class(MBZ-SS), BMW Seri 5(BMW-S5), Toyota
+Harrier(TYT-HAR).
+
+**Diverifikasi ketat sebelum eksekusi**: SETIAP kombinasi prefix+gen+warna
+hasil ganti R->P dicocokkan ke keseluruhan SKU master UA (`ua_skus` set) --
+100% match, termasuk kasus yg kelihatan janggal (Corolla Gen 5 -- OT sendiri
+tidak py baris Premium G5 lain sbg pembanding, tapi ternyata memang ada di
+master UA). Jadi bukan SKU baru yg diciptakan, murni koreksi segmen yg salah
+ketik/salah proses ke kode yg SUDAH ADA di master.
+
+**Fix**: `scripts/fix_sku_outdoor_polos.py` (pakai helper `is_outdoor_polos()`
+dari `update_harga_per_sku.py`) -- ganti SEGMEN KE-4 SKU (R/S -> P) doang,
+gen+warna+prefix tidak disentuh. Hanya kolom SKU yg berubah, harga tidak
+disentuh (sudah benar dari awal). Hasil: 31 baris Shopee OT, 0 masalah.
+
+**Kalau extend ke toko lain (OP/SP)**: pola yg sama (listing "Outdoor" polos
+py SKU tersasar R/S padahal harusnya P) kemungkinan berulang -- jalankan
+`fix_sku_outdoor_polos.py` yg sama, tapi WAJIB verifikasi ulang tiap hasil ke
+set SKU master (jangan asumsikan otomatis benar tanpa cross-check, spt yg
+dilakukan di sini).
+
+
+## (2026-09-04) Pengisian SKU massal OT -- 874 baris, `scripts/isi_sku_massal.py`
+
+Script yang sama dengan UA, diperluas supaya mengerti kosakata OT. Hasil: **874
+baris** (844 isi-kosong + 30 format lama), 0 masalah. Sumber kode: 498 dari
+listing OT sendiri, 491 dari master, cuma **3 kode model baru**.
+
+### Pemetaan kategori OT -- DIBUKTIKAN dari data, bukan ditebak
+
+Dicek ke baris OT yang SKU-nya SUDAH benar (n=7.714):
+
+| Nama listing | Segmen SKU | Bukti |
+|---|---|---|
+| Extreme Outdoor | **E** | 520/520 |
+| Outdoor (polos) | **P** | 718/718 |
+| Semi Outdoor | R/S | 5.745 (tidak ada P/E) |
+| Indoor dan Outdoor | R/S | 692 |
+
+Kata tier eksplisit ("- Premium - Outdoor") selalu menang atas kosakata Outdoor.
+Hasil akhir file konsisten 100% dengan tabel ini.
+
+### JEBAKAN BESAR: pembersih nama model harus tahu kosakata KEDUA toko
+
+Percobaan pertama menghasilkan **109 kode model baru yang SAMPAH** -- `BMW-X5O`
+("BMW X5 Outdoor"), `CHR-OM5S` ("Chery Omoda 5 Semi Outdoor"), `AUD-A42`
+("Sarung Audi A4"), `HND-CHS2`, dst. Sebabnya `TIER_RE`/`BOIL_RE` cuma
+membuang kosakata UA (Reguler/Premium/Exclusive), sedangkan OT memakai
+Outdoor/Semi Outdoor/Extreme Outdoor/Sarung Mobil. Akibatnya kata kategori
+bocor ke nama model, sehingga (a) kode barunya salah dan (b) model yang SAMA
+tidak saling ketemu antar tier maupun ke master. Setelah kosakata OT ikut
+dibuang: 109 -> **3** kode baru.
+
+**How to apply**: kalau memproses toko dengan penamaan listing berbeda, PERIKSA
+dulu berapa kode model baru yang dihasilkan. Angka yang melonjak (puluhan model
+umum seperti BMW X5 / Honda Civic dianggap "baru") = tanda kuat kosakata
+kategorinya belum dibuang, bukan tanda katalognya memang baru.
+
+### Hal lain yang ditemukan
+
+- **Warna bentuk pendek**: OT menulis warna dasar "Abu"/"Biru" (bukan
+  "Abu-abu"/"Biru Benhur"). Ditambahkan ke `WARNA_DASAR`; aman karena
+  `WARNA_STRIP` selalu dicek lebih dulu sehingga "Elite Abu" tidak salah jatuh.
+- **Listing arsip lama** ("Cover Mobil / Sarung Mobil X" tanpa akhiran
+  kategori) -- 351 baris, sengaja TIDAK disentuh sesuai keputusan user
+  2026-07-10. Ditangani lewat `ARSIP_RE`.
+- **"Toyota Altis" vs master "Toyota Corolla Altis"** -- sempat dibuatkan kode
+  duplikat TYT-ALT2. Diperbaiki lewat `ALIAS_MODEL`. Pola ini kemungkinan
+  berulang di toko lain: nama listing lebih pendek dari nama master.
+
+### Perlu keputusan user
+
+`SZK-FE` dibuat untuk listing "Suzuki Forsa Esteem", padahal master sudah punya
+"Suzuki Forsa" (`SZK-FOR`). Forsa & Esteem generasi berurutan mobil yang sama --
+bisa jadi harusnya ikut SZK-FOR. TIDAK ditebak, dilaporkan ke user.
+
+---
+
+## 2026-09-04 — Penyeragaman kode kembar (grup A & C) + file upload final OT
+
+Lanjutan dari kasus Taft GT. Setelah dicek menyeluruh, ada 3 kelompok kasus:
+
+**Grup A — master punya kode sendiri padahal semua listing pakai kode induk.**
+Kode master yang tidak terpakai itu jadi jebakan: begitu ada toko yang
+listingnya kosong, pengisian otomatis jatuh ke master dan menghasilkan kode
+salah (persis yang terjadi pada Taft GT di Otonation). Diseragamkan ke kode
+induk di master:
+
+| Model | kode master lama | -> kode induk | baris |
+|---|---|---|---|
+| Daihatsu Terios | DHT-TRS | TYT-RSH | 132 |
+| Toyota Veloz | TYT-VLZ | TYT-AVZ | 132 |
+| Daihatsu Sigra | DHT-SGR | TYT-CLY | 66 |
+| Toyota Vellfire | TYT-VLF | TYT-ALP | 330 |
+| Daihatsu Luxio | DHT-LXO | DHT-GMX | 66 |
+| Daihatsu Taft GT | DHT-TG | DHT-FRZ | 52 |
+| Mazda 2 Hatchback | MZD-MZ2 | MZD-2H | 198 |
+
+Total **976 baris master**. Verifikasi: 0 sisa kode lama di 76.212 SKU master.
+
+**Grup B — Ferrari 488 (belum dikerjakan, menunggu keputusan user).** Tiga
+listing (488 Spider 94 baris, 488 Pista 163, 488 Pista Spider 33) semuanya
+memakai `FER-4PS`; master menyebut `FER-488S` untuk 488 Spider dan tidak punya
+entri sama sekali untuk 488 Pista.
+
+**Grup C — kode beda antar channel/toko.** Diperbaiki di listing:
+- UA Lazada: Xenia 42 baris `DHT-XNA` -> `TYT-AVZ`, Agya 28 baris `TYT-AGY` ->
+  `DHT-AYL` (Shopee & TikTok sudah benar, hanya Lazada yang menyimpang).
+- OT Shopee: Mazda 2 Hatchback 51 baris `MZD-MZ2` -> `MZD-2H`.
+
+### Keputusan user: Mazda 2 Hatchback pakai MZD-2H
+
+Undercover memakai `MZD-2H`, Otonation & master memakai `MZD-MZ2`. User memilih
+**MZD-2H** karena berpasangan rapi dengan `MZD-2S` (Mazda 2 Sedan). Jadi yang
+diubah adalah master + Otonation, BUKAN Undercover.
+
+### File upload final Otonation (Shopee)
+
+`SIAP_UPLOAD_SKU_OTONATION_SHOPEE.xlsx` — **925 baris / 103 produk**, gabungan:
+- 874 baris pengisian SKU massal (SKU kosong / format lama)
+- 51 baris penyeragaman kode Mazda 2 Hatchback
+
+Digabung karena template Shopee-nya identik (shop id 407202910) dan irisan
+varian = 0, jadi satu kali upload cukup. Stok & harga disalin apa adanya dari
+export, hanya kolom SKU yang disentuh.
+
+### Temuan sampingan: master "Daihatsu Feroza Long" belum lengkap
+
+`DHT-FRL` cuma punya 34 baris dan semuanya berlabel toko Undercover Autocare —
+tiga toko lain (Otonation/Smartprotection/Otoprotection) tidak ada barisnya.
+Ini **cacat lama di master asli**, bukan akibat penambahan model baru
+(dicek di `SKU_Price_Tracking_UPDATED.xlsx` asli, sudah begitu). Tidak
+mempengaruhi hasil pengisian SKU karena segmen toko OT memang `UA`
+(aturan konsolidasi #1), tapi pembukuan masternya perlu dilengkapi.
