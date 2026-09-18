@@ -721,3 +721,11 @@ Order gagal (Reguler Biru Benhur Gen 2, `AUD-A7-UA-R-G2-BRU`). Master lengkap 68
 Screenshot doang, tanpa teks eksplisit (pola udah cukup mapan dari pesan2 sebelumnya jd tetap dikerjakan tanpa nanya). Kia Cerato **tak ada sama sekali** di master (cek 0 baris, gak ketemu jg varian nama laen di daftar semua model Kia). Warna order jg gak kelihatan di crop screenshot (cuma "Reguler" tanpa varian). Dipakai `Kia Rio Sedan` (KIA-RS) sbg template struktur (sedan Kia paling sebanding di master: R5+S9+P2+E1+T1=18 per toko) -- kode baru `KIA-CRT`, scope UA doang (asal order), 0 collision di master/gudang. 18 baris dibangun preemptif full kategori (ikut pola Colt/Darion/Verna: build kategori penuh drpd cuma nunggu laporan per-warna).
 
 File: `SKU Gudang Big Seller/impor_sku_gudang_Kia_Cerato (2026-09-15).xlsx`, 18 baris. **BELUM dikonfirmasi** warna/kategori spesifik yg dibutuhkan order asli (screenshot gak nunjukin).
+
+## INFRA 2026-09-18: file referensi template gudang di Downloads (2) udah gak ada
+
+`C:\Users\OWNER\Downloads\impor_untuk_membuat_sku_gudang_in (2).xlsx` (dipakai sbg SRC template di HAMPIR SEMUA build gudang-import sesi ini) **sudah gak ada di Downloads** (kemungkinan dibersihkan user). **Fix**: pakai file OUTPUT saya sendiri yg paling baru (mis. `impor_sku_gudang_Kia_Cerato (2026-09-15).xlsx`) sbg SRC template pengganti -- strukturnya identik (sudah diverifikasi cols+header match 100% lawan `impor_untuk_membuat_sku_gudang_in.xlsx`, versi ASLI tanpa "(2)" yg MASIH ada di folder `SKU Gudang Big Seller/`). Kalau ke depan file "(2)" ini dicari lagi dan gak ketemu, jangan panik -- pakai own-output-terbaru sbg template, sudah terbukti valid.
+
+## 2026-09-18: Suzuki Amenity gudang import, UA+SP -- pola 0%-gudang berlanjut
+
+Screenshot doang (pola mapan, gak nanya). Master lengkap 34 kode unik (UA 17+SP 17, TF=1, struktur standar E1+P2+R5+S9), 0/34 pernah di gudang. File: `impor_sku_gudang_Suzuki_Amenity (2026-09-18).xlsx`, 34 baris, termasuk target order `SZK-AMN-UA-R-G1-HTM`.
