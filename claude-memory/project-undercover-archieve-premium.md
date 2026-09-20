@@ -5,11 +5,16 @@
 User mau nonaktifkan produk-produk yang tidak laris secara massal, tapi
 Shopee/TikTok/Lazada tidak punya cara bulk-deactivate langsung yang cepat.
 **Workaround user**: ganti dulu judul produk supaya diakhiri kata
-**`archieve`** (ejaan ini sengaja dipakai persis, bukan typo yang perlu
-dibetulkan ke "archive") — nanti user search kata itu di masing-masing
-ecommerce lalu nonaktifkan manual satu-satu dari hasil pencarian. Tugas
-Claude cuma sampai menyiapkan file rename judul siap-upload, TIDAK ikut
+**`Archive`** — nanti user search kata itu di masing-masing ecommerce
+lalu nonaktifkan manual satu-satu dari hasil pencarian. Tugas Claude
+cuma sampai menyiapkan file rename judul siap-upload, TIDAK ikut
 menonaktifkan apa pun (itu manual oleh user di luar sesi ini).
+
+**KOREKSI 2026-09-20 (setelah v2)**: kata suffix diganti dari `archieve`
+ke **`Archive`** (huruf besar A, ejaan benar) — permintaan eksplisit
+user. File v2 yang sudah terlanjur pakai "archieve" (huruf kecil, ejaan
+lama) SUDAH DIGANTI, jangan dipakai lagi. Kalau nanti extend ke batch
+berikutnya, pakai suffix `" Archive"` ini, BUKAN "archieve".
 
 **Trial pertama**: 10 produk tipe **Premium** (bukan Reguler/Strip/
 Exclusive/Transparan) yang **paling tidak laris**, khusus toko
@@ -62,9 +67,9 @@ Lazada) sekaligus.
   mana pun posisinya, strip prefix "(body )cover mobil", strip suffix
   "premium"). **Kalau nemu pola judul lain yang tidak ke-strip bersih,
   base name akan salah/aneh** — selalu spot-check hasil sebelum kirim.
-- **Rename**: tambah `" archieve"` di akhir judul (title-case asli
+- **Rename**: tambah `" Archive"` di akhir judul (title-case asli
   dipertahankan, cuma nambah suffix, idempotent — cek dulu kalau sudah
-  berakhiran "archieve" biar tidak dobel kalau script dijalankan ulang).
+  berakhiran "Archive" biar tidak dobel kalau script dijalankan ulang).
   SKU, harga, dan kolom lain SAMA SEKALI tidak disentuh.
 - **Output ikut aturan "mass-upload hanya baris berubah"**: tiap file
   keluaran cuma berisi baris Premium dari 10 model ini (bukan full
@@ -105,21 +110,28 @@ Sorento (30), Ford Ranger T6 (30), Mazda 3 Hatchback (30), Mazda 3 Sedan
 (30) — total **142 baris per channel** (sama persis di Shopee/TikTok/
 Lazada, karena kesepuluhnya memang ada lengkap di ketiga channel).
 
-**File dikirim** (TIDAK di-commit ke git sesuai kebijakan data besar):
-`ARCHIEVE_PREMIUM_SHOPEE.xlsx` (142 baris, gabungan dari source
-`1.xlsx`/`2.xlsx`/`4.xlsx` — `3.xlsx`/`5.xlsx` kebetulan 0 baris kena),
-`ARCHIEVE_PREMIUM_TIKTOK.xlsx` (142 baris, dari `tiktok_2.xlsx` saja —
-file 1/3 di luar scope/0 baris), `ARCHIEVE_PREMIUM_LAZADA.xlsx` (142
-baris). Sumber listing: file UA Shopee/TikTok/Lazada yang diupload user
-18-20 September (sudah diperbaiki dari bug XML `activePane` via
-`repair_xlsx.py`, lihat `project-undercover-harga-referensi.md` bagian
-2026-09-18 audit).
+**File FINAL (v3, dikirim ke user 2026-09-20, TIDAK di-commit ke git
+sesuai kebijakan data besar)**: `ARCHIEVE_PREMIUM_SHOPEE.xlsx` (142
+baris, gabungan dari source `1.xlsx`/`2.xlsx`/`4.xlsx` — `3.xlsx`/
+`5.xlsx` kebetulan 0 baris kena), `ARCHIEVE_PREMIUM_TIKTOK.xlsx` (142
+baris, dari `tiktok_2.xlsx` saja — file 1/3 di luar scope/0 baris),
+`ARCHIEVE_PREMIUM_LAZADA.xlsx` (142 baris) — isi produk SAMA dgn v2,
+cuma suffix judul dikoreksi jadi `" Archive"`. Sumber listing: file UA
+Shopee/TikTok/Lazada yang diupload user 18-20 September (sudah
+diperbaiki dari bug XML `activePane` via `repair_xlsx.py`, lihat
+`project-undercover-harga-referensi.md` bagian 2026-09-18 audit).
 
-**File v1 (SUPERSEDED, jangan dipakai)**: `ARCHIEVE_PREMIUM_SHOPEE_1..
-4.xlsx` + `..._TIKTOK_tiktok_2.xlsx` + `..._LAZADA_file_4.xlsx` (10 model
-versi pertama, salah prioritas + Shopee masih terpecah 4 file) — sudah
-dikirim ke user tapi digantikan v2 di atas, jangan dipakai kalau muncul
-lagi di riwayat chat/file.
+**File v1 & v2 (SUPERSEDED, jangan dipakai)**:
+- v1: `ARCHIEVE_PREMIUM_SHOPEE_1..4.xlsx` + `..._TIKTOK_tiktok_2.xlsx` +
+  `..._LAZADA_file_4.xlsx` — 10 model versi pertama (salah prioritas,
+  ADA di Top-300 ikut kehitung), Shopee masih terpecah 4 file, suffix
+  "archieve".
+- v2: `ARCHIEVE_PREMIUM_SHOPEE/TIKTOK/LAZADA.xlsx` (1 file/channel, 142
+  baris, 10 model SAMA dgn v3) — model & baris sudah benar, tapi suffix
+  judulnya masih ejaan lama **"archieve"** (huruf kecil). Digantikan v3
+  yang suffix-nya "Archive".
+Kalau nemu file lama ini lagi di riwayat chat/upload, jangan dipakai —
+selalu pakai v3 sbg rujukan judul final.
 
 ## Batas akurasi "di luar Top-300" — sudah ditanyakan, user OK pakai proxy
 
@@ -143,7 +155,7 @@ order mentah yang belum ada di sesi manapun sejauh ini.
 
 ## Next step kalau user lanjut
 
-- Setelah user coba search+nonaktifkan manual pakai kata "archieve" dan
+- Setelah user coba search+nonaktifkan manual pakai kata "Archive" dan
   konfirmasi workflow ini works, kemungkinan lanjut ke batch berikutnya
   (11-20 dst) atau toko lain (OT/OP/SP - masing-masing perlu listing
   fresh diupload dulu, belum ada di sesi ini per 2026-09-20).
