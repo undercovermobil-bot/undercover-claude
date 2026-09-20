@@ -121,6 +121,26 @@ versi pertama, salah prioritas + Shopee masih terpecah 4 file) — sudah
 dikirim ke user tapi digantikan v2 di atas, jangan dipakai kalau muncul
 lagi di riwayat chat/file.
 
+## Batas akurasi "di luar Top-300" — sudah ditanyakan, user OK pakai proxy
+
+User tanya: bisa cek yang BENAR-BENAR 0 penjualan (bukan cuma "di luar
+Top-300")? Dicek ke sheet `Metodologi`: **"di luar Top-300" BUKAN berarti
+0 penjualan** — sheet `Top 300 Mobil` cuma merinci 321 model, sisanya
+digabung jadi 1 baris "TOTAL ekor panjang" = **167 unit TIDAK DIRINCI per
+model**. Jadi bisa saja ada model di luar Top-300 yang genuinely laku
+1-2 unit, tercampur rata dengan yang betul-betul 0 — file rangkuman ini
+tidak bisa membedakan. Untuk presisi itu perlu data order MENTAH (file
+`Order.all.*.xlsx` Shopee / `Semua pesanan-*.xlsx` TikTok per toko, bukan
+laporan yang sudah dirangkum), supaya bisa hitung sendiri quantity per
+model termasuk yang di luar Top-300.
+
+**Ditanyakan ke user (AskUserQuestion) — jawaban: cukup pakai proxy
+"di luar Top-300" seperti sekarang, TIDAK perlu upload data order
+mentah.** Jadi ranking v2 di atas (428 model di luar Top-300, tiebreak
+n_row terbanyak) **tetap jadi acuan final** untuk kebutuhan archive ini.
+Kalau nanti user berubah pikiran dan mau presisi 0-murni, itu perlu data
+order mentah yang belum ada di sesi manapun sejauh ini.
+
 ## Next step kalau user lanjut
 
 - Setelah user coba search+nonaktifkan manual pakai kata "archieve" dan
