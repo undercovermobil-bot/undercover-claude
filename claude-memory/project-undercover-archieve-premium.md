@@ -62,12 +62,6 @@ Lazada) sekaligus.
   mana pun posisinya, strip prefix "(body )cover mobil", strip suffix
   "premium"). **Kalau nemu pola judul lain yang tidak ke-strip bersih,
   base name akan salah/aneh** — selalu spot-check hasil sebelum kirim.
-- **Hasil top-10** (n_row = total baris varian gabungan 3 channel): Toyota
-  Crown (96, 1 dari sedikit yang genuinely tercatat 0 di sales file,
-  bukan cuma "tidak ada data"), Honda Civic Sedan (66), Nissan Cedric
-  (60), Toyota RAV4 (60), Hyundai Sonata (58), Mitsubishi Galant (54),
-  BMW Seri 5 (50), Volkswagen Passat (48), BMW Seri 7 (44), Kia Sportage
-  (42) — total **578 baris** (188 Shopee + 190 Lazada + 200 TikTok).
 - **Rename**: tambah `" archieve"` di akhir judul (title-case asli
   dipertahankan, cuma nambah suffix, idempotent — cek dulu kalau sudah
   berakhiran "archieve" biar tidak dobel kalau script dijalankan ulang).
@@ -77,18 +71,55 @@ Lazada) sekaligus.
   katalog), header/struktur template dipertahankan (sheet TikTok
   `Instruction`/`HiddenAttr`/`Brand`/dst tetap utuh, cuma sheet `Template`
   yang isinya di-trim+rename).
+- **Output digabung 1 file per channel** (bukan 1 file per file-sumber) —
+  koreksi user 2026-09-20: awalnya Shopee dipecah 4 file (ikut jumlah
+  file sumber `1.xlsx`-`5.xlsx`), user minta digabung jadi 1 file Shopee
+  saja. Caranya: baris yang kena dari SEMUA file sumber per channel
+  ditulis ke SATU workbook output (pakai file sumber pertama yg py baris
+  kena sbg shell/template, sheet lain dipertahankan, baris data lama
+  dihapus dulu baru diisi ulang gabungan).
 
-## File hasil (dikirim ke user 2026-09-20, TIDAK di-commit ke git sesuai
-kebijakan data besar)
+## KOREKSI 2026-09-20: prioritaskan model DI LUAR Top-300, bukan cuma "0 Premium"
 
-`ARCHIEVE_PREMIUM_SHOPEE_1..4.xlsx` (14+54+16+104=188 baris),
-`ARCHIEVE_PREMIUM_TIKTOK_tiktok_2.xlsx` (200 baris, dari 3 file TikTok yg
-diupload 18 Sept — cuma file ke-2/katalog utama yang punya baris Premium
-dari 10 model ini), `ARCHIEVE_PREMIUM_LAZADA_file_4.xlsx` (190 baris).
-Sumber listing: file UA Shopee/TikTok/Lazada yang diupload user 18-20
-September (sudah diperbaiki dari bug XML `activePane` via
+User koreksi cara ranking versi pertama: model yang **ADA** di daftar
+Top-300 (berarti model itu genuinely laku di tier lain, cuma Premium-nya
+yang sepi) **JANGAN didahulukan** dibanding model yang **SAMA SEKALI TIDAK
+ADA** di Top-300 (berarti hampir tidak ada penjualan sama sekali, tier
+apapun — sinyal "tidak laris" yang jauh lebih kuat). Versi pertama salah
+mencampur keduanya jadi satu skala "tercatat 0 atau tidak tercatat = sama
+saja" — padahal user melihat itu 2 level ketidaklarisan yang beda jauh.
+
+**Urutan prioritas final**: (1) di LUAR Top-300 dulu (708 produk Premium
+unik total, **428 di luar Top-300**, **105 di antaranya ada di ketiga
+channel sekaligus**), (2) baru di dalamnya urut `n_row` terbanyak seperti
+semula. Model yang ADA di Top-300 (Toyota Crown, Hyundai Sonata, dst dari
+versi pertama) TIDAK dipakai lagi di top-10 final kecuali kandidat di
+luar Top-300 habis (masih jauh dari habis, 428 >> 10).
+
+## Hasil FINAL (v2, dikirim ke user 2026-09-20)
+
+**Top-10** (n_row = total baris varian gabungan 3 channel, semua di LUAR
+Top-300): Honda Civic Sedan (66), Nissan Cedric (60), Toyota RAV4 (60),
+Volkswagen Passat (48), Range Rover Sport (36), Toyota Prius (36), Kia
+Sorento (30), Ford Ranger T6 (30), Mazda 3 Hatchback (30), Mazda 3 Sedan
+(30) — total **142 baris per channel** (sama persis di Shopee/TikTok/
+Lazada, karena kesepuluhnya memang ada lengkap di ketiga channel).
+
+**File dikirim** (TIDAK di-commit ke git sesuai kebijakan data besar):
+`ARCHIEVE_PREMIUM_SHOPEE.xlsx` (142 baris, gabungan dari source
+`1.xlsx`/`2.xlsx`/`4.xlsx` — `3.xlsx`/`5.xlsx` kebetulan 0 baris kena),
+`ARCHIEVE_PREMIUM_TIKTOK.xlsx` (142 baris, dari `tiktok_2.xlsx` saja —
+file 1/3 di luar scope/0 baris), `ARCHIEVE_PREMIUM_LAZADA.xlsx` (142
+baris). Sumber listing: file UA Shopee/TikTok/Lazada yang diupload user
+18-20 September (sudah diperbaiki dari bug XML `activePane` via
 `repair_xlsx.py`, lihat `project-undercover-harga-referensi.md` bagian
 2026-09-18 audit).
+
+**File v1 (SUPERSEDED, jangan dipakai)**: `ARCHIEVE_PREMIUM_SHOPEE_1..
+4.xlsx` + `..._TIKTOK_tiktok_2.xlsx` + `..._LAZADA_file_4.xlsx` (10 model
+versi pertama, salah prioritas + Shopee masih terpecah 4 file) — sudah
+dikirim ke user tapi digantikan v2 di atas, jangan dipakai kalau muncul
+lagi di riwayat chat/file.
 
 ## Next step kalau user lanjut
 
