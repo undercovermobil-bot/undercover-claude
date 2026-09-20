@@ -133,6 +133,44 @@ diperbaiki dari bug XML `activePane` via `repair_xlsx.py`, lihat
 Kalau nemu file lama ini lagi di riwayat chat/upload, jangan dipakai —
 selalu pakai v3 sbg rujukan judul final.
 
+## KOREKSI 2026-09-20: Shopee butuh template KHUSUS utk edit judul, beda dari price/stock
+
+User kasih tahu file Shopee v3 (`ARCHIEVE_PREMIUM_SHOPEE.xlsx`) **salah
+format** — itu masih pakai template `pricestock...export...xlsx`
+(variant-level, kolom `et_title_variation_price` dst, 1 baris per SKU
+warna) yang dipakai sepanjang proyek harga. Untuk EDIT JUDUL PRODUK,
+Shopee py template TERPISAH: **`mass_update_basic_info_<shopid>_
+<timestamp>.xlsx`** (contoh: `mass_update_basic_info_361186752_
+20260920191814.xlsx`), struktur BEDA TOTAL:
+- Cuma **5 kolom**: `et_title_product_id`, `et_title_parent_sku`,
+  `et_title_product_name`, `et_title_product_description`,
+  `et_title_reason`.
+- **1 baris PER PRODUK** (bukan per-varian/warna) — cocok pas dgn
+  kebutuhan rename judul (judul cuma 1 nilai per produk, bukan per SKU).
+  10 model archive = tepat **10 baris**, bukan 142.
+- Header sama gaya (row1=field key, row3=label, data mulai row7), TAPI
+  bug XML `activePane` yang sama tetap ada — `repair_xlsx.py` tetap
+  perlu dijalankan dulu.
+- Matching pakai `Product Name` (kolom 3) — TIDAK ada info SKU/tier di
+  file ini (`Parent SKU` kosong/placeholder "SKU"), jadi filter tier
+  Premium HARUS dari substring "premium" di nama produk (bukan urai_sku
+  kayak biasa) + `extract_base_premium()` yang sudah ada, tetap reusable.
+
+**Pelajaran umum utk proyek archive/rename judul ke depan**: kalau mau
+EDIT JUDUL/deskripsi produk Shopee, WAJIB minta user export template
+`mass_update_basic_info`, JANGAN pakai template price/stock biasa (yg
+sebenarnya untuk harga, bukan judul) — dua template Shopee ini beda
+fungsi & struktur total, sama sekali bukan interchangeable. TikTok &
+Lazada TIDAK kena masalah ini (template `all_information`/`pricestock`
+mereka memang sudah py kolom nama produk yg valid diedit langsung, tidak
+ada template terpisah yg diminta user).
+
+**File final Shopee**: `ARCHIEVE_PREMIUM_SHOPEE_basicinfo.xlsx` (10
+baris, product-level, suffix "Archive" benar) — GANTIKAN
+`ARCHIEVE_PREMIUM_SHOPEE.xlsx` (v3 lama, format price/stock, SALAH utk
+tujuan ini, jangan dipakai). TikTok (`ARCHIEVE_PREMIUM_TIKTOK.xlsx`) &
+Lazada (`ARCHIEVE_PREMIUM_LAZADA.xlsx`) v3 TETAP BERLAKU, tidak berubah.
+
 ## Batas akurasi "di luar Top-300" — sudah ditanyakan, user OK pakai proxy
 
 User tanya: bisa cek yang BENAR-BENAR 0 penjualan (bukan cuma "di luar
