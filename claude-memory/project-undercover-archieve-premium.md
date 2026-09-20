@@ -171,6 +171,61 @@ baris, product-level, suffix "Archive" benar) — GANTIKAN
 tujuan ini, jangan dipakai). TikTok (`ARCHIEVE_PREMIUM_TIKTOK.xlsx`) &
 Lazada (`ARCHIEVE_PREMIUM_LAZADA.xlsx`) v3 TETAP BERLAKU, tidak berubah.
 
+## KOREKSI 2026-09-20: TikTok error "sku not allow delete" + atribut Tahun/Bile kosong
+
+User lapor TikTok (file v3, hasil dari filter `kat=='P'` doang) gagal
+upload, kasih file hasil error (`Tiktoksellercenter_..._result.xlsx`,
+setelah diperbaiki `repair_xlsx.py`). Diagnosis dari kolom `err_info`
+(142 baris, SEMUA gagal, 2 jenis error):
+
+1. **`sku not allow delete` (78 baris)** — root cause: tiap produk
+   Premium di TikTok/Lazada TERNYATA punya varian tambahan **"Model
+   Lain/Custom"** dgn SKU KOSONG/placeholder (bukan format
+   `MEREK-MODEL-UA-KAT-GEN-WARNA` kita, jadi `urai_sku()` return
+   `(None,None)`) DI LUAR varian ber-SKU normal yang match `kat=='P'`.
+   Contoh Kia Sorento: 10 baris ber-SKU (`KIA-SRN-UA-P-G1-ABU` dst) + **2
+   baris "Model Lain/Custom, Abu-abu/Silver"** SKU kosong — filter lama
+   cuma ambil yg 10, 2 baris "Model Lain/Custom" itu KE-SKIP dari file
+   upload. TikTok (dan berpotensi Lazada) menganggap baris yg hilang dari
+   produk yg disentuh = **permintaan hapus SKU itu** (persis pola yg
+   sudah pernah ketemu di kasus HiAce Premio 2026-09-07, "file WAJIB
+   memuat SELURUH varian produk yg disentuh") — 2 baris itu punya
+   `sku_id` yg SUDAH terdaftar live jadi "dihapus" ditolak sistem.
+   **Fix**: JANGAN filter baris berdasar `kat=='P'` doang. Tahap 1: cari
+   NAMA PRODUK PERSIS yg match target (dari baris ber-SKU valid kat='P').
+   Tahap 2: ambil SEMUA baris dgn nama produk PERSIS itu, apa pun
+   SKU/tier-nya. Lazada py pola identik (dicek eksplisit, "Model
+   Lain/Custom" SKU-nya placeholder khas Lazada `<pid>-<sellerId>-N`) —
+   diperbaiki preventif walau belum sempat dilaporkan error.
+2. **`atribut produk is missing... ID:100530, nama: Tahun` (64 baris)** —
+   kolom Tahun (`product_property/100530`) kosong di SEMUA baris target
+   di source `tiktok_2.xlsx` (dicek eksplisit). Ini **gap PRA-ADA di
+   source UA**, sama persis pola yg sebelumnya cuma diperbaiki utk SP/OP
+   (lihat `project-undercover-harga-referensi.md`), **UA belum pernah
+   ditambal**. Fix: isi `"2026"` (nilai established) untuk baris yg
+   disentuh SAJA (bukan blanket ke seluruh katalog). **Preventif juga
+   isi Bile (`102755`) = `"16:9"`** (kosong juga di baris ini) supaya
+   tidak kena ronde error ke-2 (pola "TikTok lapor atribut hilang SATU
+   PER SATU, bukan sekaligus" sudah pernah kejadian di kasus SP/OP).
+   **Jenis Garansi (`100107`) TIDAK disentuh** — beda dari kasus SP,
+   kolom ini di UA SUDAH terisi ("Garansi Pabrik Produksi"), bukan
+   kosong, jadi tidak perlu ditambal.
+
+**File final v4** (GANTIKAN v3 utk TikTok & Lazada, isi produk/model
+SAMA, cuma baris & atribut lebih lengkap): `ARCHIEVE_PREMIUM_TIKTOK_
+v4.xlsx` (152 baris, 10 produk), `ARCHIEVE_PREMIUM_LAZADA_v4.xlsx` (152
+baris). Shopee (`ARCHIEVE_PREMIUM_SHOPEE_basicinfo.xlsx`, format
+`mass_update_basic_info`, product-level) TIDAK terpengaruh isu ini sama
+sekali (tidak py konsep "varian" di template itu).
+
+**Pelajaran umum utk proyek archive/rename ke depan (TikTok & Lazada,
+variant-level template)**: SELALU grouping baris berdasar NAMA PRODUK
+PERSIS (atau product_id kalau ada), BUKAN cuma filter tier/SKU pattern
+— produk hampir selalu py varian "Model Lain/Custom"/catch-all dgn SKU
+tidak standar yang gampang ke-skip filter berbasis `urai_sku()`. Kalau
+mau proses batch 11-20 atau toko lain nanti, PAKAI method 2-tahap ini
+dari awal (bukan nunggu error lagi).
+
 ## Batas akurasi "di luar Top-300" — sudah ditanyakan, user OK pakai proxy
 
 User tanya: bisa cek yang BENAR-BENAR 0 penjualan (bukan cuma "di luar
