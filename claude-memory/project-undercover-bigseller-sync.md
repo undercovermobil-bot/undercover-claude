@@ -729,3 +729,11 @@ File: `SKU Gudang Big Seller/impor_sku_gudang_Kia_Cerato (2026-09-15).xlsx`, 18 
 ## 2026-09-18: Suzuki Amenity gudang import, UA+SP -- pola 0%-gudang berlanjut
 
 Screenshot doang (pola mapan, gak nanya). Master lengkap 34 kode unik (UA 17+SP 17, TF=1, struktur standar E1+P2+R5+S9), 0/34 pernah di gudang. File: `impor_sku_gudang_Suzuki_Amenity (2026-09-18).xlsx`, 34 baris, termasuk target order `SZK-AMN-UA-R-G1-HTM`.
+
+## 2026-09-22: Mazda 2 Hatchback -- aturan bodystyle-split 08-07 TERNYATA BELUM PERNAH dieksekusi ke master/gudang
+
+Order gagal (`MZD-2H-SP-S-G1-S2A`, Strip 2 Abu). Cek master: sheet "Mazda 2 Hatchback" **MASIH pakai kode lama `MZD-MZ2`** (BUKAN `MZD-2H`) -- padahal aturan split bodystyle (`-2S-` Sedan / `-2H-` Hatchback) sudah dikonfirmasi user sejak **2026-08-07** dan didokumentasikan di [[project-undercover-sku-sync-rules]]. Sedan-nya (MZD-2S) memang sudah bener, tp **Hatchback ternyata TIDAK PERNAH benar2 dimigrasi** -- baik di master maupun di gudang, kode lama MZD-MZ2 masih dipakai di mana2 (99 baris di gudang!). Sementara itu LIVE LISTING order ini sendiri udah terlanjur pakai kode baru MZD-2H (kemungkinan session lain/manual sudah mulai migrasi listing tanpa migrasi gudang/master-nya).
+
+**Yg dikerjakan**: bukan cuma 1 baris yg gagal -- ambil SEMUA 99 kode lama `MZD-MZ2-*` yg SUDAH ada di gudang (G1+G2+G3, 33 combo x 3 gen, terverifikasi identik strukturnya per gen), swap prefix ke `MZD-2H`, bangun ulang scb migrasi penuh. File: `impor_sku_gudang_Mazda2_Hatchback (2026-09-22).xlsx`, 99 baris.
+
+**BELUM dikerjakan (di luar scope gudang)**: master sheet "Mazda 2 Hatchback" sendiri MASIH pakai kode MZD-MZ2 -- kalau nanti diminta fix listing Hatchback (bukan cuma gudang), inget update master jg (bukan cuma listing tiap toko), krn kemungkinan besar SEMUA listing Hatchback 4 toko masih pakai kode lama ini, gudang cuma 1 dari beberapa tempat yg kena dampak aturan 08-07 yg gak jalan.
