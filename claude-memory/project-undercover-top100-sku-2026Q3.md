@@ -138,3 +138,17 @@ Tepat di bawah ambang: #101 Mitsubishi Outlander (29 unit), #102 Toyota GR 86 (2
 3. Bandingkan dgn tabel di atas: SKU keluar (turun ke >100) & masuk.
 4. Filter listing: `klasifikasi_listing_top100.py` + `build_listing_top100_xlsx.py`
    (Shopee `mass_update_basic_info`).
+
+## Dokumen utk tim produksi (2026-09-24)
+
+User minta file docx berisi 100 SKU ditulis dgn NAMA PRODUK (bukan kode SKU),
+mobil kembar ditulis semua namanya -> `Daftar_100_Produk_Terlaris_Undercover.docx`
+(dikirim ke user, tidak di git). Isi: penjelasan singkat (1 nomor = 1 cover,
+baris hijau = kembar satu cover, Rocky muncul 2x: No.15 Rocky 2019+ ikut
+Raize & No.33 Rocky lama F70/F300 ikut Feroza, berlaku semua tier) + tabel
+No / Nama Produk / Terjual Apr-Sep. 110 nama (Gran Max "listing gabungan"
+Lazada tidak ditulis krn bukan mobil beda; label diperjelas: "Hyundai Avega
+(Sedan)", "Suzuki Vitara (termasuk Grand Vitara)", "Datsun Go").
+Skrip: `hpp-per-merk-scripts/build_docx_top100_produksi.js` (docx-js).
+LibreOffice rusak di cloud -> verifikasi pakai validate.py skill docx +
+baca ulang teks XML (pandoc juga tidak terpasang).
