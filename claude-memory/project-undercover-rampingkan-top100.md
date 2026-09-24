@@ -196,6 +196,29 @@ Shopee UA, 1 baris per produk, tanpa SKU) -> `klasifikasi_listing_top100.py`
   user, ditanyakan.
 - Tidak ada Transparan di listing Shopee ini (hanya R/P/E).
 
+## Cek ulang judul "Archive" (2026-09-24, file basic_info 13:28, SEMUA status)
+
+User upload `mass_update_basic_info_361186752_20260924132846.xlsx` — kali ini
+`search_condition` KOSONG = semua status (1.843 produk = 1.677 aktif + 166
+tidak aktif), beda dari file 12:04 yg `product_status:[1]` (aktif saja).
+Cek baris row 2 kolom 5 utk tahu file aktif-saja atau semua status.
+
+- **9 judul "Archive" (uji coba Premium 20 Sep), semuanya DI LUAR top-100**:
+  Range Rover Sport, Mazda 3 Hatchback, Ford Ranger T6, Mazda 3 Sedan, Toyota
+  Prius, Kia Sorento, Nissan Cedric, Toyota RAV4, VW Passat (semua Premium,
+  sudah tidak aktif). **Honda Civic Sedan Premium sudah dikembalikan user ke
+  judul normal** (tidak ada "Archive" lagi) — konflik yg dicatat sebelumnya SELESAI.
+- 91 produk tidak aktif yg mobilnya top-100: 85 duplikat lama (mobil+tier
+  sama, 83 judul persis sama) dgn listing aktif pengganti; 5 listing NAMA LAMA
+  ("Honda Civic", "Mazda 2", "Gran Max PU", "Gran Max MB", "Honda City"
+  Premium) — ini BUKTI nama-nama lama di laporan penjualan berasal dari listing
+  lama yg sudah diganti nama baru, mengonfirmasi mapping MANUAL; 1 "Livina
+  XGear Reguler" lama (versi aktif "X-Gear" ada). **Tidak ada SKU top-100
+  yg kehilangan listing aktif.**
+- Fix `klasifikasi_listing_top100.py`: nama lama dibaca dari `MANUAL` di
+  `ranking_per_sku.py` (parse via ast, 1 sumber) sebelum fallback per-nama.
+  Hasil file aktif 12:04 tetap sama (327/891/459).
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,

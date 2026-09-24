@@ -13,6 +13,11 @@ out = pickle.load(open(f"{S}/ranking_per_sku.pkl", "rb"))['out']
 rank_of = {g['key']: g['rank'] for g in out}
 qty_of = {g['key']: g['qty'] for g in out}
 VIT = {'SZK-GVT', 'SZK-GVH', 'SZK-EVT'}
+# nama lama / penamaan lain -> SKU, diambil dari MANUAL di ranking_per_sku.py (satu sumber kebenaran)
+import ast
+_src = open(os.path.join(HERE, 'ranking_per_sku.py')).read()
+_m = re.search(r'^MANUAL = (\{.*?^\})', _src, re.S | re.M)
+NAMA_LAMA = {norm(k): v[0] for k, v in ast.literal_eval(_m.group(1)).items()}
 QTY_AMBANG = out[99]['qty']
 SALES_BY_NAME = {}
 _wb = openpyxl.load_workbook(f"{S}/MOBIL_TERLARIS_BIGSELLER.xlsx", data_only=True)['Top Model Mobil']
@@ -48,6 +53,11 @@ def klasifikasi(title):
         return {'status': 'Di luar top-100', 'tier': tier, 'archive': archive, 'nama': nm, 'keys': [], 'rank': None, 'dasar': PRODUK_TERPISAH[b]}
     b_raw = norm(base_name(t))
     src = ua.get(b) or ua.get(b_raw) or spop.get(b) or spop.get(b_raw)
+    if not src and (b in NAMA_LAMA or b_raw in NAMA_LAMA):
+        k = NAMA_LAMA.get(b) or NAMA_LAMA.get(b_raw)
+        rank = rank_of.get(k)
+        return {'status': 'Masuk top-100' if rank and rank <= 100 else 'Di luar top-100', 'tier': tier, 'archive': archive,
+                'nama': nm, 'keys': [k], 'rank': rank, 'dasar': f'SKU {k} (nama lama/penamaan lain, lihat MANUAL di ranking_per_sku.py)'}
     if not src:
         # tidak ada di peta SKU: cek penjualan per NAMA di laporan; semua kasus yg ketemu jauh di bawah ambang
         q = SALES_BY_NAME.get(b, 0)
