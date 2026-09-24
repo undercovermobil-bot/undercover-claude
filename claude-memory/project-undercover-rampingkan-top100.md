@@ -134,6 +134,26 @@ yang diputuskan (Range Rover/Velar/Sport, Discovery/Discovery Sport,
 Ferrari 488 Pista/Spider, Fiat 500/Aircross, Wrangler/Rubicon, L300/L300
 Pickup) — tidak mempengaruhi daftar dipertahankan, cuma info.
 
+## UPDATE 2026-09-24: Mazda 2 = Hatchback (keputusan user) + aturan seri
+
+- User konfirmasi **"Mazda 2" = Mazda 2 Hatchback** -> digabung ke `MZD-2H`
+  (MANUAL di `ranking_per_sku.py`): 117 + 102 = **219 unit, #37**. Grup kini
+  324 (bukan 325). Nama grup dipaksa lewat `NAMA_GRUP` (MZD-2H "Mazda 2
+  Hatchback", DHT-GMXP "Gran Max Pick Up", HND-CVC "Honda Civic Sedan") krn
+  anggota terlarisnya pakai penamaan lama/toko lain.
+- Slot yg kosong diperebutkan 4 produk sama-sama 29 unit. **Aturan seri
+  (keputusan Claude, bisa diubah user): unit sama -> Total Penjualan (Rp)
+  lebih besar di atas.** Hasil: **#100 BMW Seri 5 (Rp 8,50 jt)**; di luar:
+  #101 Outlander (8,07 jt), #102 GR 86 (7,74 jt), #103 Mirage (6,19 jt).
+  Aturan ini juga menggeser urutan seri lain (Suzuki Vitara #98, Ford
+  Everest #99).
+- **Angka FINAL saat ini**: top-100 = 29.175 unit (95,5%), **84 tetap + 16
+  masuk baru** (15 sebelumnya + BMW Seri 5), 0 keluar; semua 100 ada di
+  listing UA. Daftar Mobil Listing UA: 415 nama -> **110 dipertahankan**,
+  305 di luar top-100.
+- Angka di bagian atas file ini (325 grup, 85+15, 109 nama, "Mazda 2
+  perlu keputusan") sudah TIDAK berlaku — pakai angka di bagian ini.
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,

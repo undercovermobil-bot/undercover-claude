@@ -24,6 +24,7 @@ MANUAL = {
     'Toyota Starlet Kapsul': ('TYT-STR', 'listing SP/OP "Starlet Kapsul" ber-SKU TYT-STR'),
     'Aion Hyptec HT': ('GAC-HH', 'penulisan lain GAC Aion Hyptec HT'),
     'Toyota Hardtop / Land Cruiser': ('TYT-HTP', 'Hardtop = Land Cruiser J40'),
+    'Mazda 2': ('MZD-2H', 'dikonfirmasi user 2026-09-24: "Mazda 2" = Mazda 2 Hatchback'),
     'Suzuki Vitara': ('SZK-VITARA', 'satu listing berisi beberapa SKU (SZK-GVT/GVH/EVT)'),
     'Suzuki Grand Vitara': ('SZK-VITARA', 'listing sama dgn Suzuki Vitara (SKU SZK-GVT/GVH/EVT)'),
 }
@@ -41,7 +42,6 @@ TERPISAH = {
     'Maserati GranTurismo Reguler CUSTOM SPOILER': 'produk custom terpisah',
     'Range Rover Velar': 'prefix LDR-RR sama dgn Range Rover, tapi mobil beda -> kemungkinan salah tag SKU',
     'Range Rover Sport': 'prefix LDR-RR sama dgn Range Rover, tapi mobil beda -> kemungkinan salah tag SKU',
-    'Mazda 2': 'bodi tidak disebut (bisa Hatchback MZD-2H atau Sedan MZD-2S)',
     'Mazda 3': 'bodi tidak disebut (bisa Hatchback MZD-3H atau Sedan MZD-3S)',
     'Kia Rio': 'bodi tidak disebut (bisa Hatchback KIA-RIO atau Sedan KIA-RS)',
     'Suzuki Aerio': 'bodi tidak disebut (bisa Hatchback SZK-ARH atau Sedan SZK-ARS)',
@@ -86,13 +86,14 @@ for rank, nm, qty, rp in rows:
     g = groups[key]; g['qty'] += qty; g['rp'] += rp
     g['members'].append((rank, nm, qty, why))
 
-# nama grup = anggota terlaris
+# nama grup = anggota terlaris, kecuali nama itu penamaan lama/toko lain -> pakai nama listing UA
+NAMA_GRUP = {'MZD-2H': 'Mazda 2 Hatchback', 'DHT-GMXP': 'Daihatsu Gran Max Pick Up', 'HND-CVC': 'Honda Civic Sedan'}
 out = []
 for key, g in groups.items():
     mem = sorted(g['members'], key=lambda m: -m[2])
-    out.append({'key': key, 'nama': mem[0][1], 'qty': g['qty'], 'rp': g['rp'],
+    out.append({'key': key, 'nama': NAMA_GRUP.get(key, mem[0][1]), 'qty': g['qty'], 'rp': g['rp'],
                 'members': sorted(g['members']), 'best_old': min(m[0] for m in g['members'])})
-out.sort(key=lambda x: (-x['qty'], x['best_old']))
+out.sort(key=lambda x: (-x['qty'], -x['rp'], x['best_old']))  # unit sama -> nilai penjualan (Rp) lebih besar di atas
 for i, g in enumerate(out, 1):
     g['rank'] = i
 

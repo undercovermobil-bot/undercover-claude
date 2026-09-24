@@ -48,17 +48,26 @@ ket['B4'].number_format = '#,##0'
 ket['C4'] = 'Sumber: MOBIL_TERLARIS_BIGSELLER.xlsx, baris TOTAL sheet "Top Model Mobil" (data dari user)'
 ket['C5'] = 'Sumber: periode laporan 1 Apr – 16 Sep 2026 (data dari user)'
 ket['C6'] = 'Rencana user: katalog dirampingkan jadi 100 produk terlaris, dievaluasi tiap kuartal'
+_q100 = out[99]['qty']
+_seri = [g for g in out if g['qty'] == _q100]
+_dlm = [g for g in _seri if g['rank'] <= 100]; _luar = [g for g in _seri if g['rank'] > 100]
+_nx = next(g for g in out if g['qty'] < _q100)
+_fmt = lambda gs: ', '.join(f"#{g['rank']} {g['nama']} (Rp {g['rp']/1e6:.2f} jt)" for g in gs)
+BATAS_TEKS = (f"Produk dengan {_q100} unit: {_fmt(_dlm)} masuk top-100; {_fmt(_luar) or '-'} di luar. "
+              f"Karena unitnya sama, pembedanya nilai penjualan (Rp). Produk berikutnya di bawahnya: #{_nx['rank']} {_nx['nama']} ({_nx['qty']} unit). "
+              "Selisih di sekitar ambang hanya 1-2 unit, jadi posisi #95-#105 mudah bertukar di evaluasi kuartal berikutnya.")
 notes = [
     ('Sumber data', 'MOBIL_TERLARIS_BIGSELLER.xlsx (dibuat 2026-09-17), ekspor BigSeller "Laporan Penjualan > Berdasarkan SKU Toko", periode 1 Apr – 16 Sep 2026.'),
     ('Cakupan', 'GABUNGAN 4 toko (Undercover, Otonation, Otoprotection, Smartprotection), channel Shopee + TikTok/Tokopedia. Lazada TIDAK termasuk (tidak terhubung ke BigSeller). Angka bukan khusus toko Undercover saja.'),
     ('Masalah yang diperbaiki', 'Laporan asli mengelompokkan per NAMA listing. Mobil kembar yang berbagi 1 SKU (Avanza/Xenia/Veloz, Agya/Ayla, Feroza/Taft GT/Rocky lama, dst) dan penulisan nama berbeda untuk mobil yang sama ("Gran Max PU" vs "Gran Max Pick Up", listing Otonation "... Semi Outdoor", typo "Undervover") muncul sebagai baris terpisah, sehingga ±15 slot top-100 terpakai produk yang sama.'),
     ('Metode', 'Tiap nama di laporan dipetakan ke prefix SKU (2 segmen pertama, mis. TYT-AVZ) yang dipakai di listing Undercover (Shopee/TikTok/Lazada, snapshot 18 Sep 2026); kalau tidak ada di listing Undercover, pakai listing Smartprotection/Otoprotection; kalau tidak ada di keduanya, dipetakan manual dengan bukti rentang generasi di sheet Detail. Unit & penjualan dijumlah per prefix. Rincian per nama ada di sheet "Pemetaan Nama".'),
     ('Kolom "Ada di Listing UA"', 'Ya = prefix SKU grup ini dipakai di listing Undercover snapshot 18 Sep 2026. Tidak = hanya dijual toko lain (permintaannya tetap terhitung). ? = grup tanpa SKU pasti.'),
-    ('Batas ambang', 'Peringkat #99 Ford Everest & #100 Suzuki Vitara = 30 unit; #101–#104 (Mitsubishi Outlander, Mitsubishi Mirage, BMW Seri 5, Toyota GR 86) sama-sama 29 unit. Selisih di ambang hanya 1 unit, dan Suzuki Vitara baru mencapai 30 karena digabung dengan listing Grand Vitara (6 unit) — posisi di sekitar #95–#105 sangat mudah bertukar di evaluasi kuartal berikutnya.'),
+    ('Batas ambang', BATAS_TEKS),
     ('Rocky dipecah', 'Daihatsu Rocky (90 unit): 77 unit generasi 2019+ dan 8 unit tanpa info generasi masuk ke Raize (TYT-RZE); 5 unit Rocky lama F70 masuk ke Feroza (DHT-FRZ).'),
     ('Gran Max dipecah', 'Listing "Daihatsu Gran Max" (18 unit) berisi Minibus dan Pick Up sekaligus tanpa info bodi di data penjualan, jadi dibagi rata 9 ke Minibus/Luxio (DHT-GMX) dan 9 ke Pick Up (DHT-GMXP).'),
-    ('Sengaja TIDAK digabung', 'Grand Livina Custom Roofbox & Livina X-Gear (produk & harga beda), Toyota Vios Custom & Maserati Custom Spoiler (produk custom), Range Rover Velar/Sport (prefix LDR-RR sama dengan Range Rover tapi mobil beda — kemungkinan salah tag SKU, perlu dicek), Mazda 2 / Mazda 3 / Kia Rio / Suzuki Aerio tanpa keterangan bodi (tidak bisa dipastikan Hatchback atau Sedan). Feroza Long tetap terpisah (SKU sendiri DHT-FRL). Suzuki Carry tetap terpisah dari Carry Pickup (SKU beda sesuai keputusan 2026-08-22).'),
-    ('Perlu keputusan user', 'Mazda 2 (117 unit, peringkat baru #51) tidak menyebut bodi (Hatchback MZD-2H atau Sedan MZD-2S). Kalau ternyata Hatchback, digabung ke Mazda 2 Hatchback → 219 unit dan 1 slot top-100 jadi kosong, diperebutkan 4 produk yang sama-sama 29 unit (lihat Batas ambang).'),
+    ('Sengaja TIDAK digabung', 'Grand Livina Custom Roofbox & Livina X-Gear (produk & harga beda), Toyota Vios Custom & Maserati Custom Spoiler (produk custom), Range Rover Velar/Sport (prefix LDR-RR sama dengan Range Rover tapi mobil beda — kemungkinan salah tag SKU, perlu dicek), Mazda 3 / Kia Rio / Suzuki Aerio tanpa keterangan bodi (tidak bisa dipastikan Hatchback atau Sedan). Feroza Long tetap terpisah (SKU sendiri DHT-FRL). Suzuki Carry tetap terpisah dari Carry Pickup (SKU beda sesuai keputusan 2026-08-22).'),
+    ('Keputusan user', '"Mazda 2" (117 unit, tanpa keterangan bodi di laporan) dikonfirmasi user 2026-09-24 = Mazda 2 Hatchback, jadi digabung ke MZD-2H.'),
+    ('Urutan kalau unit sama', 'Produk dengan total unit sama diurutkan berdasarkan Total Penjualan (Rp) terbesar.'),
     ('Warna font', 'Biru = angka input (bisa diubah). Hitam = rumus. Hijau = rumus yang mengambil dari sheet lain.'),
 ]
 ket['A8'] = 'Catatan'; ket['A8'].font = f_bold
@@ -277,7 +286,7 @@ dm.cell(dl + 2, 2, 'Dipertahankan').font = f_bold
 c = dm.cell(dl + 2, 3, f'=COUNTIFS(E5:E{dl},"Dipertahankan")'); c.font = f_bold
 dm.cell(dl + 3, 2, 'Di luar top-100').font = f_bold
 c = dm.cell(dl + 3, 3, f'=COUNTIFS(E5:E{dl},"Di luar top-100")'); c.font = f_bold
-dm.cell(dl + 4, 2, 'Cover motor, karpet & travel pouch tidak dimasukkan (di luar cakupan data penjualan mobil). Baris hijau = mobil kembar yang ikut masuk lewat SKU pasangannya. "Mazda 2" (tanpa keterangan bodi) tidak ada di daftar ini karena listing UA memakai Mazda 2 Hatchback / Mazda 2 Sedan.').font = f_norm
+dm.cell(dl + 4, 2, 'Cover motor, karpet & travel pouch tidak dimasukkan (di luar cakupan data penjualan mobil). Baris hijau = mobil kembar yang ikut masuk lewat SKU pasangannya.').font = f_norm
 for col, w in zip('ABCDEFG', [6, 30, 22, 11, 16, 42, 60]):
     dm.column_dimensions[col].width = w
 dm.freeze_panes = 'C5'
