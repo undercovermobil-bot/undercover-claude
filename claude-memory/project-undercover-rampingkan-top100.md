@@ -69,7 +69,68 @@ top-100 "per nama" sebenarnya hanya ~86-89 produk fisik berbeda.
 Rover / Velar / Sport berbagi `LDR-RR`, Jeep Wrangler / Rubicon berbagi
 `JEP-WRA` — kemungkinan salah-tag SKU, semua di luar top-100.
 
-## Belum dikerjakan
+## Ranking top-100 per SKU (2026-09-24, SELESAI, dikirim ke user)
 
-Ranking ulang top-100 berbasis grup SKU (gabung kembar + duplikat nama)
-— ditawarkan ke user sbg langkah berikutnya, belum ada instruksi.
+File: `RANKING_TOP100_PER_SKU.xlsx` (4 sheet: Top 100 per SKU, Peringkat
+Lengkap, Keterangan, Pemetaan Nama). 369 nama di laporan -> **325 produk
+(grup SKU)**. Top-100 per SKU = 29.146 unit = **95,4% seluruh unit**.
+
+- **85 tetap + 15 masuk baru** (sebelumnya di luar top-100 per nama):
+  Wuling Cortez, Honda Stream, Wuling Confero, Honda Civic Hatchback,
+  Chevrolet Spin, Mitsubishi Xforce, MG S5 EV, Mercedes Benz C Class,
+  Suzuki Aerio Hatchback, Hyundai Palisade, Hyundai Avega (+Avega Sedan),
+  Kia Sonet, Daihatsu Taruna, Ford Everest, Suzuki Vitara (+Grand Vitara).
+- **Tidak ada yang keluar** dari top-100 lama.
+- **Ambang sangat tipis**: #99 Ford Everest & #100 Suzuki Vitara = 30
+  unit; #101-#104 (Outlander, Mirage, BMW Seri 5, Toyota GR 86+86) = 29
+  unit. Suzuki Vitara baru 30 karena digabung listing Grand Vitara (6).
+- Semua produk top-100 ada di listing UA (snapshot 18 Sep), kecuali
+  "Mazda 2" (tanpa SKU pasti).
+
+**Aturan penggabungan** (detail per nama di sheet Pemetaan Nama, dasar
+per baris tercatat):
+1. Default: nama -> prefix SKU dominan di listing UA; kalau tidak ada,
+   listing SP/OP (sp_src, op_src, op_tiktok*, lazada_src, sp_tiktok).
+2. **MANUAL** (nama lama/penamaan toko lain yg tidak ada di listing, bukti
+   dari rentang generasi sheet Detail): Honda Civic->HND-CVC (nama lama
+   Civic Sedan, 396 unit!), Gran Max PU->DHT-GMXP, Gran Max MB->DHT-GMX,
+   Honda City->HND-CTY, Suzuki APV->SZK-APV, Strada Triton->MTB-TRN,
+   **Mitsubishi Pajero->MTB-PJS** (listing SP/OP bernama "Pajero" isinya
+   Pajero Sport), Carry PU->SZK-CRP, Mercedes E Class->MBZ-ECL, Starlet
+   Kapsul->TYT-STR, Aion Hyptec HT->GAC-HH, Hardtop/Land Cruiser->TYT-HTP,
+   Suzuki Vitara + Grand Vitara -> 1 grup (listing multi-SKU GVT/GVH/EVT).
+3. **DIPECAH**: Daihatsu Rocky 90 = 85 ke TYT-RZE (77 gen 2019+ & 8 tanpa
+   info gen ikut mayoritas) + 5 F70 ke DHT-FRZ. Daihatsu Gran Max 18 (listing
+   gabungan tanpa info bodi) = 9 DHT-GMX + 9 DHT-GMXP.
+4. **SENGAJA TIDAK digabung**: Grand Livina Custom Roofbox, Livina X-Gear
+   (NSN-LXG), Vios Custom, Maserati Custom Spoiler, Range Rover Velar/Sport
+   (LDR-RR sama, curiga salah tag), Mazda 2 / Mazda 3 / Kia Rio / Suzuki
+   Aerio tanpa bodi, Feroza Long, Suzuki Carry vs Carry Pickup.
+
+**Perlu keputusan user (belum ditanyakan eksplisit)**: "Mazda 2" (117
+unit, #51) tanpa bodi — kalau Hatchback, gabung ke MZD-2H (219 unit) ->
+1 slot top-100 kosong, diperebutkan 4 produk seri 29 unit.
+
+## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
+
+`hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,
+simpan `sku_map.pkl`), `ranking_per_sku.py` (aturan MANUAL/SPLIT/TERPISAH +
+grouping), `build_ranking_xlsx.py` (tulis workbook, rumus SUMIFS ke sheet
+Pemetaan Nama), `inject_cache.py` (hitung nilai rumus & tanam sbg cached
+value). Semua baca folder data dari env `KERJA_DIR`. Urutan:
+`repair_xlsx.py` utk listing -> `sku_map_lib.py` -> `build_ranking_xlsx.py`
+-> `inject_cache.py <file>`. **Kuartal berikutnya: cek ulang SPLIT (qty
+Rocky/Gran Max diambil manual dari sheet Detail, script `assert` kalau
+total tidak cocok) dan MANUAL (nama baru di laporan yg tidak ketemu di
+listing akan jadi grup sendiri — cek daftar "berdiri sendiri").**
+
+## JEBAKAN TEKNIS: LibreOffice rusak di kontainer cloud (2026-09-24)
+
+`soffice` gagal membuka file xlsx APA PUN ("source file could not be
+loaded", bahkan file 1 sel; `recalc.py` skill xlsx timeout). Solusi:
+`inject_cache.py` mengevaluasi rumus dari TEKS rumusnya sendiri (pola
+SUMIFS/COUNTIFS/SUM/IF/bagi/kurang saja) lalu menanam `<v>` ke XML —
+file tetap berisi rumus (Excel hitung ulang) sekaligus tidak tampil
+kosong di preview HP/Google Sheets (keluhan lama user soal "formula
+kosong", lihat project-undercover-harga-referensi.md). Hasil diverifikasi
+silang ke grouping Python: 0 selisih. Butuh `pip install lxml`.
