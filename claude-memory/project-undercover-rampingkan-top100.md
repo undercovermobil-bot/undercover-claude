@@ -171,6 +171,31 @@ listing UA). **Pelajaran**: kalau 1 baris mewakili beberapa produk, nama
 semua produknya harus kelihatan di kolom nama utama — user membaca kolom
 itu sbg daftar produk, bukan kolom rincian di ujung kanan.
 
+## Filter listing Shopee UA vs top-100 (2026-09-24)
+
+Daftar 100 SKU dicatat permanen di
+[project-undercover-top100-sku-2026Q3.md](project-undercover-top100-sku-2026Q3.md)
+(user: "evaluasi per kuartal"). User upload
+`mass_update_basic_info_361186752_20260924120444.xlsx` (1.677 produk aktif
+Shopee UA, 1 baris per produk, tanpa SKU) -> `klasifikasi_listing_top100.py`
+(judul -> nama mobil -> SKU via sku_map.pkl -> peringkat) +
+`build_listing_top100_xlsx.py` -> `LISTING_SHOPEE_UA_vs_TOP100.xlsx`:
+- **Masuk top-100: 327 produk** (109 mobil x Reguler/Premium/Exclusive —
+  110 nama di ranking, 1 mobil tidak punya listing di Shopee ini).
+- **Di luar top-100: 891 produk** (312 mobil; 308 Reguler/286 Premium/296
+  Exclusive). Mobil yg tidak ada di peta SKU (Neta V, Proton Suprima S, iCar
+  V23, Kia Cerato, Colt T120SS, Step WGN, Ssangyong Musso, Mazda 323
+  Interplay, typo "Mitusbishi Delica") dicek per nama di laporan: 0-2 unit
+  -> di luar.
+- **Bukan cover mobil: 459** (cover motor, shampoo, black trim, headlamp
+  restorer, glass polish, tas, bahan kain, logo custom). Aturan: judul harus
+  mengandung "cover/selimut/sarung mobil" & bukan "logo custom".
+- **KONFLIK**: "Honda Civic Sedan Premium Archive" (sisa uji archive 20 Sep)
+  ternyata SKU-nya `HND-CVC` peringkat #18 — model top-100. Ranking per
+  model (semua tier), jadi apakah tier Premium-nya tetap diarsipkan = keputusan
+  user, ditanyakan.
+- Tidak ada Transparan di listing Shopee ini (hanya R/P/E).
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,

@@ -57,12 +57,15 @@ def evaluate(sheet, f):
         fn, args = m.group(1), split_args(m.group(2))
         if fn == 'SUM':
             return sum(num(v) for v in rng(sheet, args[0]) if isinstance(v, (int, float)) or v is None)
-        if fn == 'SUMIFS':
-            vals, crit_r, crit = rng(sheet, args[0]), rng(sheet, args[1]), operand(sheet, args[2])
-            return sum(num(v) for v, k in zip(vals, crit_r) if str(k).lower() == str(crit).lower())
-        if fn == 'COUNTIFS':
-            crit_r, crit = rng(sheet, args[0]), operand(sheet, args[1])
-            return sum(1 for k in crit_r if str(k).lower() == str(crit).lower())
+        if fn in ('SUMIFS', 'COUNTIFS'):
+            vals = rng(sheet, args[0]) if fn == 'SUMIFS' else None
+            pairs = args[1:] if fn == 'SUMIFS' else args
+            conds = [(rng(sheet, pairs[i]), str(operand(sheet, pairs[i + 1])).lower()) for i in range(0, len(pairs), 2)]
+            n = len(conds[0][0])
+            ok = [all(str(cr[j]).lower() == cv for cr, cv in conds) for j in range(n)]
+            if fn == 'COUNTIFS':
+                return sum(ok)
+            return sum(num(v) for v, o in zip(vals, ok) if o)
         if fn == 'IF':
             cm = re.fullmatch(r'(.+?)(<=|>=|<|>|=)(.+)', args[0])
             a, op, b = operand(sheet, cm.group(1)), cm.group(2), operand(sheet, cm.group(3))
