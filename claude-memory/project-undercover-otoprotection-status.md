@@ -376,3 +376,13 @@ produk tsb (bukan cuma baris yang benar-benar berubah SKU/harga) sebelum
 file dikirim ke user -- kelengkapan varian (baris pelengkap) dan
 kelengkapan atribut wajib adalah DUA hal terpisah yang harus dua-duanya
 dipenuhi, bukan cuma salah satu.
+
+
+## 2026-09-24: keputusan DHT-RCK (Rocky lama) DIBATALKAN user
+
+Untuk menyeragamkan daftar top-100 SKU ke semua toko, user akan mengubah
+MANUAL Rocky lama OP dari `DHT-RCK-SP-*-G1-*` ke `DHT-FRZ-SP-*-G1-*`
+(30 baris: 15 Shopee + 15 TikTok, snapshot 14 Sep). Sekalian perlu: Taft GT
+OP `DHT-FRZ-SP-*-F70-*` -> `...-G1-...` (30 baris). Harga Rocky lama (324rb)
+vs Feroza (370rb) perlu disamakan krn 1 SKU = 1 harga — belum diputuskan.
+Detail di project-undercover-sku-sync-rules.md aturan #8.
