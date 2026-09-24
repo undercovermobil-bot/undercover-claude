@@ -149,79 +149,6 @@ RP_RNG = f"'Pemetaan Nama'!$D${PM_FIRST}:$D${PM_LAST}"
 KEY_RNG = f"'Pemetaan Nama'!$E${PM_FIRST}:$E${PM_LAST}"
 key_disp = lambda k: ('NAMA: ' + k[5:]) if k.startswith('NAMA:') else k
 
-# ---------------- sheet ranking ----------------
-HDR = ['Peringkat Baru', 'Nama Produk', 'Kode Grup (Prefix SKU)', 'Total Unit', '% dari Total Unit',
-       'Total Penjualan (Rp)', 'Rata-rata Terjual/Hari', 'Peringkat Lama Terbaik', 'Status',
-       'Jumlah Nama Digabung', 'Nama yang Digabung (peringkat lama, unit)', 'Ada di Listing UA']
-def build_rank_sheet(ws, title, groups, note):
-    ws['A1'] = title; ws['A1'].font = f_title
-    ws['A2'] = note; ws['A2'].font = f_norm
-    for i, h in enumerate(HDR, 1):
-        c = ws.cell(4, i, h); c.font = f_hdr; c.fill = hdr_fill
-        c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
-    ws.row_dimensions[4].height = 30
-    first = 5
-    for i, g in enumerate(groups):
-        rr = first + i
-        kd = key_disp(g['key'])
-        mem = ' + '.join(f"{m[1]} (#{m[0]}, {m[2]})" for m in g['members']) if len(g['members']) > 1 else ''
-        ws.cell(rr, 1, g['rank'])
-        ws.cell(rr, 2, g['nama'])
-        ws.cell(rr, 3, kd)
-        ws.cell(rr, 4, f'=SUMIFS({UNIT_RNG},{KEY_RNG},C{rr})')
-        ws.cell(rr, 5, f'=D{rr}/{TOTAL}')
-        ws.cell(rr, 6, f'=SUMIFS({RP_RNG},{KEY_RNG},C{rr})')
-        ws.cell(rr, 7, f'=D{rr}/{HARI}')
-        ws.cell(rr, 8, g['best_old'])
-        ws.cell(rr, 9, f'=IF(H{rr}<={AMBANG},"Tetap","Masuk Baru")')
-        ws.cell(rr, 10, f'=COUNTIFS({KEY_RNG},C{rr})')
-        ws.cell(rr, 11, mem)
-        ws.cell(rr, 12, ada_ua(g['key']))
-        for j in range(1, 13):
-            c = ws.cell(rr, j); c.font = f_norm; c.border = border
-        for j in (4, 6, 7, 9, 10):
-            ws.cell(rr, j).font = f_link
-        ws.cell(rr, 4).number_format = '#,##0'
-        ws.cell(rr, 5).number_format = '0.00%'
-        ws.cell(rr, 6).number_format = '#,##0'
-        ws.cell(rr, 7).number_format = '0.00'
-        ws.cell(rr, 11).alignment = Alignment(wrap_text=True, vertical='top')
-        ws.row_dimensions[rr].height = 13.5 * max(1, -(-len(mem) // 75))
-        for j in range(1, 11):
-            ws.cell(rr, j).alignment = Alignment(vertical='top')
-        if g['best_old'] > 100:
-            for j in range(1, 13): ws.cell(rr, j).fill = new_fill
-    last = first + len(groups) - 1
-    tr = last + 1
-    ws.cell(tr, 2, 'TOTAL').font = f_bold
-    ws.cell(tr, 4, f'=SUM(D{first}:D{last})').font = f_bold
-    ws.cell(tr, 5, f'=SUM(E{first}:E{last})').font = f_bold
-    ws.cell(tr, 6, f'=SUM(F{first}:F{last})').font = f_bold
-    ws.cell(tr, 4).number_format = '#,##0'; ws.cell(tr, 5).number_format = '0.0%'; ws.cell(tr, 6).number_format = '#,##0'
-    for col, w in zip('ABCDEFGHIJKL', [9, 30, 18, 9, 9, 16, 10, 10, 11, 9, 70, 9]):
-        ws.column_dimensions[col].width = w
-    ws.freeze_panes = 'C5'
-    ws.auto_filter.ref = f"A4:L{last}"
-    return first, last, tr
-
-t = wb.create_sheet('Top 100 per SKU', 0)
-f1, l1, tr1 = build_rank_sheet(t, 'Top 100 Produk per SKU (kembar & nama ganda sudah digabung)', out[:100],
-    'Periode 1 Apr – 16 Sep 2026 · 4 toko gabungan · Shopee + TikTok (tanpa Lazada). Baris hijau = produk yang sebelumnya di luar top-100 (per nama) dan sekarang masuk.')
-t.cell(tr1 + 2, 2, 'Tepat di bawah ambang:').font = f_bold
-for k, g in enumerate(out[100:104]):
-    t.cell(tr1 + 3 + k, 1, g['rank']).font = f_norm
-    t.cell(tr1 + 3 + k, 2, g['nama']).font = f_norm
-    t.cell(tr1 + 3 + k, 3, key_disp(g['key'])).font = f_norm
-    c = t.cell(tr1 + 3 + k, 4, f'=SUMIFS({UNIT_RNG},{KEY_RNG},C{tr1 + 3 + k})'); c.font = f_link
-t.cell(tr1 + 8, 2, 'Top-100 mencakup').font = f_norm
-c = t.cell(tr1 + 8, 5, f'=D{tr1}/{TOTAL}'); c.font = f_bold; c.number_format = '0.0%'
-t.cell(tr1 + 8, 6, 'dari seluruh unit terjual').font = f_norm
-
-full = wb.create_sheet('Peringkat Lengkap', 1)
-build_rank_sheet(full, 'Peringkat Lengkap Semua Produk per SKU', out,
-    'Semua grup produk (325), urut total unit. Baris hijau = di top-100 lama tidak ada, tapi masuk berkat penggabungan (hanya relevan untuk peringkat <= 100).')
-
-
 # ---------------- Daftar Mobil Listing UA ----------------
 SKIP_NAMA = {'nissangrandlivinacustomroofbox', 'coverhondabrv', 'wrv'}  # produk terpisah / artefak judul
 rank_of = {g['key']: g['rank'] for g in out}
@@ -259,6 +186,99 @@ for x in daftar:
     for k in x['keys']:
         anggota.setdefault(k, []).append(x['nama'])
 daftar.sort(key=lambda x: (x['best'], x['nama']))
+
+# nama produk = semua nama mobil (listing UA) yang memakai SKU ini, urut penjualan
+qty_nama = {}
+for _rank, _nm, _q, _rp in rows:
+    qty_nama[norm(nama_bersih(_nm))] = qty_nama.get(norm(nama_bersih(_nm)), 0) + _q
+LABEL_KHUSUS = {  # nama mobil yang listingnya terbagi ke 2 SKU
+    ('TYT-RZE', 'daihatsurocky'): 'Daihatsu Rocky (2019+)',
+    ('DHT-FRZ', 'daihatsurocky'): 'Daihatsu Rocky (F70 lama)',
+    ('DHT-GMX', 'daihatsugranmax'): 'Daihatsu Gran Max (listing gabungan)',
+    ('DHT-GMXP', 'daihatsugranmax'): 'Daihatsu Gran Max (listing gabungan)',
+}
+def nama_produk(g):
+    nm = anggota.get(g['key'])
+    if not nm:
+        return g['nama']
+    nm = sorted(set(nm), key=lambda n: (-qty_nama.get(norm(n), 0), n))
+    return ' / '.join(LABEL_KHUSUS.get((g['key'], norm(n)), n) for n in nm)
+
+# ---------------- sheet ranking ----------------
+HDR = ['Peringkat Baru', 'Nama Produk', 'Kode Grup (Prefix SKU)', 'Total Unit', '% dari Total Unit',
+       'Total Penjualan (Rp)', 'Rata-rata Terjual/Hari', 'Peringkat Lama Terbaik', 'Status',
+       'Jumlah Nama Digabung', 'Nama yang Digabung (peringkat lama, unit)', 'Ada di Listing UA']
+def build_rank_sheet(ws, title, groups, note):
+    ws['A1'] = title; ws['A1'].font = f_title
+    ws['A2'] = note; ws['A2'].font = f_norm
+    for i, h in enumerate(HDR, 1):
+        c = ws.cell(4, i, h); c.font = f_hdr; c.fill = hdr_fill
+        c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
+    ws.row_dimensions[4].height = 45
+    first = 5
+    for i, g in enumerate(groups):
+        rr = first + i
+        kd = key_disp(g['key'])
+        mem = ' + '.join(f"{m[1]} (#{m[0]}, {m[2]})" for m in g['members']) if len(g['members']) > 1 else ''
+        ws.cell(rr, 1, g['rank'])
+        np_ = nama_produk(g)
+        ws.cell(rr, 2, np_)
+        ws.cell(rr, 3, kd)
+        ws.cell(rr, 4, f'=SUMIFS({UNIT_RNG},{KEY_RNG},C{rr})')
+        ws.cell(rr, 5, f'=D{rr}/{TOTAL}')
+        ws.cell(rr, 6, f'=SUMIFS({RP_RNG},{KEY_RNG},C{rr})')
+        ws.cell(rr, 7, f'=D{rr}/{HARI}')
+        ws.cell(rr, 8, g['best_old'])
+        ws.cell(rr, 9, f'=IF(H{rr}<={AMBANG},"Tetap","Masuk Baru")')
+        ws.cell(rr, 10, f'=COUNTIFS({KEY_RNG},C{rr})')
+        ws.cell(rr, 11, mem)
+        ws.cell(rr, 12, ada_ua(g['key']))
+        for j in range(1, 13):
+            c = ws.cell(rr, j); c.font = f_norm; c.border = border
+        for j in (4, 6, 7, 9, 10):
+            ws.cell(rr, j).font = f_link
+        ws.cell(rr, 4).number_format = '#,##0'
+        ws.cell(rr, 5).number_format = '0.00%'
+        ws.cell(rr, 6).number_format = '#,##0'
+        ws.cell(rr, 7).number_format = '0.00'
+        ws.cell(rr, 11).alignment = Alignment(wrap_text=True, vertical='top')
+        ws.cell(rr, 2).alignment = Alignment(wrap_text=True, vertical='top')
+        ws.row_dimensions[rr].height = 13.5 * max(1, -(-len(mem) // 75), -(-len(np_) // 40))
+        for j in (1, 3, 4, 5, 6, 7, 8, 9, 10, 12):
+            ws.cell(rr, j).alignment = Alignment(vertical='top', horizontal='center' if j in (1, 8, 9, 10, 12) else None)
+        if g['best_old'] > 100:
+            for j in range(1, 13): ws.cell(rr, j).fill = new_fill
+    last = first + len(groups) - 1
+    tr = last + 1
+    ws.cell(tr, 2, 'TOTAL').font = f_bold
+    ws.cell(tr, 4, f'=SUM(D{first}:D{last})').font = f_bold
+    ws.cell(tr, 5, f'=SUM(E{first}:E{last})').font = f_bold
+    ws.cell(tr, 6, f'=SUM(F{first}:F{last})').font = f_bold
+    ws.cell(tr, 4).number_format = '#,##0'; ws.cell(tr, 5).number_format = '0.0%'; ws.cell(tr, 6).number_format = '#,##0'
+    for col, w in zip('ABCDEFGHIJKL', [10, 42, 13, 9, 9, 15, 11, 11, 11, 10, 70, 10]):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = 'C5'
+    ws.auto_filter.ref = f"A4:L{last}"
+    return first, last, tr
+
+t = wb.create_sheet('Top 100 per SKU', 0)
+f1, l1, tr1 = build_rank_sheet(t, 'Top 100 Produk per SKU (kembar & nama ganda sudah digabung)', out[:100],
+    'Periode 1 Apr – 16 Sep 2026 · 4 toko gabungan · Shopee + TikTok (tanpa Lazada). Nama Produk = semua mobil yang memakai SKU itu (kembar ikut dipertahankan). Baris hijau = produk yang sebelumnya di luar top-100 (per nama) dan sekarang masuk.')
+t.cell(tr1 + 2, 2, 'Tepat di bawah ambang:').font = f_bold
+for k, g in enumerate(out[100:104]):
+    t.cell(tr1 + 3 + k, 1, g['rank']).font = f_norm
+    t.cell(tr1 + 3 + k, 2, nama_produk(g)).font = f_norm
+    t.cell(tr1 + 3 + k, 3, key_disp(g['key'])).font = f_norm
+    c = t.cell(tr1 + 3 + k, 4, f'=SUMIFS({UNIT_RNG},{KEY_RNG},C{tr1 + 3 + k})'); c.font = f_link
+t.cell(tr1 + 8, 2, 'Top-100 mencakup').font = f_norm
+c = t.cell(tr1 + 8, 5, f'=D{tr1}/{TOTAL}'); c.font = f_bold; c.number_format = '0.0%'
+t.cell(tr1 + 8, 6, 'dari seluruh unit terjual').font = f_norm
+
+full = wb.create_sheet('Peringkat Lengkap', 1)
+build_rank_sheet(full, 'Peringkat Lengkap Semua Produk per SKU', out,
+    f'Semua grup produk ({len(out)}), urut total unit. Baris hijau = di top-100 lama tidak ada, tapi masuk berkat penggabungan (hanya relevan untuk peringkat <= 100).')
+
+
 dm = wb.create_sheet('Daftar Mobil Listing UA')
 dm['A1'] = 'Daftar nama mobil di listing Undercover & statusnya terhadap top-100 per SKU'; dm['A1'].font = f_title
 dm['A2'] = ('Satu SKU bisa dipakai beberapa nama mobil (kembar). Kalau SKU-nya masuk top-100, semua nama mobil pemakai SKU itu ikut dipertahankan '

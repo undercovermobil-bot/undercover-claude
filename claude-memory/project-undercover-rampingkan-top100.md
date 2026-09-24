@@ -154,6 +154,23 @@ Pickup) — tidak mempengaruhi daftar dipertahankan, cuma info.
 - Angka di bagian atas file ini (325 grup, 85+15, 109 nama, "Mazda 2
   perlu keputusan") sudah TIDAK berlaku — pakai angka di bagian ini.
 
+## UPDATE 2026-09-24 (lanjutan): kolom Nama Produk tampilkan SEMUA mobil per SKU
+
+User lihat sheet Top 100, kolom Nama Produk cuma 1 nama per SKU (mis.
+"Toyota Agya"), tanya apakah Ayla/Terios tidak masuk. Jawaban: masuk
+(di dalam baris SKU pasangannya + baris sendiri di sheet Daftar Mobil
+Listing UA), tapi tampilannya menyesatkan. **Diubah**: Nama Produk =
+semua nama mobil listing UA yang memakai SKU itu, urut penjualan,
+dipisah " / " (fungsi `nama_produk()` di `build_ranking_xlsx.py`), mis.
+"Toyota Avanza / Daihatsu Xenia / Toyota Veloz", "Daihatsu Feroza /
+Daihatsu Rocky (F70 lama) / Daihatsu Taft GT". Rocky & Gran Max yang
+listingnya terbagi 2 SKU diberi label khusus (`LABEL_KHUSUS`). Kolom
+"Nama yang Digabung" tetap ada (isinya nama-nama di LAPORAN PENJUALAN,
+termasuk typo/penamaan toko lain — beda dari Nama Produk yg pakai nama
+listing UA). **Pelajaran**: kalau 1 baris mewakili beberapa produk, nama
+semua produknya harus kelihatan di kolom nama utama — user membaca kolom
+itu sbg daftar produk, bukan kolom rincian di ujung kanan.
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,
