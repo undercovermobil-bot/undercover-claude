@@ -739,3 +739,13 @@ Order gagal (`MZD-2H-SP-S-G1-S2A`, Strip 2 Abu). Cek master: sheet "Mazda 2 Hatc
 **Pelajaran, WAJIB diinget ke depan**: kalau nemu ketidakcocokan antara jumlah generasi di MASTER vs jumlah generasi yg kepakai di GUDANG LAMA (kode legacy), **JANGAN otomatis percaya gudang lama sbg sumber kebenaran** -- gudang lama bisa aja nyimpen kesalahan historis (formula yg udah dikoreksi/dikonsolidasi tp sisa datanya gak pernah dibersihkan). Master (kolom Total Formula / jumlah baris Generasi unik per model) tetap sumber kebenaran utama. Kalau ketauan beda, LAPORKAN dulu ke user drpd langsung asumsi salah satu benar.
 
 **BELUM dikerjakan (di luar scope gudang)**: master sheet "Mazda 2 Hatchback" sendiri MASIH pakai kode MZD-MZ2 (bukan MZD-2H) -- kalau nanti diminta fix listing Hatchback (bukan cuma gudang), inget update master jg (bukan cuma listing tiap toko), krn kemungkinan besar SEMUA listing Hatchback 4 toko masih pakai kode lama ini.
+
+## 2026-09-24: Nissan Cedric -- gap SEMPIT (cuma Transparan G9+G10), BUKAN pola 0%-gudang
+
+Order gagal `NSN-CED-SP-T-G9-TRP`. **Beda dgn kasus2 "0% gudang" sebelumnya**: Cedric (model klasik, 10 generasi, 269 kode unik total di master) sudah **267/269 ADA di gudang** -- yg kurang persis 2: `NSN-CED-SP-T-G9-TRP` (kode order) dan `NSN-CED-SP-T-G10-TRP` (saudara persis, celah sama). Kategori **Transparan** cuma ada di G9/G10 (G2-G8 gak py Transparan di master sama sekali; kemungkinan Transparan itu kategori yg baru ditambah belakangan, jd gak ikut ter-import waktu gudang awal di-setup). Cuma dibangun 2 baris, sesuai apa yg BENAR2 kurang, bukan asal build full-family spt biasanya.
+
+**Pelajaran soal pola "0%-gudang"**: jangan otomatis asumsi tiap order gagal = seluruh model kosong -- SELALU cek dulu hitungan sdh-di-gudang vs total (`len(need)-len(missing)`) sblm mutusin scope build. Pola "0%" cocok utk model relatif baru/langka; utk model lama/mapan (Cedric, Stargazer G1, Atto3, Aion HT) biasanya gap-nya sempit atau bahkan nol -- jauh lebih efisien cuma tambal yg beneran kurang.
+
+**Data-quality quirk master, gak dibenerin (bukan scope)**: label "Gen 1" di master Cedric dipakai utk 3 rentang tahun BEDA (1962-1965 [46 baris], 1995-1999 [18 baris, bentrok dgn Gen 9 yg juga 1995-1999], 1965-1971 [2 baris]) -- kemungkinan sebagian baris "Gen 1 (1995-1999)" itu sebenernya salah-label duplikat Gen 9. Gak ngaruh ke tugas ini (cuma perlu 2 kode G9/G10 yg jelas), tp worth dicek user kalau suatu saat mau audit master Cedric.
+
+File: `impor_sku_gudang_Nissan_Cedric (2026-09-24).xlsx`, 2 baris.
