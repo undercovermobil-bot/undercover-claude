@@ -177,6 +177,9 @@ def build_rank_sheet(ws, title, groups, note):
         ws.cell(rr, 6).number_format = '#,##0'
         ws.cell(rr, 7).number_format = '0.00'
         ws.cell(rr, 11).alignment = Alignment(wrap_text=True, vertical='top')
+        ws.row_dimensions[rr].height = 13.5 * max(1, -(-len(mem) // 75))
+        for j in range(1, 11):
+            ws.cell(rr, j).alignment = Alignment(vertical='top')
         if g['best_old'] > 100:
             for j in range(1, 13): ws.cell(rr, j).fill = new_fill
     last = first + len(groups) - 1
@@ -208,6 +211,77 @@ t.cell(tr1 + 8, 6, 'dari seluruh unit terjual').font = f_norm
 full = wb.create_sheet('Peringkat Lengkap', 1)
 build_rank_sheet(full, 'Peringkat Lengkap Semua Produk per SKU', out,
     'Semua grup produk (325), urut total unit. Baris hijau = di top-100 lama tidak ada, tapi masuk berkat penggabungan (hanya relevan untuk peringkat <= 100).')
+
+
+# ---------------- Daftar Mobil Listing UA ----------------
+SKIP_NAMA = {'nissangrandlivinacustomroofbox', 'coverhondabrv', 'wrv'}  # produk terpisah / artefak judul
+rank_of = {g['key']: g['rank'] for g in out}
+nama_of = {g['key']: g['nama'] for g in out}
+VIT = {'SZK-GVT', 'SZK-GVH', 'SZK-EVT'}
+ua_raw = d['ua_raw']
+import re as _re
+NON_MOBIL = ('motor', 'karpet', 'pouch')  # di luar cakupan (aturan bisnis #6), data penjualan juga hanya mobil
+def nama_bersih(title):
+    n = base_name(title)
+    while True:
+        n2 = _re.sub(r'^(cover|mobil|body)\s+', '', n, flags=_re.I)
+        n2 = _re.sub(r'^(\w+)\s+\1\b', r'\1', n2, flags=_re.I)          # "Daihatsu Daihatsu Feroza Long"
+        n2 = _re.sub(r'^Mercedes\s+(?!Benz\b)', 'Mercedes Benz ', n2, flags=_re.I)
+        if n2 == n: return n
+        n = n2
+gab = {}
+for b, c in ua.items():
+    if b in SKIP_NAMA: continue
+    title = ua_raw[b].most_common(1)[0][0]
+    if any(k in title.lower() for k in NON_MOBIL): continue
+    tot = sum(c.values())
+    nm = nama_bersih(title)
+    x = gab.setdefault(norm(nm), {'nama': nm, 'title': title, 'keys': set(), 'n': 0})
+    x['keys'] |= {('SZK-VITARA' if p in VIT else p) for p, n in c.items() if n / tot >= 0.2}
+    if tot > x['n']:
+        x['title'], x['n'] = title, tot
+daftar = []
+for x in gab.values():
+    keys = sorted(x['keys'])
+    daftar.append({'nama': x['nama'], 'title': x['title'], 'keys': keys,
+                   'best': min(rank_of.get(k, 9999) for k in keys)})
+anggota = {}
+for x in daftar:
+    for k in x['keys']:
+        anggota.setdefault(k, []).append(x['nama'])
+daftar.sort(key=lambda x: (x['best'], x['nama']))
+dm = wb.create_sheet('Daftar Mobil Listing UA')
+dm['A1'] = 'Daftar nama mobil di listing Undercover & statusnya terhadap top-100 per SKU'; dm['A1'].font = f_title
+dm['A2'] = ('Satu SKU bisa dipakai beberapa nama mobil (kembar). Kalau SKU-nya masuk top-100, semua nama mobil pemakai SKU itu ikut dipertahankan '
+            '— cover fisiknya sama, jadi tidak menambah stok/produksi. Sumber nama & SKU: listing Undercover Shopee/TikTok/Lazada snapshot 18 Sep 2026.')
+dm['A2'].font = f_norm; dm['A2'].alignment = wrap
+dm.merge_cells('A2:G2'); dm.row_dimensions[2].height = 42
+DH = ['No', 'Nama Mobil (listing UA)', 'Kode SKU', 'Peringkat SKU (baru)', 'Status', 'Satu SKU dengan', 'Contoh Judul Listing']
+for i, h in enumerate(DH, 1):
+    c = dm.cell(4, i, h); c.font = f_hdr; c.fill = hdr_fill
+    c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
+dm.row_dimensions[4].height = 30
+for i, x in enumerate(daftar):
+    rr = 5 + i
+    lain = sorted({n for k in x['keys'] for n in anggota.get(k, []) if n != x['nama']})
+    vals = [i + 1, x['nama'], ' / '.join(x['keys']), x['best'] if x['best'] < 9999 else None,
+            f'=IF(D{rr}="","Di luar top-100",IF(D{rr}<={AMBANG},"Dipertahankan","Di luar top-100"))',
+            ', '.join(lain), x['title']]
+    for j, v in enumerate(vals, 1):
+        c = dm.cell(rr, j, v); c.font = f_norm; c.border = border
+    dm.cell(rr, 5).font = f_link
+    if x['best'] <= 100 and lain:
+        for j in range(1, 8): dm.cell(rr, j).fill = new_fill
+dl = 4 + len(daftar)
+dm.cell(dl + 2, 2, 'Dipertahankan').font = f_bold
+c = dm.cell(dl + 2, 3, f'=COUNTIFS(E5:E{dl},"Dipertahankan")'); c.font = f_bold
+dm.cell(dl + 3, 2, 'Di luar top-100').font = f_bold
+c = dm.cell(dl + 3, 3, f'=COUNTIFS(E5:E{dl},"Di luar top-100")'); c.font = f_bold
+dm.cell(dl + 4, 2, 'Cover motor, karpet & travel pouch tidak dimasukkan (di luar cakupan data penjualan mobil). Baris hijau = mobil kembar yang ikut masuk lewat SKU pasangannya. "Mazda 2" (tanpa keterangan bodi) tidak ada di daftar ini karena listing UA memakai Mazda 2 Hatchback / Mazda 2 Sedan.').font = f_norm
+for col, w in zip('ABCDEFG', [6, 30, 22, 11, 16, 42, 60]):
+    dm.column_dimensions[col].width = w
+dm.freeze_panes = 'C5'
+dm.auto_filter.ref = f"A4:G{dl}"
 
 wb.move_sheet('Keterangan', offset=1)
 wb.move_sheet('Pemetaan Nama', offset=1)

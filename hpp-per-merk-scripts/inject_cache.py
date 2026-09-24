@@ -29,6 +29,7 @@ def rng(sheet, text):
 
 def operand(sheet, t):
     t = t.strip()
+    if re.match(r'^[A-Z]+\(', t): return evaluate(sheet, t)
     if t.startswith('"'): return t.strip('"')
     if re.fullmatch(r'-?\d+(\.\d+)?', t): return float(t)
     if '!' in t:
@@ -65,7 +66,12 @@ def evaluate(sheet, f):
         if fn == 'IF':
             cm = re.fullmatch(r'(.+?)(<=|>=|<|>|=)(.+)', args[0])
             a, op, b = operand(sheet, cm.group(1)), cm.group(2), operand(sheet, cm.group(3))
-            ok = {'<=': a <= b, '>=': a >= b, '<': a < b, '>': a > b, '=': a == b}[op]
+            if isinstance(a, str) or isinstance(b, str):
+                a = '' if a is None else a; b = '' if b is None else b
+            if op == '=':
+                ok = (str(a).lower() == str(b).lower()) if (isinstance(a, str) or isinstance(b, str)) else a == b
+            else:
+                ok = {'<=': lambda: a <= b, '>=': lambda: a >= b, '<': lambda: a < b, '>': lambda: a > b}[op]()
             return operand(sheet, args[1] if ok else args[2])
     m = re.fullmatch(r'([^/\-]+)([/\-])(.+)', f)
     if m:

@@ -111,6 +111,29 @@ per baris tercatat):
 unit, #51) tanpa bodi — kalau Hatchback, gabung ke MZD-2H (219 unit) ->
 1 slot top-100 kosong, diperebutkan 4 produk seri 29 unit.
 
+## Pertanyaan user 2026-09-24: "yg SKU-nya gabung ikut masuk 100?"
+
+Jawaban: YA — 1 baris di sheet Top 100 = 1 SKU = 1 cover fisik; nama
+kembar sudah terhitung di baris itu (mis. Feroza 243 = Feroza 230 + Rocky
+lama 5 + Taft GT 8). Dalam bentuk NAMA MOBIL di listing UA, **100 SKU =
+109 nama mobil** (99 SKU + baris "Mazda 2" tanpa SKU; 10 nama tambahan =
+kembar: Xenia, Veloz, Ayla/Agya, Terios, Sigra, Rocky, Vellfire, Luxio,
+Gran Max gabungan, Taft GT). Stok/produksi tetap 100 cover.
+
+Ditambah sheet **"Daftar Mobil Listing UA"** di `RANKING_TOP100_PER_SKU.xlsx`:
+**415 nama mobil** di listing UA (setelah buang cover motor/karpet/pouch &
+duplikat judul spt "Mobil Timor"/"Daihatsu Daihatsu ..."/"Mercedes" vs
+"Mercedes Benz") -> **109 Dipertahankan, 306 di luar top-100** (93 di
+antaranya 0 terjual di periode Apr-Sep = tidak ada SKU-nya di data
+penjualan). Kolom Status pakai rumus thd ambang di Keterangan!B6, jadi
+ikut berubah kalau ambang diubah. Tinggi baris kolom "Nama yang
+Digabung" juga dirapikan (screenshot user kelihatan terpotong).
+
+Catatan: di luar top-100 masih ada nama berbagi prefix yang BUKAN kembar
+yang diputuskan (Range Rover/Velar/Sport, Discovery/Discovery Sport,
+Ferrari 488 Pista/Spider, Fiat 500/Aircross, Wrangler/Rubicon, L300/L300
+Pickup) — tidak mempengaruhi daftar dipertahankan, cuma info.
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,
