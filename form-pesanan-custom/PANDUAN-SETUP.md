@@ -51,6 +51,22 @@ Catatan:
 - Model baru yang ditambahkan admin lain baru muncul setelah halaman di-refresh.
 - Salah ketik yang terlanjur masuk daftar: hapus barisnya langsung di sheet **Daftar Mobil**.
 
+## Edit / revisi langsung di sheet "Rekap Pesanan"
+
+Kolom **Merek, Model, Generasi / Tahun** di Rekap Pesanan punya dropdown bertingkat
+(dipasang otomatis tiap pesanan tersimpan). Kalau admin merevisi langsung di sheet:
+- Ganti **Merek** → Model & Generasi baris itu dikosongkan (kalau model lama bukan milik merek baru),
+  dan dropdown Model langsung berisi model merek baru.
+- Ganti **Model** → Generasi dikosongkan (kalau tidak cocok), dropdown Generasi menyesuaikan.
+- Ketik huruf kecil (`avanza`) → otomatis jadi ejaan resmi (`Avanza`), jadi Ringkasan tidak terpecah.
+- Ketik mobil yang tidak ada di daftar → tetap diterima (muncul segitiga peringatan kecil). Setelah Merek, Model,
+  dan Generasi lengkap, mobil itu otomatis masuk **Daftar Mobil** (Sumber = "Manual (edit sheet)").
+- **Waktu** tidak berubah saat baris diedit. Sheet **Ringkasan** langsung ikut terhitung ulang.
+- Hapus baris pesanan (klik kanan → Hapus baris) aman, Ringkasan ikut berkurang.
+- Kalau dropdown hilang (mis. setelah copy-paste dari luar): menu **Form Pesanan → Pasang ulang dropdown di Rekap Pesanan**.
+
+Otomatisasi ini hanya jalan kalau edit dilakukan di Google Sheets (bukan di file xlsx yang diunduh).
+
 ## Isi Google Sheet
 
 | Sheet | Isi |
@@ -72,4 +88,5 @@ URL tetap sama. Kalau memilih "Deployment baru", URL-nya berubah.
 - Teks yang diawali `=`, `+`, `-`, `@` dipaksa jadi teks biasa (tidak dijalankan sebagai rumus).
 - Sudah diuji lokal (Chromium + tiruan Google Sheet): alur pilih-simpan, ketik manual → masuk daftar →
   muncul di dropdown, ejaan disamakan, merek baru, ganti merek mereset model, tampilan HP 390px.
+  edit langsung di Rekap (ganti merek/model/generasi, ejaan, model baru, paste 1 baris, hapus isi).
   **Belum diuji di Google Apps Script asli** — cek sekali setelah deploy.

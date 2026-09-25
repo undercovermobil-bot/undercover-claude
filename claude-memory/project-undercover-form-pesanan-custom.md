@@ -44,3 +44,9 @@ User: mau tampilan "seperti isi form di website", TANPA tanggal & no. pesanan, c
 - UI: combobox custom (bukan `<datalist>` — tidak konsisten di HP); ketik sebagian + Enter/Tab = pilih teratas; opsi "+ Tambah baru" di bawah; label kuning "Baru" hanya setelah pilihan final; pencarian abaikan tanda baca ("hrv" -> "HR-V / e:N1"); ganti Merek mereset Model & Generasi.
 - xlsx data awal: `scripts/buat_form_pencatatan_custom.py MASTER.xlsx OUT.xlsx` (ditulis ulang lagi) -> `form-pesanan-custom/Form Pesanan Custom - Google Sheet.xlsx` (gitignored), 1.234 baris generasi.
 - Diuji: Chromium/Playwright dgn Code.gs asli + tiruan SpreadsheetApp (harness di scratchpad, tidak persisten), 22/22 lulus, 0 error JS, lebar HP 390px tanpa scroll samping. **BELUM diuji di Apps Script asli.** Deploy: Execute as Me, akses "Siapa saja yg punya Akun Google".
+
+## Tambahan 2026-09-25 (ke-4): dropdown bertingkat di sheet "Rekap Pesanan" utk revisi manual
+
+- `Code.gs` dapat `katalog_()` (ejaan resmi + daftar pilihan), `pasangDropdown_()` (setDataValidations per baris, `requireValueInList` + `setAllowInvalid(true)` supaya mobil baru tetap bisa diketik), `onEdit` simple trigger, `onOpen` menu "Form Pesanan -> Pasang ulang dropdown", `pasangDropdownSemua()` (juga dipanggil `siapkan`). `simpan()` memasang dropdown di baris baru.
+- onEdit: ejaan disamakan (QUERY Ringkasan case-sensitive, jadi tanpa ini "avanza"/"Avanza" terpecah); ganti Merek -> kosongkan Model+Gen kalau model bukan milik merek baru; ganti Model -> kosongkan Gen kalau tidak cocok; TIDAK mengosongkan kolom yg ikut diedit bersamaan (paste 1 baris B:D aman); kombinasi lengkap baru -> tambah ke Daftar Mobil sumber "Manual (edit sheet)" + tanda "Ya". Waktu tidak diubah.
+- Diuji Node (vm + mock SpreadsheetApp): 12/12 lulus; form web tetap 22/22. Belum diuji di Apps Script asli.
