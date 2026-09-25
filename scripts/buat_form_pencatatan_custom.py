@@ -1,456 +1,280 @@
 #!/usr/bin/env python3
 """
-Membuat workbook "Form Pencatatan Pesanan Custom" untuk admin/operasional.
+Form pencatatan pesanan LINK CUSTOM (model di luar Top 100) untuk admin.
 
-Konteks (2026-09-24): user merampingkan listing Undercover — model di luar 100
-terlaris dijual lewat LINK CUSTOM (pembeli diskusi varian dengan admin dulu).
-Admin perlu mencatat mobil apa yang dibeli. Workbook ini:
+Versi ringkas (revisi user 2026-09-25): admin cukup pilih 3 dropdown bertingkat
+  Merek  ->  Model (hanya model merek itu)  ->  Generasi / Tahun (hanya generasi model itu)
+ditambah Tanggal, No. Pesanan, Catatan. Tidak ada SKU/kategori/warna.
 
-  - Sheet "Input Pesanan"  : tempat admin mencatat. Kolom Mobil pakai 1 dropdown
-                             gabungan "Model | Generasi | Tahun" (bisa diketik
-                             untuk mencari di Google Sheets / Excel 365).
-                             Merek, Model, Generasi, Tahun, SKU Gudang terisi
-                             otomatis. Kolom Cek memberi peringatan kalau
-                             kombinasi Kategori/Warna tidak ada di master.
-  - Sheet "Rekap per Model": total qty custom per model (SUMIFS), plus status
-                             Top 100 / Custom.
-  - Sheet "Daftar Mobil"   : sumber dropdown (dari master).
-  - Sheet "Master SKU"     : tabel kunci -> SKU (dari master).
-  - Sheet "Pengaturan"     : daftar Admin/Toko/Marketplace/Status (bisa diedit).
-  - Sheet "Cara Pakai"
+Sheet:
+  - "Input"     : tempat admin mengisi (N_BARIS baris siap pakai).
+  - "Rekap"     : jumlah pesanan per model (COUNTIFS).
+  - "Cara Pakai"
+  - "Data", "Bantu" (tersembunyi): daftar dari master + daftar dropdown per baris.
 
-Aturan bisnis yang dipakai (lihat claude-memory/project-undercover-sku-sync-rules.md):
-  - Konsolidasi toko: OT pakai SKU UA, OP pakai SKU SP (aturan #1).
-  - Tier Strip: Strip 1 = Epic, Strip 2 = Elite, Strip 3 = Warrior
-    (dikonfirmasi user utk OT, diverifikasi ulang dari SKU existing SP 07-15;
-    lihat project-undercover-smartprotection-status.md). Grup UA menyimpan
-    warna Strip sbg Elite/Epic/Warrior, grup SP sbg Strip 1/2/3 — rumus Kunci
-    menormalkan dua arah, jadi admin boleh pilih ejaan mana pun.
+Kenapa dropdown bertingkat dibuat dengan sheet "Bantu" (1 baris bantu per baris
+input) dan bukan INDIRECT/OFFSET: validasi dropdown Google Sheets hanya menerima
+range biasa, bukan rumus. Range per baris jalan sama di Excel dan Google Sheets.
+Rumus hanya INDEX/MATCH/COUNTIF/COUNTIFS (jalan di Excel lama & Google Sheets).
 
-Semua rumus hanya INDEX/MATCH/COUNTIFS/SUMIFS/SUBSTITUTE/IFERROR supaya jalan
-sama di Excel lama, Excel 365, dan Google Sheets (tanpa XLOOKUP/FILTER).
+Sumber generasi/tahun: baris toko Undercover Autocare di master (link custom = toko
+Undercover). Kalau model tidak punya baris UA, pakai toko lain. Kalau 1 generasi
+punya >1 rentang tahun di toko yang sama, dipakai yang paling sering muncul.
 
 Pemakaian:
-  python3 buat_form_pencatatan_custom.py MASTER.xlsx RANKING_BIGSELLER.xlsx OUT.xlsx [label_versi_master]
+  python3 buat_form_pencatatan_custom.py MASTER.xlsx OUT.xlsx
 """
 import re
 import sys
-from collections import OrderedDict
+from collections import Counter, OrderedDict, defaultdict
 
 import openpyxl
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.datavalidation import DataValidation
 
-N_BARIS_INPUT = 3000
-TOP_N = 100
+N_BARIS = 2000
+URUTAN_TOKO = ["Undercover Autocare", "Otonation", "Smartprotection", "Otoprotection"]
 
-TOKO_GRUP = OrderedDict([
-    ("Undercover Autocare", "UA"),
-    ("Otonation", "UA"),
-    ("Smartprotection", "SP"),
-    ("Otoprotection", "SP"),
-])
-TOKO_SUMBER_MASTER = {"UA": "Undercover Autocare", "SP": "Smartprotection"}
-
-KATEGORI = ["Reguler", "Premium", "Exclusive", "Strip", "Transparan"]
-WARNA = [
-    "Abu-abu", "Hitam", "Merah", "Biru Benhur", "Hijau Army", "Biru", "Hijau",
-    "Orange", "Silver", "Transparan",
-    "Epic Abu", "Epic Biru", "Epic Merah",
-    "Elite Abu", "Elite Biru", "Elite Merah",
-    "Warrior Abu", "Warrior Biru", "Warrior Merah",
-    "Strip 1 Abu", "Strip 1 Biru", "Strip 1 Merah",
-    "Strip 2 Abu", "Strip 2 Biru", "Strip 2 Merah",
-    "Strip 3 Abu", "Strip 3 Biru", "Strip 3 Merah",
-]
-MARKETPLACE = ["Shopee", "TikTok", "Tokopedia", "Lazada", "WhatsApp", "Lainnya"]
-STATUS = ["Baru", "Diproses", "Dikirim", "Selesai", "Batal", "Retur"]
-ADMIN_CONTOH = ["Admin 1", "Admin 2", "Admin 3"]
-
-# Nama di ranking BigSeller (dari judul listing) != nama master, model FISIK sama.
-# Diambil dari RESOLUSI_MANUAL hpp-per-merk-scripts/build_top100_terlaris.py
-# (sudah diverifikasi rentang tahun/generasi di sesi 2026-08) + ejaan master 07-03.
-ALIAS_RANKING = {
-    "Honda Brio": "Honda Brio Satya / RS",
-    "Honda HRV": "Honda HR-V / e:N1",
-    "Honda BRV": "Honda BR-V",
-    "Honda CRV": "Honda CR-V",
-    "Honda WRV": "Honda WR-V",
-    "Nissan Grand Livina": "Nissan Livina / Grand Livina",
-    "Mitsubishi Kuda": "Mitsubishi Mitsubishi Kuda",
-    "Mitsubishi Xpander Cross": "Mitsubishi Mitsubishi Xpander Cross",
-    "Mitsubishi Destinator": "Mitsubishi Mitsubishi Destinator",
-    "Honda City Hatchback": "Honda City Hatchback RS",
-    "Suzuki Carry Pickup": "Suzuki Carry",
-    "Daihatsu Gran Max PU": "Daihatsu Gran Max Pick Up",
-    "Mitsubishi Strada Triton": "Mitsubishi Triton",
-    "Suzuki APV Arena": "Suzuki APV Arena / Blind Van",
-    "Suzuki APV": "Suzuki APV Arena / Blind Van",
-    "Honda City": "Honda City Sedan",
-    "Mazda 2": "Mazda 2 Sedan",
-    "Kia Rio": "Kia Rio Sedan",
-    "Mitsubishi Pajero": "Mitsubishi Pajero Sport",
-    "Nissan XTrail": "Nissan X-Trail",
-    "Daihatsu Gran Max MB": "Daihatsu Gran Max Minibus / Blind Van",
-    "Daihatsu Gran Max": "Daihatsu Gran Max Minibus / Blind Van",
-    "Daihatsu Gran Max Minibus": "Daihatsu Gran Max Minibus / Blind Van",
-    "Toyota Hardtop / Land Cruiser": "Toyota Land Cruiser",
-    "Mazda CX-5": "Mazda CX5",
-    "Isuzu MU-X": "Isuzu Mux",
-    "Nissan Kicks": "Nissan Kicks e-POWER",
-    "Daihatsu Terios": "Daihatsu Terios / New Terios",
-}
-
-HEADER_FILL = PatternFill("solid", fgColor="1F4E78")
-HEADER_FONT = Font(bold=True, color="FFFFFF")
-AUTO_FILL = PatternFill("solid", fgColor="EDEDED")
-INPUT_FILL = PatternFill("solid", fgColor="FFFFFF")
-WARN_FILL = PatternFill("solid", fgColor="F8CBAD")
-OK_FILL = PatternFill("solid", fgColor="C6EFCE")
-TIPIS = Side(style="thin", color="BFBFBF")
-BORDER = Border(left=TIPIS, right=TIPIS, top=TIPIS, bottom=TIPIS)
-
-
-def norm(s):
-    # "Mitsubishi Mitsubishi Outlander" (typo merek dobel di master) == "Mitsubishi Outlander"
-    s = re.sub(r"^(\w+) \1 ", r"\1 ", str(s).strip(), flags=re.I)
-    return re.sub(r"[^a-z0-9]", "", s.lower())
+FONT = Font(name="Arial", size=11)
+FONT_HDR = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+FILL_HDR = PatternFill("solid", fgColor="1F4E78")
+FILL_PILIH = PatternFill("solid", fgColor="FFF9E6")   # kolom dropdown
+FILL_BAND = PatternFill("solid", fgColor="F2F6FA")
+FILL_SALAH = PatternFill("solid", fgColor="F8CBAD")
+GARIS = Side(style="thin", color="D0D7DE")
+BORDER = Border(left=GARIS, right=GARIS, top=GARIS, bottom=GARIS)
 
 
 def bersih(v):
     return re.sub(r"\s+", " ", str(v)).strip() if v is not None else ""
 
 
+def tahun(v):
+    return re.sub(r"\s*-\s*", "-", bersih(v))
+
+
+def nama_pendek(merek, model):
+    """'Toyota Avanza' -> 'Avanza'; 'Mercedes Benz E Class' (sheet Mercedes-Benz) -> 'E Class'.
+
+    Buang awalan merek (termasuk typo merek dobel 'Mitsubishi Mitsubishi Kuda').
+    Kalau sisanya kosong / bukan awalan merek (mis. 'Range Rover' di Land Rover), biarkan.
+    """
+    kandidat = {re.sub(r"\s*\(.*?\)", "", merek).replace("-", " ").lower(),
+                merek.split()[0].replace("-", " ").lower()}
+    s = model
+    ubah = True
+    while ubah:
+        ubah = False
+        for k in sorted(kandidat, key=len, reverse=True):
+            if s.lower().startswith(k + " ") and len(s) > len(k) + 1:
+                s = s[len(k) + 1:].strip()
+                ubah = True
+    return s
+
+
 def baca_master(path):
-    """Kembalikan (daftar_label, sku_by_key, bentrok).
-
-    daftar_label: OrderedDict label -> dict(merek, model, gen, tahun)
-    sku_by_key  : {"UA|label|Kategori|Warna": SKU}
-    """
+    """Return OrderedDict merek -> OrderedDict model_pendek -> [label generasi]."""
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    # Kunci pilihan = (model, generasi, rentang tahun), bukan (model, generasi) saja:
-    # master 07-03 punya label generasi sama utk 2 rentang tahun beda SKU
-    # (Toyota GR 86 "Gen 2" = 2012-2020 -> G1 DAN 2021-2026 -> G2).
-    label_by_mg = OrderedDict()   # (model, gen, tahun) -> dict
-    baris = []
+    # (merek, model) -> toko -> gen -> Counter(tahun); urutan generasi ikut master
+    data = OrderedDict()
     for ws in wb.worksheets:
-        merek = ws.title
         for r in ws.iter_rows(min_row=3, values_only=True):
-            if len(r) < 9 or not r[1] or not r[8]:
+            if len(r) < 7 or not r[1] or not r[5]:
                 continue
-            model, toko, kat, warna, gen, tahun, sku = (
-                bersih(r[1]), bersih(r[2]), bersih(r[3]), bersih(r[4]),
-                bersih(r[5]), bersih(r[6]), bersih(r[8]))
-            mg = (model, gen, tahun)
-            if mg not in label_by_mg:
-                label_by_mg[mg] = {"merek": merek, "model": model, "gen": gen, "tahun": tahun}
-            baris.append((mg, toko, kat, warna, sku))
+            key = (ws.title, bersih(r[1]))
+            d = data.setdefault(key, defaultdict(OrderedDict))
+            d[bersih(r[2])].setdefault(bersih(r[5]), Counter())[tahun(r[6])] += 1
     wb.close()
 
-    daftar = OrderedDict()
-    label_of = {}
-    for mg, d in label_by_mg.items():
-        label = f"{d['model']} | {d['gen']}" + (f" | {d['tahun']}" if d["tahun"] else "")
-        daftar[label] = d
-        label_of[mg] = label
-
-    sku_by_key = {}
-    bentrok = []
-    for mg, toko, kat, warna, sku in baris:
-        for grup, sumber in TOKO_SUMBER_MASTER.items():
-            if toko != sumber:
-                continue
-            key = f"{grup}|{label_of[mg]}|{kat}|{warna}"
-            if key in sku_by_key and sku_by_key[key] != sku:
-                bentrok.append((key, sku_by_key[key], sku))
-                continue
-            sku_by_key.setdefault(key, sku)
-    return daftar, sku_by_key, bentrok
-
-
-def baca_top(path, model_master):
-    """Top N model mobil dari 'MOBIL TERLARIS BIGSELLER.xlsx' sheet pertama.
-
-    Baris non-mobil (Headlamp Restorer, Glass Polish, dst) dilewati.
-    Return (top_models_master:set, tak_cocok:list[(rank, nama)], ranking:list).
-    """
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb.worksheets[0]
-    ranking = []
-    for r in ws.iter_rows(values_only=True):
-        if r and isinstance(r[0], (int, float)) and r[1]:
-            nama = bersih(r[1])
-            if " - " in nama or "Undercover Autocare" in nama:
-                continue  # produk non-mobil
-            ranking.append((int(r[0]), nama, r[2]))
-    wb.close()
-    idx = {norm(m): m for m in model_master}
-    top, tak_cocok = set(), []
-    for rank, nama, _ in ranking[:TOP_N]:
-        target = ALIAS_RANKING.get(nama, nama)
-        m = idx.get(norm(target)) or idx.get(norm(nama))
-        if m:
-            top.add(m)
-        else:
-            tak_cocok.append((rank, nama))
-    return top, tak_cocok, ranking
+    hasil = OrderedDict()
+    laporan = {"tahun_ganda": [], "sumber_non_ua": [], "nama_bentrok": []}
+    for (merek, model), per_toko in data.items():
+        toko = next((t for t in URUTAN_TOKO if t in per_toko), next(iter(per_toko)))
+        if toko != URUTAN_TOKO[0]:
+            laporan["sumber_non_ua"].append((model, toko))
+        labels = []
+        for gen, cnt in per_toko[toko].items():
+            isi = [(t, n) for t, n in cnt.most_common() if t]
+            if len(isi) > 1:
+                laporan["tahun_ganda"].append((model, gen, dict(cnt)))
+            th = isi[0][0] if isi else ""
+            labels.append(f"{gen} ({th})" if th else gen)
+        pendek = nama_pendek(merek, model)
+        m = hasil.setdefault(merek, OrderedDict())
+        if pendek in m:
+            laporan["nama_bentrok"].append((merek, pendek, model))
+            pendek = model
+        m[pendek] = labels
+    hasil = OrderedDict(sorted(hasil.items(), key=lambda kv: kv[0].lower()))
+    for merek in hasil:
+        hasil[merek] = OrderedDict(sorted(hasil[merek].items(), key=lambda kv: kv[0].lower()))
+    return hasil, laporan
 
 
-def gaya_header(ws, headers, widths):
-    for i, (h, w) in enumerate(zip(headers, widths), start=1):
-        c = ws.cell(row=1, column=i, value=h)
-        c.fill, c.font, c.border = HEADER_FILL, HEADER_FONT, BORDER
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        ws.column_dimensions[get_column_letter(i)].width = w
-    ws.row_dimensions[1].height = 32
-    ws.freeze_panes = "A2"
-
-
-def tulis_list(ws, col, judul, items):
-    ws.cell(row=1, column=col, value=judul)
-    for i, v in enumerate(items, start=2):
-        ws.cell(row=i, column=col, value=v)
-    return f"Pengaturan!${get_column_letter(col)}$2:${get_column_letter(col)}${len(items) + 1 + 20}"
-
-
-def buat(master_path, ranking_path, out_path, versi_master):
-    daftar, sku_by_key, bentrok = baca_master(master_path)
-    model_master = list(OrderedDict.fromkeys(d["model"] for d in daftar.values()))
-    top, tak_cocok, ranking = baca_top(ranking_path, model_master)
+def buat(master_path, out_path):
+    daftar, lap = baca_master(master_path)
+    n_merek = len(daftar)
+    maks_model = max(len(m) for m in daftar.values())
+    maks_gen = max(len(g) for m in daftar.values() for g in m.values())
 
     wb = openpyxl.Workbook()
+    wi = wb.active
+    wi.title = "Input"
+    wr = wb.create_sheet("Rekap")
+    wc = wb.create_sheet("Cara Pakai")
+    wd = wb.create_sheet("Data")
+    wbnt = wb.create_sheet("Bantu")
 
-    # ---------------- Input Pesanan ----------------
-    ws = wb.active
-    ws.title = "Input Pesanan"
-    kolom = [
-        # (header, lebar, jenis) jenis: in = diisi admin, auto = rumus
-        ("Tanggal", 12, "in"),                      # A
-        ("Admin", 12, "in"),                        # B
-        ("Toko", 20, "in"),                         # C
-        ("Marketplace", 12, "in"),                  # D
-        ("No. Pesanan", 22, "in"),                  # E
-        ("Username / Nama Pembeli", 22, "in"),      # F
-        ("Mobil (Model | Generasi | Tahun)\nketik utk cari", 46, "in"),  # G
-        ("Tahun Mobil Pembeli", 11, "in"),          # H
-        ("Kategori", 12, "in"),                     # I
-        ("Warna", 15, "in"),                        # J
-        ("Qty", 6, "in"),                           # K
-        ("Harga Jual / pcs (Rp)", 14, "in"),        # L
-        ("Status", 11, "in"),                       # M
-        ("Catatan", 28, "in"),                      # N
-        ("Merek", 16, "auto"),                      # O
-        ("Model", 26, "auto"),                      # P
-        ("Generasi", 12, "auto"),                   # Q
-        ("Rentang Tahun", 14, "auto"),              # R
-        ("SKU Gudang", 26, "auto"),                 # S
-        ("Status Model", 12, "auto"),               # T
-        ("Cek", 30, "auto"),                        # U
-        ("Kunci (sistem)", 10, "auto"),             # V
-        ("Subtotal (sistem)", 10, "auto"),          # W
-    ]
-    gaya_header(ws, [k[0] for k in kolom], [k[1] for k in kolom])
-    for i, k in enumerate(kolom, start=1):
-        if k[2] == "auto":
-            ws.cell(row=1, column=i).fill = PatternFill("solid", fgColor="595959")
-    ws.column_dimensions["V"].hidden = True
-    ws.column_dimensions["W"].hidden = True
-    ws.auto_filter.ref = f"A1:U{N_BARIS_INPUT + 1}"
+    # ---------- Data (tersembunyi) ----------
+    # A: Merek list | C: Merek, D: Model (urut per merek) | F: Kunci merek|model, G: Generasi
+    wd["A1"], wd["C1"], wd["D1"], wd["F1"], wd["G1"] = "Merek", "Merek", "Model", "Kunci", "Generasi"
+    rm = rg = 2
+    for i, merek in enumerate(daftar, start=2):
+        wd.cell(row=i, column=1, value=merek)
+        for model, gens in daftar[merek].items():
+            wd.cell(row=rm, column=3, value=merek)
+            wd.cell(row=rm, column=4, value=model)
+            rm += 1
+            for g in gens:
+                wd.cell(row=rg, column=6, value=f"{merek}|{model}")
+                wd.cell(row=rg, column=7, value=g)
+                rg += 1
+    last_m, last_g = rm - 1, rg - 1
+    R_MEREK = f"Data!$A$2:$A${n_merek + 1}"
+    R_MM, R_MODEL = f"Data!$C$2:$C${last_m}", f"Data!$D$2:$D${last_m}"
+    R_KUNCI, R_GEN = f"Data!$F$2:$F${last_g}", f"Data!$G$2:$G${last_g}"
 
-    n_daftar = len(daftar)
-    D_LABEL = f"'Daftar Mobil'!$A$2:$A${n_daftar + 1}"
-    def D(col):
-        return f"'Daftar Mobil'!${col}$2:${col}${n_daftar + 1}"
-    n_sku = len(sku_by_key)
-    M_KEY = f"'Master SKU'!$A$2:$A${n_sku + 1}"
-    M_SKU = f"'Master SKU'!$B$2:$B${n_sku + 1}"
+    # ---------- Bantu (tersembunyi): 1 baris per baris Input ----------
+    # A: awal model, B: jumlah model, C..: daftar model | lalu awal gen, jumlah gen, daftar gen
+    c_m0 = 3
+    c_ga = c_m0 + maks_model
+    c_gn = c_ga + 1
+    c_g0 = c_ga + 2
+    for r in range(2, N_BARIS + 2):
+        wbnt[f"A{r}"] = f'=IF(Input!$C{r}="","",MATCH(Input!$C{r},{R_MM},0))'
+        wbnt[f"B{r}"] = f'=IF(Input!$C{r}="",0,COUNTIF({R_MM},Input!$C{r}))'
+        for k in range(1, maks_model + 1):
+            wbnt.cell(row=r, column=c_m0 + k - 1,
+                      value=f'=IF({k}>$B{r},"",INDEX({R_MODEL},$A{r}+{k - 1}))')
+        kunci = f'Input!$C{r}&"|"&Input!$D{r}'
+        wbnt.cell(row=r, column=c_ga,
+                  value=f'=IF(Input!$D{r}="","",IFERROR(MATCH({kunci},{R_KUNCI},0),""))')
+        wbnt.cell(row=r, column=c_gn,
+                  value=f'=IF(Input!$D{r}="",0,COUNTIF({R_KUNCI},{kunci}))')
+        for k in range(1, maks_gen + 1):
+            wbnt.cell(row=r, column=c_g0 + k - 1,
+                      value=f'=IF({k}>${L(c_gn)}{r},"",INDEX({R_GEN},${L(c_ga)}{r}+{k - 1}))')
+    # ---------- Input ----------
+    kolom = [("Tanggal", 12), ("No. Pesanan", 22), ("Merek ▼", 18), ("Model ▼", 26),
+             ("Generasi / Tahun ▼", 26), ("Catatan", 34)]
+    for i, (h, w) in enumerate(kolom, start=1):
+        c = wi.cell(row=1, column=i, value=h)
+        c.font, c.fill, c.border = FONT_HDR, FILL_HDR, BORDER
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        wi.column_dimensions[L(i)].width = w
+    wi.row_dimensions[1].height = 26
+    wi.freeze_panes = "A2"
+    wi.sheet_view.zoomScale = 110
+    # G, H tersembunyi: 1 = pilihan Model / Generasi tidak cocok (mis. Merek diganti setelahnya)
+    wi["G1"], wi["H1"] = "cek model", "cek gen"
+    wi.column_dimensions["G"].hidden = True
+    wi.column_dimensions["H"].hidden = True
 
-    for r in range(2, N_BARIS_INPUT + 2):
-        m = f"MATCH($G{r},{D_LABEL},0)"
-        ws[f"O{r}"] = f'=IF($G{r}="","",IFERROR(INDEX({D("B")},{m}),""))'
-        ws[f"P{r}"] = f'=IF($G{r}="","",IFERROR(INDEX({D("C")},{m}),""))'
-        ws[f"Q{r}"] = f'=IF($G{r}="","",IFERROR(INDEX({D("D")},{m}),""))'
-        ws[f"R{r}"] = f'=IF($G{r}="","",IFERROR(INDEX({D("E")},{m}),""))'
-        ws[f"T{r}"] = f'=IF($G{r}="","",IFERROR(INDEX({D("F")},{m}),""))'
-        # Grup SKU: UA/OT -> UA, SP/OP -> SP. Warna Strip dinormalkan per grup.
-        grup = f'IF(OR($C{r}="Smartprotection",$C{r}="Otoprotection"),"SP","UA")'
-        w_ke_sp = (f'SUBSTITUTE(SUBSTITUTE(SUBSTITUTE($J{r},"Epic","Strip 1"),'
-                   f'"Elite","Strip 2"),"Warrior","Strip 3")')
-        w_ke_ua = (f'SUBSTITUTE(SUBSTITUTE(SUBSTITUTE($J{r},"Strip 1","Epic"),'
-                   f'"Strip 2","Elite"),"Strip 3","Warrior")')
-        ws[f"V{r}"] = (f'=IF(OR($G{r}="",$I{r}="",$J{r}=""),"",{grup}&"|"&$G{r}&"|"&$I{r}&"|"&'
-                       f'IF({grup}="SP",{w_ke_sp},{w_ke_ua}))')
-        ws[f"S{r}"] = f'=IF($V{r}="","",IFERROR(INDEX({M_SKU},MATCH($V{r},{M_KEY},0)),""))'
-        ws[f"W{r}"] = f'=IF(AND(ISNUMBER($K{r}),ISNUMBER($L{r})),$K{r}*$L{r},0)'
-        ws[f"U{r}"] = (
-            f'=IF(COUNTA($A{r}:$N{r})=0,"",'
-            f'IF($C{r}="","Isi Toko",'
-            f'IF($G{r}="","Isi Mobil",'
-            f'IF($O{r}="","Mobil tidak ada di daftar",'
-            f'IF(OR($I{r}="",$J{r}=""),"Isi Kategori & Warna",'
-            f'IF($S{r}="","Kombinasi tdk ada di master - cek",'
-            f'IF($K{r}="","Isi Qty","OK")))))))'
-        )
-        for c in range(1, len(kolom) + 1):
-            cell = ws.cell(row=r, column=c)
-            cell.border = BORDER
-            if kolom[c - 1][2] == "auto":
-                cell.fill = AUTO_FILL
-        ws[f"A{r}"].number_format = "dd/mm/yyyy"
-        ws[f"L{r}"].number_format = "#,##0"
+    for r in range(2, N_BARIS + 2):
+        for c in range(1, 7):
+            cell = wi.cell(row=r, column=c)
+            cell.font, cell.border = FONT, BORDER
+            cell.alignment = Alignment(vertical="center")
+            if c in (3, 4, 5):
+                cell.fill = FILL_PILIH
+        wi[f"A{r}"].number_format = "dd/mm/yyyy"
+        wi[f"B{r}"].number_format = "@"
+        wi[f"G{r}"] = (f'=IF($D{r}="",0,IF(COUNTIF(Bantu!${L(c_m0)}${r}:${L(c_ga - 1)}${r},$D{r})=0,1,0))')
+        wi[f"H{r}"] = (f'=IF($E{r}="",0,IF(COUNTIF(Bantu!${L(c_g0)}${r}:'
+                       f'${L(c_g0 + maks_gen - 1)}${r},$E{r})=0,1,0))')
 
-    ws.conditional_formatting.add(
-        f"U2:U{N_BARIS_INPUT + 1}",
-        FormulaRule(formula=['AND($U2<>"",$U2<>"OK")'], fill=WARN_FILL))
-    ws.conditional_formatting.add(
-        f"U2:U{N_BARIS_INPUT + 1}", FormulaRule(formula=['$U2="OK"'], fill=OK_FILL))
+        dv_m = DataValidation(type="list", allow_blank=True,
+                              formula1=f"Bantu!${L(c_m0)}${r}:${L(c_ga - 1)}${r}")
+        dv_g = DataValidation(type="list", allow_blank=True,
+                              formula1=f"Bantu!${L(c_g0)}${r}:${L(c_g0 + maks_gen - 1)}${r}")
+        for dv, col in ((dv_m, "D"), (dv_g, "E")):
+            dv.error, dv.errorTitle = "Pilih dari dropdown. Isi Merek dulu.", "Tidak ada di daftar"
+            wi.add_data_validation(dv)
+            dv.add(f"{col}{r}")
 
-    # ---------------- Pengaturan ----------------
-    wp = wb.create_sheet("Pengaturan")
-    ref_toko = tulis_list(wp, 1, "Toko", list(TOKO_GRUP))
-    ref_mp = tulis_list(wp, 2, "Marketplace", MARKETPLACE)
-    ref_admin = tulis_list(wp, 3, "Admin (edit nama di sini)", ADMIN_CONTOH)
-    ref_status = tulis_list(wp, 4, "Status", STATUS)
-    ref_kat = tulis_list(wp, 5, "Kategori", KATEGORI)
-    ref_warna = tulis_list(wp, 6, "Warna", WARNA)
-    for i in range(1, 7):
-        c = wp.cell(row=1, column=i)
-        c.fill, c.font = HEADER_FILL, HEADER_FONT
-        wp.column_dimensions[get_column_letter(i)].width = 24
-    wp.freeze_panes = "A2"
+    last = N_BARIS + 1
+    dv_merek = DataValidation(type="list", formula1=R_MEREK, allow_blank=True)
+    dv_merek.error, dv_merek.errorTitle = "Pilih merek dari dropdown.", "Tidak ada di daftar"
+    wi.add_data_validation(dv_merek)
+    dv_merek.add(f"C2:C{last}")
+    dv_tgl = DataValidation(type="date", operator="greaterThan", formula1="DATE(2026,1,1)",
+                            allow_blank=True)
+    dv_tgl.error = "Isi tanggal, contoh 25/09/2026."
+    wi.add_data_validation(dv_tgl)
+    dv_tgl.add(f"A2:A{last}")
 
-    def dv(ref, rng, strict=True, prompt=None):
-        v = DataValidation(type="list", formula1=ref, allow_blank=True,
-                           showErrorMessage=strict)
-        v.error = "Pilih dari daftar (dropdown)."
-        v.errorStyle = "stop" if strict else "warning"
-        if prompt:
-            v.prompt, v.showInputMessage = prompt, True
-        ws.add_data_validation(v)
-        v.add(rng)
+    wi.conditional_formatting.add(f"D2:D{last}", FormulaRule(formula=["$G2=1"], fill=FILL_SALAH))
+    wi.conditional_formatting.add(f"E2:E{last}", FormulaRule(formula=["$H2=1"], fill=FILL_SALAH))
+    wi.conditional_formatting.add(f"A2:B{last}", FormulaRule(formula=["ISEVEN(ROW())"], fill=FILL_BAND))
+    wi.conditional_formatting.add(f"F2:F{last}", FormulaRule(formula=["ISEVEN(ROW())"], fill=FILL_BAND))
+    wi.auto_filter.ref = f"A1:F{last}"
 
-    last = N_BARIS_INPUT + 1
-    dv(ref_admin, f"B2:B{last}", strict=False)
-    dv(ref_toko, f"C2:C{last}")
-    dv(ref_mp, f"D2:D{last}")
-    dv(D_LABEL, f"G2:G{last}", prompt="Ketik nama mobil (mis. 'Xenia'), lalu pilih generasi.")
-    dv(ref_kat, f"I2:I{last}")
-    dv(ref_warna, f"J2:J{last}")
-    dv(ref_status, f"M2:M{last}")
-    tgl = DataValidation(type="date", operator="greaterThan", formula1="DATE(2026,1,1)",
-                         allow_blank=True)
-    tgl.error = "Isi tanggal (dd/mm/yyyy)."
-    ws.add_data_validation(tgl)
-    tgl.add(f"A2:A{last}")
-    qty = DataValidation(type="whole", operator="between", formula1="1", formula2="100",
-                         allow_blank=True)
-    qty.error = "Qty angka bulat 1-100."
-    ws.add_data_validation(qty)
-    qty.add(f"K2:K{last}")
-    harga = DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0",
-                           allow_blank=True)
-    harga.error = "Harga diisi angka saja (tanpa 'Rp' / 'rb')."
-    ws.add_data_validation(harga)
-    harga.add(f"L2:L{last}")
-
-    # ---------------- Rekap per Model ----------------
-    wr = wb.create_sheet("Rekap per Model")
-    gaya_header(wr, ["Merek", "Model", "Status Model", "Qty Tercatat (tanpa Batal/Retur)",
-                     "Jumlah Pesanan", "Omzet (Rp)"], [18, 34, 12, 16, 12, 16])
-    INP = "'Input Pesanan'"
-    rng = lambda c: f"{INP}!${c}$2:${c}${last}"
+    # ---------- Rekap ----------
+    for i, (h, w) in enumerate([("Merek", 20), ("Model", 30), ("Jumlah Pesanan", 16)], start=1):
+        c = wr.cell(row=1, column=i, value=h)
+        c.font, c.fill, c.border = FONT_HDR, FILL_HDR, BORDER
+        c.alignment = Alignment(horizontal="center")
+        wr.column_dimensions[L(i)].width = w
     r = 2
-    for model in model_master:
-        merek = next(d["merek"] for d in daftar.values() if d["model"] == model)
-        wr.cell(row=r, column=1, value=merek)
-        wr.cell(row=r, column=2, value=model)
-        wr.cell(row=r, column=3, value="Top 100" if model in top else "Custom")
-        wr.cell(row=r, column=4, value=(
-            f'=SUMIFS({rng("K")},{rng("P")},$B{r})'
-            f'-SUMIFS({rng("K")},{rng("P")},$B{r},{rng("M")},"Batal")'
-            f'-SUMIFS({rng("K")},{rng("P")},$B{r},{rng("M")},"Retur")'))
-        wr.cell(row=r, column=5, value=(
-            f'=COUNTIFS({rng("P")},$B{r})-COUNTIFS({rng("P")},$B{r},{rng("M")},"Batal")'
-            f'-COUNTIFS({rng("P")},$B{r},{rng("M")},"Retur")'))
-        wr.cell(row=r, column=6, value=(
-            f'=SUMIFS({rng("W")},{rng("P")},$B{r})'
-            f'-SUMIFS({rng("W")},{rng("P")},$B{r},{rng("M")},"Batal")'
-            f'-SUMIFS({rng("W")},{rng("P")},$B{r},{rng("M")},"Retur")'))
-        wr.cell(row=r, column=6).number_format = "#,##0"
-        r += 1
-    wr.auto_filter.ref = f"A1:F{r - 1}"
+    for merek, models in daftar.items():
+        for model in models:
+            wr.cell(row=r, column=1, value=merek).font = FONT
+            wr.cell(row=r, column=2, value=model).font = FONT
+            wr.cell(row=r, column=3, value=(f'=COUNTIFS(Input!$C$2:$C${last},$A{r},'
+                                            f'Input!$D$2:$D${last},$B{r})')).font = FONT
+            r += 1
+    wr.freeze_panes = "A2"
+    wr.auto_filter.ref = f"A1:C{r - 1}"
+    wr.conditional_formatting.add(f"C2:C{r - 1}", FormulaRule(formula=["$C2>0"],
+                                  fill=PatternFill("solid", fgColor="C6EFCE")))
 
-    # ---------------- Daftar Mobil ----------------
-    wd = wb.create_sheet("Daftar Mobil")
-    gaya_header(wd, ["Pilihan Dropdown (Model | Generasi | Tahun)", "Merek", "Model",
-                     "Generasi", "Rentang Tahun", "Status Model"], [52, 18, 30, 14, 18, 12])
-    for i, (label, d) in enumerate(daftar.items(), start=2):
-        wd.cell(row=i, column=1, value=label)
-        wd.cell(row=i, column=2, value=d["merek"])
-        wd.cell(row=i, column=3, value=d["model"])
-        wd.cell(row=i, column=4, value=d["gen"])
-        wd.cell(row=i, column=5, value=d["tahun"])
-        wd.cell(row=i, column=6, value="Top 100" if d["model"] in top else "Custom")
-    wd.auto_filter.ref = f"A1:F{n_daftar + 1}"
-
-    # ---------------- Master SKU ----------------
-    wm = wb.create_sheet("Master SKU")
-    gaya_header(wm, ["Kunci (Grup|Mobil|Kategori|Warna)", "SKU Gudang"], [90, 28])
-    for i, (k, v) in enumerate(sku_by_key.items(), start=2):
-        wm.cell(row=i, column=1, value=k)
-        wm.cell(row=i, column=2, value=v)
-
-    # ---------------- Cara Pakai ----------------
-    wc = wb.create_sheet("Cara Pakai", 0)
-    wc.column_dimensions["A"].width = 110
+    # ---------- Cara Pakai ----------
+    wc.column_dimensions["A"].width = 90
     teks = [
-        ("FORM PENCATATAN PESANAN CUSTOM - UNDERCOVER", True),
-        (f"Sumber daftar mobil & SKU: master {versi_master} "
-         f"({len(model_master)} model, {n_daftar} pilihan generasi).", False),
-        (f"Status Top 100: ranking BigSeller (Shopee+TikTok) 1 Apr - 16 Sep 2026. "
-         f"Ubah manual di sheet 'Daftar Mobil' & 'Rekap per Model' kolom Status Model kalau perlu.", False),
+        ("CARA MENCATAT PESANAN CUSTOM", True),
+        ("1. Isi Tanggal dan No. Pesanan.", False),
+        ("2. Pilih Merek (dropdown), lalu Model, lalu Generasi / Tahun. Isi berurutan dari kiri.", False),
+        ("3. Model & Generasi hanya muncul setelah kolom sebelumnya diisi.", False),
+        ("4. Kolom merah = pilihan tidak cocok (biasanya Merek diganti setelah Model dipilih). Pilih ulang.", False),
+        ("5. Catatan bebas: warna, jumlah, permintaan khusus, dll.", False),
+        ("6. Sheet 'Rekap' = jumlah pesanan per model (filter kolom Jumlah untuk lihat yang terisi).", False),
         ("", False),
-        ("CARA MENCATAT (sheet 'Input Pesanan', 1 baris = 1 varian dalam 1 pesanan)", True),
-        ("1. Isi Tanggal, Admin, Toko, Marketplace, No. Pesanan, Username pembeli.", False),
-        ("2. Kolom Mobil: klik dropdown lalu KETIK nama mobil (mis. 'xenia') -> pilih generasi yg cocok dgn tahun mobil pembeli.", False),
-        ("3. Isi Tahun Mobil Pembeli (tahun asli mobilnya, utk cek ulang generasi).", False),
-        ("4. Pilih Kategori & Warna, isi Qty & Harga.", False),
-        ("5. Kolom abu-abu terisi otomatis (Merek, Model, Generasi, Tahun, SKU Gudang). JANGAN diketik manual.", False),
-        ("6. Lihat kolom 'Cek': hijau OK = lengkap & SKU ketemu. Oranye = ada yg kurang / kombinasi tidak dijual di master.", False),
-        ("7. Pembeli beli 2 varian beda -> 2 baris, No. Pesanan sama.", False),
-        ("8. Pesanan batal/retur: ubah kolom Status (jangan hapus baris) -> otomatis tidak dihitung di Rekap.", False),
-        ("", False),
-        ("CATATAN WARNA STRIP", True),
-        ("Strip 1 = Epic, Strip 2 = Elite, Strip 3 = Warrior. Boleh pilih ejaan mana pun, SKU otomatis menyesuaikan toko.", False),
-        ("Toko Otonation memakai SKU Undercover (UA); Otoprotection memakai SKU Smartprotection (SP) - aturan konsolidasi stok.", False),
-        ("", False),
-        ("PENTING", True),
-        ("Jangan tambah/hapus kolom di 'Input Pesanan'. Tambah nama admin di sheet 'Pengaturan'.", False),
-        ("Daftar mobil & SKU diperbarui dengan membuat ulang file dari master terbaru "
-         "(script scripts/buat_form_pencatatan_custom.py di repo), lalu salin baris Input lama.", False),
+        (f"Sumber daftar: master SKU ({n_merek} merek, {sum(len(m) for m in daftar.values())} model). "
+         "Jangan ubah sheet tersembunyi 'Data' dan 'Bantu'.", False),
     ]
-    for i, (t, tebal) in enumerate(teks, start=1):
+    for i, (t, b) in enumerate(teks, start=1):
         c = wc.cell(row=i, column=1, value=t)
-        c.font = Font(bold=tebal, size=12 if tebal else 11)
-        c.alignment = Alignment(wrap_text=True, vertical="top")
+        c.font = Font(name="Arial", size=13 if b else 11, bold=b)
 
-    wb.active = wb.sheetnames.index("Input Pesanan")
+    wd.sheet_state = "hidden"
+    wbnt.sheet_state = "hidden"
+    wb.active = 0
     wb.save(out_path)
 
-    print(f"master: {len(model_master)} model, {n_daftar} pilihan, {n_sku} kunci SKU, bentrok kunci {len(bentrok)}")
-    for b in bentrok[:10]:
-        print("  bentrok:", b)
-    print(f"top{TOP_N} model mobil: {len(top)} cocok ke master, {len(tak_cocok)} tak ada di master:")
-    for rank, nama in tak_cocok:
-        print(f"  #{rank} {nama}")
+    print(f"{n_merek} merek, {sum(len(m) for m in daftar.values())} model, "
+          f"{last_g - 1} generasi | maks model/merek {maks_model}, maks gen/model {maks_gen}")
+    print(f"model tanpa baris UA (pakai toko lain): {len(lap['sumber_non_ua'])}")
+    print(f"generasi dgn >1 rentang tahun di toko sumber: {len(lap['tahun_ganda'])}")
+    for x in lap["tahun_ganda"][:15]:
+        print("   ", x)
+    print(f"nama pendek bentrok: {lap['nama_bentrok']}")
     print("tersimpan:", out_path)
-    return daftar, sku_by_key, top, tak_cocok
+    return daftar, lap
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         sys.exit(__doc__)
-    buat(sys.argv[1], sys.argv[2], sys.argv[3],
-         sys.argv[4] if len(sys.argv) > 4 else "(tanpa label)")
+    buat(sys.argv[1], sys.argv[2])
