@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catat Pesanan Custom — Undercover</title>
+<style>
+  :root {
+    --bg: #f3f5f8; --card: #ffffff; --ink: #1c2430; --muted: #6b7686; --line: #d9dee6;
+    --brand: #1f4e78; --brand-ink: #ffffff; --focus: #2f6fb0; --hover: #eef3f9;
+    --ok-bg: #e7f5ec; --ok-ink: #1d6b3a; --err-bg: #fdecea; --err-ink: #a3261a;
+    --new-bg: #fff4dc; --new-ink: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 460px; margin: 0 auto; padding: 28px 16px 48px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 22px 22px; box-shadow: 0 1px 2px rgba(20,30,50,.04), 0 6px 24px rgba(20,30,50,.06); }
+  .brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  h1 { font-size: 21px; margin: 0 0 20px; }
+  .field { margin-bottom: 16px; }
+  label { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .badge { display: none; font-weight: 600; font-size: 11px; padding: 2px 7px; border-radius: 999px;
+    background: var(--new-bg); color: var(--new-ink); }
+  .field.is-new .badge { display: inline-block; }
+  .combo { position: relative; }
+  .combo input { width: 100%; height: 46px; padding: 0 40px 0 14px; font: inherit; color: var(--ink);
+    background: #fff; border: 1px solid var(--line); border-radius: 10px; outline: none; }
+  .combo input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px rgba(47,111,176,.18); }
+  .combo input:disabled { background: #f6f7f9; color: var(--muted); cursor: not-allowed; }
+  .combo .chev { position: absolute; right: 14px; top: 50%; width: 10px; height: 10px; margin-top: -7px;
+    border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg);
+    pointer-events: none; }
+  .list { position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px;
+    list-style: none; max-height: 264px; overflow-y: auto; background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; box-shadow: 0 10px 28px rgba(20,30,50,.14); display: none; }
+  .combo.open .list { display: block; }
+  .list li { padding: 9px 10px; border-radius: 7px; cursor: pointer; }
+  .list li.active { background: var(--hover); }
+  .list li.add { color: var(--brand); font-weight: 600; border-top: 1px solid var(--line); margin-top: 4px; }
+  .list li.empty { color: var(--muted); cursor: default; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+  .hint:empty { display: none; }
+  button.save { width: 100%; height: 48px; margin-top: 6px; border: 0; border-radius: 10px;
+    background: var(--brand); color: var(--brand-ink); font: inherit; font-weight: 700; cursor: pointer; }
+  button.save:disabled { opacity: .55; cursor: default; }
+  .msg { display: none; margin-top: 14px; padding: 11px 13px; border-radius: 10px; font-size: 14.5px; }
+  .msg.ok { display: block; background: var(--ok-bg); color: var(--ok-ink); }
+  .msg.err { display: block; background: var(--err-bg); color: var(--err-ink); }
+  .recent { margin-top: 18px; }
+  .recent h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+  .recent ol { margin: 0; padding-left: 20px; font-size: 14px; color: var(--ink); }
+  .recent li { margin: 2px 0; }
+  .loading { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <p class="brand">Undercover</p>
+    <h1>Catat Pesanan Custom</h1>
+    <p class="loading" id="loading">Memuat daftar mobil…</p>
+
+    <form id="form" autocomplete="off" novalidate>
+      <div class="field" id="f-merek">
+        <label for="merek">Merek <span class="badge">Baru</span></label>
+        <div class="combo"><input id="merek" placeholder="Pilih atau ketik merek" disabled><span class="chev"></span><ul class="list"></ul></div>
+        <div class="hint"></div>
+      </div>
+      <div class="field" id="f-model">
+        <label for="model">Model <span class="badge">Baru</span></label>
+        <div class="combo"><input id="model" placeholder="Pilih merek dulu" disabled><span class="chev"></span><ul class="list"></ul></div>
+        <div class="hint"></div>
+      </div>
+      <div class="field" id="f-gen">
+        <label for="gen">Generasi / Tahun <span class="badge">Baru</span></label>
+        <div class="combo"><input id="gen" placeholder="Pilih model dulu" disabled><span class="chev"></span><ul class="list"></ul></div>
+        <div class="hint"></div>
+      </div>
+      <button class="save" id="save" type="submit" disabled>Simpan</button>
+      <div class="msg" id="msg" role="status"></div>
+    </form>
+
+    <div class="recent" id="recent" hidden>
+      <h2>Baru saja disimpan</h2>
+      <ol id="recent-list"></ol>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  // data: Map merek -> Map model -> [generasi]
+  var data = new Map();
+  var norm = function (s) { return String(s || '').replace(/\s+/g, ' ').trim(); };
+  var key = function (s) { return norm(s).toLowerCase(); };
+  var loose = function (s) { return key(s).replace(/[^a-z0-9]/g, ''); };  // "hrv" cocok "HR-V"
+  var byName = function (a, b) { return a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }); };
+
+  function cari(list, teks) {
+    var k = key(teks);
+    for (var i = 0; i < list.length; i++) if (key(list[i]) === k) return list[i];
+    return null;
+  }
+  function daftarMerek() { return Array.from(data.keys()).sort(byName); }
+  function daftarModel() {
+    var m = data.get(cari(daftarMerek(), fMerek.value()) || '');
+    return m ? Array.from(m.keys()).sort(byName) : [];
+  }
+  function daftarGen() {
+    var m = data.get(cari(daftarMerek(), fMerek.value()) || '');
+    if (!m) return [];
+    var g = m.get(cari(Array.from(m.keys()), fModel.value()) || '');
+    return g ? g.slice() : [];
+  }
+
+  function Combo(id, opsi) {
+    var field = document.getElementById('f-' + id);
+    var input = document.getElementById(id);
+    var combo = input.parentNode;
+    var ul = combo.querySelector('.list');
+    var hint = field.querySelector('.hint');
+    var items = [], aktif = -1, terakhir = '';
+
+    function render() {
+      var q = loose(input.value), semua = opsi.ambil(), ada = cari(semua, input.value);
+      var cocok = q && !ada ? semua.filter(function (x) { return loose(x).indexOf(q) !== -1; })
+                            : semua;
+      items = cocok.map(function (x) { return { teks: x, nilai: x }; });
+      if (norm(input.value) && !ada) items.push({ teks: '+ Tambah baru: “' + norm(input.value) + '”', nilai: norm(input.value), add: true });
+      ul.innerHTML = '';
+      if (!items.length) {
+        var li = document.createElement('li'); li.className = 'empty';
+        li.textContent = semua.length ? 'Tidak ada yang cocok' : 'Belum ada data — ketik untuk menambah';
+        ul.appendChild(li);
+      }
+      items.forEach(function (it, i) {
+        var li = document.createElement('li');
+        li.textContent = it.teks;
+        if (it.add) li.className = 'add';
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); pilih(i); });
+        ul.appendChild(li);
+      });
+      aktif = ada ? items.findIndex(function (it) { return it.nilai === ada; }) : (items.length ? 0 : -1);
+      sorot();
+    }
+    function sorot() {
+      Array.prototype.forEach.call(ul.children, function (li, i) { li.classList.toggle('active', i === aktif); });
+      var li = ul.children[aktif]; if (li && li.scrollIntoView) li.scrollIntoView({ block: 'nearest' });
+    }
+    function buka() { if (!input.disabled) { combo.classList.add('open'); render(); } }
+    function tutup() { combo.classList.remove('open'); }
+    function status() {
+      var v = norm(input.value), baru = v && !cari(opsi.ambil(), v);
+      field.classList.toggle('is-new', !!baru);
+      hint.textContent = baru ? 'Tidak ada di daftar — akan ditambahkan otomatis saat disimpan.' : (opsi.hint || '');
+    }
+    function commit() {
+      var v = norm(input.value), ada = cari(opsi.ambil(), v);
+      input.value = ada || v;
+      status();
+      if (key(input.value) !== key(terakhir)) { terakhir = input.value; opsi.berubah(); }
+    }
+    function pilih(i) {
+      input.value = items[i].nilai; tutup(); commit();
+      if (opsi.lanjut) opsi.lanjut();
+    }
+
+    input.addEventListener('focus', buka);
+    input.addEventListener('click', buka);
+    input.addEventListener('input', function () {
+      // label "Baru" baru ditampilkan setelah pilihan final (blur/pilih), bukan saat mengetik
+      field.classList.remove('is-new'); hint.textContent = opsi.hint || ''; buka();
+    });
+    input.addEventListener('blur', function () { tutup(); commit(); });
+    input.addEventListener('keydown', function (e) {
+      var terbuka = combo.classList.contains('open');
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (!terbuka) buka(); else if (items.length) { aktif = (aktif + 1) % items.length; sorot(); } }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (items.length) { aktif = (aktif - 1 + items.length) % items.length; sorot(); } }
+      else if (e.key === 'Enter') {
+        if (terbuka && aktif >= 0 && items[aktif]) { e.preventDefault(); pilih(aktif); }
+      }
+      else if (e.key === 'Tab' && !e.shiftKey && norm(input.value)) {
+        // Tab = ambil pilihan yang disorot lalu pindah ke kolom berikutnya
+        e.preventDefault();
+        if (terbuka && aktif >= 0 && items[aktif]) pilih(aktif);
+        else { tutup(); commit(); if (opsi.lanjut) opsi.lanjut(); }
+      }
+      else if (e.key === 'Escape') { tutup(); }
+    });
+
+    return {
+      value: function () { return norm(input.value); },
+      set: function (v) { input.value = v; terakhir = v; status(); },
+      enable: function (on, ph) { input.disabled = !on; if (ph) input.placeholder = ph; },
+      focus: function () { input.focus(); },
+      status: status
+    };
+  }
+
+  var fMerek, fModel, fGen;
+  var btn = document.getElementById('save'), msg = document.getElementById('msg');
+
+  function segarkanTombol() {
+    btn.disabled = !(fMerek.value() && fModel.value() && fGen.value());
+  }
+  fMerek = Combo('merek', {
+    ambil: daftarMerek,
+    berubah: function () {
+      fModel.set(''); fGen.set('');
+      fModel.enable(!!fMerek.value(), fMerek.value() ? 'Pilih atau ketik model' : 'Pilih merek dulu');
+      fGen.enable(false, 'Pilih model dulu');
+      segarkanTombol();
+    },
+    lanjut: function () { fModel.focus(); }
+  });
+  fModel = Combo('model', {
+    ambil: daftarModel,
+    berubah: function () {
+      fGen.set('');
+      fGen.enable(!!fModel.value(), fModel.value() ? 'Pilih atau ketik generasi / tahun' : 'Pilih model dulu');
+      segarkanTombol();
+    },
+    lanjut: function () { fGen.focus(); }
+  });
+  fGen = Combo('gen', {
+    ambil: daftarGen,
+    hint: '',
+    berubah: segarkanTombol,
+    lanjut: function () { segarkanTombol(); btn.focus(); }
+  });
+  ['merek', 'model', 'gen'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () {
+      // tombol ikut teks yang sedang diketik (belum blur)
+      btn.disabled = !(fMerek.value() && fModel.value() && fGen.value());
+    });
+  });
+
+  function tampil(jenis, teks) { msg.className = 'msg ' + jenis; msg.textContent = teks; }
+
+  function tambahLokal(h) {
+    if (!data.has(h.merek)) data.set(h.merek, new Map());
+    var m = data.get(h.merek);
+    if (!m.has(h.model)) m.set(h.model, []);
+    if (m.get(h.model).indexOf(h.gen) === -1) m.get(h.model).push(h.gen);
+  }
+
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var isi = { merek: fMerek.value(), model: fModel.value(), gen: fGen.value() };
+    if (!isi.merek || !isi.model || !isi.gen) { tampil('err', 'Lengkapi Merek, Model, dan Generasi / Tahun.'); return; }
+    btn.disabled = true; btn.textContent = 'Menyimpan…'; msg.className = 'msg';
+    google.script.run
+      .withSuccessHandler(function (h) {
+        tambahLokal(h);
+        tampil('ok', 'Tersimpan: ' + h.merek + ' ' + h.model + ' — ' + h.gen + (h.baru ? ' (ditambahkan ke daftar)' : ''));
+        var li = document.createElement('li');
+        li.textContent = h.merek + ' ' + h.model + ' — ' + h.gen;
+        var ol = document.getElementById('recent-list');
+        ol.insertBefore(li, ol.firstChild);
+        while (ol.children.length > 5) ol.removeChild(ol.lastChild);
+        document.getElementById('recent').hidden = false;
+        fMerek.set(''); fModel.set(''); fGen.set('');
+        fModel.enable(false, 'Pilih merek dulu'); fGen.enable(false, 'Pilih model dulu');
+        btn.textContent = 'Simpan'; segarkanTombol(); fMerek.focus();
+      })
+      .withFailureHandler(function (err) {
+        tampil('err', 'Gagal menyimpan: ' + (err && err.message ? err.message : err) + ' — coba lagi.');
+        btn.textContent = 'Simpan'; segarkanTombol();
+      })
+      .simpan(isi);
+  });
+
+  google.script.run
+    .withSuccessHandler(function (rows) {
+      rows.forEach(function (r) {
+        var mm = new Map();
+        r[1].forEach(function (x) { mm.set(x[0], x[1]); });
+        data.set(r[0], mm);
+      });
+      document.getElementById('loading').remove();
+      fMerek.enable(true);
+      fMerek.focus();
+    })
+    .withFailureHandler(function (err) {
+      document.getElementById('loading').textContent = 'Gagal memuat daftar: ' + (err && err.message ? err.message : err);
+    })
+    .ambilDaftar();
+})();
+</script>
+</body>
+</html>

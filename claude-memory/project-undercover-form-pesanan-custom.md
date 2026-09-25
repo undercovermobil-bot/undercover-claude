@@ -33,3 +33,14 @@ User: desain lama "terlalu ribet"; cukup **Merek -> Model -> Generasi/Tahun** (d
 - Nama model dipendekkan (buang awalan merek: "Toyota Avanza" -> "Avanza", "Mercedes Benz E Class" -> "E Class"); 0 bentrok nama.
 - Label generasi = "Gen X (tahun)" dari baris toko **Undercover Autocare** (semua 504 model punya baris UA). Master tidak konsisten: 108 generasi punya >1 rentang tahun di baris UA sendiri (153 kalau lintas toko) -> dipakai yg paling sering. Janggal: **GAC Aion Hyptec HT Gen 1 = "1994-Now"** (14 baris) padahal mobil listrik baru — data master perlu dicek.
 - Diuji LibreOffice: Toyota->50 model, Daihatsu->20, Avanza->2 gen, Merek salah/gen salah -> merah, Rekap benar. Batas: jika >2.000 baris, buat file baru (validasi per baris tidak otomatis ikut kalau baris ditambah). BELUM diuji langsung di Google Sheets.
+
+## REVISI 2026-09-25 (ke-3) — FORM WEB (Google Apps Script), menggantikan versi sheet-dropdown di atas
+
+User: mau tampilan "seperti isi form di website", TANPA tanggal & no. pesanan, cuma Merek/Model/Generasi; data masuk ke sheet lain; model di luar master bisa diketik manual, otomatis tersimpan dan muncul di dropdown berikutnya.
+
+- Solusi: **Google Sheet + Apps Script Web App** di folder `form-pesanan-custom/` (`Code.gs`, `Index.html`, `PANDUAN-SETUP.md`). Google Forms ditolak krn tidak bisa dropdown bertingkat & tidak bisa auto-tambah opsi dari isian manual.
+- Sheet: **Daftar Mobil** (Merek|Model|Generasi/Tahun|Sumber Master/Manual|Ditambahkan) = sumber dropdown; **Rekap Pesanan** (Waktu otomatis|Merek|Model|Generasi|Model Baru?); **Ringkasan** (2 rumus QUERY, dibuat fungsi `siapkan()`).
+- `simpan()`: ejaan disamakan ke yg sudah ada (case/spasi-insensitive) -> tidak dobel; kombinasi baru -> append ke Daftar Mobil (Sumber=Manual); LockService; format '@' + prefix `'` utk teks diawali = + - @. `ambilDaftar()` return ARRAY (bukan object) krn model bernama angka ("5", "206") akan diurutkan ulang oleh JS object.
+- UI: combobox custom (bukan `<datalist>` — tidak konsisten di HP); ketik sebagian + Enter/Tab = pilih teratas; opsi "+ Tambah baru" di bawah; label kuning "Baru" hanya setelah pilihan final; pencarian abaikan tanda baca ("hrv" -> "HR-V / e:N1"); ganti Merek mereset Model & Generasi.
+- xlsx data awal: `scripts/buat_form_pencatatan_custom.py MASTER.xlsx OUT.xlsx` (ditulis ulang lagi) -> `form-pesanan-custom/Form Pesanan Custom - Google Sheet.xlsx` (gitignored), 1.234 baris generasi.
+- Diuji: Chromium/Playwright dgn Code.gs asli + tiruan SpreadsheetApp (harness di scratchpad, tidak persisten), 22/22 lulus, 0 error JS, lebar HP 390px tanpa scroll samping. **BELUM diuji di Apps Script asli.** Deploy: Execute as Me, akses "Siapa saja yg punya Akun Google".
