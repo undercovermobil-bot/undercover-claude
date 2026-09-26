@@ -17,8 +17,8 @@ Keputusan user 2026-09-26:
   - 3 produk "Custom Semua Merek" tetap aktif.
 
 TikTok (template all_information): 1 produk harus dikirim lengkap semua baris
-variannya, dan atribut wajib yang kosong ikut diisi (2026) / 16:9 / Model
-Mercedes. Kalau tidak, TikTok menolak SELURUH produk (pelajaran OP
+variannya, dan atribut wajib yang kosong ikut diisi: Tahun 2026, Bile 16:9,
+Model Mercedes, Garansi "Tanpa Garansi". Kalau tidak, TikTok menolak SELURUH produk (pelajaran OP
 2026-09-11, lihat perbaikan_otoprotection_final.py).
 
 Pemakaian:
@@ -199,6 +199,7 @@ def proses_tiktok(paths, out, laporan):
         i_atr = {k: v for k, v in h.items()
                  if k in ('product_property/100530', 'product_property/102755')}
         c_model = h.get('product_property/100177')
+        c_garansi = h.get('product_property/100107')
         per_produk = {}
         for r in range(6, ws.max_row + 1):
             pid = ws.cell(row=r, column=c_pid).value
@@ -220,6 +221,10 @@ def proses_tiktok(paths, out, laporan):
                 m_mb = model_mercedes(nama)
                 if c_model and m_mb and ws.cell(row=r, column=c_model).value in (None, ''):
                     atr[c_model] = m_mb
+                # Garansi: preventif, pelajaran SP 2026-09-14 (TikTok lapor
+                # atribut wajib satu per satu; "Tanpa Garansi" terbukti lolos)
+                if c_garansi and ws.cell(row=r, column=c_garansi).value in (None, ''):
+                    atr[c_garansi] = 'Tanpa Garansi'
                 for idx, val in atr.items():
                     s2 = ws.cell(row=r, column=idx)
                     s2.value = val
