@@ -49,6 +49,13 @@
   .msg { display: none; margin-top: 14px; padding: 11px 13px; border-radius: 10px; font-size: 14.5px; }
   .msg.ok { display: block; background: var(--ok-bg); color: var(--ok-ink); }
   .msg.err { display: block; background: var(--err-bg); color: var(--err-ink); }
+  .harga { display: none; margin: -4px 0 16px; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 10px; background: #f8fafc; }
+  .harga.show { display: block; }
+  .harga .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+  .harga .tipe { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .harga .rp { font-weight: 700; font-size: 14.5px; }
+  .harga .contoh { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
   .recent { margin-top: 18px; }
   .recent h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
   .recent ol { margin: 0; padding-left: 20px; font-size: 14px; color: var(--ink); }
@@ -78,6 +85,15 @@
         <label for="gen">Generasi / Tahun <span class="badge">Baru</span></label>
         <div class="combo"><input id="gen" placeholder="Pilih model dulu" disabled><span class="chev"></span><ul class="list"></ul></div>
         <div class="hint"></div>
+      </div>
+      <div class="field" id="f-ukuran">
+        <label for="ukuran">Ukuran</label>
+        <div class="combo"><input id="ukuran" placeholder="Pilih model dulu" disabled><span class="chev"></span><ul class="list"></ul></div>
+        <div class="hint"></div>
+      </div>
+      <div class="harga" id="harga" aria-live="polite">
+        <div class="grid" id="harga-grid"></div>
+        <div class="contoh" id="harga-contoh"></div>
       </div>
       <button class="save" id="save" type="submit" disabled>Simpan</button>
       <div class="msg" id="msg" role="status"></div>
@@ -129,7 +145,7 @@
       var cocok = q && !ada ? semua.filter(function (x) { return loose(x).indexOf(q) !== -1; })
                             : semua;
       items = cocok.map(function (x) { return { teks: x, nilai: x }; });
-      if (norm(input.value) && !ada) items.push({ teks: '+ Tambah baru: “' + norm(input.value) + '”', nilai: norm(input.value), add: true });
+      if (norm(input.value) && !ada && opsi.bebas !== false) items.push({ teks: '+ Tambah baru: “' + norm(input.value) + '”', nilai: norm(input.value), add: true });
       ul.innerHTML = '';
       if (!items.length) {
         var li = document.createElement('li'); li.className = 'empty';
@@ -154,8 +170,9 @@
     function tutup() { combo.classList.remove('open'); }
     function status() {
       var v = norm(input.value), baru = v && !cari(opsi.ambil(), v);
-      field.classList.toggle('is-new', !!baru);
-      hint.textContent = baru ? 'Tidak ada di daftar — akan ditambahkan otomatis saat disimpan.' : (opsi.hint || '');
+      field.classList.toggle('is-new', !!baru && opsi.bebas !== false);
+      if (opsi.berubahTeks) opsi.berubahTeks();
+      hint.textContent = baru ? (opsi.bebas === false ? 'Pilih salah satu dari daftar.' : 'Tidak ada di daftar — akan ditambahkan otomatis saat disimpan.') : (typeof opsi.hint === 'function' ? opsi.hint() : (opsi.hint || ''));
     }
     function commit() {
       var v = norm(input.value), ada = cari(opsi.ambil(), v);
@@ -172,7 +189,7 @@
     input.addEventListener('click', buka);
     input.addEventListener('input', function () {
       // label "Baru" baru ditampilkan setelah pilihan final (blur/pilih), bukan saat mengetik
-      field.classList.remove('is-new'); hint.textContent = opsi.hint || ''; buka();
+      field.classList.remove('is-new'); hint.textContent = typeof opsi.hint === 'function' ? opsi.hint() : (opsi.hint || ''); buka();
     });
     input.addEventListener('blur', function () { tutup(); commit(); });
     input.addEventListener('keydown', function (e) {
@@ -200,11 +217,36 @@
     };
   }
 
-  var fMerek, fModel, fGen;
+  var fMerek, fModel, fGen, fUk;
   var btn = document.getElementById('save'), msg = document.getElementById('msg');
+  var matriks = [];            // [[ukuran, pcs, reguler, strip, premium, exclusive, contoh]]
+  var petaUk = new Map();      // "merek|model" (huruf kecil) -> ukuran
+  var ukOtomatis = false;
+  var rp = function (n) { return 'Rp' + Number(n || 0).toLocaleString('id-ID'); };
+  function daftarUk() { return matriks.map(function (r) { return r[0]; }); }
+  function ukDari(me, mo) { return petaUk.get(key(me) + '|' + key(mo)) || ''; }
+  function ukValid() { return !!cari(daftarUk(), fUk.value()); }
 
   function segarkanTombol() {
-    btn.disabled = !(fMerek.value() && fModel.value() && fGen.value());
+    btn.disabled = !(fMerek.value() && fModel.value() && fGen.value() && ukValid());
+  }
+  function tampilHarga() {
+    var r = matriks.filter(function (x) { return key(x[0]) === key(fUk.value()); })[0];
+    var box = document.getElementById('harga');
+    if (!r) { box.classList.remove('show'); return; }
+    var tipe = [['Reguler', r[2]], ['Strip', r[3]], ['Premium', r[4]], ['Exclusive', r[5]]];
+    document.getElementById('harga-grid').innerHTML = tipe.map(function (t) {
+      return '<div><div class="tipe">' + t[0] + '</div><div class="rp">' + rp(t[1]) + '</div></div>';
+    }).join('');
+    document.getElementById('harga-contoh').textContent = r[6] ? 'Contoh ' + r[0] + ': ' + r[6] : '';
+    box.classList.add('show');
+  }
+  function aturUkuranDariModel() {
+    var u = fModel.value() ? ukDari(fMerek.value(), fModel.value()) : '';
+    ukOtomatis = !!u;
+    fUk.set(u);
+    fUk.enable(!!fModel.value(), fModel.value() ? 'Pilih ukuran' : 'Pilih model dulu');
+    tampilHarga();
   }
   fMerek = Combo('merek', {
     ambil: daftarMerek,
@@ -212,6 +254,7 @@
       fModel.set(''); fGen.set('');
       fModel.enable(!!fMerek.value(), fMerek.value() ? 'Pilih atau ketik model' : 'Pilih merek dulu');
       fGen.enable(false, 'Pilih model dulu');
+      aturUkuranDariModel();
       segarkanTombol();
     },
     lanjut: function () { fModel.focus(); }
@@ -221,6 +264,7 @@
     berubah: function () {
       fGen.set('');
       fGen.enable(!!fModel.value(), fModel.value() ? 'Pilih atau ketik generasi / tahun' : 'Pilih model dulu');
+      aturUkuranDariModel();
       segarkanTombol();
     },
     lanjut: function () { fGen.focus(); }
@@ -229,12 +273,24 @@
     ambil: daftarGen,
     hint: '',
     berubah: segarkanTombol,
+    lanjut: function () { segarkanTombol(); if (ukValid()) btn.focus(); else fUk.focus(); }
+  });
+  fUk = Combo('ukuran', {
+    ambil: daftarUk,
+    bebas: false,
+    hint: function () {
+      if (!fModel.value()) return '';
+      if (ukOtomatis && key(fUk.value()) === key(ukDari(fMerek.value(), fModel.value()))) return 'Terisi otomatis dari data model. Ganti kalau perlu.';
+      return ukDari(fMerek.value(), fModel.value()) ? '' : 'Ukuran model ini belum ada di data — pilih sesuai mobil (lihat contoh). Tersimpan otomatis untuk pesanan berikutnya.';
+    },
+    berubah: function () { tampilHarga(); segarkanTombol(); },
+    berubahTeks: tampilHarga,
     lanjut: function () { segarkanTombol(); btn.focus(); }
   });
-  ['merek', 'model', 'gen'].forEach(function (id) {
+  ['merek', 'model', 'gen', 'ukuran'].forEach(function (id) {
     document.getElementById(id).addEventListener('input', function () {
       // tombol ikut teks yang sedang diketik (belum blur)
-      btn.disabled = !(fMerek.value() && fModel.value() && fGen.value());
+      btn.disabled = !(fMerek.value() && fModel.value() && fGen.value() && ukValid());
     });
   });
 
@@ -245,25 +301,27 @@
     var m = data.get(h.merek);
     if (!m.has(h.model)) m.set(h.model, []);
     if (m.get(h.model).indexOf(h.gen) === -1) m.get(h.model).push(h.gen);
+    if (h.ukuran && !ukDari(h.merek, h.model)) petaUk.set(key(h.merek) + '|' + key(h.model), h.ukuran);
   }
 
   document.getElementById('form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var isi = { merek: fMerek.value(), model: fModel.value(), gen: fGen.value() };
-    if (!isi.merek || !isi.model || !isi.gen) { tampil('err', 'Lengkapi Merek, Model, dan Generasi / Tahun.'); return; }
+    var isi = { merek: fMerek.value(), model: fModel.value(), gen: fGen.value(), ukuran: fUk.value() };
+    if (!isi.merek || !isi.model || !isi.gen || !ukValid()) { tampil('err', 'Lengkapi Merek, Model, Generasi / Tahun, dan Ukuran.'); return; }
     btn.disabled = true; btn.textContent = 'Menyimpan…'; msg.className = 'msg';
     google.script.run
       .withSuccessHandler(function (h) {
         tambahLokal(h);
-        tampil('ok', 'Tersimpan: ' + h.merek + ' ' + h.model + ' — ' + h.gen + (h.baru ? ' (ditambahkan ke daftar)' : ''));
+        tampil('ok', 'Tersimpan: ' + h.merek + ' ' + h.model + ' — ' + h.gen + ' · ' + h.ukuran + (h.baru ? ' (ditambahkan ke daftar)' : ''));
         var li = document.createElement('li');
-        li.textContent = h.merek + ' ' + h.model + ' — ' + h.gen;
+        li.textContent = h.merek + ' ' + h.model + ' — ' + h.gen + ' · ' + h.ukuran;
         var ol = document.getElementById('recent-list');
         ol.insertBefore(li, ol.firstChild);
         while (ol.children.length > 5) ol.removeChild(ol.lastChild);
         document.getElementById('recent').hidden = false;
         fMerek.set(''); fModel.set(''); fGen.set('');
         fModel.enable(false, 'Pilih merek dulu'); fGen.enable(false, 'Pilih model dulu');
+        aturUkuranDariModel();
         btn.textContent = 'Simpan'; segarkanTombol(); fMerek.focus();
       })
       .withFailureHandler(function (err) {
@@ -273,6 +331,16 @@
       .simpan(isi);
   });
 
+  var sisaMuat = 2;
+  function selesaiMuat() {
+    if (--sisaMuat > 0) return;
+    document.getElementById('loading').remove();
+    fMerek.enable(true);
+    fMerek.focus();
+  }
+  function gagalMuat(err) {
+    document.getElementById('loading').textContent = 'Gagal memuat daftar: ' + (err && err.message ? err.message : err);
+  }
   google.script.run
     .withSuccessHandler(function (rows) {
       rows.forEach(function (r) {
@@ -280,14 +348,18 @@
         r[1].forEach(function (x) { mm.set(x[0], x[1]); });
         data.set(r[0], mm);
       });
-      document.getElementById('loading').remove();
-      fMerek.enable(true);
-      fMerek.focus();
+      selesaiMuat();
     })
-    .withFailureHandler(function (err) {
-      document.getElementById('loading').textContent = 'Gagal memuat daftar: ' + (err && err.message ? err.message : err);
-    })
+    .withFailureHandler(gagalMuat)
     .ambilDaftar();
+  google.script.run
+    .withSuccessHandler(function (u) {
+      matriks = u.matriks;
+      u.peta.forEach(function (x) { petaUk.set(x[0], x[1]); });
+      selesaiMuat();
+    })
+    .withFailureHandler(gagalMuat)
+    .ambilUkuran();
 })();
 </script>
 </body>

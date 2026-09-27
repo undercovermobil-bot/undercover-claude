@@ -67,6 +67,34 @@ Kolom **Merek, Model, Generasi / Tahun** di Rekap Pesanan punya dropdown berting
 
 Otomatisasi ini hanya jalan kalau edit dilakukan di Google Sheets (bukan di file xlsx yang diunduh).
 
+## Ukuran & harga (Subcompact / Compact / Midsize / Large / Jumbo)
+
+Setelah Model dipilih, kolom **Ukuran** terisi otomatis dan kartu harga 4 tipe muncul
+(Reguler / Strip / Premium / Exclusive). Ukuran tetap bisa diganti untuk pesanan itu.
+
+| Ukuran | Pcs/Roll | Reguler | Strip | Premium | Exclusive |
+|---|---|---|---|---|---|
+| Subcompact | 7 | Rp301.000 | Rp344.000 | Rp715.000 | Rp1.115.000 |
+| Compact | 6 | Rp337.000 | Rp380.000 | Rp751.000 | Rp1.151.000 |
+| Midsize | 5 | Rp387.000 | Rp430.000 | Rp801.000 | Rp1.201.000 |
+| Large | 4 | Rp462.000 | Rp505.000 | Rp876.000 | Rp1.276.000 |
+| Jumbo | 3 | Rp583.000 | Rp626.000 | Rp997.000 | Rp1.397.000 |
+
+- Sumber harga: `Judul Deskripsi Harga Custom UA.txt` (Drive, 25-09-2026).
+- Ukuran per model = tier Pcs/Roll di `DATA UC HPP Top 100 Terlaris.xlsx` (290 model).
+  Honda Jazz dikoreksi ke **Midsize** sesuai deskripsi listing.
+- Model tanpa data ukuran (214 model) → admin wajib pilih ukuran. Setelah disimpan, ukuran itu tercatat
+  di sheet **Ukuran Mobil** (Sumber = Manual), jadi pesanan berikutnya terisi otomatis.
+- Sheet baru (dibuat `siapkan`): **Matriks Harga** (ubah harga di sini → form langsung ikut) dan
+  **Ukuran Mobil** (ubah ukuran model di sini). Rekap Pesanan dapat kolom **F = Ukuran** (ada dropdown),
+  Ringkasan dapat tabel jumlah pesanan per ukuran (kolom J).
+- Ganti Model di sheet Rekap → Ukuran ikut data model baru (dikosongkan kalau belum ada datanya).
+
+### Update dari versi sebelumnya (sheet sudah terpasang)
+1. Ganti isi `Code.gs` dan `Index.html` di editor Apps Script, lalu Ctrl+S.
+2. Pilih fungsi `siapkan` → Run (data lama tidak terhapus; sheet Matriks Harga & Ukuran Mobil dibuat kalau belum ada).
+3. Deploy → Manage deployments → pensil → Version: **New version** → Deploy (link tetap sama).
+
 ## Isi Google Sheet
 
 | Sheet | Isi |
