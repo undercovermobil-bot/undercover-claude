@@ -31,8 +31,8 @@ const HEADER_MATRIKS = ['Ukuran', 'Pcs/Roll', 'Reguler', 'Strip', 'Premium', 'Ex
 // harga diubah langsung di sheet.
 const MATRIKS_AWAL = [
   ['Subcompact', 7, 301000, 344000, 715000, 1115000, 'Wuling Air EV, Wuling Mini EV'],
-  ['Compact', 6, 337000, 380000, 751000, 1151000, 'Honda Brio, Suzuki Karimun, Suzuki Ignis, Toyota Yaris, Toyota Raize'],
-  ['Midsize', 5, 387000, 430000, 801000, 1201000, 'Toyota Avanza, Daihatsu Xenia, Toyota Rush, Toyota Innova, Toyota Vios, Honda Jazz, Honda HR-V'],
+  ['Compact', 6, 337000, 380000, 751000, 1151000, 'Honda Brio, Honda Jazz, Suzuki Karimun, Suzuki Ignis, Toyota Yaris, Toyota Raize'],
+  ['Midsize', 5, 387000, 430000, 801000, 1201000, 'Toyota Avanza, Daihatsu Xenia, Toyota Rush, Toyota Innova, Toyota Vios, Honda HR-V'],
   ['Large', 4, 462000, 505000, 876000, 1276000, 'Toyota Fortuner, Mitsubishi Pajero Sport, Toyota Alphard, Toyota Vellfire, Toyota Hilux'],
   ['Jumbo', 3, 583000, 626000, 997000, 1397000, 'Toyota HiAce']
 ];
@@ -371,7 +371,7 @@ function onEdit(e) {
 /* ===================== Data awal ukuran (dipakai siapkan() sekali) =====================
  * Ukuran = tier Pcs/Roll di "DATA UC HPP Top 100 Terlaris.xlsx" (291 model, 29-08-2026):
  * 7 = Subcompact, 6 = Compact, 5 = Midsize, 4 = Large, 3 = Jumbo.
- * Koreksi: Honda Jazz = Midsize (sesuai deskripsi listing custom UA 25-09-2026).
+ * Dikonfirmasi user 2026-09-28: Honda Jazz = Compact, Suzuki Ignis = Compact, Daihatsu Sigra = Midsize.
  * Model lain belum punya ukuran -> admin pilih saat mencatat, lalu tersimpan otomatis.
  */
 const UKURAN_AWAL = [
@@ -464,7 +464,7 @@ const UKURAN_AWAL = [
   ["Honda", "CR-V", "Midsize"],
   ["Honda", "Freed", "Midsize"],
   ["Honda", "HR-V / e:N1", "Midsize"],
-  ["Honda", "Jazz", "Midsize"],
+  ["Honda", "Jazz", "Compact"],
   ["Honda", "Mobilio", "Midsize"],
   ["Honda", "Odyssey", "Midsize"],
   ["Honda", "Stream", "Midsize"],

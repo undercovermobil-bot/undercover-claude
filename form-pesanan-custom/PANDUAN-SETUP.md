@@ -82,7 +82,7 @@ Setelah Model dipilih, kolom **Ukuran** terisi otomatis dan kartu harga 4 tipe m
 
 - Sumber harga: `Judul Deskripsi Harga Custom UA.txt` (Drive, 25-09-2026).
 - Ukuran per model = tier Pcs/Roll di `DATA UC HPP Top 100 Terlaris.xlsx` (290 model).
-  Honda Jazz dikoreksi ke **Midsize** sesuai deskripsi listing.
+  Dikonfirmasi user 28-09: Honda Jazz = **Compact**, Suzuki Ignis = **Compact**, Daihatsu Sigra = **Midsize**.
 - Model tanpa data ukuran (214 model) → admin wajib pilih ukuran. Setelah disimpan, ukuran itu tercatat
   di sheet **Ukuran Mobil** (Sumber = Manual), jadi pesanan berikutnya terisi otomatis.
 - Sheet baru (dibuat `siapkan`): **Matriks Harga** (ubah harga di sini → form langsung ikut) dan
