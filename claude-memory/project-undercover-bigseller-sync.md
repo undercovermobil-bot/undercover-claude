@@ -765,3 +765,17 @@ Order gagal `REN-DST-UA-R-G1-HTM` (Reguler Hitam). Master `Renault Duster`: **4 
 **Cara nentuin "multi-gen sah vs cruft" (penting, belajar dr kasus Mazda 2 Hatchback 09-22)**: acuan tunggal = MASTER (jumlah segmen generasi unik + rentang tahun per segmen). Sah kalau: tiap segmen py rentang tahun BEDA yg gak tumpang-tindih + struktur combo per segmen konsisten. Curigai cruft kalau: cuma gudang lama yg py generasi ekstra sementara master cuma 1, ATAU label generasi sama dipakai utk beberapa rentang tahun tabrakan (spt "Gen 1" Cedric). Kalau curiga, tanya user, jangan diam2 pilih salah satu.
 
 File: `impor_sku_gudang_Renault_Duster (2026-09-26).xlsx`, 136 baris. User sudah diberitahu bhw ikuti master utk 4 gen, dan kalau ternyata dijual sebagian doang bisa dipangkas.
+
+## 2026-09-28: SKU Gudang produk CUSTOM UA (85 kode CST-*) -- konteksnya ada di BRANCH sesi Claude lain
+
+User: "kemarin aku sudah buat link produk custom (di luar 100 terlaris), buatkan impor gudangnya, kamu punya catatan kode SKU-nya kan?" -- **catatan itu TIDAK ada di memory/main saya**; ternyata ditulis sesi Claude lain (user kerja lintas akun) di branch **`origin/claude/repo-memory-access-4hthja`**: `claude-memory/project-undercover-ramping-100-custom.md` (+ `project-undercover-form-pesanan-custom.md`). Ketemu lewat `git grep -n "CST-" origin/<tiap branch>` setelah grep working tree + memory lokal kosong.
+
+**Konteks bisnis**: UA dirampingkan -- hanya 100 model terlaris py link fix; sisanya diarsip (akhiran " [Archived]") dan dilayani 3 link custom "Body Cover Mobil {Reguler|Premium|Exclusive} Custom Semua Merek", varian ukuran Subcompact/Compact/Midsize/Large/Jumbo (= Pcs/Roll 7/6/5/4/3). Harga: Reguler 301/337/387/462/583rb; Strip +43rb; Premium = Reguler+414rb; Exclusive = Premium+400rb (cocok dgn screenshot Shopee).
+
+**Skema SKU**: `CST-{SBC|CMP|MID|LRG|JMB}-UA-{R|S|P|E}-G1-{WARNA}` = **85 kode**: Reguler polos 25 (ABU/BRU/GRN/HTM/MRH) + Strip 45 (kategori huruf **S**, 9 kode UA-style EAB..WMR) + Premium 10 (ABU/SLV) + Exclusive 5 (ABU), semua x 5 ukuran. UA-only (gak ada versi SP/OT/OP). Per 09-26 kolom SKU di Shopee masih kosong; per 09-28 sudah terisi (screenshot user), 10/10 kode yg kelihatan cocok skema.
+
+**File**: `SKU Gudang Big Seller/impor_sku_gudang_Custom_UA (2026-09-28).xlsx`, 85 baris, Judul gaya `Undercover Autocare - Cover Mobil Custom {Ukuran} {Kategori} {Warna}` (Strip: `... Custom {Ukuran} Strip {Elite|Epic|Warrior} {Abu|Biru|Merah}`). 0 tabrakan dgn snapshot gudang 08-08.
+
+**Pelajaran alur kerja (PENTING)**: kalau user bilang "kamu punya catatan X kan?" tp memory lokal + working tree kosong, **jangan bilang gak punya** -- sesi Claude lain nulis ke BRANCH beda di repo yg sama. Cari: `git fetch origin; git grep -n -I "<kata kunci>" origin/<branch>` utk tiap `git branch -r`, plus `git log --all --since=... --grep=...` utk nemu commit relevan. Catatan lintas-sesi baru terbaca kalau dicari eksplisit di semua branch (branch itu blm di-merge ke main).
+
+**Detail UI Shopee**: teks "Lihat Semua (N SKU Produk)" di bawah 3 varian yg tampil = **N varian tambahan yg disembunyikan** (bukan total): listing Premium "3 tampil + (7)" = 10 SKU, cocok dgn 10 di skema.
