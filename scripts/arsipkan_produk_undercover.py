@@ -250,6 +250,59 @@ def proses_tiktok(paths, out, laporan):
     return n_prod, n_baris, n_atr
 
 
+# TikTok menolak file upload > 10.000 baris (info user 2026-09-28). Dihitung
+# konservatif: 5 baris header template ikut dihitung.
+MAKS_BARIS_TIKTOK = 10000
+HEADER_TIKTOK = 5
+
+
+def pecah_tiktok(path, maks=MAKS_BARIS_TIKTOK):
+    """Pecah file TikTok jadi beberapa file <= `maks` baris, seimbang, dan
+    1 produk TIDAK PERNAH terbelah (all_information wajib varian lengkap).
+    -> daftar (path_bagian, n_produk, n_baris_data)"""
+    batas = maks - HEADER_TIKTOK
+    ws = openpyxl.load_workbook(path, read_only=True)['Template']
+    per_produk = {}
+    for i, row in enumerate(ws.iter_rows(min_row=6, max_col=1, values_only=True), 6):
+        if row[0]:
+            per_produk.setdefault(str(row[0]), []).append(i)
+    total = sum(map(len, per_produk.values()))
+    if total <= batas:
+        return [(path, len(per_produk), total)]
+    n_bagian = -(-total // batas)
+    target = -(-total // n_bagian)
+
+    def kemas(cap):
+        bagian, isi = [], []
+        for rows in per_produk.values():
+            if len(rows) > batas:
+                raise SystemExit(f'1 produk {len(rows)} baris > batas {batas}')
+            if isi and sum(map(len, isi)) + len(rows) > cap:
+                bagian.append(isi)
+                isi = []
+            isi.append(rows)
+        return bagian + [isi]
+
+    # cap = target pas sering menyisakan 1 file ekstra (produk terakhir tidak
+    # muat), jadi longgarkan sebesar produk terbesar; batas keras tetap `batas`
+    terbesar = max(map(len, per_produk.values()))
+    for cap in (target, target + terbesar, batas):
+        bagian = kemas(min(cap, batas))
+        if len(bagian) == n_bagian:
+            break
+    hasil = []
+    dasar, ext = os.path.splitext(path)
+    for k, isi in enumerate(bagian, 1):
+        wb = openpyxl.load_workbook(path)
+        rows = sorted(r for p in isi for r in p)
+        pindah_baris(wb['Template'], rows, 6)
+        out = f'{dasar}_{k}{ext}'
+        wb.save(out)
+        hasil.append((out, len(isi), len(rows)))
+    os.remove(path)
+    return hasil
+
+
 def tulis_laporan(laporan, out):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -279,11 +332,16 @@ if __name__ == '__main__':
     wb = openpyxl.load_workbook(lazada)
     n_l = proses_sederhana('lazada', lazada, os.path.join(out_dir, 'ARCHIVED_UA_LAZADA.xlsx'),
                            'template', 5, 1, kolom(wb['template'], 1, 'Nama Produk'), lap)
-    n_t = proses_tiktok(tiktok, os.path.join(out_dir, 'ARCHIVED_UA_TIKTOK.xlsx'), lap)
+    p_t = os.path.join(out_dir, 'ARCHIVED_UA_TIKTOK.xlsx')
+    n_t = proses_tiktok(tiktok, p_t, lap)
+    bagian_t = pecah_tiktok(p_t) if n_t[1] else []
     tulis_laporan(lap, os.path.join(out_dir, 'LAPORAN_ARCHIVED_UA.xlsx'))
     print(f'shopee : {n_s} produk diberi [Archived]')
     print(f'lazada : {n_l} produk diberi [Archived]')
     print(f'tiktok : {n_t[0]} produk / {n_t[1]} baris varian, {n_t[2]} sel atribut wajib diisi')
+    for p, n_prod, n_baris in bagian_t:
+        print(f'         {os.path.basename(p)}: {n_prod} produk, {n_baris} baris data '
+              f'(+{HEADER_TIKTOK} header = {n_baris + HEADER_TIKTOK})')
     print('ringkasan alasan:')
     for (ch, a), n in sorted(Counter((x[0], x[4].split(' "')[0].split(' No.')[0]
                                       if x[3] else x[4].split('.')[0]) for x in lap).items()):
