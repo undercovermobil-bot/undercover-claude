@@ -3,15 +3,24 @@
 Optimasi judul listing Smartprotection / Otoprotection (hasil diskusi SEO
 2026-09, lihat claude-memory/project-undercover-judul-seo-sp-op.md).
 
-Formula (satu judul dipakai SAMA di Shopee & TikTok):
-    Body Cover Mobil {Model} Signature Waterproof - {Toko} - Selimut Sarung Mobil
-    Body Cover Mobil {Model} Transparan Anti Air - {Toko} - Selimut Sarung Mobil
+Formula (satu judul dipakai SAMA di Shopee & TikTok), pola "cover" (default,
+revisi 2026-09-29):
+    Cover Mobil {Model} Signature Waterproof - {Toko} - Body Cover Selimut Sarung Mobil
+    Cover Mobil {Model} Transparan Anti Air - {Toko} - Body Cover Selimut Sarung Mobil
+Pola "body" (versi pertama): "Body Cover Mobil {Model} ... - {Toko} - Selimut Sarung Mobil".
+
+Kenapa pola "cover": simulasi render kartu hasil pencarian (2 baris) cuma
+menampilkan ±40-55 karakter (HP 360dp ±48, TikTok ±44). "Body " di depan
+memakan 5 karakter di zona itu -> di HP 360dp nama model terpotong di 18-28
+judul dan kata Signature/Transparan hilang di 101 (Shopee) / 179 (TikTok)
+judul. Kata "Body Cover" tetap ada di ekor, jadi pencarian "body cover mobil
+{model}" tetap cocok. Nama toko TIDAK pernah terlihat di kartu pencarian
+(pola mana pun) -- hanya di halaman detail produk.
 
 - "Signature" = nama lini non-Transparan (pengganti "Reguler"; Classic/Prime/
   Deluxe/Premium/Elite gugur -- lihat memory).
-- Bagian elegan (s/d nama toko) harus selesai sebelum karakter ~80 (batas
-  tampil di HP); ekor "Selimut Sarung Mobil" = ruang kata kunci, boleh
-  terpotong di tampilan. Shopee maks 120 karakter.
+- Yang terlihat di kartu pencarian = model + tipe; ekor setelah nama toko =
+  ruang kata kunci. Shopee maks 120 karakter.
 - Klaim sesuai deskripsi toko: kain "waterproof Taffeta" (non-Transparan),
   "PE tebal, full waterproof" (Transparan).
 
@@ -19,7 +28,7 @@ Nama model diambil dari judul lama lalu dibetulkan lewat KOREKSI_MODEL
 (ejaan/merek salah -- diverifikasi lewat SKU di export SP 2026-09-12).
 
 Pemakaian:
-  python3 optimasi_judul_sp_op.py <Toko> <folder_out> <shopee_basic.xlsx> <tiktok_basic.xlsx>
+  python3 optimasi_judul_sp_op.py <Toko> <folder_out> <shopee_basic.xlsx> <tiktok_basic.xlsx> [cover|body]
 File input harus sudah lewat repair_xlsx.py.
 """
 import sys, os, re, warnings
@@ -32,7 +41,6 @@ from openpyxl.styles import PatternFill, Font
 ORANGE = PatternFill('solid', fgColor='FFC000')
 MERAH = PatternFill('solid', fgColor='FF9999')
 BATAS_SHOPEE = 120
-BATAS_TAMPIL = 80
 
 RE_JUDUL_LAMA = re.compile(
     r'^(?:Body\s+)?Cover Mobil\s*/\s*(?:Sarung\s*/\s*)?Selimut Mobil\s+(.+?)(?:\s+(Transparan))?\s*$', re.I)
@@ -76,11 +84,19 @@ def urai(nama):
     return m.group(1), bool(m.group(2))
 
 
+POLA = {
+    'cover': ('Cover Mobil', 'Body Cover Selimut Sarung Mobil'),
+    'body': ('Body Cover Mobil', 'Selimut Sarung Mobil'),
+}
+POLA_AKTIF = 'cover'
+
+
 def judul_baru(model, transparan, toko):
     model = KOREKSI_MODEL.get(model, model)
     tipe = 'Transparan Anti Air' if transparan else 'Signature Waterproof'
-    etalase = f'Body Cover Mobil {model} {tipe} - {toko}'
-    return f'{etalase} - Selimut Sarung Mobil', len(etalase), model
+    depan, ekor = POLA[POLA_AKTIF]
+    etalase = f'{depan} {model} {tipe} - {toko}'
+    return f'{etalase} - {ekor}', len(etalase), model
 
 
 def proses(ch, path, out, sheet, start, c_id, c_nama, toko, laporan):
@@ -104,8 +120,6 @@ def proses(ch, path, out, sheet, start, c_id, c_nama, toko, laporan):
             cat.append(f'model dibetulkan: "{model}" -> "{model_fix}"')
         if len(baru) > BATAS_SHOPEE:
             cat.append(f'LEWAT {BATAS_SHOPEE} KARAKTER')
-        if p_etalase > BATAS_TAMPIL:
-            cat.append(f'nama toko selesai di karakter {p_etalase} (>{BATAS_TAMPIL})')
         sel.value = baru
         sel.fill = ORANGE
         n += 1
@@ -143,6 +157,8 @@ def tulis_laporan(laporan, out):
 
 if __name__ == '__main__':
     toko, out_dir, shopee, tiktok = sys.argv[1:5]
+    if len(sys.argv) > 5:
+        POLA_AKTIF = sys.argv[5]
     os.makedirs(out_dir, exist_ok=True)
     lap = []
     kode = toko.upper()
@@ -157,6 +173,5 @@ if __name__ == '__main__':
     print(f'shopee {n_s} judul, tiktok {n_t} judul, gagal pola {len(lap) - len(ok)}')
     print(f'panjang {min(x[4] for x in ok)}-{max(x[4] for x in ok)}, '
           f'toko selesai di karakter {min(x[5] for x in ok)}-{max(x[5] for x in ok)}')
-    print('lewat 120:', sum(x[4] > BATAS_SHOPEE for x in ok),
-          '| toko lewat 80:', [(x[3], x[5]) for x in ok if x[5] > BATAS_TAMPIL])
+    print('lewat 120:', sum(x[4] > BATAS_SHOPEE for x in ok))
     print('model dibetulkan:', sum('dibetulkan' in x[7] for x in ok))
