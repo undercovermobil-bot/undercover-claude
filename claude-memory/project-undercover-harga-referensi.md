@@ -2488,3 +2488,15 @@ Sumber listing = 6 file Drive 2026-10-01 (`gdrive_fix/`).
   + `RINGKASAN_HARGA_SISA_TOP100.xlsx`.
 - STATUS: menunggu user upload. Belum ada laporan hasil upload/error. Setelah
   ini, 100 SKU top-100 Q3 semuanya akan berharga formulasi matriks.
+- **Double-check atas pertanyaan user (2026-10-01): "harganya bukan pakai STP OTP
+  kan? Brio di STP/OTP 322rb, di UA 332rb".**
+  - Dari HPP STP OTP yang diambil HANYA kolom Pcs/Roll. Harga Kain (715rb),
+    Pcs/Roll dan HPP identik di kedua file untuk 100/100 model. Yang beda
+    cuma Harga Jual Terbaru, karena margin/biaya marketplace beda.
+  - Lantai harga tetap dari HPP UA: P7 296rb, P6 332rb, P5 382rb, P4 457rb,
+    P3 583rb. Lantai STP/OTP: 287/322/370/443/565rb.
+  - File UA "DATA UC HPP per Merk Reguler" (506 model) cuma punya 1 Pcs/Roll
+    terisi, jadi tidak bisa dipakai sebagai sumber Pcs/Roll.
+  - Dicek ulang di file Shopee yang dikirim: Serena 458rb/501rb, Everest
+    387rb/430rb, Avega 382rb/425rb. Ini harga UA, bukan STP/OTP.
+  - File TIDAK perlu diubah.
