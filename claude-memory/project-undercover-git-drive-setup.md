@@ -54,6 +54,30 @@ ke user cuma perlu kalau (a) sesi Claude tidak py akses filesystem device
 itu (mis. sesi cloud/browser-only), atau (b) device itu tidak py Drive
 Desktop ke-mount.
 
+**BACA/UNDUH dari Drive lewat konektor MCP di sesi CLOUD — TERBUKTI JALAN
+(2026-10-01).** Beda arah dari upload yg gagal di atas. User minta "baca file
+di `G:\My Drive\E-commerce\List Produk SKU\List produk`" (path Drive for
+Desktop di PC-nya). Sesi cloud tidak bisa buka drive G:, tapi konektor
+Google Drive (`mcp__Google_Drive__*`, akun under.covermobil@gmail.com) bisa:
+1. Navigasi folder: `search_files` dgn `parentId = '<id>'` (E-commerce =
+   `168snWOIoROx-isBH3DWdECwSiYVgFHqK`, List Produk SKU =
+   `1GG8ZHvJjIF5oTfBHDB1iOgPrsdNux_MF`, List produk =
+   `1SlX362uY4kLRdlFYle0FgDkA28CGAbjH`). Hasil bisa berhalaman — cek
+   `nextPageToken` (file ke-6 baru muncul di halaman 2).
+2. `download_file_content` -> kalau hasil > batas token, harness OTOMATIS
+   menyimpan JSON `{content: base64, ...}` ke `~/.claude/projects/.../
+   tool-results/mcp-Google_Drive-download_file_content-*.txt`; decode pakai
+   python `base64.b64decode(json.load(f)['content'])` -> xlsx utuh.
+   Diverifikasi byte-exact (Shopee 2.xlsx 101.230 byte = ukuran di Drive).
+   **Hati-hati: file KECIL (<~40 KB) TIDAK disimpan ke file, base64-nya
+   masuk langsung ke percakapan** (boros konteks, dan tidak bisa di-decode
+   tanpa menyalin ulang) — utk file kecil tetap lebih baik minta user upload
+   di chat, atau terima saja hasil inline kalau isinya tidak perlu diolah.
+3. File hasil tetap perlu `repair_xlsx.py` (bug activePane Shopee sama).
+Belum diuji utk file ~2 MB (Lazada/TikTok 1 di folder itu) — mekanisme sama,
+kemungkinan jalan. Upload/tulis ke Drive lewat MCP tetap JANGAN dicoba
+(lihat catatan gagal di atas).
+
 **Sinkronisasi memory Claude lintas device:** folder `claude-memory/` di
 repo adalah snapshot manual dari
 `~/.claude/projects/<hash-folder-project>/memory/*.md`. Kalau ada memory
