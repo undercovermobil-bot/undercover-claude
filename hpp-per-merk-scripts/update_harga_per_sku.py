@@ -323,7 +323,12 @@ def baca_harga(path, no_awal, no_akhir):
 def salin(ws_s, r_s, ws_d, r_d, n_kol):
     for c in range(1, n_kol + 1):
         s = ws_s.cell(row=r_s, column=c)
-        d = ws_d.cell(row=r_d, column=c, value=s.value)
+        # FIX 2026-10-01: ws.cell(..., value=None) TIDAK mengosongkan sel tujuan,
+        # jadi sel kosong di sumber dulu mewarisi nilai lama baris tujuan
+        # (ketahuan di Shopee: SKU Induk & Min. Jumlah Pembelian, yg cuma terisi
+        # di baris pertama tiap produk, nyasar ke varian produk lain).
+        d = ws_d.cell(row=r_d, column=c)
+        d.value = s.value
         d.fill = copy.copy(s.fill)
         d.number_format = s.number_format
 

@@ -19,6 +19,9 @@ def cek(ok, pesan):
     print(('  OK   ' if ok else '  GAGAL ') + pesan)
     if not ok: gagal.append(pesan)
 
+def norm(v):
+    return None if v == '' else v   # openpyxl tidak menyimpan string kosong -> terbaca None
+
 def pfx_kat(sku):
     b = str(sku or '').strip().split('-')
     return ('-'.join(b[:2]).upper(), b[3].upper()) if len(b) >= 6 else (None, None)
@@ -62,9 +65,9 @@ for ch, sp in SPEC.items():
     for f in sp['src']:
         w = openpyxl.load_workbook(f'{S}/gdrive_fix/{f}')[sp['sheet']]
         if hdr_src is None:
-            hdr_src = [[w.cell(r, c).value for c in range(1, w.max_column + 1)] for r in range(1, sp['start'])]
+            hdr_src = [[norm(w.cell(r, c).value) for c in range(1, w.max_column + 1)] for r in range(1, sp['start'])]
         for r in range(sp['start'], w.max_row + 1):
-            vals = [w.cell(r, c).value for c in range(1, w.max_column + 1)]
+            vals = [norm(w.cell(r, c).value) for c in range(1, w.max_column + 1)]
             if all(v in (None, '') for v in vals): continue
             k = tuple(str(vals[i - 1]) for i in sp['key'])
             assert k not in src_rows, (ch, k)
@@ -77,11 +80,11 @@ for ch, sp in SPEC.items():
                 if int(float(vals[sp['harga'] - 1])) != exp:
                     harap[k] = exp
     w = openpyxl.load_workbook(f'{OUT}/UPDATE_HARGA_UA_{ch.upper()}.xlsx')[sp['sheet']]
-    hdr_out = [[w.cell(r, c).value for c in range(1, w.max_column + 1)] for r in range(1, sp['start'])]
+    hdr_out = [[norm(w.cell(r, c).value) for c in range(1, w.max_column + 1)] for r in range(1, sp['start'])]
     cek(hdr_out == hdr_src, 'baris header identik dgn sumber')
     out_rows = {}
     for r in range(sp['start'], w.max_row + 1):
-        vals = [w.cell(r, c).value for c in range(1, w.max_column + 1)]
+        vals = [norm(w.cell(r, c).value) for c in range(1, w.max_column + 1)]
         if all(v in (None, '') for v in vals): continue
         k = tuple(str(vals[i - 1]) for i in sp['key'])
         cek_dup = k in out_rows
