@@ -219,6 +219,35 @@ Cek baris row 2 kolom 5 utk tahu file aktif-saja atau semua status.
   `ranking_per_sku.py` (parse via ast, 1 sumber) sebelum fallback per-nama.
   Hasil file aktif 12:04 tetap sama (327/891/459).
 
+## Cek status ramping langsung dari Google Drive (2026-10-01)
+
+6 file listing UA diunduh langsung dari Drive folder `E-commerce/List Produk
+SKU/List produk` (ID `1SlX362uY4kLRdlFYle0FgDkA28CGAbjH`) lewat konektor
+MCP. Ukuran hasil decode sama persis dengan di Drive. Semua file milik UA.
+Klasifikasi pakai `klasifikasi_listing_top100.klasifikasi()`.
+
+- **Shopee** (Shopee 1 = 650 produk, Shopee 2 = 139 produk, hanya yang
+  aktif, shop 361186752; total 789): **SUDAH RAMPING**. 327 listing top-100
+  (109 mobil x R/P/E), 459 bukan cover mobil, ditambah 3 listing generik
+  "Body Cover Mobil ... Custom Semua Merek". Tidak ada mobil di luar
+  top-100 yang masih aktif.
+- **TikTok** (TikTok 1 = katalog utama 754 produk; TikTok 2 = Travel Pouch;
+  TikTok 3 = 2 cover motor Ducati): 327 listing top-100 (110 mobil), 416
+  bukan mobil. **MASIH ADA 11 listing mobil di luar top-100**: BMW M5
+  Exclusive/Premium, BMW X1 Exclusive, DFSK Super Cab Exclusive, Hyundai
+  Matrix Reguler, Jeep Compass Premium, Mercedes Benz V Class
+  Exclusive/Premium, Mitsubishi Eclipse Premium, Mitsubishi L300 Exclusive,
+  Volvo XC90 Exclusive [Archived]. Ditambah 3 listing Custom generik. Ada
+  typo judul "Undercover Autcare" (Toyota Avanza Reguler).
+- **Lazada** (1.184 produk): 851 listing di luar top-100 sudah berjudul
+  "[Archived]", 326 listing top-100 aktif. **Masih aktif di luar top-100:
+  Nissan Note Premium** + 3 listing Custom generik. 2 listing top-100 yang
+  ber-[Archived] adalah "Daihatsu Gran Max Exclusive/Premium" (listing
+  GABUNGAN lama). Minibus dan Pick Up sudah punya listing sendiri, jadi
+  tidak ada masalah.
+- Belum diputuskan user: apakah 3 listing Custom generik dipertahankan,
+  dan apakah perlu file archive untuk sisa listing TikTok/Lazada.
+
 ## Skrip (disimpan di repo, siap dipakai ulang kuartal berikutnya)
 
 `hpp-per-merk-scripts/`: `sku_map_lib.py` (peta nama listing -> prefix SKU,
