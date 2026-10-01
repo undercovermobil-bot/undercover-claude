@@ -2395,3 +2395,96 @@ Dicek baris R DAN S (Strip = Reguler + 43rb).
   Keduanya akan tertimpa kalau batch BELUM dieksekusi.
 - Status: BELUM ada instruksi eksekusi. Jangan generate file update sebelum
   user minta.
+
+## Eksekusi 2026-10-01: file update harga SISA top-100 (32 SKU lama + 15 SKU baru)
+
+User: "lanjutkan update harga baru untuk sisa produk cover mobil yg belum pakai
+harga terbaru". Skrip: `hpp-per-merk-scripts/update_harga_reguler_sisa_top100.py`
+-> `verify_update_harga_sisa_top100.py` (verifikasi independen dari disk).
+Sumber listing = 6 file Drive 2026-10-01 (`gdrive_fix/`).
+
+**Sumber target & temuan HPP Drive**:
+- "Copy of DATA UC HPP Top 100 Terlaris.xlsx" di Drive DIUBAH user 2026-09-28:
+  Pcs/Roll Jazz/Agya/Ayla/Ignis 5->6 dan Sigra 6->5. Ini persis sejalan dengan
+  override yang sudah diputuskan. Recompute `harga_baru_matriks.py` dari file
+  ini (`HARGA_BARU_TOP100_v7_recompute.xlsx`) identik dengan v6+override untuk
+  91/93 prefix. Bedanya cuma Brio/Jazz (v7 335rb vs override lantai 332rb yang
+  live; override tetap berlaku dan tidak disentuh batch ini). Override
+  Agya/Ayla/Ignis/Calya-Sigra tidak perlu lagi kalau recompute dari file Drive
+  terbaru, tapi Brio/Jazz 332rb TETAP wajib.
+- 15 SKU baru dihitung dengan metode matriks yang sama.
+  - Pcs/Roll diambil dari Google Sheet "HPP STP OTP" (Drive). Pcs/Roll di
+    sana 100/100 identik dengan UA untuk model yang ada di kedua file, jadi
+    Pcs/Roll = atribut fisik mobil, sama lintas toko.
+  - Kategori dan panjang diambil dari `harga_baru_sp_op_matriks.py`.
+  - **Kalibrasi 100 model lama DIKUNCI** (`harga_slot`): model baru disisipkan
+    ke grup Pcs/Roll x kategori yang ada tanpa menggeser harga live.
+    Kalau dihitung penuh (grup dihitung ulang dengan model baru), beberapa
+    model lama ikut bergeser, makanya dikunci.
+  - Carry Pickup (SZK-CRP) = entri 'Suzuki Carry' (Pickup 4195mm, 382rb).
+  - Listing "Suzuki Vitara" memuat 3 prefix (SZK-GVT/GVH/EVT) -> semua 385rb.
+- Harga 15 SKU baru (Reguler; Strip = +43rb):
+  | Model | Harga |
+  |---|---|
+  | Carry Pickup | 382rb |
+  | APV Luxury | 384rb |
+  | Serena | 458rb (P4) |
+  | Livina X-Gear | 384rb |
+  | Captiva | 386rb |
+  | Santa Fe | 387rb |
+  | Cortez | 385rb |
+  | Stream | 387rb |
+  | MG S5 EV | 386rb |
+  | Xforce | 384rb |
+  | Civic Hatchback | 385rb |
+  | Avega | 382rb |
+  | Sonet | 383rb |
+  | Vitara | 385rb |
+  | Everest | 387rb |
+- `KECUALI` di skrip ini = ('custom', 'roofbox') saja. 'x-gear' sengaja
+  dibuang karena Livina X-Gear sekarang SKU top-100 sendiri (NSN-LXG).
+  Prefix NSN-LXG hanya ada di listing X-Gear (sudah dicek).
+
+**Output** (`output_harga_sisa_top100/`):
+- Shopee: 1.736 baris, hanya yang berubah, Shopee 1+2 digabung.
+- TikTok: 1.736 baris = SEMUA varian dari 47 produk. Tahun/Bile kosong
+  diisi "2026"/"16:9" (1.722 sel).
+- Lazada: 1.750 baris.
+- `RINGKASAN_HARGA_SISA_TOP100.xlsx`: 47 SKU, harga lama -> baru, dasar
+  perhitungan.
+- Kolom stok Shopee/Lazada membawa angka export pagi 2026-10-01. Upload
+  secepatnya supaya stok tidak mundur.
+
+**BUG LAMA ketemu & DIPERBAIKI: `salin()` di `update_harga_per_sku.py`.**
+- Gejala: `ws.cell(row, col, value=None)` di openpyxl TIDAK mengosongkan sel
+  tujuan. Jadi waktu baris dipadatkan ke atas, sel kosong di sumber mewarisi
+  nilai lama baris tujuan.
+- Ketahuan di verifikasi Shopee. Kolom SKU Induk & Min. Jumlah Pembelian
+  memang cuma terisi di BARIS PERTAMA tiap produk, jadi nilainya nyasar ke
+  varian produk lain (123 sel).
+- Fix: set `d.value = s.value` eksplisit.
+- Batch-batch harga sebelumnya (1-40, Taft GT, dll.) memakai fungsi yang
+  sama. Dicek di data live Shopee 2026-10-01: TIDAK ada SKU Induk yang
+  dipakai >1 produk selain nilai literal "SKU" (6 produk, termasuk
+  S-Presso, Fronx, Taft GT, Xforce). S-Presso/Xforce belum pernah ikut batch
+  harga, jadi itu bukan jejak bug ini. Kesimpulan: tidak ada bukti kerusakan
+  live dari bug ini.
+- **Pelajaran**: verifikasi independen WAJIB membandingkan SEMUA kolom (bukan
+  cuma harga) terhadap sumber. String kosong '' dianggap = None (openpyxl
+  tidak menyimpan '').
+- Verifikasi independen `verify_update_harga_sisa_top100.py`: SEMUA LULUS di 3
+  channel.
+  - Header identik.
+  - Baris berubah == ekspektasi independen (1736/1736/1750).
+  - Harga == target, tipe sel tetap teks.
+  - Kolom lain 0 selisih.
+  - TikTok membawa semua varian (47 produk) dan Tahun/Bile tidak ada yang
+    kosong.
+  - Ke-47 grup SKU ada di tiap channel.
+- Info dari verifikasi: 15/15 harga model baru SAMA dengan hitung-penuh.
+  Kalau grup dihitung penuh, 13 harga model lama akan bergeser 1rb-an;
+  itulah alasan kalibrasi dikunci.
+- Dikirim ke user dengan nama `UPDATE_HARGA_UA_{SHOPEE,TIKTOK,LAZADA}_SISA_TOP100.xlsx`
+  + `RINGKASAN_HARGA_SISA_TOP100.xlsx`.
+- STATUS: menunggu user upload. Belum ada laporan hasil upload/error. Setelah
+  ini, 100 SKU top-100 Q3 semuanya akan berharga formulasi matriks.

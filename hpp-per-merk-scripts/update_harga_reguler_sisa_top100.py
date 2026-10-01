@@ -114,14 +114,17 @@ def harga_slot(prod, pr, kat, p):
 
 def bangun_target():
     v7 = baca_harga(HARGA_V7, 1, 100)
+    prod = baca_matriks_terkunci()
+    by_nama = {x['nama']: x for x in prod}
     target, info = {}, []
     for pfx in LAMA:
         t = v7[pfx]
-        target[pfx] = {'reguler': t['reguler'], 'strip': t['reguler'] + TAMBAHAN_STRIP,
-                       'label': t['label'].split(' ', 1)[1]}
-        info.append((pfx, target[pfx]['label'], 'Target lama (rank lama 61-100)', '', '', '', target[pfx]['reguler'],
-                     'HARGA_BARU_TOP100 (matriks, HPP Drive 28-09)'))
-    prod = baca_matriks_terkunci()
+        nama = t['label'].split(' ', 1)[1]
+        x = by_nama[nama]
+        label = nama.replace('Mitsubishi Mitsubishi', 'Mitsubishi')
+        target[pfx] = {'reguler': t['reguler'], 'strip': t['reguler'] + TAMBAHAN_STRIP, 'label': label}
+        info.append((pfx, label, 'Target lama (rank lama 61-100)', x['pr'], x['kat'], x['p'], target[pfx]['reguler'],
+                     'HARGA_BARU_TOP100 (matriks, HPP Drive 28-09) - sudah diformulasikan, belum diterapkan'))
     ua_pr = {x['nama']: x['pr'] for x in prod}
     hpp = openpyxl.load_workbook(HPP_SPOP, data_only=True)['HPP 12%']
     PR = {str(hpp.cell(r, 1).value).strip(): hpp.cell(r, 3).value for r in range(2, hpp.max_row + 1)
