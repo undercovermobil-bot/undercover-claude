@@ -2357,3 +2357,41 @@ Catatan kecil: Lazada tidak punya baris `TIM-TIM` (Timor, rank 98) sama
 sekali - kemungkinan produk itu genuinely tidak dijual di Lazada (di luar
 scope rank 1-60 jadi tidak relevan sekarang, cukup dicatat kalau nanti
 proses rank 61-100 sampai ke Timor).
+
+## Audit 2026-10-01: harga Reguler UA vs daftar top-100 SKU BARU (baseline Q3)
+
+User tanya: "berapa produk Reguler yang belum pakai harga terbaru yang pernah
+kita formulasikan". Audit read-only atas 6 file listing UA yang diunduh dari
+Drive hari itu (Shopee 1+2, TikTok 1, Lazada; lihat
+project-undercover-rampingkan-top100.md). Skrip:
+`hpp-per-merk-scripts/audit_harga_reguler_top100.py` (env `KERJA_DIR`, butuh
+`HARGA_BARU_TOP100_v6.xlsx`, `ranking_per_sku.pkl`, `sku_map.pkl`, file
+listing di `gdrive_fix/`). Target harga sama dengan audit 09-18:
+`HARGA_BARU_TOP100_v6` + override Brio/Jazz 332rb, Ignis 333rb, Agya/Ayla
+334rb, Calya/Sigra ikut Calya 382rb, plus alias GMX->LXO, HAL->HAC, 2H->MZ2.
+Dicek baris R DAN S (Strip = Reguler + 43rb).
+
+**Hasil IDENTIK di ketiga channel** (109 listing Reguler top-100 per channel
+= 100 SKU; Rocky dihitung 1 listing untuk 2 grup):
+- **SUDAH: 62 listing = 53 SKU**. Semuanya rank lama 1-60, termasuk 8 grup
+  kembar (17 listing). Semua baris R dan S cocok persis.
+- **BELUM: 32 listing = 32 SKU**. Target harga sudah ada (rank lama 61-100),
+  tetapi live masih harga lama. Rank BARU-nya: #49 X-Trail, #51 Land Cruiser,
+  #52 BYD Atto 1, #57 Voxy, #58 Destinator, #59 Fiesta, #60 Creta, #62
+  Sienta, #63 Odyssey, #64 CX-5, #65 Mini Cooper, #66 Carry, #67 City
+  Hatchback, #69 Almaz, #70 S-Presso, #71 Xpander Cross, #72 Evalia, #73 SX4,
+  #74 Mercedes E Class, #76 Air EV, #78 Terrano, #80 Kuda, #81 Stargazer, #82
+  Datsun Go, #83 Harrier, #86 Confero, #91 Spin, #92 Mercedes C Class, #93
+  Aerio Hatchback, #94 Palisade, #97 Taruna, #100 BMW Seri 5.
+- **TANPA TARGET: 15 listing = 15 SKU**. SKU baru yang masuk top-100 Q3 dan
+  BELUM PERNAH diformulasikan (tidak ada di file HPP top-100 lama): #61 Carry
+  Pickup (SZK-CRP), #68 APV Luxury (SZK-AL), #75 Serena, #77 Livina X-Gear,
+  #79 Captiva, #84 Santa Fe, #85 Cortez, #87 Stream, #88 MG S5 EV, #89
+  Xforce, #90 Civic Hatchback, #95 Avega, #96 Sonet, #98 Vitara, #99 Everest.
+  Kalau mau diformulasikan, perlu Pcs/Roll per model (HPP) dulu.
+- Tidak ada status SEBAGIAN. Tidak ada regresi dari batch 1-60.
+- Catatan kecil: harga lama Mini Cooper beda antar channel (Shopee 320rb,
+  TikTok/Lazada 285rb). Strip Air EV juga beda-beda (319/322/321rb).
+  Keduanya akan tertimpa kalau batch BELUM dieksekusi.
+- Status: BELUM ada instruksi eksekusi. Jangan generate file update sebelum
+  user minta.
