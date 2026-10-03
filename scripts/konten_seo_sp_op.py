@@ -11,7 +11,8 @@ Deskripsi -- hasil riset 2026-10-03 (lihat memory project-undercover-judul-seo-s
   - kata kunci utama (Cover Mobil {Model} {Tipe} + nama toko) di kalimat
     pertama / 100 karakter awal; variasi kata kunci (body cover, selimut,
     sarung, penutup mobil) masing-masing muncul wajar, bukan ditumpuk
-  - teks bersih: tidak HURUF BESAR SEMUA, poin pendek berlambang ✔
+  - teks bersih TANPA emoji (revisi user 2026-10-03): judul bagian huruf besar
+    singkat, poin "- ", bagian SPESIFIKASI, tagline toko (SP: Pintar Melindungi)
   - tanpa link, nomor HP, nama marketplace/toko lain (larangan Shopee & TikTok)
   - TikTok disarankan >= 500 karakter; Shopee & Lazada maks 3.000
   - Lazada: Sorotan Produk = daftar poin (faktor ranking kedua setelah judul)
@@ -68,10 +69,19 @@ def normal_token(p):
     label, a, b, sisa = m.groups()
     b = b if b.isdigit() else 'sekarang'
     label = label.strip(' :(')
+    if b.isdigit() and (int(b) > TAHUN_MAKS or int(b) < int(a)) or int(a) < 1930:
+        # tahun mustahil = salah ketik di nama varian listing (mis. '1972-2979',
+        # '2013-2029') -> jangan tampilkan tahunnya, catat utk dibetulkan user
+        TAHUN_JANGGAL.append(p)
+        return (label or None), (0, int(a))
     teks = f'{label} ({a}–{b})' if label else f'{a}–{b}'
     if sisa.strip(' )'):
         teks += f' {sisa.strip()}'
     return teks, (0, int(a))
+
+
+TAHUN_MAKS = 2027
+TAHUN_JANGGAL = []      # diisi normal_token(), dikosongkan per produk di siapkan()
 
 
 def daftar_generasi(varian):
@@ -83,7 +93,8 @@ def daftar_generasi(varian):
             if not p or p == 'None' or RE_BUKAN_GEN.match(p):
                 continue
             teks, kunci = normal_token(p)
-            hasil[teks] = kunci + (teks,)
+            if teks:
+                hasil[teks] = kunci + (teks,)
     return [t for t, _ in sorted(hasil.items(), key=lambda x: x[1])]
 
 
@@ -94,7 +105,7 @@ def generasi_dari_deskripsi(desk):
     if 'Keterangan Generasi' not in t:
         return None
     baris = [re.sub(r'\s+', ' ', l.strip('•· ').strip()) for l in t.split('\n') if l.strip().startswith('•')]
-    return [normal_token(b)[0] for b in baris] or None
+    return [t for t in (normal_token(b)[0] for b in baris) if t] or None
 
 
 def teks_polos(d):
@@ -103,48 +114,62 @@ def teks_polos(d):
 
 
 # ---------------------------------------------------------------- konten
+# tagline resmi per toko (SP: dipilih user 2026-10-03). Toko lain: kosong dulu.
+TAGLINE = {'Smartprotection': 'Pintar Melindungi'}
+
+
 def konten(model, transparan, toko, generasi):
-    """-> (pembuka[list], bagian[list of (judul, [baris])], penutup[list], sorotan[list])"""
-    tipe = 'Transparan' if transparan else 'Signature'
+    """-> (pembuka[list], bagian[list of (judul, [baris])], penutup[list], sorotan[list])
+    Format "clean" (revisi user 2026-10-03): tanpa emoji, judul bagian huruf
+    besar singkat, poin pakai "- ", ada bagian SPESIFIKASI yang menjelaskan
+    produk; tagline toko di kalimat pembuka."""
+    tag = TAGLINE.get(toko)
+    merek = f'{toko}, {tag}' if tag else toko
     if generasi:
-        gen = [f'• {g}' for g in generasi]
-        gen.append('Pilih generasi/tahun mobil Anda di pilihan varian. Untuk tahun lain, '
+        gen = [f'- {g}' for g in generasi]
+        gen.append('Pilih generasi/tahun mobil di pilihan varian. Untuk tahun lain, '
                    'tulis tahun mobil di catatan pembelian.')
     else:
         gen = ['Ukuran disesuaikan dengan tipe dan tahun mobil. Mohon tulis tahun mobil '
-               'Anda di catatan pembelian.']
+               'di catatan pembelian.']
     if not transparan:
         pembuka = [
-            f'Cover Mobil {model} Signature dari {toko}: body cover berbahan kain Taffeta '
-            f'waterproof import Korea yang dibuat mengikuti bentuk {model}, bukan ukuran all size.',
-            f'Selimut mobil ini membantu melindungi cat {model} dari debu, air hujan, dan terik '
-            f'matahari, sehingga mobil tetap bersih dan warna cat tidak cepat pudar.',
+            f'Cover Mobil {model} Signature dari {merek}.',
+            f'Body cover berbahan kain Taffeta waterproof import Korea, dibuat mengikuti '
+            f'bentuk {model} sehingga pas di bodi, bukan ukuran all size. Selimut mobil ini '
+            f'melindungi cat dari debu, air hujan, dan terik matahari, sehingga mobil tetap '
+            f'bersih dan warna cat tidak cepat pudar.',
         ]
         bagian = [
-            ('✨ Keunggulan', [
-                '✔ Kain Taffeta waterproof import Korea, halus dan tidak kasar di permukaan cat',
-                '✔ Anti air hingga 70%, membantu meminimalkan air hujan masuk',
-                '✔ Anti debu dan tahan sinar matahari (UV)',
-                '✔ Ukuran pas di bodi, disesuaikan dengan tipe dan tahun mobil',
-                '✔ Tali elastis kuat di sekeliling bagian bawah: tinggal diserut, tidak mudah '
-                'terbang tertiup angin',
-                '✔ Bisa dicuci dan di-laundry',
-                '✔ Bonus tas penyimpanan',
+            ('KEUNGGULAN', [
+                '- Melindungi cat dari debu, air hujan, dan sinar matahari (UV)',
+                '- Kain halus, tidak kasar di permukaan cat',
+                f'- Ukuran pas mengikuti bentuk bodi {model}, bukan all size',
+                '- Tidak mudah terbang tertiup angin berkat tali elastis di sekeliling bagian bawah',
+                '- Mudah dirawat, bisa dicuci dan di-laundry',
+                '- Praktis disimpan, sudah termasuk tas penyimpanan',
             ]),
-            (f'🚗 Tersedia untuk {model}', gen),
-            ('🎨 Pilihan Warna', ['Silakan pilih warna yang tersedia di pilihan varian.']),
-            (f'🛡️ Jaminan {toko}', [
-                '✔ Garansi ukuran (kekecilan atau kebesaran)',
-                '✔ Garansi warna jika tidak sesuai pesanan',
-                '✔ Diproduksi sendiri, bukan reseller',
-                '✔ Barang ready stock dan dikirim secepatnya',
+            ('SPESIFIKASI', [
+                'Tipe: Signature',
+                'Bahan: kain Taffeta waterproof import Korea',
+                'Ketahanan air: hingga 70%',
+                'Perlindungan: anti debu dan tahan sinar matahari (UV)',
+                'Pengikat: tali elastis di sekeliling bagian bawah, tinggal diserut',
+                'Warna: sesuai pilihan varian',
+                f'Isi paket: 1 cover mobil {model} dan 1 tas penyimpanan',
             ]),
-            ('📦 Isi Paket', [f'1 cover mobil {model} Signature + 1 tas penyimpanan']),
+            (f'COCOK UNTUK {model.upper()}', gen),
+            ('GARANSI DAN LAYANAN', [
+                '- Garansi ukuran (kekecilan atau kebesaran)',
+                '- Garansi warna jika tidak sesuai pesanan',
+                f'- Diproduksi sendiri oleh {toko}, bukan reseller',
+                '- Barang ready stock dan dikirim secepatnya',
+            ]),
         ]
         penutup = [
-            '💡 Tips: tutup mobil dalam keadaan bersih dan kering agar cat tetap terjaga.',
-            f'Cocok sebagai sarung mobil, selimut mobil, atau penutup mobil {model} untuk parkir '
-            f'di rumah, garasi, maupun carport.',
+            'Tips: tutup mobil dalam keadaan bersih dan kering agar cat tetap terjaga.',
+            f'Cocok sebagai sarung mobil, selimut mobil, maupun penutup mobil {model} untuk '
+            f'parkir di rumah, garasi, atau carport.',
         ]
         sorotan = [
             'Kain Taffeta waterproof import Korea, halus di permukaan cat',
@@ -152,41 +177,45 @@ def konten(model, transparan, toko, generasi):
             f'Ukuran pas mengikuti bentuk {model}, bukan all size',
             'Tali elastis keliling bagian bawah, tidak mudah terbang tertiup angin',
             'Bisa dicuci dan di-laundry',
-            'Bonus tas penyimpanan',
+            'Termasuk tas penyimpanan',
             'Garansi ukuran dan garansi warna',
             f'Diproduksi sendiri oleh {toko}, ready stock',
         ]
     else:
         pembuka = [
-            f'Cover Mobil {model} Transparan dari {toko}: body cover plastik PE tebal yang full '
-            f'waterproof 100%, dibuat mengikuti pola {model} yang beredar di Indonesia.',
-            f'Selimut mobil transparan ini praktis untuk parkir di luar ruangan, melindungi '
-            f'{model} dari air hujan dan debu tanpa menutupi tampilan mobil.',
+            f'Cover Mobil {model} Transparan dari {merek}.',
+            f'Body cover plastik PE tebal yang full waterproof, dibuat mengikuti pola {model} '
+            f'yang beredar di Indonesia. Selimut mobil transparan ini praktis untuk parkir di '
+            f'luar ruangan, melindungi mobil dari air hujan dan debu tanpa menutupi tampilannya.',
         ]
         bagian = [
-            ('✨ Keunggulan', [
-                '✔ Full waterproof 100%, bahan plastik PE (LDPE) 80 mikron',
-                '✔ Bahan 1,5x lebih tebal dibanding cover mobil plastik sejenis di pasaran',
-                '✔ Potongan pola dipress, bukan dijahit jarum, sehingga tidak ada celah tempat '
-                'air merembes',
-                '✔ Full karet keliling dan kancing klip di setiap roda (lock system ke velg), '
-                'aman dari angin saat dipakai di luar ruangan',
-                '✔ Tidak meninggalkan bercak luntur saat terkena hujan',
-                '✔ Aman untuk semua warna cat mobil',
+            ('KEUNGGULAN', [
+                '- Full waterproof: potongan pola dipress, bukan dijahit jarum, sehingga tidak ada '
+                'celah tempat air merembes',
+                '- Bahan 1,5x lebih tebal dibanding cover mobil plastik sejenis di pasaran',
+                '- Aman dari angin di luar ruangan berkat karet keliling dan kancing klip di setiap roda',
+                '- Tidak meninggalkan bercak luntur saat terkena hujan',
+                '- Aman untuk semua warna cat mobil',
             ]),
-            (f'🚗 Tersedia untuk {model}', gen),
-            ('📦 Isi Paket', [f'1 cover mobil {model} Transparan']),
+            ('SPESIFIKASI', [
+                'Tipe: Transparan',
+                'Bahan: plastik PE (LDPE) 80 mikron',
+                'Ketahanan air: full waterproof 100%',
+                'Pengikat: karet keliling dan kancing klip ke setiap roda (lock system ke velg)',
+                f'Isi paket: 1 cover mobil {model} Transparan',
+            ]),
+            (f'COCOK UNTUK {model.upper()}', gen),
         ]
         penutup = [
-            '💡 Tips: pastikan mobil dalam keadaan kering sebelum ditutup.',
-            f'Cocok sebagai sarung mobil, selimut mobil, atau penutup mobil {model} anti air '
+            'Tips: pastikan mobil dalam keadaan kering sebelum ditutup.',
+            f'Cocok sebagai sarung mobil, selimut mobil, maupun penutup mobil {model} anti air '
             f'untuk parkir outdoor.',
         ]
         sorotan = [
             'Full waterproof 100%, plastik PE (LDPE) 80 mikron',
             'Bahan 1,5x lebih tebal dari cover plastik sejenis',
             'Potongan pola dipress, tidak ada celah air merembes',
-            'Full karet keliling + kancing klip di setiap roda',
+            'Karet keliling dan kancing klip di setiap roda',
             'Aman dari angin saat dipakai di luar ruangan',
             'Tidak meninggalkan bercak luntur saat hujan',
             'Aman untuk semua warna cat mobil',
@@ -253,7 +282,9 @@ def siapkan(ch, pid, nama_lama, desk_lama, varian, toko, laporan):
         laporan.append((ch, pid, nama_lama, '', '', 'bukan pola cover mobil - tidak diubah'))
         return None
     judul, _, model_fix = JUDUL.judul_baru(model, trn, toko)
+    TAHUN_JANGGAL.clear()
     gen = generasi_dari_deskripsi(desk_lama) or daftar_generasi(varian or [])
+    janggal = sorted(set(TAHUN_JANGGAL))
     pembuka, bagian, penutup, sorotan = konten(model_fix, trn, toko, gen)
     baris = ke_baris(pembuka, bagian, penutup)
     polos = render_polos(baris)
@@ -262,6 +293,8 @@ def siapkan(ch, pid, nama_lama, desk_lama, varian, toko, laporan):
         cat.append(f'model dibetulkan: {model} -> {model_fix}')
     if not gen:
         cat.append('tanpa daftar generasi (data varian tidak ada)')
+    if janggal:
+        cat.append(f'tahun varian janggal (tidak ditampilkan, betulkan nama varian): {janggal}')
     lama_t = teks_polos(desk_lama)
     if re.search(r'otoprotection', lama_t, re.I):
         cat.append('deskripsi lama menyebut Otoprotection')
