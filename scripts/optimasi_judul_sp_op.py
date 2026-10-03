@@ -51,6 +51,7 @@ KOREKSI_MODEL = {
     'Mitsubishi Lantis': 'Mazda Lantis',            # tahun 1993-1998 = Mazda Lantis
     'Mitsubishi Pajero': 'Mitsubishi Pajero Sport', # SKU MTB-PJS, Gen 1-3 1996-2026
     'Kia Sedona / Carnival': 'Kia Sedona',          # SKU KIA-SED
+    'Suzuki Agya': 'Toyota Agya',                   # judul Lazada SP (12 Sep)
     # merek hilang
     'Feroza': 'Daihatsu Feroza',
     'Feroza Long': 'Daihatsu Feroza Long',
@@ -68,6 +69,7 @@ KOREKSI_MODEL = {
     'isuzu Panther': 'Isuzu Panther',
     'Mazda CX3': 'Mazda CX-3',
     'Mazda CX9': 'Mazda CX-9',
+    'Mercedes Benz Cla Class': 'Mercedes Benz CLA Class',
     'Mercedes Benz Glc Class': 'Mercedes Benz GLC Class',
     'Mercedes Benz Gls Class': 'Mercedes Benz GLS Class',
     'Nissan XTrail': 'Nissan X-Trail',
