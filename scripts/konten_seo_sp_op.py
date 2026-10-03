@@ -19,7 +19,8 @@ Deskripsi -- hasil riset 2026-10-03 (lihat memory project-undercover-judul-seo-s
   - generasi & tahun mobil dicantumkan dari data varian listing itu sendiri
     (kata kunci tahun, mis. "cover mobil avanza 2015")
 Fakta produk HANYA dari deskripsi toko yang sudah ada:
-  Signature : kain waterproof Taffeta import Korea, anti air hingga 70%,
+  Signature : bahan Polyester New Tech Grade S+ (ganti dari 'Taffeta import Korea',
+              instruksi user 2026-10-03), anti air hingga 70%,
               anti debu, tahan UV, tali elastis keliling, bisa dicuci/laundry,
               bonus tas, garansi ukuran & warna, produksi sendiri, ready stock
   Transparan: PE/LDPE 80 mikron, 1,5x lebih tebal, full waterproof 100%, pola
@@ -116,6 +117,8 @@ def teks_polos(d):
 # ---------------------------------------------------------------- konten
 # tagline resmi per toko (SP: dipilih user 2026-10-03). Toko lain: kosong dulu.
 TAGLINE = {'Smartprotection': 'Pintar Melindungi'}
+# bahan lini Signature (user 2026-10-03; sebelumnya 'kain Taffeta waterproof import Korea')
+BAHAN_SIGNATURE = 'Polyester New Tech Grade S+'
 
 
 def konten(model, transparan, toko, generasi):
@@ -135,7 +138,7 @@ def konten(model, transparan, toko, generasi):
     if not transparan:
         pembuka = [
             f'Cover Mobil {model} Signature dari {merek}.',
-            f'Body cover berbahan kain Taffeta waterproof import Korea, dibuat mengikuti '
+            f'Body cover berbahan {BAHAN_SIGNATURE}, dibuat mengikuti '
             f'bentuk {model} sehingga pas di bodi, bukan ukuran all size. Selimut mobil ini '
             f'melindungi cat dari debu, air hujan, dan terik matahari, sehingga mobil tetap '
             f'bersih dan warna cat tidak cepat pudar.',
@@ -151,7 +154,7 @@ def konten(model, transparan, toko, generasi):
             ]),
             ('SPESIFIKASI', [
                 'Tipe: Signature',
-                'Bahan: kain Taffeta waterproof import Korea',
+                f'Bahan: {BAHAN_SIGNATURE}',
                 'Ketahanan air: hingga 70%',
                 'Perlindungan: anti debu dan tahan sinar matahari (UV)',
                 'Pengikat: tali elastis di sekeliling bagian bawah, tinggal diserut',
@@ -172,7 +175,7 @@ def konten(model, transparan, toko, generasi):
             f'parkir di rumah, garasi, atau carport.',
         ]
         sorotan = [
-            'Kain Taffeta waterproof import Korea, halus di permukaan cat',
+            f'Bahan {BAHAN_SIGNATURE}, halus di permukaan cat',
             'Anti air hingga 70%, anti debu, tahan sinar matahari (UV)',
             f'Ukuran pas mengikuti bentuk {model}, bukan all size',
             'Tali elastis keliling bagian bawah, tidak mudah terbang tertiup angin',
