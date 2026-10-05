@@ -779,3 +779,11 @@ User: "kemarin aku sudah buat link produk custom (di luar 100 terlaris), buatkan
 **Pelajaran alur kerja (PENTING)**: kalau user bilang "kamu punya catatan X kan?" tp memory lokal + working tree kosong, **jangan bilang gak punya** -- sesi Claude lain nulis ke BRANCH beda di repo yg sama. Cari: `git fetch origin; git grep -n -I "<kata kunci>" origin/<branch>` utk tiap `git branch -r`, plus `git log --all --since=... --grep=...` utk nemu commit relevan. Catatan lintas-sesi baru terbaca kalau dicari eksplisit di semua branch (branch itu blm di-merge ke main).
 
 **Detail UI Shopee**: teks "Lihat Semua (N SKU Produk)" di bawah 3 varian yg tampil = **N varian tambahan yg disembunyikan** (bukan total): listing Premium "3 tampil + (7)" = 10 SKU, cocok dgn 10 di skema.
+
+## 2026-10-05: Travel Pouch Organizer (TikTok UA) -- produk NON-cover, skema kode baru TPO-UA
+
+Order gagal; kolom SKU Big Seller cuma teks varian mentah ("Hitam, S", "Hitam, L", "Abu-abu, M") = listing TikTok-nya Seller SKU-nya belum berkode. Produk ini selalu dikecualikan dari sinkron SKU (aturan #6 luar-scope) jadi **tak ada kode di master** -- user diberi pilihan, **dipilih: kode baru `TPO-UA-{warna}-{ukuran}`** (bukan pakai teks varian mentah). Varian dari screenshot form TikTok user (bukan export): **Warna** Hitam/Biru/Merah/Hijau/Abu-abu x **Ukuran** S/M/L = **15 kombinasi** (memory lama nyebut ~20 baris di export TikTok -- selisihnya belum dijelaskan, mungkin ada varian lain/pernah dihapus; kalau export muncul, cocokkan). Kode warna ikut standar project: HTM/BRU/MRH/GRN/ABU (Biru polos -> BRU, bukan "Biru Benhur"). UA-only (toko TikTok Undercover Autocare).
+
+File: `impor_sku_gudang_Travel_Pouch (2026-10-05).xlsx`, 15 baris, Judul `Undercover Autocare - Travel Pouch Organizer Waterproof {Warna} {Ukuran}`. 0 tabrakan prefix TPO- di snapshot gudang 08-08.
+
+**BELUM dikerjakan**: Seller SKU listing TikTok pouch masih teks varian -> perlu diubah ke kode TPO-UA-* (file edit TikTok, aturan: kirim SEMUA varian produk, bukan cuma yg berubah) -- BUTUH export TikTok produk pouch dari user (user bilang mau kirim; blm diterima). Di export TikTok pouch kadang jadi file `_1/_2/_3` tergantung ekspor -> selalu cek isi, bukan nomor file.
