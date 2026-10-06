@@ -729,3 +729,61 @@ File: `SKU Gudang Big Seller/impor_sku_gudang_Kia_Cerato (2026-09-15).xlsx`, 18 
 ## 2026-09-18: Suzuki Amenity gudang import, UA+SP -- pola 0%-gudang berlanjut
 
 Screenshot doang (pola mapan, gak nanya). Master lengkap 34 kode unik (UA 17+SP 17, TF=1, struktur standar E1+P2+R5+S9), 0/34 pernah di gudang. File: `impor_sku_gudang_Suzuki_Amenity (2026-09-18).xlsx`, 34 baris, termasuk target order `SZK-AMN-UA-R-G1-HTM`.
+
+## 2026-09-22: Mazda 2 Hatchback -- aturan bodystyle-split 08-07 TERNYATA BELUM PERNAH dieksekusi ke master/gudang
+
+Order gagal (`MZD-2H-SP-S-G1-S2A`, Strip 2 Abu). Cek master: sheet "Mazda 2 Hatchback" **MASIH pakai kode lama `MZD-MZ2`** (BUKAN `MZD-2H`) -- padahal aturan split bodystyle (`-2S-` Sedan / `-2H-` Hatchback) sudah dikonfirmasi user sejak **2026-08-07** dan didokumentasikan di [[project-undercover-sku-sync-rules]]. Sedan-nya (MZD-2S) memang sudah bener, tp **Hatchback ternyata TIDAK PERNAH benar2 dimigrasi** -- baik di master maupun di gudang, kode lama MZD-MZ2 masih dipakai di mana2 (99 baris di gudang!). Sementara itu LIVE LISTING order ini sendiri udah terlanjur pakai kode baru MZD-2H (kemungkinan session lain/manual sudah mulai migrasi listing tanpa migrasi gudang/master-nya).
+
+**KOREKSI, kesalahan sempat kejadian**: draft awal saya ambil SEMUA 99 kode lama `MZD-MZ2-*` yg ada di gudang (G1+G2+G3, 33 combo x 3 gen) dan migrasi semuanya ke `MZD-2H`. User langsung koreksi: **"formula mobil hanya 1, jadi pakai g1 aja"** -- G2/G3 yg ada di gudang lama itu ternyata BUKAN formula valid (legacy cruft/error dari sebelum TF dikoreksi ke 1), bukan bukti kebutuhan asli. **Master sendiri dari awal SUDAH cuma py Gen 1** utk sheet "Mazda 2 Hatchback" (33 baris) -- saya sempat override itu krn silau liat 99 baris di gudang lama, PADAHAL harusnya percaya master (Total Formula) drpd data gudang legacy yg berpotensi salah. File final dikoreksi ke **33 baris (G1 doang)**, file 99-baris draft awal sudah digantikan/jangan dipakai.
+
+**Pelajaran, WAJIB diinget ke depan**: kalau nemu ketidakcocokan antara jumlah generasi di MASTER vs jumlah generasi yg kepakai di GUDANG LAMA (kode legacy), **JANGAN otomatis percaya gudang lama sbg sumber kebenaran** -- gudang lama bisa aja nyimpen kesalahan historis (formula yg udah dikoreksi/dikonsolidasi tp sisa datanya gak pernah dibersihkan). Master (kolom Total Formula / jumlah baris Generasi unik per model) tetap sumber kebenaran utama. Kalau ketauan beda, LAPORKAN dulu ke user drpd langsung asumsi salah satu benar.
+
+**BELUM dikerjakan (di luar scope gudang)**: master sheet "Mazda 2 Hatchback" sendiri MASIH pakai kode MZD-MZ2 (bukan MZD-2H) -- kalau nanti diminta fix listing Hatchback (bukan cuma gudang), inget update master jg (bukan cuma listing tiap toko), krn kemungkinan besar SEMUA listing Hatchback 4 toko masih pakai kode lama ini.
+
+## 2026-09-24: Nissan Cedric -- gap SEMPIT (cuma Transparan G9+G10), BUKAN pola 0%-gudang
+
+Order gagal `NSN-CED-SP-T-G9-TRP`. **Beda dgn kasus2 "0% gudang" sebelumnya**: Cedric (model klasik, 10 generasi, 269 kode unik total di master) sudah **267/269 ADA di gudang** -- yg kurang persis 2: `NSN-CED-SP-T-G9-TRP` (kode order) dan `NSN-CED-SP-T-G10-TRP` (saudara persis, celah sama). Kategori **Transparan** cuma ada di G9/G10 (G2-G8 gak py Transparan di master sama sekali; kemungkinan Transparan itu kategori yg baru ditambah belakangan, jd gak ikut ter-import waktu gudang awal di-setup). Cuma dibangun 2 baris, sesuai apa yg BENAR2 kurang, bukan asal build full-family spt biasanya.
+
+**Pelajaran soal pola "0%-gudang"**: jangan otomatis asumsi tiap order gagal = seluruh model kosong -- SELALU cek dulu hitungan sdh-di-gudang vs total (`len(need)-len(missing)`) sblm mutusin scope build. Pola "0%" cocok utk model relatif baru/langka; utk model lama/mapan (Cedric, Stargazer G1, Atto3, Aion HT) biasanya gap-nya sempit atau bahkan nol -- jauh lebih efisien cuma tambal yg beneran kurang.
+
+**Data-quality quirk master, gak dibenerin (bukan scope)**: label "Gen 1" di master Cedric dipakai utk 3 rentang tahun BEDA (1962-1965 [46 baris], 1995-1999 [18 baris, bentrok dgn Gen 9 yg juga 1995-1999], 1965-1971 [2 baris]) -- kemungkinan sebagian baris "Gen 1 (1995-1999)" itu sebenernya salah-label duplikat Gen 9. Gak ngaruh ke tugas ini (cuma perlu 2 kode G9/G10 yg jelas), tp worth dicek user kalau suatu saat mau audit master Cedric.
+
+File: `impor_sku_gudang_Nissan_Cedric (2026-09-24).xlsx`, 2 baris.
+
+## 2026-09-25: Mercedes Benz SLK Class Transparan -- master TAK py kategori Transparan, listing Lazada SP sudah jual
+
+User minta eksplisit ("varian transparan belum ada") setelah nunjukin picker gudang Big Seller yg cuma nampilin SLK Reguler+Strip. Master `Mercedes Benz SLK Class`: 28 kode unik (UA+SP x Reguler5+Strip9, G1 doang), **TANPA Transparan sama sekali** -- padahal listing Lazada SP "Cover Mobil / Selimut Mobil Mercedes Benz SLK Class Transparan" udah jalan. Sama pola dgn Peugeot 306 (master ketinggalan dr listing nyata). Karena ini permintaan EKSPLISIT user (bukan tebakan saya), langsung dibangun: `MBZ-SLK-SP-T-G1-TRP` (T=Transparan, TRP, SP-store, G1 ikut TF=1 model ini -- pola identik semua Transparan lain sesi ini). 1 baris. File: `impor_sku_gudang_Mercedes_SLK_Transparan (2026-09-25).xlsx`.
+
+**Konvensi Judul beda**: 28 kode SLK lama di gudang pakai gaya HYPHEN lama (`Mercedes Benz SLK Class-Smartprotection-Reguler-Merah-Gen 1`, dari kolom master "Nama Produk Bigseller"); kode baru ini pakai gaya baru sesi ini (`Smartprotection - Cover Mobil Mercedes Benz SLK Class Transparan`). Fungsional gak masalah (Big Seller matching by Nomor SKU, bukan judul), cuma tampilan picker jadi gak seragam -- user sudah diberi tahu + ditawari samain ke gaya lama. Gaya hyphen lama utk Transparan = `{Model}-Smartprotection-Transparan-Transparan-Gen 1` (kata Transparan 2x: kategori+warna).
+
+**BELUM dikerjakan**: (1) **Seller SKU listing Lazada SP-nya masih placeholder auto-generate Lazada** (`18898902177-1789357659765-2`, format `{productId}-{timestamp}-{n}`, timestamp ~2026-09-13 => listing baru, setelah export 08-05 yg jadi acuan lokal) -- perlu diisi `MBZ-SLK-SP-T-G1-TRP`, tp gak bisa dibangun file upload-nya tanpa export Lazada SP FRESH (file lokal terlalu lama, produk ini gak ada di situ); user ditawari kirim export baru. (2) Master sheet Mercedes-Benz belum ditambah baris Transparan SLK -- flagged doang, gak diubah sendiri.
+
+## 2026-09-26: Renault Duster gudang import -- multi-generasi VALID (4 segmen), 0% gudang
+
+Order gagal `REN-DST-UA-R-G1-HTM` (Reguler Hitam). Master `Renault Duster`: **4 segmen generasi** G1 (Gen 1, 2010-2017), G2 (Gen 2, 2017-2021), **G2F** (Gen 2 Facelift, 2021-2024), G3 (Gen 3, 2024) -- rentang tahun rapi gak tumpang-tindih, struktur identik per gen (34 combo = UA17+SP17), jadi ini formula multi-gen YG SAH (bukan kasus cruft spt Mazda 2 Hatchback / label ganda spt Cedric). Total 136 kode unik, **0 ada di gudang** (0 kode REN-DST apapun, jadi gak ada data legacy yg bisa bentrok). Dibangun semua 136 dari master langsung, label generasi di Judul diambil apa adanya dr kolom `gen` master (termasuk "Gen 2 Facelift" utk G2F -- jangan bikin label sendiri utk segmen bukan-angka-murni spt G2F/G1F, ambil dr master).
+
+**Cara nentuin "multi-gen sah vs cruft" (penting, belajar dr kasus Mazda 2 Hatchback 09-22)**: acuan tunggal = MASTER (jumlah segmen generasi unik + rentang tahun per segmen). Sah kalau: tiap segmen py rentang tahun BEDA yg gak tumpang-tindih + struktur combo per segmen konsisten. Curigai cruft kalau: cuma gudang lama yg py generasi ekstra sementara master cuma 1, ATAU label generasi sama dipakai utk beberapa rentang tahun tabrakan (spt "Gen 1" Cedric). Kalau curiga, tanya user, jangan diam2 pilih salah satu.
+
+File: `impor_sku_gudang_Renault_Duster (2026-09-26).xlsx`, 136 baris. User sudah diberitahu bhw ikuti master utk 4 gen, dan kalau ternyata dijual sebagian doang bisa dipangkas.
+
+## 2026-09-28: SKU Gudang produk CUSTOM UA (85 kode CST-*) -- konteksnya ada di BRANCH sesi Claude lain
+
+User: "kemarin aku sudah buat link produk custom (di luar 100 terlaris), buatkan impor gudangnya, kamu punya catatan kode SKU-nya kan?" -- **catatan itu TIDAK ada di memory/main saya**; ternyata ditulis sesi Claude lain (user kerja lintas akun) di branch **`origin/claude/repo-memory-access-4hthja`**: `claude-memory/project-undercover-ramping-100-custom.md` (+ `project-undercover-form-pesanan-custom.md`). Ketemu lewat `git grep -n "CST-" origin/<tiap branch>` setelah grep working tree + memory lokal kosong.
+
+**Konteks bisnis**: UA dirampingkan -- hanya 100 model terlaris py link fix; sisanya diarsip (akhiran " [Archived]") dan dilayani 3 link custom "Body Cover Mobil {Reguler|Premium|Exclusive} Custom Semua Merek", varian ukuran Subcompact/Compact/Midsize/Large/Jumbo (= Pcs/Roll 7/6/5/4/3). Harga: Reguler 301/337/387/462/583rb; Strip +43rb; Premium = Reguler+414rb; Exclusive = Premium+400rb (cocok dgn screenshot Shopee).
+
+**Skema SKU**: `CST-{SBC|CMP|MID|LRG|JMB}-UA-{R|S|P|E}-G1-{WARNA}` = **85 kode**: Reguler polos 25 (ABU/BRU/GRN/HTM/MRH) + Strip 45 (kategori huruf **S**, 9 kode UA-style EAB..WMR) + Premium 10 (ABU/SLV) + Exclusive 5 (ABU), semua x 5 ukuran. UA-only (gak ada versi SP/OT/OP). Per 09-26 kolom SKU di Shopee masih kosong; per 09-28 sudah terisi (screenshot user), 10/10 kode yg kelihatan cocok skema.
+
+**File**: `SKU Gudang Big Seller/impor_sku_gudang_Custom_UA (2026-09-28).xlsx`, 85 baris, Judul gaya `Undercover Autocare - Cover Mobil Custom {Ukuran} {Kategori} {Warna}` (Strip: `... Custom {Ukuran} Strip {Elite|Epic|Warrior} {Abu|Biru|Merah}`). 0 tabrakan dgn snapshot gudang 08-08.
+
+**Pelajaran alur kerja (PENTING)**: kalau user bilang "kamu punya catatan X kan?" tp memory lokal + working tree kosong, **jangan bilang gak punya** -- sesi Claude lain nulis ke BRANCH beda di repo yg sama. Cari: `git fetch origin; git grep -n -I "<kata kunci>" origin/<branch>` utk tiap `git branch -r`, plus `git log --all --since=... --grep=...` utk nemu commit relevan. Catatan lintas-sesi baru terbaca kalau dicari eksplisit di semua branch (branch itu blm di-merge ke main).
+
+**Detail UI Shopee**: teks "Lihat Semua (N SKU Produk)" di bawah 3 varian yg tampil = **N varian tambahan yg disembunyikan** (bukan total): listing Premium "3 tampil + (7)" = 10 SKU, cocok dgn 10 di skema.
+
+## 2026-10-05: Travel Pouch Organizer (TikTok UA) -- produk NON-cover, skema kode baru TPO-UA
+
+Order gagal; kolom SKU Big Seller cuma teks varian mentah ("Hitam, S", "Hitam, L", "Abu-abu, M") = listing TikTok-nya Seller SKU-nya belum berkode. Produk ini selalu dikecualikan dari sinkron SKU (aturan #6 luar-scope) jadi **tak ada kode di master** -- user diberi pilihan, **dipilih: kode baru `TPO-UA-{warna}-{ukuran}`** (bukan pakai teks varian mentah). Varian dari screenshot form TikTok user (bukan export): **Warna** Hitam/Biru/Merah/Hijau/Abu-abu x **Ukuran** S/M/L = **15 kombinasi** (memory lama nyebut ~20 baris di export TikTok -- selisihnya belum dijelaskan, mungkin ada varian lain/pernah dihapus; kalau export muncul, cocokkan). Kode warna ikut standar project: HTM/BRU/MRH/GRN/ABU (Biru polos -> BRU, bukan "Biru Benhur"). UA-only (toko TikTok Undercover Autocare).
+
+File: `impor_sku_gudang_Travel_Pouch (2026-10-05).xlsx`, 15 baris, Judul `Undercover Autocare - Travel Pouch Organizer Waterproof {Warna} {Ukuran}`. 0 tabrakan prefix TPO- di snapshot gudang 08-08.
+
+**BELUM dikerjakan**: Seller SKU listing TikTok pouch masih teks varian -> perlu diubah ke kode TPO-UA-* (file edit TikTok, aturan: kirim SEMUA varian produk, bukan cuma yg berubah) -- BUTUH export TikTok produk pouch dari user (user bilang mau kirim; blm diterima). Di export TikTok pouch kadang jadi file `_1/_2/_3` tergantung ekspor -> selalu cek isi, bukan nomor file.
