@@ -286,3 +286,75 @@ menghitung "berapa baris terisi".
   Toyota Corolla, Hyundai Kona, dst.
 - Listing **Transparan** atribut TikTok-nya masih kosong semua → kalau nanti
   diedit, akan kena error atribut wajib yang sama.
+
+## 2026-10-06 — Audit harga SP vs harga terbaru + daftar top-100 SKU (persiapan ramping)
+
+User upload ekspor SP terbaru: Shopee `1.xlsx` (150 produk) + `2.xlsx` (332
+produk), shop 473932094, hanya yang aktif; dan TikTok `all_information`
+20261006 (474 produk). Pertanyaan: "sudah berapa produk yang pakai harga
+terbaru? Kaitannya, aku mau filter jumlah produknya sama seperti Undercover".
+
+- Skrip: `hpp-per-merk-scripts/audit_harga_sp_top100.py` (read-only).
+- Target harga dihitung ULANG dari skrip asli:
+  - Signature = `harga_baru_sp_op_matriks_v3.py` atas Google Sheet
+    "HPP STP OTP" (Drive, diekspor xlsx); Strip = Reguler + 43rb.
+  - Transparan = formula `update_harga_transparan_sp.py` + `ESTIMASI_MM`.
+- Model dikenali dari JUDUL; keanggotaan top-100 dari prefix SKU, atau nama
+  kalau listing belum ber-SKU.
+- Hasil: `AUDIT_HARGA_SP_TOP100.xlsx` (Ringkasan COUNTIFS + sheet per
+  produk per channel).
+
+**Format judul SP baru**:
+- Shopee: "Cover Mobil X Signature Waterproof - Smartprotection - Body Cover
+  ..." dan "Cover Mobil X Transparan Anti Air - Smartprotection - ...".
+- TikTok: "Cover Mobil / Selimut Mobil X" dan "... X Transparan".
+- SP hanya punya 2 jenis produk: **Signature Waterproof** (varian warna
+  dasar = R, Epic/Elite/Warrior = S) dan **Transparan Anti Air**.
+
+**Hasil (identik pola di kedua channel)**:
+- Semua 100 SKU top-100 punya listing SP di Shopee dan TikTok:
+  **218 listing** = 109 Signature + 109 Transparan. Lebihnya dari 100 karena
+  kembar punya listing sendiri.
+- Hanya **1 listing top-100 yang belum**: MG S5 EV Signature, live
+  372/415 vs matriks 374/417.
+- Di luar top-100:
+  - Shopee 264 listing: 219 sudah, 28 belum, 17 tanpa target.
+  - TikTok 256 listing: 212 sudah, 25 belum, 1 sebagian, 18 tanpa target.
+- TANPA TARGET = 11 model kelompok A (09-10) + Jaecoo J5, Hummer H3, Mazda
+  3 Hatchback, Mazda Lantis, Aerio Sedan, Kia Grand Carnaval (typo
+  TikTok), Volswagen Polo.
+
+**Kembar dihitung SUDAH bila harganya = kembaran yang benar**:
+- Veloz ikut Avanza 370rb, Gran Max Minibus ikut Luxio 371rb (keputusan
+  user 09-10).
+- Taft GT ikut Feroza 370rb.
+- Rocky (listing berisi DHT-FRZ + TYT-RZE) masih 324rb, keputusan DHT-FRZ
+  370 vs 324 BELUM ada sejak 09-10.
+- Transparan Veloz 199rb vs Avanza/Xenia 198rb (SKU sama, selisih 1rb).
+
+**Belum ketemu penjelasannya**: ~20 model di luar top-100 berharga "hampir
+baru" tapi beda dari hitung ulang matriks v3 hari ini.
+- Contoh selisih kecil: BMW M2/M3 374 vs 372, Seri 7 374 vs 375.
+- Contoh selisih besar: Tiggo 8, MX-5 RF, SLK, Kona live 370 vs matriks
+  322-326 (Pcs/Roll 6 di HPP).
+- Sudah dicek dan BUKAN penyebabnya:
+  - Pcs/Roll HPP: salinan 4 Sep ("Harga Ecommerce STP OTP" di Drive) =
+    versi 7 Sep, 0 beda.
+  - Skrip matriks: tidak pernah diubah sejak commit 6ecc79e (09-04).
+- File FINAL 29 Agustus tidak ada lagi (container baru), jadi asal angka
+  live tidak bisa dibuktikan.
+- Karena semuanya di luar top-100 (akan dirampingkan), tidak dikejar.
+
+**Listing top-100 yang belum ber-SKU** (penting kalau filter pakai SKU):
+- Shopee: Mini Cooper Transparan, MG S5 EV (Signature + Transparan).
+- TikTok: yang sama, ditambah Taft GT (Signature + Transparan) dan
+  "Honda Civic Hatcback" Transparan (typo judul).
+
+**Jebakan container baru 2026-10-06**:
+- Branch lokal `claude/sku-price-tracking-sheets-7ogdnv` ter-checkout di
+  posisi main, padahal remote branch punya 24 commit belum masuk main.
+- Diperbaiki: `git checkout -B <branch> origin/<branch>` lalu merge
+  origin/main.
+- Scratchpad lama juga hilang. HPP diambil ulang dari Drive: HPP STP OTP
+  `1PF3WI97Ib6Jd0ZDwD5jWwEszEU5lAPP_dIG0iWnSlsY` (export xlsx) dan Copy of
+  DATA UC HPP Top 100 `1k3Ng-5Sz7gcyvuc0WNiwHdB5sPErXrjZ`.
