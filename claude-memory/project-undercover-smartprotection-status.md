@@ -358,3 +358,23 @@ baru" tapi beda dari hitung ulang matriks v3 hari ini.
 - Scratchpad lama juga hilang. HPP diambil ulang dari Drive: HPP STP OTP
   `1PF3WI97Ib6Jd0ZDwD5jWwEszEU5lAPP_dIG0iWnSlsY` (export xlsx) dan Copy of
   DATA UC HPP Top 100 `1k3Ng-5Sz7gcyvuc0WNiwHdB5sPErXrjZ`.
+
+### 2026-10-07 — Cek per NAMA: 110 nama mobil top-100 vs listing SP (Shopee + TikTok)
+
+User upload `RANKING_TOP_100_PER_SKU.xlsx`.
+- 100 baris teratas sheet "Top 100 per SKU" identik dengan daftar resmi di
+  memory. Peringkat 101-104 ikut ditampilkan sebagai "tepat di bawah
+  ambang": Outlander, GR 86, Mirage, BMW X1.
+- Dicek per nama (110 nama "Dipertahankan" di sheet Daftar Mobil Listing
+  UA) x Signature/Transparan x Shopee/TikTok, memakai ekspor SP 2026-10-06.
+
+**Hasil: semua 100 SKU & semua nama ada listingnya di SP, di kedua channel,
+semua aktif** (TikTok 218/218 Aktif; ekspor Shopee memang hanya yang aktif).
+- 109 listing per jenis per channel. "Daihatsu Gran Max" (listing gabungan
+  UA) tidak perlu ada di SP, karena SP punya listing terpisah Gran Max
+  Minibus dan Gran Max Pick Up.
+- Judul TikTok yang tidak standar (listingnya ADA):
+  - "Honda Fortuner Transparan" (seharusnya Toyota, SKU TYT-FTN benar).
+  - "Mitsubishi Pajero" Signature (tanpa "Sport", SKU MTB-PJS).
+  - "Honda Civic Hatcback" Transparan.
+- Lazada SP TIDAK ikut dicek (user tidak kirim file Lazada).
