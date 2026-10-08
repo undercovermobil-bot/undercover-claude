@@ -63,6 +63,7 @@ class Protection {
   canDomainEdit() { return false; }
   setDomainEdit() { return this; }
   remove() { this.removed = true; }
+  canEdit() { return this.bolehEdit !== false; }
 }
 
 class Range {
@@ -87,6 +88,7 @@ class Range {
   }
   getValues() { const out = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? this.tampil(x) : ''); } out.push(row); } return out; }
   getValue() { return this.getValues()[0][0]; }
+  getFormula() { return this.getFormulas()[0][0]; }
   getFormulas() { const out = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? x.f : ''); } out.push(row); } return out; }
   setValues(a) { this.dims(a, 'setValues'); return this.each((x, i, j) => { let v = a[i][j]; if (Object.prototype.toString.call(v) === '[object Date]') v = instanKeSerial(v.getTime(), this.sh.ss.tz); if (typeof v === 'string' && v.startsWith('=')) { x.f = v; x.v = ''; } else { x.v = v === null || v === undefined ? '' : v; x.f = ''; } }); }
   setFormulas(a) { this.dims(a, 'setFormulas'); return this.each((x, i, j) => { const f = a[i][j]; if (f && !String(f).startsWith('=')) throw new Error('formula tanpa = : ' + f); x.f = f; x.v = ''; }); }
@@ -102,6 +104,13 @@ class Range {
   setFontWeight() { return this; } setHorizontalAlignment() { return this; } setVerticalAlignment() { return this; }
   setWrap() { return this; }
   setNumberFormat(f) { return this.each(x => { x.nf = f; }); }
+  copyTo(tujuan) {
+    if (tujuan.nr !== this.nr || tujuan.nc !== this.nc) throw new Error('copyTo: ukuran beda');
+    const salinan = [];
+    this.each((x, i, j) => salinan.push([i, j, Object.assign(new Cell(), x)]));
+    salinan.forEach(([i, j, x]) => { tujuan.sh.cells.set((tujuan.r + i) + ',' + (tujuan.c + j), x); });
+    return this;
+  }
   clearFormat() { return this.each(x => { x.bg = null; x.fc = null; x.nf = null; }); }
   setBorder(...a) { if (a.length !== 6) throw new Error('setBorder butuh 6 argumen'); return this; }
 }

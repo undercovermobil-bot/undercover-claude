@@ -185,6 +185,7 @@ edit(U, 4, E, -2); cek(uv(4, D) === 44, 'negatif ditolak');
 edit(U, 4, E, ' 7 '); cek(uv(4, D) === 51 && uv(4, E) === '', 'string angka diterima');
 paste(U, 5, E, [[2], [3]]); cek(uv(5, D) === 26 && uv(6, D) === 10, 'paste multi-baris');
 paste(U, 7, D, [[10, 2, 1]]); cek(uv(7, D) === 11, 'paste STOK+IN+OUT');
+cek(logUC().getRange(2, 7, 3, 1).getValues().map(r => r[0]).join() === 'OUT,IN,KOREKSI', 'satu batch: yang diproses terakhir paling atas');
 edit(U, 8, D, 20, { oldValue: '16' });
 const lk = logUC().getRange(2, 7, 1, 4).getValues()[0];   // terbaru = baris 2
 cek(lk[0] === 'KOREKSI' && lk[2] === 16 && lk[3] === 20, 'koreksi manual: ' + JSON.stringify(lk));
@@ -245,6 +246,15 @@ cek(nLogS() === 4 && nLog() > 3, 'log terpisah: UC ' + nLog() + ' baris, STP ' +
   const q = ss.getSheetByName('Stok Cover UC').peek(199, 5).f, qs = ss.getSheetByName('Stok Cover STP').peek(110, 5).f;
   cek(q.includes("'Log Stok UC'!") && !q.includes('Log Stok STP') && !q.includes('$B:$B'), 'rekap UC merujuk log UC: ' + q.slice(0, 60));
   cek(qs.includes("'Log Stok STP'!") && !qs.includes('Log Stok UC'), 'rekap STP merujuk log STP');
+}
+// jam baris lama tidak berubah saat bergeser (disalin apa adanya, tanpa konversi), dan tidak ada baris kosong di antara data
+{
+  const t2 = logUC().peek(2, 1).v;
+  edit(U, 22, E, 1);
+  cek(logUC().peek(3, 1).v === t2, 'jam baris yang bergeser identik: ' + t2 + ' vs ' + logUC().peek(3, 1).v);
+  const kolA = logUC().getRange(2, 3, nLog(), 1).getValues().map(r => r[0]);
+  cek(kolA.every(x => x !== ''), 'tidak ada baris kosong di antara data log');
+  edit(U, 22, F, 1);
 }
 // dua edit berturut-turut: yang kedua di baris 2, yang pertama bergeser ke baris 3
 edit(U, 20, E, 1); edit(U, 21, E, 1);
@@ -381,6 +391,84 @@ cek(b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v === 17, 'data diambil ul
   // kunci mencakup arsip
   ba.ctx.kunciKolomStok();
   cek(ba.ss.getSheetByName(expU1).protections.filter(p => !p.removed).length === 1 && LU.protections.filter(p => !p.removed).length === 1 && LS.protections.filter(p => !p.removed).length === 1, 'kunci: log & arsip terkunci');
+}
+
+// ---------- hasil review ke-2: status rekap lama, arsip aman diulang
+{
+  const bs = siapkan();
+  bs.ctx.migrasiStokUC();
+  const sU = bs.ss.getSheetByName('Stok Cover UC');
+  bs.ctx.__alerts.length = 0; bs.ctx.cekStatus();
+  cek(!/versi lama/.test(bs.ctx.__alerts[0]), 'cekStatus: rekap baru tidak diperingatkan');
+  sU.getRange(199, 5).setValue("=SUMIFS('Log Stok'!$H:$H,'Log Stok'!$B:$B,\"Stok Cover UC\")");
+  bs.ctx.__alerts.length = 0; bs.ctx.cekStatus();
+  cek(/rekap harian masih merujuk log versi lama/.test(bs.ctx.__alerts[0]), 'cekStatus: rekap merujuk log lama diperingatkan');
+}
+{
+  const nowS = (Date.now() + 7 * 3600e3 - Date.UTC(1899, 11, 30)) / 86400000;
+  const L1 = Math.floor(nowS) - 40, L2 = Math.floor(nowS) - 75;
+  const isi = (w, n) => [w, 'Stok Cover UC', 4, 'Produk ' + n, 'SKU', 'Abu-abu', 'IN', n, 0, n, 'u@x', ''];
+  const baru = () => {
+    const bb = siapkan();
+    bb.ctx.migrasiStokUC(); bb.ctx.aktifkanInputOtomatis();
+    const LB = bb.ss.getSheetByName('Log Stok UC');
+    // urutan seperti log yang pernah diurutkan manual: lama, baru, lama, aneh, baru (bukan terurut waktu)
+    const baris = [isi(L1 + 0.2, 1), isi(nowS, 2), isi(L2 + 0.4, 3), isi('teks-aneh', 4), isi(nowS - 0.001, 5), isi(L1 + 0.8, 6)];
+    baris.forEach((r, i) => LB.getRange(2 + i, 1, 1, 12).setValues([r]));
+    LB.getRange(2, 1, baris.length, 1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    return { bb, LB };
+  };
+  const bln = nomor => { const d = new Date(Math.floor(nomor * 86400000) + Date.UTC(1899, 11, 30)); return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2); };
+  const arsipNama = n => 'Arsip Log Stok UC ' + bln(n);
+
+  // (a) baris tersebar: yang bulan ini & tak terbaca tetap di tempat relatifnya
+  {
+    const { bb, LB } = baru();
+    bb.ctx.arsipkanLogBulanLalu();
+    const sisa = LB.getRange(2, 4, LB.getLastRow() - 1, 1).getValues().map(r => r[0]);
+    cek(sisa.join() === 'Produk 2,Produk 4,Produk 5', 'baris tersebar: sisa Log urutan semula: ' + sisa.join());
+    const a1 = bb.ss.getSheetByName(arsipNama(L1)), a2 = bb.ss.getSheetByName(arsipNama(L2));
+    cek(a1 && a2 && a1.getLastRow() === 3 && a2.getLastRow() === 2, 'baris tersebar: arsip per bulan terisi');
+    cek(a1.getRange(2, 4, 2, 1).getValues().map(r => r[0]).join() === 'Produk 6,Produk 1', 'arsip terurut terbaru di atas');
+  }
+  // (b) gagal di tengah (deleteRows error) lalu diulang: arsip tidak ganda
+  {
+    const { bb, LB } = baru();
+    const asli = Object.getPrototypeOf(LB).deleteRows;
+    Object.getPrototypeOf(LB).deleteRows = function () { throw new Error('You are trying to edit a protected cell or object'); };
+    bb.ctx.__alerts.length = 0;
+    bb.ctx.arsipkanLogBulanLalu();
+    Object.getPrototypeOf(LB).deleteRows = asli;
+    cek(/GAGAL.*Aman diulang/.test(bb.ctx.__alerts.join(' ')), 'kegagalan dilaporkan, bukan exception mentah');
+    const a1 = bb.ss.getSheetByName(arsipNama(L1));
+    cek(a1.getLastRow() === 3 && LB.getLastRow() === 7, 'gagal di tengah: arsip sudah terisi, Log masih utuh');
+    bb.ctx.arsipkanLogBulanLalu();
+    cek(a1.getLastRow() === 3 && bb.ss.getSheetByName(arsipNama(L2)).getLastRow() === 2, 'diulang: arsip tidak ganda');
+    cek(LB.getLastRow() === 4 && LB.getRange(2, 4, 3, 1).getValues().map(r => r[0]).join() === 'Produk 2,Produk 4,Produk 5', 'diulang: Log bersih, sisa utuh');
+    bb.ctx.arsipkanLogBulanLalu();
+    cek(a1.getLastRow() === 3, 'dijalankan ketiga kali: tetap tidak ganda');
+  }
+  // (c) Log dikunci & akun ini bukan editor proteksi: tidak menulis apa pun
+  {
+    const { bb, LB } = baru();
+    const p = LB.protect(); p.bolehEdit = false;
+    bb.ctx.__alerts.length = 0;
+    bb.ctx.arsipkanLogBulanLalu();
+    cek(/DILEWATI.*dikunci/.test(bb.ctx.__alerts.join(' ')) && !bb.ss.sheets.some(x => /^Arsip /.test(x.name)) && LB.getLastRow() === 7, 'log terkunci: dilewati sebelum menulis apa pun');
+  }
+  // (d) arsip yang sudah ada berisi waktu teks: tidak hilang saat digabung
+  {
+    const { bb, LB } = baru();
+    bb.ctx.arsipkanLogBulanLalu();
+    const a1 = bb.ss.getSheetByName(arsipNama(L1));
+    a1.getRange(3, 1).setValue('catatan manual');          // waktu tak terbaca di arsip
+    const sebelum = a1.getLastRow();
+    LB.getRange(LB.getLastRow() + 1, 1, 1, 12).setValues([isi(L1 + 0.5, 7)]);
+    LB.getRange(LB.getLastRow(), 1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    bb.ctx.arsipkanLogBulanLalu();
+    const col = a1.getRange(2, 1, a1.getLastRow() - 1, 1).getValues().map(r => r[0]);
+    cek(a1.getLastRow() === sebelum + 1 && col.includes('catatan manual'), 'waktu teks di arsip tidak hilang saat digabung');
+  }
 }
 
 // kunci

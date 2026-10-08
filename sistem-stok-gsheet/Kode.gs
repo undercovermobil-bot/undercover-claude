@@ -569,7 +569,20 @@ function cekStatus() {
   const baris = ['Trigger aktif (akun ini): ' + t + (t > 1 ? '  ← lebih dari 1, hapus lewat menu Matikan lalu aktifkan lagi' : '')];
   KONFIG.SISTEM.forEach(cfg => {
     const sh = ss.getSheetByName(cfg.nama);
-    const status = !sh ? 'TIDAK ADA' : Object.keys(bacaPeta_(sh).kolom).length ? 'format STOK/IN/OUT (aktif)' : 'format lama (belum dimigrasi)';
+    let status = 'TIDAK ADA';
+    if (sh) {
+      const peta = bacaPeta_(sh);
+      if (!Object.keys(peta.kolom).length) {
+        status = 'format lama (belum dimigrasi)';
+      } else {
+        status = 'format STOK/IN/OUT (aktif)';
+        // rekap "hari ini" (baris di bawah TOTAL STOK, kolom IN warna pertama) harus merujuk log sheet ini
+        const rumus = sh.getRange(peta.barisTotal + 1, 5).getFormula();
+        if (rumus.indexOf("'" + cfg.log + "'!") < 0) {
+          status += '  ← rekap harian masih merujuk log versi lama: ulangi migrasi (lihat PANDUAN, "Memasang versi kode baru")';
+        }
+      }
+    }
     baris.push('"' + cfg.nama + '": ' + status);
   });
   KONFIG.SISTEM.forEach(cfg => {
@@ -676,15 +689,22 @@ function warnaCover_(nama) {
   return null;
 }
 
-/** Mutasi terbaru ditaruh di baris 2 (paling atas), tepat di bawah header. */
+/**
+ * Mutasi terbaru ditaruh di baris 2 (paling atas), tepat di bawah header; dalam satu batch, yang diproses
+ * paling akhir ada paling atas. Baris disisipkan SETELAH baris 2 lalu isi baris 2 disalin ke bawah:
+ * rumus/aturan buatan staf yang rentangnya berawal di baris 2 (mis. G2:G) ikut melebar, tidak bergeser.
+ * Salinan memakai copyTo (nilai + format apa adanya), bukan getValues, supaya jam tidak terkonversi ulang.
+ */
 function tulisLog_(ss, cfg, rows) {
   const sh = siapkanLog_(ss, cfg.log);
   const n = rows.length;
-  if (sh.getMaxRows() < 2) sh.insertRowsAfter(1, 1);
-  sh.insertRowsBefore(2, n);
-  sh.getRange(2, 1, n, HEADER_LOG.length).clearFormat();   // baris baru bisa mewarisi format header
+  const lebar = HEADER_LOG.length;
+  if (sh.getMaxRows() < 3) sh.insertRowsAfter(sh.getMaxRows(), 3 - sh.getMaxRows());
+  sh.insertRowsBefore(3, n);
+  sh.getRange(2, 1, 1, lebar).copyTo(sh.getRange(n + 2, 1, 1, lebar));
+  sh.getRange(2, 1, n, lebar).clearFormat();   // baris baru bisa mewarisi format dari baris di atasnya
   sh.getRange(2, 1, n, 1).setNumberFormat(KONFIG.FORMAT_WAKTU);
-  sh.getRange(2, 1, n, HEADER_LOG.length).setValues(rows);
+  sh.getRange(2, 1, n, lebar).setValues(rows.slice().reverse());
 }
 
 function siapkanLog_(ss, nama) {
@@ -713,9 +733,43 @@ function bulanDariNomor_(w) {
   return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2);
 }
 
+/** Bisa menulis ke sheet ini? (false kalau sheet dikunci dan akun ini bukan editor proteksi.) */
+function bisaEdit_(sh) {
+  return sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).every(p => p.canEdit());
+}
+
+/** Kunci baris untuk mencegah baris yang sama diarsipkan dua kali (waktu dibulatkan ke detik). */
+function kunciBaris_(r) {
+  return r.map((v, i) => i === 0 ? String(Math.round((typeof v === 'number' ? v : 0) * 86400)) : String(v)).join('|');
+}
+
+/** Rencana arsip: per log, indeks baris (0 = baris 2) yang jamnya sebelum bulan ini + barisnya per bulan. */
+function rencanaArsip_(ss, zona, bulanIni) {
+  const rencana = [];
+  KONFIG.SISTEM.forEach(cfg => {
+    const log = ss.getSheetByName(cfg.log);
+    if (!log || log.getLastRow() < 2) return;
+    const n = log.getLastRow() - 1;
+    const indeks = [];
+    const pindah = {};
+    log.getRange(2, 1, n, HEADER_LOG.length).getValues().forEach((row, i) => {
+      const w = waktuNomor_(row[0], zona);
+      if (w === null) return;   // jam tak terbaca: dibiarkan di Log
+      const b = bulanDariNomor_(w);
+      if (b >= bulanIni) return;
+      row[0] = w;
+      indeks.push(i);
+      (pindah[b] = pindah[b] || []).push(row);
+    });
+    if (indeks.length) rencana.push({ cfg: cfg, n: n, indeks: indeks, pindah: pindah, log: log });
+  });
+  return rencana;
+}
+
 /**
  * Pindahkan baris Log sebelum bulan ini ke sheet "Arsip <nama log> <yyyy-MM>" (satu sheet per bulan,
- * terbaru di atas). Log hanya menyisakan bulan ini. Rekap "hari ini" tidak terpengaruh.
+ * terbaru di atas), lalu hapus baris itu dari Log. Aman diulang: baris yang sudah ada di arsip tidak
+ * digandakan, jadi kalau proses terhenti di tengah cukup jalankan lagi. Rekap "hari ini" tidak terpengaruh.
  */
 function arsipkanLogBulanLalu() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -723,32 +777,16 @@ function arsipkanLogBulanLalu() {
   const zona = ss.getSpreadsheetTimeZone();
   const bulanIni = bulanDariNomor_(waktuSerial_(new Date(), KONFIG.ZONA_WAKTU));
 
-  const rencana = [];
-  KONFIG.SISTEM.forEach(cfg => {
-    const log = ss.getSheetByName(cfg.log);
-    if (!log || log.getLastRow() < 2) return;
-    const n = log.getLastRow() - 1;
-    const simpan = [];
-    const pindah = {};
-    log.getRange(2, 1, n, HEADER_LOG.length).getValues().forEach(row => {
-      const w = waktuNomor_(row[0], zona);
-      if (w === null) { simpan.push(row); return; }   // baris yang jamnya tak terbaca dibiarkan di Log
-      row[0] = w;
-      const b = bulanDariNomor_(w);
-      if (b < bulanIni) (pindah[b] = pindah[b] || []).push(row); else simpan.push(row);
-    });
-    if (Object.keys(pindah).length) rencana.push({ cfg: cfg, n: n, simpan: simpan, pindah: pindah });
-  });
+  const rencana = rencanaArsip_(ss, zona, bulanIni);
   if (!rencana.length) {
     ui.alert('Tidak ada log bulan sebelum ' + bulanIni + '.');
     return;
   }
-
   let tanya = 'Pindahkan log sebelum bulan ini (' + bulanIni + ') ke sheet arsip per bulan?\n';
   rencana.forEach(p => {
     tanya += '\n' + p.cfg.log + ':';
     Object.keys(p.pindah).sort().forEach(b => { tanya += '\n  • ' + b + ': ' + p.pindah[b].length + ' baris → "Arsip ' + p.cfg.log + ' ' + b + '"'; });
-    tanya += '\n  Tersisa di Log: ' + p.simpan.length + ' baris.';
+    tanya += '\n  Tersisa di Log: ' + (p.n - p.indeks.length) + ' baris.';
   });
   if (ui.alert('Arsipkan log', tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
 
@@ -757,41 +795,61 @@ function arsipkanLogBulanLalu() {
     ui.alert('Sistem sibuk, coba lagi sebentar lagi.');
     return;
   }
+  let hasil = [];
   try {
-    const hasil = [];
-    rencana.forEach(p => {
-      const log = ss.getSheetByName(p.cfg.log);
-      // Data di Log mungkin berubah selama dialog terbuka: kalau jumlah baris berbeda, batalkan bagian ini.
-      if (log.getLastRow() - 1 !== p.n) {
-        hasil.push(p.cfg.log + ': DILEWATI, Log berubah selama dialog. Jalankan lagi.');
-        return;
+    // Baca ulang setelah lock didapat: dialog bisa terbuka lama dan log terus bertambah.
+    rencanaArsip_(ss, zona, bulanIni).forEach(p => {
+      const nama = p.cfg.log;
+      try {
+        const bulan = Object.keys(p.pindah).sort();
+        // Periksa hak edit SEBELUM menulis apa pun, supaya tidak berhenti separuh jalan.
+        const arsipAda = bulan.map(b => ss.getSheetByName('Arsip ' + nama + ' ' + b)).filter(Boolean);
+        if (!bisaEdit_(p.log) || !arsipAda.every(bisaEdit_)) {
+          hasil.push(nama + ': DILEWATI. Sheet dikunci; jalankan menu ini sebagai pemilik file.');
+          return;
+        }
+        bulan.forEach(b => {
+          const arsip = siapkanLog_(ss, 'Arsip ' + nama + ' ' + b);
+          const ada = arsip.getLastRow() > 1
+            ? arsip.getRange(2, 1, arsip.getLastRow() - 1, HEADER_LOG.length).getValues().map(r => {
+              const w = waktuNomor_(r[0], zona);
+              if (w !== null) r[0] = w;   // waktu tak terbaca (teks) dibiarkan apa adanya
+              return r;
+            })
+            : [];
+          const sudah = {};
+          ada.forEach(r => { const k = kunciBaris_(r); sudah[k] = (sudah[k] || 0) + 1; });
+          const baru = p.pindah[b].filter(r => {
+            const k = kunciBaris_(r);
+            if (sudah[k] > 0) { sudah[k]--; return false; }   // sudah ada di arsip (jalan ulang)
+            return true;
+          });
+          if (!baru.length) return;
+          const gabung = ada.concat(baru).sort((x, y) => (typeof y[0] === 'number' ? y[0] : 0) - (typeof x[0] === 'number' ? x[0] : 0));
+          pastikanUkuran_(arsip, gabung.length + 1, HEADER_LOG.length);
+          arsip.getRange(2, 1, gabung.length, 1).setNumberFormat(KONFIG.FORMAT_WAKTU);
+          arsip.getRange(2, 1, gabung.length, HEADER_LOG.length).setValues(gabung);
+        });
+        SpreadsheetApp.flush();
+        // Hapus hanya baris yang sudah diarsipkan (dari bawah ke atas); baris lain di Log tidak disentuh.
+        const grup = [];
+        p.indeks.forEach(i => {
+          const g = grup[grup.length - 1];
+          if (g && i === g.akhir + 1) g.akhir = i; else grup.push({ awal: i, akhir: i });
+        });
+        pastikanUkuran_(p.log, p.n + 2, HEADER_LOG.length);   // sisakan minimal satu baris non-beku
+        grup.reverse().forEach(g => p.log.deleteRows(g.awal + 2, g.akhir - g.awal + 1));
+        hasil.push(nama + ': ' + p.indeks.length + ' baris diarsipkan, ' + (p.n - p.indeks.length) + ' baris tersisa.');
+      } catch (err) {
+        hasil.push(nama + ': GAGAL (' + err.message + '). Aman diulang: baris yang sudah masuk arsip tidak digandakan.');
       }
-      Object.keys(p.pindah).sort().forEach(b => {
-        const arsip = siapkanLog_(ss, 'Arsip ' + p.cfg.log + ' ' + b);
-        const ada = arsip.getLastRow() > 1
-          ? arsip.getRange(2, 1, arsip.getLastRow() - 1, HEADER_LOG.length).getValues().map(r => { r[0] = waktuNomor_(r[0], zona); return r; })
-          : [];
-        const gabung = ada.concat(p.pindah[b]).sort((x, y) => (y[0] || 0) - (x[0] || 0));
-        pastikanUkuran_(arsip, gabung.length + 1, HEADER_LOG.length);
-        arsip.getRange(2, 1, gabung.length, 1).setNumberFormat(KONFIG.FORMAT_WAKTU);
-        arsip.getRange(2, 1, gabung.length, HEADER_LOG.length).setValues(gabung);
-      });
-      SpreadsheetApp.flush();
-      log.getRange(2, 1, p.n, HEADER_LOG.length).clearContent();
-      if (p.simpan.length) {
-        const urut = p.simpan.sort((x, y) => (typeof y[0] === 'number' ? y[0] : 0) - (typeof x[0] === 'number' ? x[0] : 0));
-        log.getRange(2, 1, urut.length, 1).setNumberFormat(KONFIG.FORMAT_WAKTU);
-        log.getRange(2, 1, urut.length, HEADER_LOG.length).setValues(urut);
-      }
-      const lebih = p.n - p.simpan.length;
-      if (lebih > 0 && log.getMaxRows() - lebih >= 2) log.deleteRows(p.simpan.length + 2, lebih);
-      hasil.push(p.cfg.log + ': ' + lebih + ' baris diarsipkan, ' + p.simpan.length + ' baris tersisa.');
     });
     SpreadsheetApp.flush();
-    ui.alert('Arsip selesai', hasil.join('\n') + '\n\nSheet arsip baru belum dikunci: jalankan menu 3 lagi bila log dikunci.', ui.ButtonSet.OK);
   } finally {
     lock.releaseLock();
   }
+  if (!hasil.length) hasil.push('Tidak ada yang dipindahkan (log berubah selama dialog).');
+  ui.alert('Arsip selesai', hasil.join('\n') + '\n\nSheet arsip baru belum dikunci: jalankan menu 3 lagi bila log dikunci.', ui.ButtonSet.OK);
 }
 
 function pastikanUkuran_(sh, baris, kolom) {

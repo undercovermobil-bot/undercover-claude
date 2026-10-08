@@ -43,13 +43,25 @@ Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghit
 - Log hanya menyisakan bulan ini. Rekap "hari ini" tidak terpengaruh.
 - Ada dialog konfirmasi yang menampilkan jumlah baris per bulan. Baris yang jamnya tidak terbaca dibiarkan di Log.
 - Sheet arsip baru belum dikunci: jalankan menu **3. Kunci kolom STOK** lagi bila memakai kunci.
-- Cukup dijalankan sebulan sekali (awal bulan) oleh pemilik file.
+- Cukup dijalankan sebulan sekali (awal bulan) oleh **pemilik file**. Kalau Log sudah dikunci (menu 3) dan akun lain menjalankannya, menu berhenti dengan pesan "DILEWATI" sebelum menulis apa pun.
+- **Aman diulang.** Kalau proses terhenti di tengah (mis. koneksi putus), jalankan lagi: baris yang sudah masuk arsip tidak digandakan, dan hanya baris yang sudah diarsipkan yang dihapus dari Log.
+- Baris Log yang kolom Waktu-nya tidak terbaca (mis. teks) tidak dipindah.
+
+**Rumus buatan sendiri di log** (mis. `COUNTIF`, `QUERY`): aman mulai dari baris 2 karena script menyisip baris baru di bawah baris data pertama, sehingga rentang seperti `G2:G` ikut melebar. Paling aman tetap memakai kolom penuh (`G:G`) atau `G2:G`. Dalam satu kali input yang memproses beberapa sel (mis. paste), yang diproses paling akhir ada paling atas.
 
 Kalau di file trial masih ada sheet **"Log Stok"** lama (satu log bersama dari versi sebelumnya), hapus saja; script tidak memakainya lagi.
 
+## Memasang versi kode baru (sheet sudah pernah dimigrasi)
+
+Tempel kode baru di Apps Script lalu simpan (Ctrl+S) cukup untuk **logika input** (validasi, zona waktu, log baru, arsip). Tampilan yang dibuat saat migrasi (warna, format STOK 0 kosong, rumus rekap harian, log per sheet) **tidak berubah otomatis** di sheet yang sudah dimigrasi. Menu **Cek status** memberi peringatan bila rekap harian masih merujuk log versi lama.
+
+- **File trial**: boleh migrasi ulang. Hapus sheet "Stok Cover UC" / "Stok Cover STP" baru dan semua sheet "Log Stok…", ganti nama "(lama)" kembali ke nama asli, lalu jalankan menu 1a dan 1b. Mutasi yang sudah dicatat di sheet baru ikut hilang.
+- **File asli yang sudah dipakai sungguhan**: **jangan** migrasi ulang (stok sekarang ada di sheet baru, sheet "(lama)" sudah basi). Ubah tampilan manual, atau minta perubahan khusus dibuatkan.
+- Ubah `FORMAT_STOK` di kode hanya berlaku untuk migrasi berikutnya.
+
 ## Tampilan STOK 0
 
-Angka **0** di kolom STOK tidak ditampilkan (sel tampak kosong); nilainya tetap 0 sehingga hitungan, OUT, dan TOTAL tidak berubah. Baris TOTAL STOK tetap menampilkan angka, termasuk 0. Untuk menampilkan 0 lagi: ubah `FORMAT_STOK` di Kode.gs menjadi `'0'`, migrasi ulang.
+Angka **0** di kolom STOK tidak ditampilkan (sel tampak kosong); nilainya tetap 0 sehingga hitungan, OUT, dan TOTAL tidak berubah. Baris TOTAL STOK tetap menampilkan angka, termasuk 0. Untuk menampilkan 0 lagi: ubah `FORMAT_STOK` di Kode.gs menjadi `'0'` lalu migrasi ulang (lihat bagian di atas), atau ubah format kolom STOK manual lewat **Format → Number**.
 
 ## Warna di sheet baru
 
@@ -198,6 +210,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 174/174 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-08: 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.
