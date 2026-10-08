@@ -56,32 +56,49 @@ Formula biasa tidak bisa "menambah ke dirinya sendiri". `STOK = STOK + IN` adala
 
 ## Trial dulu di salinan, baru pasang di file asli
 
+Nama menu di bawah memakai **tampilan Google bahasa Inggris**.
+
 1. Upload `Stock_Opname.xlsx` ke Google Drive.
-2. Buka dengan Google Sheets → **File → Simpan sebagai Google Spreadsheet**. File .xlsx yang dibuka langsung (mode Office) tidak bisa memakai Apps Script; menu Ekstensi → Apps Script baru muncul di versi Google Spreadsheet.
+2. Buka dengan Google Sheets → **File → Save as Google Sheets**. File .xlsx yang dibuka langsung (mode Office) tidak bisa memakai Apps Script.
 3. Di file hasil konversi itu, jalankan langkah **Pasang** di bawah. Coba semua skenario di tabel "Cara kerja".
-4. Setelah puas: di file trial klik **Matikan input otomatis**, lalu ulangi langkah Pasang di Google Sheet asli. Script tidak ikut pindah; tempel ulang di file asli.
+4. Setelah puas: di file trial klik **📦 Sistem Stok → Matikan input otomatis**, lalu ulangi langkah Pasang di Google Sheet asli. Script tidak ikut pindah; tempel ulang di file asli.
 
 Migrasi di file asli memakai data saat itu, bukan data file trial.
 
 ## Pasang (sekali, oleh pemilik file)
 
-1. **Backup dulu**: File → Buat salinan.
-2. Buka Stock Opname → **Ekstensi → Apps Script**.
-3. Project masih kosong (hanya `function myFunction() {}`): hapus isinya, tempel seluruh isi [`Kode.gs`](Kode.gs), klik **Simpan**.
-   Sudah ada script lain: **jangan dihapus**. Klik **+ → Skrip**, beri nama `SistemStok`, tempel di situ. Kalau script lama juga punya `function onOpen`, gabungkan isinya jadi satu fungsi.
-4. Kembali ke sheet, **refresh** halaman. Muncul menu **📦 Sistem Stok**.
-5. Klik **1a. Ubah "Stok Cover UC"**.
-   - Google minta izin ("Google belum memverifikasi aplikasi ini"): **Lanjutan → Buka (tidak aman) → Izinkan**. Wajar untuk script buatan sendiri.
-   - Muncul ringkasan (jumlah produk, OUT yang masih terisi); klik **Ya**.
-   - Muncul catatan formula Value yang bermasalah. Catat untuk dicek.
-6. Klik **1b. Ubah "Stok Cover STP"**, sama seperti langkah 5.
-7. Klik **2. Aktifkan input otomatis** (sekali, berlaku untuk kedua sheet).
-8. Tes di kedua sheet: ketik `1` di IN → Enter → STOK +1, IN kosong. Lalu `1` di OUT → kembali semula.
-9. (Disarankan) **3. Kunci kolom STOK**: staf hanya bisa isi IN/OUT. Hanya pemilik yang bisa ubah STOK/Log. Admin lain bisa ditambahkan manual di Data → Sheet dan rentang yang dilindungi.
+**A. Tempel kode**
+1. File asli: **File → Make a copy** dulu sebagai backup. (Untuk file trial tidak perlu.)
+2. Di spreadsheet: **Extensions → Apps Script**. Terbuka tab baru "Untitled project". Harus dibuka dari menu spreadsheet ini, bukan dari script.google.com.
+3. Buka file `Kode.gs` (Notepad / VS Code) → **Ctrl+A** → **Ctrl+C**.
+4. Di Apps Script, panel kiri **Files**:
+   - Project baru (cuma ada `Code.gs` berisi `function myFunction() {}`): klik `Code.gs`.
+   - Sudah ada script lain: **jangan dihapus**. Klik **+ → Script**, beri nama `SistemStok`, klik file itu. Kalau script lama juga punya `function onOpen`, gabungkan isinya jadi satu fungsi.
+5. Klik di area kode → **Ctrl+A** → **Delete** (hapus `function myFunction() {}`) → **Ctrl+V**. Baris pertama harus `/**`, paling bawah `function huruf_(c) {…}` (±710 baris).
+6. **Ctrl+S** (atau ikon disket "Save project"). Tidak perlu klik **Run** atau **Deploy**.
 
-**Waktu migrasi terbaik: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
+**B. Jalankan dari spreadsheet**
+7. Kembali ke tab spreadsheet → **refresh (F5)**. Tunggu ±5 detik: menu **📦 Sistem Stok** muncul setelah **Help**.
+8. Klik **📦 Sistem Stok → 1a. Ubah "Stok Cover UC"…**. Pertama kali muncul izin:
+   **Authorization required → OK / Review permissions** → pilih akun → **"Google hasn't verified this app" → Advanced → Go to Untitled project (unsafe) → Allow**. Wajar untuk script buatan sendiri.
+   Setelah Allow, kalau tidak terjadi apa-apa, klik menu **1a** sekali lagi.
+9. Muncul ringkasan (jumlah produk, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok".
+10. **📦 Sistem Stok → 1b. Ubah "Stok Cover STP"…** → **Yes** → **OK**. Kolom Orange muncul setelah Hijau Army.
+11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet).
+
+**C. Tes**
+12. Stok Cover UC, baris 4 (Honda Brio): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok" ada baris baru.
+13. Ketik `1` di **F4** (OUT Abu-abu) → D4 kembali semula.
+14. Ketik `999` di F4 → sel merah + catatan "DITOLAK", D4 tidak berubah. Hapus isi F4 → warna kembali normal.
+15. Stok Cover STP: coba kolom Orange (**T** = IN, **U** = OUT, **S** = STOK).
+16. Tes juga dari aplikasi Google Sheets di HP.
+17. (Disarankan, di file asli) **📦 Sistem Stok → 3. Kunci kolom STOK**: staf hanya bisa isi IN/OUT. Admin lain bisa ditambahkan di **Data → Protect sheets and ranges**.
+
+**Waktu migrasi terbaik di file asli: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
 
 Kalau migrasi error di tengah jalan, script mengembalikan sheet lama ke nama semula dan menghapus sheet setengah jadi.
+
+Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps Script dibuka lewat **Extensions → Apps Script** dari spreadsheet yang sama, file sudah format Google Sheets (bukan .xlsx), lalu refresh lagi.
 
 ## Aturan pakai
 
@@ -96,7 +113,7 @@ Kalau migrasi error di tengah jalan, script mengembalikan sheet lama ke nama sem
 
 ## Batasan yang perlu dites sendiri
 
-- **Aplikasi Sheets di HP**: dokumentasi Google tidak menyebut beda perilaku trigger di HP, tapi juga tidak menjamin. Tes langkah 8 dari HP sebelum dipakai staf.
+- **Aplikasi Sheets di HP**: dokumentasi Google tidak menyebut beda perilaku trigger di HP, tapi juga tidak menjamin. Tes langkah 12–14 dari HP sebelum dipakai staf.
 - Kolom **User** di Log bisa kosong. Untuk akun Gmail biasa, Google sering tidak memberikan email editor ke script.
 - Kuota Google untuk trigger terbatas per hari. Satu input ±1 detik. Volume ratusan input per hari masih jauh di bawah batas.
 - Butuh koneksi internet saat input. Input saat offline belum tentu diproses. Sel IN/OUT yang tetap terisi = belum diproses: hapus, ketik ulang.
