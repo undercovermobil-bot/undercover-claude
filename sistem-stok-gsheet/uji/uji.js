@@ -60,6 +60,7 @@ ctx.migrasiStokUC();
 console.log('ALERT UC:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
 ctx.__alerts.length = 0;
 ctx.migrasiStokSTP();
+const alertSTP = ctx.__alerts.join('\n');
 console.log('ALERT STP:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
 cek(ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover UC (lama)|Stok Cover STP|Stok Cover STP (lama)|Resi Keluar Stok|Log Stok',
   'urutan tab: ' + ss.sheets.map(s => s.name).join('|'));
@@ -102,7 +103,8 @@ cek(uc.v(40, 54) === '' && uc.v(50, 52) === '', 'UC baris 40 premium & baris 50 
 cek(stp.v(10, 52) === '=(D10+G10+J10+M10+P10)*257000', 'STP baris 10 L9 dibetulkan: ' + stp.v(10, 52));
 cek(stp.v(5, 53) === '=(S5+V5+Y5+AB5+AE5+AH5+AK5+AN5+AQ5)*257000', 'STP baris 5 strip lengkap: ' + stp.v(5, 53));
 cek(stp.v(4, 53) === '' && stp.v(4, 55) === '' && stp.v(102, 52) === '', 'STP tanpa harga tetap kosong');
-const alertSTP = ctx.__alerts.join('\n');
+cek(/DIPERBAIKI baris 10 Toyota Innova/.test(alertSTP) && (alertSTP.match(/DIPERBAIKI baris (5|6|7|8|11) /g) || []).length === 5, 'STP catatan diperbaiki 5-8,10,11');
+cek(!/Exclusive: \d+ baris/.test(alertSTP), 'STP Exclusive tidak dilaporkan');
 
 // ---------- edit
 const log = () => ss.getSheetByName('Log Stok');

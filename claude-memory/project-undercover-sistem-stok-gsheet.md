@@ -19,14 +19,14 @@ Sheet "Stok Cover UC": tiap warna 2 kolom IN/OUT. **IN = stok tersedia** (diedit
 - Layout baru: STOK|IN|OUT per 16 warna (D..AY; STOK warna k = kolom 4+3k), Value AZ..BD (label dari header lama: UC Premium, STP Transparan), TOTAL STOK & MASUK/KELUAR HARI INI (SUMIFS ke "Log Stok") di bawah produk.
 - Ketik IN/OUT + Enter → STOK berubah, sel dikosongkan, tercatat di **"Log Stok"**. OUT > stok ditolak. Edit langsung STOK = log `KOREKSI`. Nilai dibaca ulang setelah LockService → trigger ganda tidak dobel.
 - Uji: 117/117 lulus; LibreOffice recalc: UC 1.161 unit & value identik; STP 246 unit, value beda hanya di baris yg formula lamanya salah.
-- User akan pakai Google Sheet → disarankan pakai GSheet yang ada (bukan upload ulang xlsx). Kalau upload, wajib "Simpan sebagai Google Spreadsheet" (mode Office tidak bisa Apps Script).
+- Rencana user: **trial dulu** — upload xlsx unduhan → Simpan sebagai Google Spreadsheet (mode Office tidak bisa Apps Script) → pasang & tes → kalau sesuai baru pasang di Google Sheet asli.
 
 ## PENTING untuk sub-proyek Stock Sync ([[project-undercover-stock-sync-status]])
 Setelah user migrasi, Stock_Opname yang diunduh punya layout BARU: kolom IN lama (4+2k) TIDAK berlaku lagi. Stok warna k ada di kolom **4+3k** (mis. Abu-abu k=0 → D, Elite Abu k=5 → S, Epic Abu k=8 → AB, Warior Abu k=11 → AK). Cek dulu baris 3 (STOK/IN/OUT) sebelum membaca. Data lama ada di sheet "(lama)".
 
 ## Temuan data (dilaporkan ke user, belum dikonfirmasi)
 UC: baris 40 & 41 formula Value Premium rusak (`=AF40*AM4441128`); 14 baris tanpa formula Value (50,58,68,69,70,82,83,94,118,140,190,191,192,194); 46 sel OUT masih terisi; baris 19 "Toyota Swift" (SKU SZK-SWF) kemungkinan typo.
-STP: total lama cuma SUM s/d baris 104 → X-Over/Soluna/C Class (3 unit) tidak ikut (246 vs 243); baris 5,6,7,8,11 formula Strip tanpa Elite Abu & Warior Abu; baris 10 Innova merujuk L9; kolom Exclusive tanpa formula harga di semua baris.
+STP: total lama cuma SUM s/d baris 104 → X-Over (Hijau Army 1), Soluna & C Class (Transparan 1+1) tidak ikut (246 vs 243). Baris 5,6,7,8,11 (Strip tanpa Elite Abu & Warior Abu) dan baris 10 (Innova merujuk L9) → **user minta diperbaiki: migrasi otomatis membuat ulang formula standar** (catatan 'DIPERBAIKI'). **Smartprotection tidak jual Exclusive** (user 2026-10-08) → `tanpaValue: ['Exclusive']`, tidak dilaporkan.
 
 ## Belum diverifikasi
 - Trigger dari aplikasi Sheets HP (tidak ada pernyataan resmi Google) — user diminta tes.

@@ -21,9 +21,10 @@ const KONFIG = {
   // arsip : nama baru untuk sheet lama saat migrasi (isinya tidak diubah)
   // barisAkhir hanya cadangan; migrasi mencari sendiri baris produk terakhir
   //   (baris sebelum label "OUT"/"IN" di kolom B).
+  // tanpaValue: grup yang memang tidak dijual di toko itu (tidak dilaporkan "tanpa harga").
   SISTEM: [
-    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', barisAwal: 4, barisAkhir: 196 },
-    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', barisAwal: 4, barisAkhir: 107 },
+    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', barisAwal: 4, barisAkhir: 196, tanpaValue: [] },
+    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', barisAwal: 4, barisAkhir: 107, tanpaValue: ['Exclusive'] },
   ],
   SHEET_LOG: 'Log Stok',
   BARIS_DATA: 4,            // baris produk pertama di sheet sistem
@@ -338,8 +339,8 @@ function bangunSheet_(sh, cfg, d) {
         return '';
       }
       if (!formulaLamaStandar_(f[gi], g.warna.map(k => 4 + 2 * k), rLama)) {
-        d.peringatan.push('Baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama tidak standar (' + f[gi] +
-          '). Dibuat ulang: semua warna ' + d.labelValue[gi] + ' baris ini × ' + harga + '. Cek.');
+        d.peringatan.push('DIPERBAIKI baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama ' + f[gi] +
+          ' → sekarang semua warna ' + d.labelValue[gi] + ' baris ini × ' + harga + ' (sama seperti baris lain).');
       }
       const refs = g.warna.map(k => huruf_(kolStok(k)) + r);
       return '=(' + refs.join('+') + ')*' + harga;
@@ -349,7 +350,7 @@ function bangunSheet_(sh, cfg, d) {
   });
   sh.getRange(KONFIG.BARIS_DATA, kolValue, n, GRUP_VALUE.length + 1).setFormulas(fBaru);
   tanpaHarga.forEach((rows, gi) => {
-    if (rows.length) {
+    if (rows.length && (cfg.tanpaValue || []).indexOf(d.labelValue[gi]) < 0) {
       d.peringatan.push(d.labelValue[gi] + ': ' + rows.length + ' baris tanpa formula harga, value kosong' +
         (rows.length <= 15 ? ' (baris ' + rows.join(', ') + ')' : '') + '.');
     }

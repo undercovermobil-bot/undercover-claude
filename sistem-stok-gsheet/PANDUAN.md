@@ -45,13 +45,14 @@ Sheet lain (Resi Keluar Stok, Plan Stok, dll.) tidak disentuh.
 
 Formula biasa tidak bisa "menambah ke dirinya sendiri". `STOK = STOK + IN` adalah referensi melingkar. Angka yang diketik lalu hilang (seperti alur sekarang) hanya bisa lewat script. Apps Script gratis, bawaan Google Sheets, tidak perlu install ekstensi.
 
-## Pakai Google Sheet yang sudah ada, bukan upload ulang
+## Trial dulu di salinan, baru pasang di file asli
 
-Disarankan langsung di Google Sheet Stock Opname yang sekarang:
-- Data paling baru (file unduhan sudah ketinggalan sejak diunduh).
-- Link, akses staf, dan riwayat versi tetap sama.
+1. Upload `Stock_Opname.xlsx` ke Google Drive.
+2. Buka dengan Google Sheets → **File → Simpan sebagai Google Spreadsheet**. File .xlsx yang dibuka langsung (mode Office) tidak bisa memakai Apps Script; menu Ekstensi → Apps Script baru muncul di versi Google Spreadsheet.
+3. Di file hasil konversi itu, jalankan langkah **Pasang** di bawah. Coba semua skenario di tabel "Cara kerja".
+4. Setelah puas: di file trial klik **Matikan input otomatis**, lalu ulangi langkah Pasang di Google Sheet asli. Script tidak ikut pindah; tempel ulang di file asli.
 
-Kalau tetap upload file .xlsx: setelah dibuka, wajib **File → Simpan sebagai Google Spreadsheet**. File .xlsx yang dibuka langsung (mode Office) tidak bisa memakai Apps Script.
+Migrasi di file asli memakai data saat itu, bukan data file trial.
 
 ## Pasang (sekali, oleh pemilik file)
 
@@ -101,9 +102,10 @@ Stok Cover UC:
 
 Stok Cover STP:
 - **Total lama (baris 109–110) hanya menjumlah sampai baris 104.** X-Over, Soluna, C Class (baris 105–107, 3 unit) tidak ikut total. Sheet baru menjumlah sampai 107: 246 unit (total lama 243).
-- **Baris 5, 6, 7, 8, 11**: formula Strip tidak menghitung Elite Abu & Warior Abu. Sheet baru menghitung semua warna Strip. Efek di data sekarang: Veloz (baris 6) value Strip 0 → 257.000.
-- **Baris 10 (Innova)**: formula Reguler merujuk `L9` (Hijau Army baris 9) bukan `L10`. Sheet baru memakai baris sendiri: value Reguler Innova 514.000 → 0.
-- **Kolom Exclusive tidak punya formula harga di semua baris**, jadi value Exclusive = 0. Strip baris 4 dan Transparan baris 15 juga kosong; 8 baris tanpa formula sama sekali (47, 73, 91, 102, 103, 105, 106, 107).
+- **Baris 5, 6, 7, 8, 11 — otomatis DIPERBAIKI saat migrasi**: formula Strip lama tidak menghitung Elite Abu & Warior Abu. Sheet baru menghitung semua 9 warna Strip seperti baris lain, harga tetap. Efek di data sekarang: Veloz (baris 6) value Strip 0 → 257.000.
+- **Baris 10 (Innova) — otomatis DIPERBAIKI saat migrasi**: formula Reguler merujuk `L9` (Hijau Army baris 9) bukan `L10`. Sheet baru memakai baris sendiri: value Reguler Innova 514.000 → 0 (Innova memang tidak punya stok Reguler).
+- **Exclusive**: Smartprotection tidak menjual varian Exclusive (konfirmasi user 2026-10-08). Kolomnya tetap ada tapi kosong; tidak dilaporkan sebagai masalah.
+- Strip baris 4 dan Transparan baris 15 tidak punya harga; 8 baris tanpa formula Value sama sekali (47, 73, 91, 102, 103, 105, 106, 107).
 - 1 sel OUT masih terisi (Honda Brio Hitam).
 
 ## Sheet lain di file
@@ -120,6 +122,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 117/117 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-08: 119/119 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP: total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan).
