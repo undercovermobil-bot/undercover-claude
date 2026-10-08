@@ -4,7 +4,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-class Cell { constructor() { this.v = ''; this.f = ''; this.note = ''; this.bg = null; this.fc = null; this.dv = null; } }
+class Cell { constructor() { this.v = ''; this.f = ''; this.note = ''; this.bg = null; this.fc = null; this.nf = null; this.dv = null; } }
 
 class Sheet {
   constructor(ss, name, rows = 1000, cols = 26) {
@@ -32,6 +32,19 @@ class Sheet {
   insertRowsAfter(after, n) { this.maxRows += n; }
   insertColumnsAfter(after, n) { this.maxCols += n; }
   setFrozenRows(n) { this.frozenRows = n; }
+  insertRowsBefore(pos, n) {
+    if (pos < 1 || pos > this.maxRows) throw new Error('Those rows are out of bounds.');
+    const baru = new Map();
+    for (const [k, x] of this.cells) { const [r, c] = k.split(',').map(Number); baru.set((r >= pos ? r + n : r) + ',' + c, x); }
+    this.cells = baru; this.maxRows += n;
+  }
+  deleteRows(pos, n) {
+    if (pos < 1 || pos + n - 1 > this.maxRows) throw new Error('Those rows are out of bounds.');
+    if (this.maxRows - n < this.frozenRows + 1) throw new Error('You cannot delete all the non-frozen rows on a sheet.');
+    const baru = new Map();
+    for (const [k, x] of this.cells) { const [r, c] = k.split(',').map(Number); if (r >= pos && r < pos + n) continue; baru.set((r >= pos + n ? r - n : r) + ',' + c, x); }
+    this.cells = baru; this.maxRows -= n;
+  }
   setFrozenColumns(n) { this.frozenCols = n; }
   setColumnWidth() {}
   setColumnWidths() {}
@@ -67,10 +80,15 @@ class Range {
   getRow() { return this.r; } getColumn() { return this.c; }
   getNumRows() { return this.nr; } getNumColumns() { return this.nc; }
   getSheet() { return this.sh; }
-  getValues() { const out = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? (x.f ? (x.calc === undefined ? '' : x.calc) : x.v) : ''); } out.push(row); } return out; }
+  tampil(x) {
+    const v = x.f ? (x.calc === undefined ? '' : x.calc) : x.v;
+    if (typeof v === 'number' && x.nf && /yyyy/.test(x.nf)) return new Date(wallKeInstant(v * 86400000 + Date.UTC(1899, 11, 30), this.sh.ss.tz));
+    return v;
+  }
+  getValues() { const out = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? this.tampil(x) : ''); } out.push(row); } return out; }
   getValue() { return this.getValues()[0][0]; }
   getFormulas() { const out = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? x.f : ''); } out.push(row); } return out; }
-  setValues(a) { this.dims(a, 'setValues'); return this.each((x, i, j) => { const v = a[i][j]; if (typeof v === 'string' && v.startsWith('=')) { x.f = v; x.v = ''; } else { x.v = v === null || v === undefined ? '' : v; x.f = ''; } }); }
+  setValues(a) { this.dims(a, 'setValues'); return this.each((x, i, j) => { let v = a[i][j]; if (Object.prototype.toString.call(v) === '[object Date]') v = instanKeSerial(v.getTime(), this.sh.ss.tz); if (typeof v === 'string' && v.startsWith('=')) { x.f = v; x.v = ''; } else { x.v = v === null || v === undefined ? '' : v; x.f = ''; } }); }
   setFormulas(a) { this.dims(a, 'setFormulas'); return this.each((x, i, j) => { const f = a[i][j]; if (f && !String(f).startsWith('=')) throw new Error('formula tanpa = : ' + f); x.f = f; x.v = ''; }); }
   setValue(v) { return this.each(x => { if (typeof v === 'string' && v.startsWith('=')) { x.f = v; x.v = ''; } else { x.v = v; x.f = ''; } }); }
   clearContent() { return this.each(x => { x.v = ''; x.f = ''; }); }
@@ -82,7 +100,9 @@ class Range {
   setDataValidation(dv) { return this.each(x => { x.dv = dv; }); }
   merge() { this.sh.merges.push([this.r, this.c, this.nr, this.nc]); return this; }
   setFontWeight() { return this; } setHorizontalAlignment() { return this; } setVerticalAlignment() { return this; }
-  setWrap() { return this; } setNumberFormat() { return this; }
+  setWrap() { return this; }
+  setNumberFormat(f) { return this.each(x => { x.nf = f; }); }
+  clearFormat() { return this.each(x => { x.bg = null; x.fc = null; x.nf = null; }); }
   setBorder(...a) { if (a.length !== 6) throw new Error('setBorder butuh 6 argumen'); return this; }
 }
 
@@ -91,6 +111,7 @@ class Spreadsheet {
   getSpreadsheetTimeZone() { return this.tz; }
   setSpreadsheetTimeZone(z) { this.tz = z; }
   getSheetByName(n) { return this.sheets.find(s => s.name === n) || null; }
+  getSheets() { return this.sheets.slice(); }
   insertSheet(name, index) {
     if (this.getSheetByName(name)) throw new Error('sheet sudah ada ' + name);
     const s = new Sheet(this, name);
@@ -101,6 +122,15 @@ class Spreadsheet {
   toast(msg, title) { this.toasts.push(title + ': ' + msg); }
   getOwner() { return { getEmail: () => 'owner@x' }; }
 }
+
+function tzOffsetMs(ms, tz) {
+  const p = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
+}
+function wallKeInstant(wallMs, tz) { const o = tzOffsetMs(wallMs, tz); return wallMs - tzOffsetMs(wallMs - o, tz); }
+function instanKeSerial(ms, tz) { return (ms + tzOffsetMs(ms, tz) - Date.UTC(1899, 11, 30)) / 86400000; }
 
 function colNum(s) { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0) - 64; return n; }
 
@@ -139,7 +169,7 @@ function buatKonteks(ss, opsi = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + '\n;globalThis.__KONFIG = KONFIG;', ctx, { filename: 'Kode.gs' });
-  ctx.__alerts = alerts; ctx.__triggers = triggers;
+  ctx.__alerts = alerts; ctx.__triggers = triggers; ctx.__opsi = opsi;
   return ctx;
 }
 

@@ -16,7 +16,7 @@ Tiap warna jadi 3 kolom: **STOK | IN | OUT**.
 
 | Aksi staf | Hasil otomatis (±1 detik) |
 |---|---|
-| Ketik `5` di **IN**, Enter | STOK +5, sel IN kosong lagi, tercatat di "Log Stok" |
+| Ketik `5` di **IN**, Enter | STOK +5, sel IN kosong lagi, tercatat di Log sheet itu (UC → "Log Stok UC", STP → "Log Stok STP") |
 | Ketik `2` di **OUT**, Enter | STOK −2, sel OUT kosong lagi, tercatat |
 | OUT lebih besar dari STOK | **Ditolak**: sel merah + catatan, STOK tidak berubah |
 | Ketik huruf / desimal / minus | Ditolak oleh validasi sheet |
@@ -29,6 +29,27 @@ Baris bawah tabel:
 - **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Otomatis reset tiap ganti hari.
 
 Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghitung dari kolom STOK.
+
+## Log Stok (satu per sheet)
+
+- **Stok Cover UC** mencatat ke **Log Stok UC**, **Stok Cover STP** ke **Log Stok STP**.
+- **Terbaru di paling atas** (baris 2). Header tetap di baris 1 dan ikut membeku saat scroll.
+- Kolom: Waktu (WIB), Sheet, Baris, Produk, Kode SKU, Warna, Jenis (IN / OUT / KOREKSI / DITOLAK), Qty, Stok Sebelum, Stok Sesudah, User, Keterangan.
+
+**Cari / saring riwayat.** Aman. Pakai **Data → Filter views → Create new filter view** (bukan "Create a filter"): filter view hanya berlaku di layar kamu, tidak mengubah tampilan staf lain, dan tidak mengganggu script. Contoh: filter kolom Produk = Honda Brio, atau Jenis = DITOLAK, atau Waktu pada rentang tertentu. Script tetap mencatat mutasi baru walaupun filter sedang aktif (baris disisipkan di atas dan tersimpan, hanya mungkin belum terlihat sampai filter diterapkan ulang). Hindari **Data → Sort sheet** langsung di log: urutannya berlaku untuk semua orang. Urutan tetap kembali terbaru-di-atas untuk mutasi berikutnya.
+
+**Dibagi per bulan?** Tidak wajib. Satu log per sheet lebih mudah dicari dengan filter. Kalau log mulai berat (kira-kira di atas 30–50 ribu baris; perkiraan, bukan batas Google), jalankan menu **📦 Sistem Stok → Arsipkan log bulan lalu**:
+- Baris sebelum bulan ini dipindah ke sheet **"Arsip Log Stok UC 2026-09"**, **"Arsip Log Stok STP 2026-09"**, dst. (satu sheet per bulan, terbaru di atas).
+- Log hanya menyisakan bulan ini. Rekap "hari ini" tidak terpengaruh.
+- Ada dialog konfirmasi yang menampilkan jumlah baris per bulan. Baris yang jamnya tidak terbaca dibiarkan di Log.
+- Sheet arsip baru belum dikunci: jalankan menu **3. Kunci kolom STOK** lagi bila memakai kunci.
+- Cukup dijalankan sebulan sekali (awal bulan) oleh pemilik file.
+
+Kalau di file trial masih ada sheet **"Log Stok"** lama (satu log bersama dari versi sebelumnya), hapus saja; script tidak memakainya lagi.
+
+## Tampilan STOK 0
+
+Angka **0** di kolom STOK tidak ditampilkan (sel tampak kosong); nilainya tetap 0 sehingga hitungan, OUT, dan TOTAL tidak berubah. Baris TOTAL STOK tetap menampilkan angka, termasuk 0. Untuk menampilkan 0 lagi: ubah `FORMAT_STOK` di Kode.gs menjadi `'0'`, migrasi ulang.
 
 ## Warna di sheet baru
 
@@ -63,7 +84,7 @@ Diatur di `KONFIG.SISTEM[1].warnaTambahan`. Warna baru lain bisa ditambah dengan
 | Stok Cover UC (format IN/OUT) | **Stok Cover UC** = format baru STOK/IN/OUT, dipakai harian |
 | | **Stok Cover UC (lama)** = sheet lama, isi utuh, termasuk Stok Reseller ASTA & ROBY (baris 201+) |
 | Stok Cover STP | **Stok Cover STP** (baru) + **Stok Cover STP (lama)** |
-| — | **Log Stok** (baru) |
+| — | **Log Stok UC** dan **Log Stok STP** (baru, satu log per sheet) |
 
 Sheet lain (Resi Keluar Stok, Plan Stok, dll.) tidak disentuh.
 
@@ -99,12 +120,12 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 8. Klik **📦 Sistem Stok → 1a. Ubah "Stok Cover UC"…**. Pertama kali muncul izin:
    **Authorization required → OK / Review permissions** → pilih akun → **"Google hasn't verified this app" → Advanced → Go to Untitled project (unsafe) → Allow**. Wajar untuk script buatan sendiri.
    Setelah Allow, kalau tidak terjadi apa-apa, klik menu **1a** sekali lagi.
-9. Muncul ringkasan (jumlah produk, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok".
+9. Muncul ringkasan (jumlah produk, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok UC".
 10. **📦 Sistem Stok → 1b. Ubah "Stok Cover STP"…** → **Yes** → **OK**. Kolom Orange muncul setelah Hijau Army.
 11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet).
 
 **C. Tes**
-12. Stok Cover UC, baris 4 (Honda Brio): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok" ada baris baru.
+12. Stok Cover UC, baris 4 (Honda Brio): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok UC" ada baris baru di paling atas (baris 2).
 13. Ketik `1` di **F4** (OUT Abu-abu) → D4 kembali semula.
 14. Ketik `999` di F4 → sel merah + catatan "DITOLAK", D4 tidak berubah. Hapus isi F4 → warna kembali normal.
 15. Stok Cover STP: coba kolom Orange (**T** = IN, **U** = OUT, **S** = STOK).
@@ -113,9 +134,9 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 
 ### Untuk apa "Kunci kolom STOK"?
 
-Tanpa kunci, semua editor bisa mengetik apa saja di sel mana pun, termasuk menimpa atau menghapus angka STOK, menghapus baris di Log Stok, atau merusak rumus Total/Value. Dengan kunci:
+Tanpa kunci, semua editor bisa mengetik apa saja di sel mana pun, termasuk menimpa atau menghapus angka STOK, menghapus baris di Log Stok UC/STP, atau merusak rumus Total/Value. Dengan kunci:
 - Staf **hanya** bisa mengisi kolom **IN** dan **OUT** (semua baris produk).
-- Kolom **STOK**, header, TOTAL, Value, nama produk, SKU, dan sheet **Log Stok** terkunci. Hanya pemilik (dan editor yang ditambahkan di **Data → Protect sheets and ranges**) yang bisa mengubahnya.
+- Kolom **STOK**, header, TOTAL, Value, nama produk, SKU, dan sheet **Log Stok UC / STP** (dan arsipnya) terkunci. Hanya pemilik (dan editor yang ditambahkan di **Data → Protect sheets and ranges**) yang bisa mengubahnya.
 - STOK tetap berubah saat staf mengisi IN/OUT, karena trigger berjalan sebagai pemilik file.
 - Efek samping: staf tidak bisa koreksi stok langsung (opname) dan tidak bisa menambah produk/baris. Itu dikerjakan pemilik.
 
@@ -133,7 +154,7 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 - **Jangan buat fungsi bernama `onEdit`** di Apps Script. Bisa memicu proses ganda.
 - **Jangan pakai Ctrl+Z** untuk membatalkan input stok. Koreksi dengan input kebalikan (salah IN 5 → OUT 5). Semua tercatat di Log.
 - Tunggu sel IN/OUT kosong lagi (±1 detik) sebelum mengetik di **sel yang sama**.
-- **Jangan ganti nama** sheet "Stok Cover UC", "Stok Cover STP", "Log Stok", dan jangan hapus sheet "(lama)" (penanda sudah dimigrasi). Kalau perlu ganti nama, ubah juga `KONFIG` di Kode.gs.
+- **Jangan ganti nama** sheet "Stok Cover UC", "Stok Cover STP", "Log Stok UC", "Log Stok STP", dan jangan hapus sheet "(lama)" (penanda sudah dimigrasi). Kalau perlu ganti nama, ubah juga `KONFIG` di Kode.gs.
 - Staf jangan mengisi stok di sheet "(lama)". Isinya tidak lagi diupdate.
 - **Tambah produk baru**: klik kanan **baris kosong tepat di atas TOTAL STOK** (mis. baris 197 di UC) → **Insert 1 row above**. Baris baru jatuh di dalam rumus TOTAL, jadi ikut terhitung. Isi nama, Kode SKU, STOK awal; salin rumus Value dari baris produk di atasnya. Jangan sisip di bawah baris kosong itu: baris tersebut tidak masuk TOTAL.
 - Header baris 2 (nama warna) dan baris 3 (STOK/IN/OUT) jadi patokan script. Jangan diubah.
@@ -141,7 +162,7 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 ## Batasan yang perlu dites sendiri
 
 - **Aplikasi Sheets di HP**: dokumentasi Google tidak menyebut beda perilaku trigger di HP, tapi juga tidak menjamin. Tes langkah 12–14 dari HP sebelum dipakai staf.
-- **Jam di Log Stok** selalu WIB (angka jam ditulis script, tidak bergantung zona waktu file). Saat migrasi, script juga mengubah **zona waktu file** ke Asia/Jakarta kalau belum, supaya rekap "MASUK / KELUAR HARI INI" mengikuti tanggal WIB. Perubahan ini disebut di dialog sebelum klik **Yes**. File hasil konversi dari .xlsx bisa berzona waktu Pacific (UTC-7): jam Log tampil 14 jam lebih awal. Menu **Setel zona waktu file ke WIB** memperbaikinya tanpa migrasi ulang (baris Log lama tidak berubah; hapus kalau hanya data uji).
+- **Jam di Log** selalu WIB (angka jam ditulis script, tidak bergantung zona waktu file). Saat migrasi, script juga mengubah **zona waktu file** ke Asia/Jakarta kalau belum, supaya rekap "MASUK / KELUAR HARI INI" mengikuti tanggal WIB. Perubahan ini disebut di dialog sebelum klik **Yes**. File hasil konversi dari .xlsx bisa berzona waktu Pacific (UTC-7): jam Log tampil 14 jam lebih awal. Menu **Setel zona waktu file ke WIB** memperbaikinya tanpa migrasi ulang (baris Log lama tidak berubah; hapus kalau hanya data uji).
 - Kolom **User** di Log bisa kosong.
 - **Batas angka**: IN/OUT/STOK 1–9999 per sel (`KONFIG.MAKS_QTY`). Ini juga menolak angka yang tidak sengaja terbaca sebagai tanggal (mis. `1/2`). Zona waktu file dikembalikan ke WIB otomatis begitu input pertama diproses. Untuk akun Gmail biasa, Google sering tidak memberikan email editor ke script.
 - Kuota Google untuk trigger terbatas per hari. Satu input ±1 detik. Volume ratusan input per hari masih jauh di bawah batas.
@@ -177,6 +198,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 150/150 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-08: 174/174 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.
