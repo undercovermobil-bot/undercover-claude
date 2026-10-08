@@ -8,6 +8,7 @@
  *     dan mencatat mutasi ke sheet "Log Stok".
  *   - OUT melebihi stok ditolak (sel merah + catatan), stok tidak berubah.
  *
+ * Berlaku untuk sheet "Stok Cover UC" dan "Stok Cover STP" (KONFIG.SISTEM).
  * Pasang: lihat PANDUAN.md di folder yang sama.
  *
  * PENTING: jangan buat fungsi bernama onEdit di project ini.
@@ -16,9 +17,13 @@
  */
 
 const KONFIG = {
-  // Sheet sumber (lama, tidak diubah) -> sheet sistem (baru).
+  // nama  : sheet yang dipakai staf (setelah migrasi berformat STOK|IN|OUT)
+  // arsip : nama baru untuk sheet lama saat migrasi (isinya tidak diubah)
+  // barisAkhir hanya cadangan; migrasi mencari sendiri baris produk terakhir
+  //   (baris sebelum label "OUT"/"IN" di kolom B).
   SISTEM: [
-    { sumber: 'Stok Cover UC', tujuan: 'Stok UC Sistem', barisAwal: 4, barisAkhir: 196 },
+    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', barisAwal: 4, barisAkhir: 196 },
+    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', barisAwal: 4, barisAkhir: 107 },
   ],
   SHEET_LOG: 'Log Stok',
   BARIS_DATA: 4,            // baris produk pertama di sheet sistem
@@ -30,7 +35,8 @@ const KONFIG = {
   DESKRIPSI_PROTEKSI: 'Sistem stok: hanya IN/OUT yang boleh diisi',
 };
 
-// Urutan warna di sheet: 0-4 Reguler, 5-13 Strip, 14 Premium, 15 Exclusive.
+// Urutan warna di sheet: 0-4 Reguler, 5-13 Strip, 14 Premium (STP: Transparan), 15 Exclusive.
+// Nama grup hanya cadangan; label diambil dari header baris 3 sheet lama.
 const GRUP_VALUE = [
   { nama: 'Reguler', warna: [0, 1, 2, 3, 4] },
   { nama: 'Strip', warna: [5, 6, 7, 8, 9, 10, 11, 12, 13] },
@@ -45,7 +51,8 @@ const HEADER_LOG = ['Waktu', 'Sheet', 'Baris', 'Produk', 'Kode SKU', 'Warna', 'J
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('📦 Sistem Stok')
-    .addItem('1. Buat sheet sistem dari "' + KONFIG.SISTEM[0].sumber + '"', 'migrasiStokUC')
+    .addItem('1a. Ubah "' + KONFIG.SISTEM[0].nama + '" ke format STOK/IN/OUT', 'migrasiStokUC')
+    .addItem('1b. Ubah "' + KONFIG.SISTEM[1].nama + '" ke format STOK/IN/OUT', 'migrasiStokSTP')
     .addItem('2. Aktifkan input otomatis', 'aktifkanInputOtomatis')
     .addItem('3. Kunci kolom STOK (opsional, pemilik file)', 'kunciKolomStok')
     .addSeparator()
@@ -66,7 +73,7 @@ function prosesInputStok(e) {
   if (!e || !e.range) return;
   const sheet = e.range.getSheet();
   const namaSheet = sheet.getName();
-  if (!KONFIG.SISTEM.some(s => s.tujuan === namaSheet)) return;
+  if (!KONFIG.SISTEM.some(s => s.nama === namaSheet)) return;
 
   const r0 = e.range.getRow();
   const c0 = e.range.getColumn();
@@ -188,30 +195,38 @@ function migrasiStokUC() {
   migrasi_(KONFIG.SISTEM[0]);
 }
 
+function migrasiStokSTP() {
+  migrasi_(KONFIG.SISTEM[1]);
+}
+
+/**
+ * Sheet lama diganti nama jadi cfg.arsip (isinya tidak diubah),
+ * sheet baru format STOK|IN|OUT dibuat dengan nama asli di posisi tab yang sama.
+ */
 function migrasi_(cfg) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  const src = ss.getSheetByName(cfg.sumber);
-  if (!src) {
-    ui.alert('Sheet "' + cfg.sumber + '" tidak ditemukan.');
+  if (ss.getSheetByName(cfg.arsip)) {
+    ui.alert('"' + cfg.nama + '" sudah pernah dimigrasi (sheet "' + cfg.arsip + '" sudah ada).');
     return;
   }
-  if (ss.getSheetByName(cfg.tujuan)) {
-    ui.alert('Sheet "' + cfg.tujuan + '" sudah ada.\nHapus atau ganti namanya dulu kalau mau migrasi ulang.');
+  const src = ss.getSheetByName(cfg.nama);
+  if (!src) {
+    ui.alert('Sheet "' + cfg.nama + '" tidak ditemukan.');
+    return;
+  }
+  if (Object.keys(bacaPeta_(src).kolom).length) {
+    ui.alert('"' + cfg.nama + '" sudah berformat STOK / IN / OUT.');
     return;
   }
 
   const W = KONFIG.JUMLAH_WARNA;
-  const n = cfg.barisAkhir - cfg.barisAwal + 1;
-  const kolStok = k => 4 + 3 * k;
-  const kolValue = 4 + 3 * W;
-  const totalKolom = kolValue + GRUP_VALUE.length;   // 4 grup + Total Value
-  const barisDataAkhir = KONFIG.BARIS_DATA + n - 1;
-  const barisTotal = barisDataAkhir + 2;
-  const barisMutasi = barisTotal + 1;
-
+  const barisAkhir = cariBarisAkhir_(src, cfg);
+  const n = barisAkhir - cfg.barisAwal + 1;
   const namaWarna = src.getRange(2, 4, 1, 2 * W).getValues()[0]
     .filter((_, i) => i % 2 === 0).map(v => String(v).trim());
+  const labelValue = src.getRange(3, 4 + 2 * W, 1, GRUP_VALUE.length + 1).getValues()[0]
+    .map((v, i) => String(v).trim() || (i < GRUP_VALUE.length ? GRUP_VALUE[i].nama : 'Total Value'));
   const lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
   const fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
@@ -225,20 +240,51 @@ function migrasi_(cfg) {
       }
     }
   });
-  let tanya = 'Sheet baru "' + cfg.tujuan + '" akan dibuat dari "' + cfg.sumber + '" baris ' +
-    cfg.barisAwal + '–' + cfg.barisAkhir + ' (' + n + ' produk).\n' +
-    'Sheet lama TIDAK diubah.\n\nSTOK awal = angka kolom IN sekarang.';
+  let tanya = 'Produk "' + cfg.nama + '" baris ' + cfg.barisAwal + '–' + barisAkhir + ' (' + n + ' produk) ' +
+    'dipindah ke format STOK / IN / OUT.\n\n' +
+    '• Sheet lama diganti nama jadi "' + cfg.arsip + '" (isinya tidak diubah, termasuk bagian di bawah baris ' +
+    barisAkhir + ').\n• Sheet baru bernama "' + cfg.nama + '".\n• STOK awal = angka kolom IN sekarang.';
   if (outTerisi.length) {
     tanya += '\n\nPERHATIAN: ' + outTerisi.length + ' sel OUT masih terisi. Sistem menganggap IN sudah dikurangi OUT ' +
       '(sesuai alur lama). Kalau belum, batalkan dan rapikan dulu.\n' +
       outTerisi.slice(0, 8).join('\n') + (outTerisi.length > 8 ? '\n…' : '');
   }
   tanya += '\n\nLanjutkan?';
-  if (ui.alert('Migrasi sistem stok', tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  if (ui.alert('Migrasi ' + cfg.nama, tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
 
   const peringatan = [];
   siapkanLog_(ss);
-  const sh = ss.insertSheet(cfg.tujuan, src.getIndex());
+  src.setName(cfg.arsip);
+  let sh = null;
+  try {
+    sh = ss.insertSheet(cfg.nama, src.getIndex() - 1);
+    bangunSheet_(sh, cfg, { n, namaWarna, labelValue, lama, fLama, peringatan });
+  } catch (err) {
+    if (sh) ss.deleteSheet(sh);
+    src.setName(cfg.nama);
+    ui.alert('Migrasi GAGAL, sheet lama dikembalikan seperti semula.\n\n' + err.message);
+    return;
+  }
+
+  let selesai = 'Sheet "' + cfg.nama + '" siap: ' + n + ' produk. Sheet lama: "' + cfg.arsip + '".' +
+    '\n\nLangkah berikutnya: menu 📦 Sistem Stok → 2. Aktifkan input otomatis (cukup sekali untuk semua sheet).';
+  if (peringatan.length) {
+    selesai += '\n\nCatatan (' + peringatan.length + '):\n' + peringatan.slice(0, 20).join('\n') +
+      (peringatan.length > 20 ? '\n…' : '');
+  }
+  console.log(selesai);
+  ui.alert('Migrasi selesai', selesai, ui.ButtonSet.OK);
+}
+
+function bangunSheet_(sh, cfg, d) {
+  const W = KONFIG.JUMLAH_WARNA;
+  const n = d.n;
+  const kolStok = k => 4 + 3 * k;
+  const kolValue = 4 + 3 * W;
+  const totalKolom = kolValue + GRUP_VALUE.length;   // 4 grup + Total Value
+  const barisDataAkhir = KONFIG.BARIS_DATA + n - 1;
+  const barisTotal = barisDataAkhir + 2;
+  const barisMutasi = barisTotal + 1;
   pastikanUkuran_(sh, barisMutasi, totalKolom);
 
   // Header
@@ -254,21 +300,19 @@ function migrasi_(cfg) {
   sh.getRange(1, kolValue, 2, totalKolom - kolValue + 1).merge();
   const label3 = [];
   for (let k = 0; k < W; k++) {
-    sh.getRange(2, kolStok(k)).setValue(namaWarna[k]);
+    sh.getRange(2, kolStok(k)).setValue(d.namaWarna[k]);
     sh.getRange(2, kolStok(k), 1, 3).merge();
     label3.push('STOK', 'IN', 'OUT');
   }
-  GRUP_VALUE.forEach(g => label3.push(g.nama));
-  label3.push('Total Value');
-  sh.getRange(3, 4, 1, label3.length).setValues([label3]);
+  sh.getRange(3, 4, 1, label3.length + d.labelValue.length).setValues([label3.concat(d.labelValue)]);
 
   // Data
-  const data = lama.map((row, i) => {
+  const data = d.lama.map((row, i) => {
     const out = [row[0], row[1], row[2]];
     for (let k = 0; k < W; k++) {
       const v = row[3 + 2 * k];
       if (v !== '' && typeof v !== 'number') {
-        peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + namaWarna[k] + ': IN bukan angka ("' + v + '"), dikosongkan.');
+        d.peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + d.namaWarna[k] + ': IN bukan angka ("' + v + '"), dikosongkan.');
       }
       out.push(typeof v === 'number' ? v : '', '', '');
     }
@@ -277,15 +321,25 @@ function migrasi_(cfg) {
   sh.getRange(KONFIG.BARIS_DATA, 1, n, 3 + 3 * W).setValues(data);
 
   // Value: harga per baris diambil dari formula lama, referensi diganti ke kolom STOK.
-  const fBaru = fLama.map((f, i) => {
+  const tanpaHarga = GRUP_VALUE.map(() => []);
+  const fBaru = d.fLama.map((f, i) => {
     const r = KONFIG.BARIS_DATA + i;
+    const rLama = cfg.barisAwal + i;
+    const produk = String(d.lama[i][1]).trim();
     const hasil = GRUP_VALUE.map((g, gi) => {
-      if (!f[gi]) return '';
+      if (!f[gi]) {
+        tanpaHarga[gi].push(rLama);
+        return '';
+      }
       const harga = hargaDariFormula_(f[gi]);
       if (harga === null) {
-        peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + String(lama[i][1]).trim() + ': formula ' + g.nama +
-          ' lama tidak wajar (' + f[gi] + '), value ' + g.nama + ' dikosongkan.');
+        d.peringatan.push('Baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama rusak (' + f[gi] +
+          '), dikosongkan. Isi harga manual.');
         return '';
+      }
+      if (!formulaLamaStandar_(f[gi], g.warna.map(k => 4 + 2 * k), rLama)) {
+        d.peringatan.push('Baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama tidak standar (' + f[gi] +
+          '). Dibuat ulang: semua warna ' + d.labelValue[gi] + ' baris ini × ' + harga + '. Cek.');
       }
       const refs = g.warna.map(k => huruf_(kolStok(k)) + r);
       return '=(' + refs.join('+') + ')*' + harga;
@@ -294,20 +348,24 @@ function migrasi_(cfg) {
     return hasil;
   });
   sh.getRange(KONFIG.BARIS_DATA, kolValue, n, GRUP_VALUE.length + 1).setFormulas(fBaru);
+  tanpaHarga.forEach((rows, gi) => {
+    if (rows.length) {
+      d.peringatan.push(d.labelValue[gi] + ': ' + rows.length + ' baris tanpa formula harga, value kosong' +
+        (rows.length <= 15 ? ' (baris ' + rows.join(', ') + ')' : '') + '.');
+    }
+  });
 
   // Total + mutasi hari ini
   const akhirStok = huruf_(kolValue - 1);
   const q = "'" + KONFIG.SHEET_LOG + "'!";
-  const fTotal = [];
-  const fMutasi = [];
-  fTotal.push('=SUMIF($D$3:$' + akhirStok + '$3,"STOK",D' + barisTotal + ':' + akhirStok + barisTotal + ')');
-  fMutasi.push('');
+  const fTotal = ['=SUMIF($D$3:$' + akhirStok + '$3,"STOK",D' + barisTotal + ':' + akhirStok + barisTotal + ')'];
+  const fMutasi = [''];
   for (let k = 0; k < W; k++) {
     const hs = huruf_(kolStok(k));
     fTotal.push('=SUM(' + hs + KONFIG.BARIS_DATA + ':' + hs + barisDataAkhir + ')', '', '');
     fMutasi.push('');
     ['IN', 'OUT'].forEach(jenis => {
-      fMutasi.push('=SUMIFS(' + q + '$H:$H,' + q + '$B:$B,"' + cfg.tujuan + '",' + q + '$F:$F,' + hs + '$2,' +
+      fMutasi.push('=SUMIFS(' + q + '$H:$H,' + q + '$B:$B,"' + cfg.nama + '",' + q + '$F:$F,' + hs + '$2,' +
         q + '$G:$G,"' + jenis + '",' + q + '$A:$A,">="&TODAY(),' + q + '$A:$A,"<"&(TODAY()+1))');
     });
   }
@@ -345,13 +403,6 @@ function migrasi_(cfg) {
   sh.setColumnWidths(kolValue, totalKolom - kolValue + 1, 110);
   sh.setFrozenRows(3);
   sh.setFrozenColumns(2);
-
-  let selesai = 'Sheet "' + cfg.tujuan + '" dibuat: ' + n + ' produk.\n\nLangkah berikutnya: menu 📦 Sistem Stok → 2. Aktifkan input otomatis.';
-  if (peringatan.length) {
-    selesai += '\n\nCatatan (' + peringatan.length + '):\n' + peringatan.slice(0, 12).join('\n') +
-      (peringatan.length > 12 ? '\n…' : '');
-  }
-  ui.alert('Migrasi selesai', selesai, ui.ButtonSet.OK);
 }
 
 // ---------------------------------------------------------------- trigger & proteksi
@@ -399,10 +450,14 @@ function kunciKolomStok() {
   const hasil = [];
 
   KONFIG.SISTEM.forEach(cfg => {
-    const sh = ss.getSheetByName(cfg.tujuan);
+    const sh = ss.getSheetByName(cfg.nama);
     if (!sh) return;
-    hapusProteksiLama_(sh);
     const peta = bacaPeta_(sh);
+    if (!Object.keys(peta.kolom).length) {
+      hasil.push(cfg.nama + ': belum dimigrasi, dilewati');
+      return;
+    }
+    hapusProteksiLama_(sh);
     const bebas = [];
     Object.keys(peta.kolom).forEach(c => {
       if (peta.kolom[c].jenis !== 'STOK') {
@@ -412,7 +467,7 @@ function kunciKolomStok() {
     const p = sh.protect().setDescription(KONFIG.DESKRIPSI_PROTEKSI);
     p.setUnprotectedRanges(bebas);
     batasiKePemilik_(p, me);
-    hasil.push(cfg.tujuan + ': dikunci, ' + bebas.length + ' kolom IN/OUT tetap bisa diisi');
+    hasil.push(cfg.nama + ': dikunci, ' + bebas.length + ' kolom IN/OUT tetap bisa diisi');
   });
 
   const log = ss.getSheetByName(KONFIG.SHEET_LOG);
@@ -428,7 +483,11 @@ function cekStatus() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const t = ScriptApp.getProjectTriggers().filter(x => x.getHandlerFunction() === 'prosesInputStok').length;
   const baris = ['Trigger aktif (akun ini): ' + t + (t > 1 ? '  ← lebih dari 1, hapus lewat menu Matikan lalu aktifkan lagi' : '')];
-  KONFIG.SISTEM.forEach(cfg => baris.push('Sheet "' + cfg.tujuan + '": ' + (ss.getSheetByName(cfg.tujuan) ? 'ada' : 'BELUM ada')));
+  KONFIG.SISTEM.forEach(cfg => {
+    const sh = ss.getSheetByName(cfg.nama);
+    const status = !sh ? 'TIDAK ADA' : Object.keys(bacaPeta_(sh).kolom).length ? 'format STOK/IN/OUT (aktif)' : 'format lama (belum dimigrasi)';
+    baris.push('"' + cfg.nama + '": ' + status);
+  });
   const log = ss.getSheetByName(KONFIG.SHEET_LOG);
   baris.push('Log: ' + (log ? Math.max(log.getLastRow() - 1, 0) + ' baris mutasi' : 'BELUM ada'));
   SpreadsheetApp.getUi().alert(baris.join('\n'));
@@ -541,6 +600,32 @@ function aturanAngka_(sel, bolehNol) {
     .build();
 }
 
+/** Baris produk terakhir = baris berisi terakhir sebelum label "OUT"/"IN" di kolom B. */
+function cariBarisAkhir_(src, cfg) {
+  const last = src.getLastRow();
+  if (last < cfg.barisAwal) return cfg.barisAkhir;
+  const b = src.getRange(cfg.barisAwal, 1, last - cfg.barisAwal + 1, 2).getValues();
+  for (let i = 0; i < b.length; i++) {
+    const label = String(b[i][1]).trim().toUpperCase();
+    if (label === 'OUT' || label === 'IN') {
+      let j = i - 1;
+      while (j >= 0 && String(b[j][0]).trim() === '' && String(b[j][1]).trim() === '') j--;
+      return cfg.barisAwal + j;
+    }
+  }
+  return cfg.barisAkhir;
+}
+
+/** True kalau formula lama merujuk persis kolom grup (format lama: IN warna k di kolom 4+2k) di barisnya sendiri. */
+function formulaLamaStandar_(f, kolomHarap, baris) {
+  const kiri = String(f).replace(/\*[^*]*$/, '');
+  const refs = [];
+  const re = /([A-Z]+)(\d+)/g;
+  let m;
+  while ((m = re.exec(kiri))) refs.push([kolomAngka_(m[1]), Number(m[2])]);
+  return refs.length === kolomHarap.length && refs.every((x, i) => x[0] === kolomHarap[i] && x[1] === baris);
+}
+
 /** Harga dari formula lama, mis. "=(D4+F4+H4+J4+L4)*281000" → 281000. */
 function hargaDariFormula_(f) {
   const m = String(f).match(/\*\s*\(?\s*(\d+(?:\.\d+)?)\s*\)?\s*$/);
@@ -569,6 +654,12 @@ function batasiKePemilik_(p, me) {
   p.addEditor(me);
   p.removeEditors(p.getEditors());
   if (p.canDomainEdit()) p.setDomainEdit(false);
+}
+
+function kolomAngka_(h) {
+  let n = 0;
+  for (let i = 0; i < h.length; i++) n = n * 26 + h.charCodeAt(i) - 64;
+  return n;
 }
 
 function huruf_(c) {

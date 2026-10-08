@@ -14,6 +14,7 @@ class Sheet {
   cell(r, c) { const k = r + ',' + c; if (!this.cells.has(k)) this.cells.set(k, new Cell()); return this.cells.get(k); }
   peek(r, c) { return this.cells.get(r + ',' + c); }
   getName() { return this.name; }
+  setName(n) { if (this.ss.getSheetByName(n)) throw new Error('nama sheet sudah dipakai ' + n); this.name = n; return this; }
   getIndex() { return this.ss.sheets.indexOf(this) + 1; }
   getRange(a, b, c, d) {
     if (typeof a === 'string') {
@@ -93,6 +94,7 @@ class Spreadsheet {
     if (index === undefined) this.sheets.push(s); else this.sheets.splice(index, 0, s);
     return s;
   }
+  deleteSheet(s) { this.sheets.splice(this.sheets.indexOf(s), 1); }
   toast(msg, title) { this.toasts.push(title + ': ' + msg); }
   getOwner() { return { getEmail: () => 'owner@x' }; }
 }

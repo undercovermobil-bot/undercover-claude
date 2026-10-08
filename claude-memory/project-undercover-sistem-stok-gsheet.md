@@ -11,22 +11,24 @@ Beda dari [[project-undercover-stock-sync-status]] (sync angka stok ke listing m
 ## Masalah awal (dari user)
 Sheet "Stok Cover UC": tiap warna 2 kolom IN/OUT. **IN = stok tersedia** (diedit manual saat barang masuk). OUT ditulis saat barang keluar, lalu IN dikurangi manual, OUT dihapus akhir hari → rawan human error. Produk baris 4–196 (193 produk), total di 198–199. Section reseller ASTA mulai baris 201 (di luar scope).
 
-## Solusi yang dibuat (2026-10-08)
-`sistem-stok-gsheet/Kode.gs` + `PANDUAN.md` + `uji/` (mock SpreadsheetApp Node).
+## Solusi yang dibuat (2026-10-08, revisi sama hari)
+`sistem-stok-gsheet/Kode.gs` + `PANDUAN.md` + `uji/` (mock SpreadsheetApp Node, fixture dari `uji/ekstrak.py`, tidak di-commit).
 - Formula murni tidak bisa (STOK=STOK+IN melingkar) → **Apps Script, trigger installable onEdit** `prosesInputStok` (sengaja BUKAN `onEdit` supaya tidak dobel).
-- Menu "📦 Sistem Stok": 1) migrasi → sheet baru **"Stok UC Sistem"** (STOK|IN|OUT per 16 warna, D..AY; Value AZ..BD; TOTAL STOK baris 198; MASUK/KELUAR HARI INI baris 199 via SUMIFS ke Log) — sheet lama tidak diubah; 2) pasang trigger; 3) kunci kolom STOK (hanya IN/OUT bebas).
-- Ketik IN/OUT + Enter → STOK berubah, sel dikosongkan, baris masuk sheet **"Log Stok"**. OUT > stok ditolak (sel merah + note). Edit langsung STOK = log `KOREKSI`.
-- Nilai dibaca ulang setelah LockService → trigger ganda tidak menghitung dobel.
-- Uji: 82/82 lulus di mock; formula hasil migrasi dihitung ulang LibreOffice, total unit 1.161 & value per baris identik dgn sheet lama.
+- **Berlaku untuk "Stok Cover UC" (produk 4–196) dan "Stok Cover STP" (produk 4–107, 104 produk).** Batas baris dideteksi otomatis (baris sebelum label OUT/IN di kolom B).
+- Migrasi (menu 1a/1b): sheet lama di-rename jadi **"Stok Cover UC (lama)" / "Stok Cover STP (lama)"** (isi utuh, termasuk reseller ASTA/ROBY baris 201+), sheet baru memakai **nama asli** di posisi tab yang sama — permintaan user: tetap pakai nama "Stok Cover UC/STP". Rollback otomatis kalau error.
+- Layout baru: STOK|IN|OUT per 16 warna (D..AY; STOK warna k = kolom 4+3k), Value AZ..BD (label dari header lama: UC Premium, STP Transparan), TOTAL STOK & MASUK/KELUAR HARI INI (SUMIFS ke "Log Stok") di bawah produk.
+- Ketik IN/OUT + Enter → STOK berubah, sel dikosongkan, tercatat di **"Log Stok"**. OUT > stok ditolak. Edit langsung STOK = log `KOREKSI`. Nilai dibaca ulang setelah LockService → trigger ganda tidak dobel.
+- Uji: 117/117 lulus; LibreOffice recalc: UC 1.161 unit & value identik; STP 246 unit, value beda hanya di baris yg formula lamanya salah.
+- User akan pakai Google Sheet → disarankan pakai GSheet yang ada (bukan upload ulang xlsx). Kalau upload, wajib "Simpan sebagai Google Spreadsheet" (mode Office tidak bisa Apps Script).
+
+## PENTING untuk sub-proyek Stock Sync ([[project-undercover-stock-sync-status]])
+Setelah user migrasi, Stock_Opname yang diunduh punya layout BARU: kolom IN lama (4+2k) TIDAK berlaku lagi. Stok warna k ada di kolom **4+3k** (mis. Abu-abu k=0 → D, Elite Abu k=5 → S, Epic Abu k=8 → AB, Warior Abu k=11 → AK). Cek dulu baris 3 (STOK/IN/OUT) sebelum membaca. Data lama ada di sheet "(lama)".
 
 ## Temuan data (dilaporkan ke user, belum dikonfirmasi)
-- Baris 40 & 41 formula Value Premium rusak (`=AF40*AM4441128`).
-- 14 baris tanpa formula Value: 50,58,68,69,70,82,83,94,118,140,190,191,192,194.
-- File unduhan punya 46 sel OUT masih terisi → migrasi sebaiknya akhir hari.
-- Baris 19 "Toyota Swift" (SKU SZK-SWF) kemungkinan typo "Suzuki Swift".
+UC: baris 40 & 41 formula Value Premium rusak (`=AF40*AM4441128`); 14 baris tanpa formula Value (50,58,68,69,70,82,83,94,118,140,190,191,192,194); 46 sel OUT masih terisi; baris 19 "Toyota Swift" (SKU SZK-SWF) kemungkinan typo.
+STP: total lama cuma SUM s/d baris 104 → X-Over/Soluna/C Class (3 unit) tidak ikut (246 vs 243); baris 5,6,7,8,11 formula Strip tanpa Elite Abu & Warior Abu; baris 10 Innova merujuk L9; kolom Exclusive tanpa formula harga di semua baris.
 
 ## Belum diverifikasi
 - Trigger dari aplikasi Sheets HP (tidak ada pernyataan resmi Google) — user diminta tes.
 - Status pemasangan di Sheet asli user: belum ada konfirmasi.
-- Sheet "Stok Cover STP" belum dibuat sistemnya. Beda dari UC: warna ke-15 "Transparan" (bukan Premium), produk baris 4–107 (105 produk), total lama cuma SUM s/d baris 104 → X-Over/Soluna/C Class (3 unit) tidak ikut total.
-- User (2026-10-08): ke depan hanya pakai "Stok Cover UC" + "Stok Cover STP", sheet lain tetap dibiarkan. Dicek: 0 formula lintas sheet di 11 sheet → aman.
+- File unduhan 2026-10-08: 11 sheet, 0 formula lintas sheet → sheet lain aman dibiarkan.
