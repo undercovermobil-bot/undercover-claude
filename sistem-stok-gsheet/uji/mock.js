@@ -112,7 +112,7 @@ function buatKonteks(ss, opsi = {}) {
     setHelpText(h) { o.help = h; return b; }, build() { return o; } }; return b; };
   const ui = {
     ButtonSet: { YES_NO: 'YES_NO', OK: 'OK' }, Button: { YES: 'YES', NO: 'NO' },
-    alert(...a) { alerts.push(a.filter(x => typeof x === 'string' && !['YES_NO', 'OK'].includes(x)).join(' | ')); return opsi.jawab || 'YES'; },
+    alert(...a) { alerts.push(a.filter(x => typeof x === 'string' && !['YES_NO', 'OK'].includes(x)).join(' | ')); if (opsi.saatAlert) opsi.saatAlert(a); return opsi.jawab || 'YES'; },
     createMenu() { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; },
   };
   const ctx = {

@@ -40,6 +40,11 @@ lamaUC.getRange(4, 5).setValue(3);
 ctx.__alerts.length = 0; ctx.kunciKolomStok();
 cek(/belum dimigrasi/.test(ctx.__alerts[0]) && lamaUC.protections.length === 0, 'kunci sebelum migrasi dilewati');
 
+// ---------- dialog migrasi menyebut perubahan zona waktu (file belum WIB)
+const bz = siapkan();
+bz.ctx.migrasiStokUC();
+cek(/Zona waktu file diubah dari America\/Los_Angeles ke Asia\/Jakarta/.test(bz.ctx.__alerts[0]) && bz.ss.getSpreadsheetTimeZone() === 'Asia/Jakarta', 'dialog menyebut perubahan zona');
+
 // ---------- migrasi dibatalkan user
 const b0 = siapkan({ jawab: 'NO' });
 b0.ctx.migrasiStokUC();
@@ -68,7 +73,7 @@ cek(b1.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Re
 // ---------- migrasi UC & STP
 ctx.__alerts.length = 0;
 ctx.migrasiStokUC();
-cek(/Zona waktu file diubah dari America\/Los_Angeles ke Asia\/Jakarta/.test(ctx.__alerts[0]), 'dialog menyebut perubahan zona');
+
 console.log('ALERT UC:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
 ctx.__alerts.length = 0;
 ctx.migrasiStokSTP();
@@ -103,7 +108,7 @@ function cekStruktur(nama, lama, akhir, labelPrem, peta) {
   }
   cek(selisih === 0 && unitLama === unitBaru, `${nama} data tersalin persis (selisih ${selisih}, unit ${unitLama}/${unitBaru})`);
   cek(v(akhir + 1, 2) === '' && v(akhir + 2, 2) === 'TOTAL STOK' && v(akhir + 3, 2) === 'MASUK / KELUAR HARI INI', nama + ' posisi total');
-  cek(v(akhir + 2, 4) === `=SUM(D4:D${akhir})`, nama + ' total STOK: ' + v(akhir + 2, 4));
+  cek(v(akhir + 2, 4) === `=SUM(D4:D${akhir + 1})`, nama + ' total STOK: ' + v(akhir + 2, 4));
   cek(v(akhir + 3, 5).includes(`"${nama}"`), nama + ' mutasi merujuk nama sheet');
   console.log(`${nama}: produk baris 4-${akhir}, ${Wb} warna, total unit ${unitBaru}`);
   return { sh, v, kolValue };
@@ -216,6 +221,44 @@ const arsip = ss.getSheetByName('Stok Cover UC (lama)');
 arsip.getRange(4, 5).setValue(1); ctx.prosesInputStok({ range: arsip.getRange(4, 5), source: ss });
 cek(nLog() === n1 && arsip.peek(4, 4).v === 39, 'sheet arsip diabaikan');
 
+// ---------- hasil review: zona waktu dipaksa saat input diproses
+ss.tz = 'America/Los_Angeles';
+const stokZona = uv(4, D);
+edit(U, 4, E, 1);
+cek(ss.getSpreadsheetTimeZone() === 'Asia/Jakarta' && uv(4, D) === stokZona + 1, 'zona file dikembalikan ke WIB saat input diproses');
+edit(U, 4, F, 1);
+
+// ---------- hasil review: tanggal/angka di luar batas ditolak
+edit(U, 5, E, 46024);   // "1/2" yang terbaca sebagai tanggal
+cek(uv(5, D) === 26 && /1–9999/.test(U.peek(5, E).note) && U.peek(5, E).bg === '#e06666', 'serial tanggal ditolak (> MAKS_QTY)');
+edit(U, 5, E, '');
+cek(U.peek(5, E).bg === null, 'reset sel setelah angka ditolak');
+const dvAkhir = U.peek(5, E).dv;
+cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.peek(4, E).dv.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))', 'validasi IN memuat batas atas: ' + U.peek(4, E).dv.f);
+
+// ---------- hasil review: ketikan susulan di sel yang sama tidak terhapus
+{
+  const Rg = Object.getPrototypeOf(U.getRange(1, 1));
+  const asli = Rg.getValues;
+  let sudah = false;
+  Rg.getValues = function () {
+    const out = asli.call(this);
+    if (!sudah && this.sh === U && this.r === 4 && this.c === 1 && this.nr === 1 && this.nc >= 40) {
+      sudah = true;                                   // pembacaan blok awal oleh trigger
+      U.getRange(4, E).setValue(5);                   // staf mengetik ulang 5 sebelum trigger selesai
+    }
+    return out;
+  };
+  const stokAwal = uv(4, D);
+  U.getRange(4, E).setValue(50);
+  ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });
+  Rg.getValues = asli;
+  cek(uv(4, D) === stokAwal + 50 && uv(4, E) === 5, 'ketikan susulan tidak terhapus: stok ' + uv(4, D) + ', sel IN ' + uv(4, E));
+  ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });   // eksekusi berikutnya memproses ketikan baru
+  cek(uv(4, D) === stokAwal + 55 && uv(4, E) === '', 'ketikan susulan diproses eksekusi berikutnya: ' + uv(4, D));
+  edit(U, 4, F, 55);
+}
+
 // lock gagal
 const b2 = siapkan({ lockGagal: true });
 b2.ctx.migrasiStokUC();
@@ -223,6 +266,20 @@ const sh2 = b2.ss.getSheetByName('Stok Cover UC');
 sh2.getRange(4, E).setValue(5);
 b2.ctx.prosesInputStok({ range: sh2.getRange(4, E, 1, 2), source: b2.ss });
 cek(sh2.peek(4, D).v === 39 && /sibuk/.test(sh2.peek(4, E).note) && !sh2.peek(4, F).note, 'lock gagal: input tetap, ditandai');
+sh2.getRange(4, D).setValue(77);
+b2.ctx.prosesInputStok({ range: sh2.getRange(4, D), source: b2.ss });
+cek(sh2.peek(4, D).v === 77 && /belum tercatat di Log/.test(sh2.peek(4, D).note), 'lock gagal: koreksi STOK ditandai');
+
+// ---------- hasil review: warnaTambahan berantai + data terbaru setelah dialog
+const b5 = siapkan();
+b5.ctx.__KONFIG.SISTEM[1].warnaTambahan = [{ nama: 'Orange', setelah: 'Hijau Army' }, { nama: 'Silver', setelah: 'Orange' }, { nama: 'Pink', setelah: 'Hijau Army' }];
+b5.ctx.migrasiStokSTP();
+const s5 = b5.ss.getSheetByName('Stok Cover STP');
+const namaB5 = []; for (let c = 4; c <= 4 + 3 * 19; c += 3) namaB5.push(s5.peek(2, c) ? s5.peek(2, c).v : '');
+cek(namaB5.slice(4, 10).join('|') === 'Hijau Army|Orange|Silver|Pink|Elite Abu|Elite Biru', 'warna berantai & urutan config: ' + namaB5.slice(0, 12).join('|'));
+const b6 = siapkan({ saatAlert: a => { if (/Migrasi Stok Cover UC/.test(String(a[0])) ) b6.ss.getSheetByName('Stok Cover UC').getRange(10, 4).setValue(17); } });
+b6.ctx.migrasiStokUC();
+cek(b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v === 17, 'data diambil ulang setelah dialog: ' + b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v);
 
 // kunci
 ctx.__alerts.length = 0; ctx.kunciKolomStok(); ctx.kunciKolomStok();

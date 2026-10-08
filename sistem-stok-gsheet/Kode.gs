@@ -37,6 +37,7 @@ const KONFIG = {
   LABEL_MUTASI: 'MASUK / KELUAR HARI INI',
   ZONA_WAKTU: 'Asia/Jakarta',   // zona waktu file + jam di Log Stok (WIB)
   IZINKAN_STOK_MINUS: false,
+  MAKS_QTY: 9999,               // batas IN/OUT/STOK per sel; sekaligus menolak tanggal yang terketik ("1/2" = 46024)
   WARNA_SEL: { ERROR: '#e06666', HEADER: '#cfe2f3', BANNER_BG: '#00ffff', BANNER_FG: '#ff0000' },
   // Warna header & kolom STOK per warna cover, dicocokkan dari nama warna (huruf kecil, mengandung `kunci`).
   // Yang cocok pertama dipakai. Kolom IN / OUT sengaja tanpa warna. Nilai bg = sama dengan sheet asli.
@@ -116,8 +117,10 @@ function prosesInputStok(e) {
     for (let r = barisAwal; r <= barisAkhir; r++) {
       for (let c = c0; c <= kolomAkhir; c++) {
         const info = peta.kolom[c];
-        if (info && info.jenis !== 'STOK' && isi[r - barisAwal][c - c0] !== '') {
-          tandaiError_(sheet.getRange(r, c), 'Sistem sibuk, belum diproses. Hapus lalu ketik ulang.');
+        if (info && isi[r - barisAwal][c - c0] !== '') {
+          tandaiError_(sheet.getRange(r, c), info.jenis === 'STOK'
+            ? 'Sistem sibuk: koreksi STOK ini belum tercatat di Log. Ketik ulang angkanya.'
+            : 'Sistem sibuk, belum diproses. Hapus lalu ketik ulang.');
         }
       }
     }
@@ -126,12 +129,15 @@ function prosesInputStok(e) {
 
   try {
     const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+    // Rekap "hari ini" memakai TODAY() menurut zona file, jam Log memakai WIB: samakan.
+    if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
     const blok = sheet.getRange(barisAwal, 1, barisAkhir - barisAwal + 1, peta.kolomTerakhir).getValues();
     const satuSel = r0 === r1 && c0 === c1;
     const user = emailUser_(e);
     const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script
     const log = [];
     const pesan = [];
+    const selesai = [];   // sel IN/OUT yang sudah diproses, dikosongkan setelah dicek ulang
 
     for (let r = barisAwal; r <= barisAkhir; r++) {
       const baris = blok[r - barisAwal];
@@ -169,7 +175,7 @@ function prosesInputStok(e) {
           continue;
         }
         if (isNaN(qty)) {
-          tandaiError_(sel, 'Isi angka bulat lebih dari 0.');
+          tandaiError_(sel, 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + '.');
           continue;
         }
         const sebelum = angkaStok_(baris[info.kolomStok - 1]);
@@ -190,14 +196,24 @@ function prosesInputStok(e) {
 
         sheet.getRange(r, info.kolomStok).setValue(sesudah);
         baris[info.kolomStok - 1] = sesudah;
-        sel.clearContent();
+        selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna });
         baris[c - 1] = '';
-        resetSel_(sel, info.jenis, info.warna);
         log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qty, sebelum, sesudah, user, '']);
         pesan.push(produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
       }
     }
 
+    if (selesai.length) {
+      // Staf bisa mengetik ulang di sel yang sama selagi script berjalan: sel yang isinya sudah berubah
+      // jangan dihapus; ketikan baru itu diproses eksekusi berikutnya.
+      const terkini = sheet.getRange(barisAwal, c0, barisAkhir - barisAwal + 1, kolomAkhir - c0 + 1).getValues();
+      selesai.forEach(x => {
+        if (terkini[x.r - barisAwal][x.c - c0] === x.nilai) {
+          x.sel.clearContent();
+          resetSel_(x.sel, x.jenis, x.warna);
+        }
+      });
+    }
     if (log.length) tulisLog_(ss, log);
     SpreadsheetApp.flush();   // wajib sebelum lock dilepas, supaya eksekusi berikutnya baca nilai terbaru
     if (pesan.length) {
@@ -254,8 +270,8 @@ function migrasi_(cfg) {
     ui.alert(err.message);
     return;
   }
-  const lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
-  const fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
+  let lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
+  let fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
   // OUT yang masih terisi: menurut alur lama, IN biasanya SUDAH dikurangi OUT.
   const outTerisi = [];
@@ -290,6 +306,9 @@ function migrasi_(cfg) {
   tanya += '\n\nLanjutkan?';
   if (ui.alert('Migrasi ' + cfg.nama, tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   if (zonaLama !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
+  // Dialog bisa terbuka lama; staf lain mungkin mengubah sheet lama. Pakai data terbaru.
+  lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
+  fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
   const peringatan = [];
   siapkanLog_(ss);
@@ -396,14 +415,15 @@ function bangunSheet_(sh, cfg, d) {
     }
   });
 
-  // Total + mutasi hari ini
+  // Total + mutasi hari ini. SUM sengaja sampai baris kosong di bawah produk: produk baru ditambah dengan
+  // "Insert row above" pada baris kosong itu, sehingga rentang SUM ikut melebar.
   const akhirStok = huruf_(kolValue - 1);
   const q = "'" + KONFIG.SHEET_LOG + "'!";
   const fTotal = ['=SUMIF($D$3:$' + akhirStok + '$3,"STOK",D' + barisTotal + ':' + akhirStok + barisTotal + ')'];
   const fMutasi = [''];
   for (let k = 0; k < W; k++) {
     const hs = huruf_(kolStok(k));
-    fTotal.push('=SUM(' + hs + KONFIG.BARIS_DATA + ':' + hs + barisDataAkhir + ')', '', '');
+    fTotal.push('=SUM(' + hs + KONFIG.BARIS_DATA + ':' + hs + (barisDataAkhir + 1) + ')', '', '');
     fMutasi.push('');
     ['IN', 'OUT'].forEach(jenis => {
       fMutasi.push('=SUMIFS(' + q + '$H:$H,' + q + '$B:$B,"' + cfg.nama + '",' + q + '$F:$F,' + hs + '$2,' +
@@ -412,7 +432,7 @@ function bangunSheet_(sh, cfg, d) {
   }
   for (let c = kolValue; c <= totalKolom; c++) {
     const h = huruf_(c);
-    fTotal.push('=SUM(' + h + KONFIG.BARIS_DATA + ':' + h + barisDataAkhir + ')');
+    fTotal.push('=SUM(' + h + KONFIG.BARIS_DATA + ':' + h + (barisDataAkhir + 1) + ')');
     fMutasi.push('');
   }
   sh.getRange(barisTotal, 2).setValue(KONFIG.LABEL_TOTAL);
@@ -438,6 +458,7 @@ function bangunSheet_(sh, cfg, d) {
     sh.getRange(KONFIG.BARIS_DATA, c + 1, n, 2).setDataValidation(aturanAngka_(huruf_(c + 1) + KONFIG.BARIS_DATA, false));
   }
   sh.getRange(KONFIG.BARIS_DATA, 4, barisMutasi - KONFIG.BARIS_DATA + 1, 3 * W).setHorizontalAlignment('center');
+  sh.getRange(KONFIG.BARIS_DATA, 4, n, 3 * W).setNumberFormat('0');   // angka bulat; cegah format tanggal menempel
   sh.getRange(KONFIG.BARIS_DATA, kolValue, barisMutasi - KONFIG.BARIS_DATA + 1, totalKolom - kolValue + 1)
     .setNumberFormat('#,##0');
   sh.getRange(barisTotal, 3).setNumberFormat('#,##0" unit"');
@@ -462,6 +483,7 @@ function aktifkanInputOtomatis() {
     return;
   }
   ScriptApp.newTrigger('prosesInputStok').forSpreadsheet(ss).onEdit().create();
+  if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
   let pesan = 'Input otomatis AKTIF.\nTrigger berjalan atas nama akun: ' + Session.getEffectiveUser().getEmail() +
     '\n\nCoba: ketik 1 di kolom IN salah satu produk lalu Enter. STOK harus bertambah 1 dan sel IN kosong lagi.';
   const pemilik = ss.getOwner();
@@ -595,7 +617,7 @@ function angkaInput_(v) {
     if (!/^\d+$/.test(s)) return NaN;
     v = Number(s);
   }
-  if (typeof v !== 'number' || !isFinite(v) || v <= 0 || Math.floor(v) !== v) return NaN;
+  if (typeof v !== 'number' || !isFinite(v) || v <= 0 || Math.floor(v) !== v || v > KONFIG.MAKS_QTY) return NaN;
   return v;
 }
 
@@ -633,7 +655,7 @@ function waktuSerial_(d) {
 /** Kembalikan sel ke tampilan normal: STOK = warna cover, IN/OUT = tanpa warna. */
 function resetSel_(sel, jenis, warna) {
   const w = jenis === 'STOK' ? warnaCover_(warna) : null;
-  sel.setBackground(w ? w.bg : null).setFontColor(w ? w.fg : null).setNote('');
+  sel.setBackground(w ? w.bg : null).setFontColor(w ? w.fg : null).setNumberFormat('0').setNote('');
 }
 
 /** Warna cover dari nama warna ("Elite Biru" -> biru), atau null kalau tidak dikenal. */
@@ -672,9 +694,9 @@ function pastikanUkuran_(sh, baris, kolom) {
 function aturanAngka_(sel, bolehNol) {
   const syarat = bolehNol ? sel + '>=0' : sel + '>0';
   return SpreadsheetApp.newDataValidation()
-    .requireFormulaSatisfied('=AND(ISNUMBER(' + sel + '),' + syarat + ',' + sel + '=INT(' + sel + '))')
+    .requireFormulaSatisfied('=AND(ISNUMBER(' + sel + '),' + syarat + ',' + sel + '<=' + KONFIG.MAKS_QTY + ',' + sel + '=INT(' + sel + '))')
     .setAllowInvalid(false)
-    .setHelpText(bolehNol ? 'STOK: angka bulat >= 0' : 'Isi angka bulat lebih dari 0 lalu Enter')
+    .setHelpText(bolehNol ? 'STOK: angka bulat 0–' + KONFIG.MAKS_QTY : 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + ' lalu Enter')
     .build();
 }
 
@@ -684,16 +706,26 @@ function aturanAngka_(sel, bolehNol) {
  */
 function susunWarna_(namaWarna, cfg) {
   const grupDari = k => GRUP_VALUE.findIndex(g => g.warna.indexOf(k) >= 0);
-  const tambahan = (cfg.warnaTambahan || []).filter(t => namaWarna.indexOf(t.nama) < 0);   // sudah ada → lewati
-  tambahan.forEach(t => {
-    if (namaWarna.indexOf(t.setelah) < 0) {
-      throw new Error('Warna tambahan "' + t.nama + '": warna "' + t.setelah + '" tidak ada di header "' + cfg.nama + '". Cek KONFIG.');
+  const daftar = namaWarna.map((nama, k) => ({ nama: nama, kSumber: k, gi: grupDari(k), setelah: null }));
+  const turunanDari = (x, induk) => {
+    let p = x.setelah;
+    for (let n = 0; p && n < 50; n++) {
+      if (p === induk) return true;
+      const y = daftar.find(z => z.nama === p);
+      p = y ? y.setelah : null;
     }
-  });
-  const daftar = [];
-  namaWarna.forEach((nama, k) => {
-    daftar.push({ nama: nama, kSumber: k, gi: grupDari(k) });
-    tambahan.filter(t => t.setelah === nama).forEach(t => daftar.push({ nama: t.nama, kSumber: null, gi: grupDari(k) }));
+    return false;
+  };
+  (cfg.warnaTambahan || []).forEach(t => {
+    if (daftar.some(x => x.nama === t.nama)) return;   // sudah ada → lewati
+    let i = daftar.findIndex(x => x.nama === t.setelah);   // boleh warna lama atau warna tambahan sebelumnya
+    if (i < 0) {
+      throw new Error('Warna tambahan "' + t.nama + '": warna "' + t.setelah + '" tidak ada di header "' + cfg.nama +
+        '" dan bukan warna tambahan sebelumnya. Cek KONFIG.');
+    }
+    // lewati warna tambahan lain yang menempel pada induk yang sama (atau turunannya): urutan config terjaga
+    while (i + 1 < daftar.length && daftar[i + 1].kSumber === null && turunanDari(daftar[i + 1], t.setelah)) i++;
+    daftar.splice(i + 1, 0, { nama: t.nama, kSumber: null, gi: daftar[i].gi, setelah: t.setelah });
   });
   return daftar;
 }
