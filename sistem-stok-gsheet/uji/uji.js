@@ -68,6 +68,7 @@ cek(b1.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Re
 // ---------- migrasi UC & STP
 ctx.__alerts.length = 0;
 ctx.migrasiStokUC();
+cek(/Zona waktu file diubah dari America\/Los_Angeles ke Asia\/Jakarta/.test(ctx.__alerts[0]), 'dialog menyebut perubahan zona');
 console.log('ALERT UC:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
 ctx.__alerts.length = 0;
 ctx.migrasiStokSTP();
@@ -143,13 +144,17 @@ edit(U, 4, E, 5);
 cek(uv(4, D) === 44 && uv(4, E) === '' && nLog() === 1, 'IN 5: ' + uv(4, D));
 const l1 = log().getRange(2, 1, 1, 12).getValues()[0];
 cek(l1[1] === 'Stok Cover UC' && l1[2] === 4 && l1[3] === 'Honda Brio' && l1[4] === 'HND-BRI-UA-R-G1' && l1[5] === 'Abu-abu' &&
-  l1[6] === 'IN' && l1[7] === 5 && l1[8] === 39 && l1[9] === 44 && Object.prototype.toString.call(l1[0]) === '[object Date]', 'isi log: ' + JSON.stringify(l1));
+  l1[6] === 'IN' && l1[7] === 5 && l1[8] === 39 && l1[9] === 44 && typeof l1[0] === 'number', 'isi log: ' + JSON.stringify(l1));
+// jam Log = jam WIB (UTC+7) sekarang, apa pun zona waktu file (mock: Los_Angeles)
+const wibSekarang = (Date.now() + 7 * 3600e3 - Date.UTC(1899, 11, 30)) / 86400000;
+cek(Math.abs(l1[0] - wibSekarang) < 2 / 1440, 'jam log WIB: ' + l1[0] + ' vs ' + wibSekarang);
+cek(ss.getSpreadsheetTimeZone() === 'Asia/Jakarta', 'zona waktu file diset WIB: ' + ss.getSpreadsheetTimeZone());
 edit(U, 4, I, 3); cek(uv(4, G) === 27 && uv(4, I) === '', 'OUT 3');
 ctx.prosesInputStok({ range: U.getRange(4, I), source: ss }); cek(uv(4, G) === 27 && nLog() === 2, 'trigger ganda tidak dobel');
 edit(U, 4, I, 100);
 cek(uv(4, G) === 27 && uv(4, I) === 100 && U.peek(4, I).bg === '#e06666' && /DITOLAK/.test(U.peek(4, I).note) && nLog() === 3, 'OUT berlebih ditolak');
 ctx.prosesInputStok({ range: U.getRange(4, I), source: ss }); cek(nLog() === 3, 'penolakan tidak dicatat dobel');
-edit(U, 4, I, ''); cek(U.peek(4, I).bg === '#f4cccc' && U.peek(4, I).note === '', 'hapus sel ditolak -> reset');
+edit(U, 4, I, ''); cek(U.peek(4, I).bg === null && U.peek(4, I).note === '', 'hapus sel ditolak -> reset ke tanpa warna');
 edit(U, 4, E, 'abc'); cek(uv(4, D) === 44 && /angka bulat/.test(U.peek(4, E).note), 'teks ditolak');
 edit(U, 4, E, 1.5); cek(uv(4, D) === 44 && U.peek(4, E).bg === '#e06666', 'desimal ditolak');
 edit(U, 4, E, -2); cek(uv(4, D) === 44, 'negatif ditolak');
@@ -159,6 +164,32 @@ paste(U, 7, D, [[10, 2, 1]]); cek(uv(7, D) === 11, 'paste STOK+IN+OUT');
 edit(U, 8, D, 20, { oldValue: '16' });
 const lk = log().getRange(log().getLastRow(), 7, 1, 4).getValues()[0];
 cek(lk[0] === 'KOREKSI' && lk[2] === 16 && lk[3] === 20, 'koreksi manual: ' + JSON.stringify(lk));
+// warna: header & STOK = warna cover, IN/OUT tanpa warna
+const bg = (sh, r, c) => { const x = sh.peek(r, c); return x ? x.bg : null; };
+const fc = (sh, r, c) => { const x = sh.peek(r, c); return x ? x.fc : null; };
+const WARNA = { 'Abu-abu': '#999999', 'Hitam': '#000000', 'Biru Benhur': '#0000ff', 'Merah': '#ff0000', 'Hijau Army': '#38761d',
+  'Orange': '#ff9900', 'Elite Abu': '#999999', 'Elite Biru': '#0000ff', 'Elite Merah': '#ff0000', 'Epic Abu': '#999999',
+  'Epic Biru': '#0000ff', 'Epic Merah': '#ff0000', 'Warior Abu': '#999999', 'Warior Biru': '#0000ff', 'Warior Merah': '#ff0000',
+  'Premium': '#efefef', 'Transparan': '#efefef', 'Exclusive': '#d9d9d9' };
+for (const [sh, akhir, Wb] of [[U, 196, 16], [S, 107, 17]]) {
+  let salah = 0, dicek = 0;
+  for (let i = 0; i < Wb; i++) {
+    const c = 4 + 3 * i, nama = sh.peek(2, c).v, exp = WARNA[nama];
+    if (!exp) { salah++; continue; }
+    for (const [r, k] of [[2, 0], [2, 1], [2, 2], [3, 0], [4, 0], [akhir, 0]]) { dicek++; if (bg(sh, r, c + k) !== exp) salah++; }
+    for (const r of [3, 4, 50, akhir]) for (const k of [1, 2]) { dicek++; if (bg(sh, r, c + k) !== null) salah++; }
+  }
+  cek(salah === 0, sh.name + ' warna cover header/STOK, IN/OUT tanpa warna (' + salah + ' salah dari ' + dicek + ')');
+}
+cek(fc(U, 4, 4 + 3) === '#ffffff' && bg(U, 4, 4 + 3) === '#000000' && fc(U, 4, 4) === '#000000', 'font putih di hitam, hitam di abu');
+cek(bg(U, 1, 4) === '#00ffff' && fc(U, 1, 4) === '#ff0000', 'banner D1 cyan teks merah');
+cek(bg(S, 4, 19) === '#ff9900' && S.peek(2, 19).v === 'Orange', 'STP Orange berwarna oranye');
+cek(bg(U, 4, 2) === null && bg(U, 4, 3) === null, 'nama produk & SKU tanpa warna');
+// STOK Hitam diketik huruf -> merah error, lalu angka valid -> kembali hitam
+U.getRange(4, 7).setValue('x'); ctx.prosesInputStok({ range: U.getRange(4, 7), source: ss });
+cek(bg(U, 4, 7) === '#e06666', 'STOK huruf -> error merah');
+U.getRange(4, 7).setValue(27); ctx.prosesInputStok({ range: U.getRange(4, 7), source: ss });
+cek(bg(U, 4, 7) === '#000000' && fc(U, 4, 7) === '#ffffff' && uv(4, 7) === 27, 'STOK valid -> warna cover kembali');
 const n0 = nLog();
 edit(U, 4, 52, 123); cek(nLog() === n0, 'kolom value diabaikan');
 edit(U, 198, E, 5); cek(nLog() === n0, 'baris total diabaikan'); U.getRange(198, E).setValue('');

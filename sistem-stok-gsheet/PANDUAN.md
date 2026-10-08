@@ -30,6 +30,23 @@ Baris bawah tabel:
 
 Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghitung dari kolom STOK.
 
+## Warna di sheet baru
+
+Mengikuti sheet asli: tiap warna cover diwarnai di **header** dan kolom **STOK**; kolom **IN** dan **OUT** tanpa warna.
+
+| Warna | Header & STOK |
+|---|---|
+| Abu-abu, Elite/Epic/Warior Abu | abu (#999999), teks hitam |
+| Hitam | hitam, teks putih |
+| Biru Benhur, Elite/Epic/Warior Biru | biru (#0000FF), teks putih |
+| Merah, Elite/Epic/Warior Merah | merah (#FF0000), teks putih |
+| Hijau Army | hijau tua (#38761D), teks putih |
+| Orange (STP) | oranye (#FF9900), teks hitam |
+| Premium / Transparan / Exclusive | abu muda |
+
+Nama produk dan Kode SKU sengaja **tanpa warna** (kuning/hijau di sheet lama ditambah sendiri). Banner "SELAIN ADMIN…" di baris 1 tetap cyan bertulisan merah.
+Cell yang ditolak (input salah / OUT melebihi stok) tetap merah muda sampai dihapus. Daftar warna ada di `KONFIG.PALET`; cocok berdasarkan kata di nama warna, jadi warna baru bernama "… Biru" otomatis biru.
+
 ## Warna Orange (Stok Cover STP)
 
 Orange = warna **Reguler** ke-6 Smartprotection (SKU `-R-…-ORG`). Sheet lama STP belum punya kolom Orange, jadi migrasi STP otomatis menambahkan blok **Orange: STOK | IN | OUT** tepat setelah Hijau Army:
@@ -92,7 +109,17 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 14. Ketik `999` di F4 → sel merah + catatan "DITOLAK", D4 tidak berubah. Hapus isi F4 → warna kembali normal.
 15. Stok Cover STP: coba kolom Orange (**T** = IN, **U** = OUT, **S** = STOK).
 16. Tes juga dari aplikasi Google Sheets di HP.
-17. (Disarankan, di file asli) **📦 Sistem Stok → 3. Kunci kolom STOK**: staf hanya bisa isi IN/OUT. Admin lain bisa ditambahkan di **Data → Protect sheets and ranges**.
+17. (Opsional) **📦 Sistem Stok → 3. Kunci kolom STOK**, lihat penjelasan di bawah. Tidak perlu saat trial sendirian.
+
+### Untuk apa "Kunci kolom STOK"?
+
+Tanpa kunci, semua editor bisa mengetik apa saja di sel mana pun, termasuk menimpa atau menghapus angka STOK, menghapus baris di Log Stok, atau merusak rumus Total/Value. Dengan kunci:
+- Staf **hanya** bisa mengisi kolom **IN** dan **OUT** (semua baris produk).
+- Kolom **STOK**, header, TOTAL, Value, nama produk, SKU, dan sheet **Log Stok** terkunci. Hanya pemilik (dan editor yang ditambahkan di **Data → Protect sheets and ranges**) yang bisa mengubahnya.
+- STOK tetap berubah saat staf mengisi IN/OUT, karena trigger berjalan sebagai pemilik file.
+- Efek samping: staf tidak bisa koreksi stok langsung (opname) dan tidak bisa menambah produk/baris. Itu dikerjakan pemilik.
+
+Kalau semua pengguna dipercaya dan Log cukup, boleh tidak dikunci. Untuk membuka kunci: **Data → Protect sheets and ranges** → hapus perlindungan bernama "Sistem stok: hanya IN/OUT yang boleh diisi".
 
 **Waktu migrasi terbaik di file asli: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
 
@@ -114,6 +141,7 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 ## Batasan yang perlu dites sendiri
 
 - **Aplikasi Sheets di HP**: dokumentasi Google tidak menyebut beda perilaku trigger di HP, tapi juga tidak menjamin. Tes langkah 12–14 dari HP sebelum dipakai staf.
+- **Jam di Log Stok** selalu WIB (angka jam ditulis script, tidak bergantung zona waktu file). Saat migrasi, script juga mengubah **zona waktu file** ke Asia/Jakarta kalau belum, supaya rekap "MASUK / KELUAR HARI INI" mengikuti tanggal WIB. Perubahan ini disebut di dialog sebelum klik **Yes**. File hasil konversi dari .xlsx bisa berzona waktu Pacific (UTC-7): jam Log tampil 14 jam lebih awal. Menu **Setel zona waktu file ke WIB** memperbaikinya tanpa migrasi ulang (baris Log lama tidak berubah; hapus kalau hanya data uji).
 - Kolom **User** di Log bisa kosong. Untuk akun Gmail biasa, Google sering tidak memberikan email editor ke script.
 - Kuota Google untuk trigger terbatas per hari. Satu input ±1 detik. Volume ratusan input per hari masih jauh di bawah batas.
 - Butuh koneksi internet saat input. Input saat offline belum tentu diproses. Sel IN/OUT yang tetap terisi = belum diproses: hapus, ketik ulang.
@@ -148,6 +176,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 130/130 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-08: 141/141 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.

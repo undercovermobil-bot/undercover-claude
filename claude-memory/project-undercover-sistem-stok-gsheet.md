@@ -22,6 +22,10 @@ Sheet "Stok Cover UC": tiap warna 2 kolom IN/OUT. **IN = stok tersedia** (diedit
 - Uji: 117/117 lulus; LibreOffice recalc: UC 1.161 unit & value identik; STP 246 unit, value beda hanya di baris yg formula lamanya salah.
 - Rencana user: **trial dulu** — upload xlsx unduhan → Simpan sebagai Google Spreadsheet (mode Office tidak bisa Apps Script) → pasang & tes → kalau sesuai baru pasang di Google Sheet asli.
 
+- **Warna (user 2026-10-08)**: header + kolom STOK diwarnai per warna cover seperti sheet asli (abu #999999, hitam, biru #0000FF, merah #FF0000, hijau #38761D, orange #FF9900, Premium/Transparan/Exclusive abu muda); IN/OUT tanpa warna; nama produk & SKU tanpa warna (user tambah sendiri). `KONFIG.PALET` cocok by kata di nama warna.
+- **Zona waktu**: bug nyata di trial user — jam Log tampil 21:12 padahal 11:12 WIB = file berzona Pacific (UTC-7, hasil konversi xlsx). Fix: jam Log ditulis sbg serial number WIB (`waktuSerial_`, Utilities.formatDate 'Asia/Jakarta') + migrasi set `setSpreadsheetTimeZone('Asia/Jakarta')` (disebut di dialog) + menu "Setel zona waktu file ke WIB". Rekap harian (SUMIFS ke TODAY()) bergantung zona waktu file.
+- Jelaskan ke user "Kunci kolom STOK" (menu 3): staf hanya isi IN/OUT; STOK/Log/Total/Value terkunci; trigger jalan sbg pemilik; opsional.
+
 ## PENTING untuk sub-proyek Stock Sync ([[project-undercover-stock-sync-status]])
 Setelah user migrasi, Stock_Opname yang diunduh punya layout BARU: kolom IN lama (4+2k) TIDAK berlaku lagi. Stok warna k ada di kolom **4+3k** (UC: Abu-abu k=0 → D, Elite Abu k=5 → S, Epic Abu k=8 → AB, Warior Abu k=11 → AK). **STP beda: ada Orange di k=5 (S), warna Strip bergeser +3 kolom.** Selalu baca nama warna baris 2 + label baris 3 (STOK/IN/OUT) sebelum membaca. Data lama ada di sheet "(lama)".
 

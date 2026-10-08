@@ -4,7 +4,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-class Cell { constructor() { this.v = ''; this.f = ''; this.note = ''; this.bg = null; this.dv = null; } }
+class Cell { constructor() { this.v = ''; this.f = ''; this.note = ''; this.bg = null; this.fc = null; this.dv = null; } }
 
 class Sheet {
   constructor(ss, name, rows = 1000, cols = 26) {
@@ -77,6 +77,7 @@ class Range {
   setNote(n) { return this.each(x => { x.note = n || ''; }); }
   getNote() { return this.sh.cell(this.r, this.c).note; }
   setBackground(b) { return this.each(x => { x.bg = b; }); }
+  setFontColor(c) { return this.each(x => { x.fc = c; }); }
   getBackground() { return this.sh.cell(this.r, this.c).bg; }
   setDataValidation(dv) { return this.each(x => { x.dv = dv; }); }
   merge() { this.sh.merges.push([this.r, this.c, this.nr, this.nc]); return this; }
@@ -86,7 +87,9 @@ class Range {
 }
 
 class Spreadsheet {
-  constructor() { this.sheets = []; this.toasts = []; }
+  constructor() { this.sheets = []; this.toasts = []; this.tz = 'America/Los_Angeles'; }
+  getSpreadsheetTimeZone() { return this.tz; }
+  setSpreadsheetTimeZone(z) { this.tz = z; }
   getSheetByName(n) { return this.sheets.find(s => s.name === n) || null; }
   insertSheet(name, index) {
     if (this.getSheetByName(name)) throw new Error('sheet sudah ada ' + name);
@@ -119,6 +122,14 @@ function buatKonteks(ss, opsi = {}) {
       newDataValidation: dvBuilder, ProtectionType: { SHEET: 'SHEET', RANGE: 'RANGE' },
     },
     LockService: { getDocumentLock: () => ({ tryLock: () => (opsi.lockGagal ? false : true), releaseLock() {} }) },
+    Utilities: {
+      formatDate(d, tz, fmt) {
+        const p = {};
+        new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+          .formatToParts(d).forEach(x => { p[x.type] = x.value; });
+        return fmt.replace('yyyy', p.year).replace('MM', p.month).replace('dd', p.day).replace('HH', p.hour).replace('mm', p.minute).replace('ss', p.second);
+      },
+    },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@x' }), getActiveUser: () => ({ getEmail: () => '' }) },
     ScriptApp: {
       getProjectTriggers: () => triggers.slice(),

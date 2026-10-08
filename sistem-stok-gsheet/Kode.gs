@@ -35,8 +35,22 @@ const KONFIG = {
   JUMLAH_WARNA: 16,         // jumlah warna di sheet LAMA (format IN/OUT)
   LABEL_TOTAL: 'TOTAL STOK',
   LABEL_MUTASI: 'MASUK / KELUAR HARI INI',
+  ZONA_WAKTU: 'Asia/Jakarta',   // zona waktu file + jam di Log Stok (WIB)
   IZINKAN_STOK_MINUS: false,
-  WARNA_SEL: { STOK: '#fff2cc', IN: '#d9ead3', OUT: '#f4cccc', ERROR: '#e06666', HEADER: '#cfe2f3' },
+  WARNA_SEL: { ERROR: '#e06666', HEADER: '#cfe2f3', BANNER_BG: '#00ffff', BANNER_FG: '#ff0000' },
+  // Warna header & kolom STOK per warna cover, dicocokkan dari nama warna (huruf kecil, mengandung `kunci`).
+  // Yang cocok pertama dipakai. Kolom IN / OUT sengaja tanpa warna. Nilai bg = sama dengan sheet asli.
+  PALET: [
+    { kunci: 'hitam', bg: '#000000', fg: '#ffffff' },
+    { kunci: 'biru', bg: '#0000ff', fg: '#ffffff' },
+    { kunci: 'merah', bg: '#ff0000', fg: '#ffffff' },
+    { kunci: 'hijau', bg: '#38761d', fg: '#ffffff' },
+    { kunci: 'orange', bg: '#ff9900', fg: '#000000' },
+    { kunci: 'abu', bg: '#999999', fg: '#000000' },
+    { kunci: 'exclusive', bg: '#d9d9d9', fg: '#000000' },
+    { kunci: 'premium', bg: '#efefef', fg: '#000000' },
+    { kunci: 'transparan', bg: '#efefef', fg: '#000000' },
+  ],
   DESKRIPSI_PROTEKSI: 'Sistem stok: hanya IN/OUT yang boleh diisi',
 };
 
@@ -62,6 +76,7 @@ function onOpen() {
     .addItem('3. Kunci kolom STOK (opsional, pemilik file)', 'kunciKolomStok')
     .addSeparator()
     .addItem('Cek status', 'cekStatus')
+    .addItem('Setel zona waktu file ke WIB', 'setelZonaWaktu')
     .addItem('Matikan input otomatis', 'matikanInputOtomatis')
     .addToUi();
 }
@@ -114,7 +129,7 @@ function prosesInputStok(e) {
     const blok = sheet.getRange(barisAwal, 1, barisAkhir - barisAwal + 1, peta.kolomTerakhir).getValues();
     const satuSel = r0 === r1 && c0 === c1;
     const user = emailUser_(e);
-    const waktu = new Date();
+    const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script
     const log = [];
     const pesan = [];
 
@@ -137,7 +152,7 @@ function prosesInputStok(e) {
             tandaiError_(sel, 'STOK harus angka bulat >= 0.');
             continue;
           }
-          resetSel_(sel, 'STOK');
+          resetSel_(sel, 'STOK', info.warna);
           const lama = satuSel ? (angkaStok_(e.oldValue === undefined ? '' : e.oldValue)) : '';
           log.push([waktu, namaSheet, r, produk, sku, info.warna, 'KOREKSI', '', lama === null ? '' : lama, baru, user,
             satuSel ? 'Edit langsung kolom STOK' : 'Edit banyak sel sekaligus, stok sebelum tidak terbaca']);
@@ -146,7 +161,7 @@ function prosesInputStok(e) {
 
         const qty = angkaInput_(nilai);
         if (qty === null) {               // sel dikosongkan
-          resetSel_(sel, info.jenis);
+          resetSel_(sel, info.jenis, info.warna);
           continue;
         }
         if (!produk) {
@@ -177,7 +192,7 @@ function prosesInputStok(e) {
         baris[info.kolomStok - 1] = sesudah;
         sel.clearContent();
         baris[c - 1] = '';
-        resetSel_(sel, info.jenis);
+        resetSel_(sel, info.jenis, info.warna);
         log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qty, sebelum, sesudah, user, '']);
         pesan.push(produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
       }
@@ -267,8 +282,14 @@ function migrasi_(cfg) {
       '(sesuai alur lama). Kalau belum, batalkan dan rapikan dulu.\n' +
       outTerisi.slice(0, 8).join('\n') + (outTerisi.length > 8 ? '\n…' : '');
   }
+  const zonaLama = ss.getSpreadsheetTimeZone();
+  if (zonaLama !== KONFIG.ZONA_WAKTU) {
+    tanya += '\n• Zona waktu file diubah dari ' + zonaLama + ' ke ' + KONFIG.ZONA_WAKTU +
+      ' (supaya jam Log Stok dan rekap "hari ini" sesuai WIB). Isi sheet lain tidak berubah.';
+  }
   tanya += '\n\nLanjutkan?';
   if (ui.alert('Migrasi ' + cfg.nama, tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  if (zonaLama !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
 
   const peringatan = [];
   siapkanLog_(ss);
@@ -401,12 +422,17 @@ function bangunSheet_(sh, cfg, d) {
 
   // Format
   sh.getRange(1, 1, 3, totalKolom).setFontWeight('bold').setHorizontalAlignment('center')
-    .setVerticalAlignment('middle').setBackground(KONFIG.WARNA_SEL.HEADER).setWrap(true);
+    .setVerticalAlignment('middle').setWrap(true);
+  sh.getRange(1, 4, 1, 3 * W).setBackground(KONFIG.WARNA_SEL.BANNER_BG).setFontColor(KONFIG.WARNA_SEL.BANNER_FG);
   for (let k = 0; k < W; k++) {
     const c = kolStok(k);
-    sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setBackground(KONFIG.WARNA_SEL.STOK).setFontWeight('bold');
-    sh.getRange(KONFIG.BARIS_DATA, c + 1, n, 1).setBackground(KONFIG.WARNA_SEL.IN);
-    sh.getRange(KONFIG.BARIS_DATA, c + 2, n, 1).setBackground(KONFIG.WARNA_SEL.OUT);
+    const w = warnaCover_(d.daftar[k].nama);   // IN / OUT sengaja tanpa warna
+    if (w) {
+      sh.getRange(2, c, 1, 3).setBackground(w.bg).setFontColor(w.fg);
+      sh.getRange(3, c).setBackground(w.bg).setFontColor(w.fg);
+      sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setBackground(w.bg).setFontColor(w.fg);
+    }
+    sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setFontWeight('bold');
     sh.getRange(2, c, barisMutasi - 1, 3).setBorder(null, true, null, true, null, null);
     sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setDataValidation(aturanAngka_(huruf_(c) + KONFIG.BARIS_DATA, true));
     sh.getRange(KONFIG.BARIS_DATA, c + 1, n, 2).setDataValidation(aturanAngka_(huruf_(c + 1) + KONFIG.BARIS_DATA, false));
@@ -499,6 +525,15 @@ function kunciKolomStok() {
   ui.alert(hasil.length ? hasil.join('\n') : 'Sheet sistem belum ada. Jalankan langkah 1 dulu.');
 }
 
+/** Zona waktu file ke WIB. Baris Log yang sudah tercatat tidak berubah (jamnya tetap seperti yang tertulis). */
+function setelZonaWaktu() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const lama = ss.getSpreadsheetTimeZone();
+  ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
+  SpreadsheetApp.getUi().alert('Zona waktu file: ' + lama + ' → ' + KONFIG.ZONA_WAKTU +
+    '.\nBaris Log Stok yang sudah ada tidak berubah. Kalau itu hanya data uji, hapus saja barisnya.');
+}
+
 function cekStatus() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const t = ScriptApp.getProjectTriggers().filter(x => x.getHandlerFunction() === 'prosesInputStok').length;
@@ -510,6 +545,8 @@ function cekStatus() {
   });
   const log = ss.getSheetByName(KONFIG.SHEET_LOG);
   baris.push('Log: ' + (log ? Math.max(log.getLastRow() - 1, 0) + ' baris mutasi' : 'BELUM ada'));
+  const zona = ss.getSpreadsheetTimeZone();
+  baris.push('Zona waktu file: ' + zona + (zona === KONFIG.ZONA_WAKTU ? '' : '  ← bukan ' + KONFIG.ZONA_WAKTU + ', pilih menu "Setel zona waktu file ke WIB"'));
   SpreadsheetApp.getUi().alert(baris.join('\n'));
 }
 
@@ -583,8 +620,29 @@ function tandaiError_(sel, catatan) {
   return true;
 }
 
-function resetSel_(sel, jenis) {
-  sel.setBackground(KONFIG.WARNA_SEL[jenis]).setNote('');
+/**
+ * Jam sekarang menurut KONFIG.ZONA_WAKTU sebagai nomor seri Sheets (hari sejak 30-12-1899, pecahan = jam).
+ * Ditulis sebagai angka supaya tampilannya pasti WIB, berapa pun zona waktu file/script.
+ */
+function waktuSerial_(d) {
+  const p = Utilities.formatDate(d, KONFIG.ZONA_WAKTU, 'yyyy-MM-dd-HH-mm-ss').split('-').map(Number);
+  const ms = Date.UTC(p[0], p[1] - 1, p[2], p[3], p[4], p[5]) - Date.UTC(1899, 11, 30);
+  return ms / 86400000 + 1e-8;   // +0,9 ms: cegah tampil mundur 1 detik karena pembulatan desimal
+}
+
+/** Kembalikan sel ke tampilan normal: STOK = warna cover, IN/OUT = tanpa warna. */
+function resetSel_(sel, jenis, warna) {
+  const w = jenis === 'STOK' ? warnaCover_(warna) : null;
+  sel.setBackground(w ? w.bg : null).setFontColor(w ? w.fg : null).setNote('');
+}
+
+/** Warna cover dari nama warna ("Elite Biru" -> biru), atau null kalau tidak dikenal. */
+function warnaCover_(nama) {
+  const n = String(nama).toLowerCase();
+  for (let i = 0; i < KONFIG.PALET.length; i++) {
+    if (n.indexOf(KONFIG.PALET[i].kunci) >= 0) return KONFIG.PALET[i];
+  }
+  return null;
 }
 
 function tulisLog_(ss, rows) {
