@@ -69,9 +69,17 @@ Formula biasa tidak bisa "menambah ke dirinya sendiri". `STOK = STOK + IN` adala
 
 ## Menambah sheet STP nanti
 
-Struktur "Stok Cover STP" sama. Tambah entri di `KONFIG.SISTEM`, mis.
-`{ sumber: 'Stok Cover STP', tujuan: 'Stok STP Sistem', barisAwal: 4, barisAkhir: <baris produk terakhir> }`,
-lalu tambah fungsi `function migrasiStokSTP() { migrasi_(KONFIG.SISTEM[1]); }` dan item menunya.
+Struktur "Stok Cover STP" hampir sama, dengan 3 beda (dicek 2026-10-08):
+- Warna ke-15 bernama **Transparan** (UC: Premium). Label kolom Value "Premium" di `GRUP_VALUE` perlu dibuat per sheet.
+- Produk sampai **baris 107** (105 produk). Jadi `barisAkhir: 107`, bukan 104.
+- Total lama di baris 109–110 hanya `SUM(...4:...104)`: X-Over, Soluna, C Class (baris 105–107, 3 unit) **tidak ikut total** sekarang.
+
+Langkah: tambah entri `{ sumber: 'Stok Cover STP', tujuan: 'Stok STP Sistem', barisAwal: 4, barisAkhir: 107 }` di `KONFIG.SISTEM`,
+fungsi `function migrasiStokSTP() { migrasi_(KONFIG.SISTEM[1]); }`, dan item menunya.
+
+## Sheet lain di file
+
+Dicek dari file unduhan 2026-10-08: 11 sheet, 1.443 formula, **0 formula yang merujuk sheet lain** (tidak ada `'Sheet'!A1`, IMPORTRANGE, QUERY, VLOOKUP, INDIRECT). Sheet lain aman dibiarkan; script hanya membaca/menulis sheet sistem + "Log Stok". Trigger tetap terpanggil saat sheet lain diedit, tapi langsung berhenti di baris pertama (cek nama sheet).
 
 ## Uji
 

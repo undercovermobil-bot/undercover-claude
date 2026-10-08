@@ -28,4 +28,5 @@ Sheet "Stok Cover UC": tiap warna 2 kolom IN/OUT. **IN = stok tersedia** (diedit
 ## Belum diverifikasi
 - Trigger dari aplikasi Sheets HP (tidak ada pernyataan resmi Google) — user diminta tes.
 - Status pemasangan di Sheet asli user: belum ada konfirmasi.
-- Sheet "Stok Cover STP" belum dibuat sistemnya (struktur sama, tinggal tambah entri KONFIG.SISTEM).
+- Sheet "Stok Cover STP" belum dibuat sistemnya. Beda dari UC: warna ke-15 "Transparan" (bukan Premium), produk baris 4–107 (105 produk), total lama cuma SUM s/d baris 104 → X-Over/Soluna/C Class (3 unit) tidak ikut total.
+- User (2026-10-08): ke depan hanya pakai "Stok Cover UC" + "Stok Cover STP", sheet lain tetap dibiarkan. Dicek: 0 formula lintas sheet di 11 sheet → aman.
