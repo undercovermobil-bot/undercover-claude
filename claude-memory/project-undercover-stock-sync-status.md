@@ -69,4 +69,4 @@ Skrip (scratchpad, TIDAK persisten antar sesi, perlu ditulis ulang kalau sesi ba
 Lihat [[feedback-undercover-sku-sync-lessons]] utk pelajaran teknis terkait (SKU sbg kunci matching yg robust, dll).
 
 ## (2026-10-08) PERINGATAN layout Stock Opname berubah
-User memasang sistem stok otomatis ([[project-undercover-sistem-stok-gsheet]]). Setelah migrasi, sheet "Stok Cover UC"/"Stok Cover STP" berformat **STOK|IN|OUT** (stok warna k di kolom 4+3k), bukan IN|OUT (kolom 4+2k). Kolom "IN" sekarang input sementara (selalu kosong) — **baca kolom STOK**, cek label baris 3 dulu. Sheet format lama tersimpan sebagai "... (lama)" dan tidak diupdate lagi.
+User memasang sistem stok otomatis ([[project-undercover-sistem-stok-gsheet]]). Setelah migrasi, sheet "Stok Cover UC"/"Stok Cover STP" berformat **STOK|IN|OUT** (stok warna k di kolom 4+3k), bukan IN|OUT (kolom 4+2k). Kolom "IN" sekarang input sementara (selalu kosong) — **baca kolom STOK**, cek label baris 3 dulu. STP punya warna tambahan **Orange** (Reguler, setelah Hijau Army) → posisi kolom STP ≠ UC; petakan dari nama warna baris 2. Sheet format lama tersimpan sebagai "... (lama)" dan tidak diupdate lagi.

@@ -45,6 +45,17 @@ const b0 = siapkan({ jawab: 'NO' });
 b0.ctx.migrasiStokUC();
 cek(b0.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok', 'batal: tidak ada perubahan');
 
+// ---------- warnaTambahan: 'setelah' tidak ada -> dibatalkan tanpa perubahan; sudah ada -> tidak dobel
+const b3 = siapkan();
+b3.ctx.__KONFIG.SISTEM[1].warnaTambahan = [{ nama: 'Orange', setelah: 'Hijau' }];
+b3.ctx.migrasiStokSTP();
+cek(/tidak ada di header/.test(b3.ctx.__alerts[0] || '') && !b3.ss.getSheetByName('Stok Cover STP (lama)'), 'setelah salah: batal');
+const b4 = siapkan();
+b4.ctx.__KONFIG.SISTEM[1].warnaTambahan = [{ nama: 'Hitam', setelah: 'Abu-abu' }];
+b4.ctx.migrasiStokSTP();
+const s4 = b4.ss.getSheetByName('Stok Cover STP');
+cek(s4.getRange(3, 1, 1, s4.getMaxColumns()).getValues()[0].filter(x => x === 'STOK').length === 16 && s4.peek(3, 52).v === 'Reguler', 'warna yang sudah ada tidak ditambah dobel');
+
 // ---------- migrasi gagal di tengah -> rollback
 const b1 = siapkan();
 const asli = Object.getPrototypeOf(b1.ss.sheets[0]).setFrozenColumns;
@@ -69,40 +80,48 @@ cek(snap(lamaSTP) === snapSTP && lamaSTP.name === 'Stok Cover STP (lama)', 'isi 
 ctx.__alerts.length = 0; ctx.migrasiStokUC();
 cek(/sudah pernah dimigrasi/.test(ctx.__alerts[0] || ''), 'migrasi ulang ditolak');
 
-function cekStruktur(nama, lama, akhir, labelPrem) {
+// peta: indeks warna sheet baru -> indeks warna sheet lama (null = warna baru)
+function cekStruktur(nama, lama, akhir, labelPrem, peta) {
   const sh = ss.getSheetByName(nama);
   const v = (r, c) => { const x = sh.peek(r, c); return x ? (x.f || x.v) : ''; };
-  for (let k = 0; k < W; k++) {
-    cek(v(2, 4 + 3 * k) === String(lama.peek(2, 4 + 2 * k).v).trim(), nama + ' nama warna k=' + k);
-    cek(v(3, 4 + 3 * k) === 'STOK' && v(3, 5 + 3 * k) === 'IN' && v(3, 6 + 3 * k) === 'OUT', nama + ' label k=' + k);
-  }
-  cek(v(3, 54) === labelPrem && v(3, 56) === 'Total Value', nama + ' label value: ' + v(3, 54));
+  const Wb = peta.length, kolValue = 4 + 3 * Wb;
+  peta.forEach((k, i) => {
+    if (k !== null) cek(v(2, 4 + 3 * i) === String(lama.peek(2, 4 + 2 * k).v).trim(), nama + ' nama warna i=' + i);
+    cek(v(3, 4 + 3 * i) === 'STOK' && v(3, 5 + 3 * i) === 'IN' && v(3, 6 + 3 * i) === 'OUT', nama + ' label i=' + i);
+  });
+  cek(v(3, kolValue) === 'Reguler' && v(3, kolValue + 2) === labelPrem && v(3, kolValue + 4) === 'Total Value', nama + ' label value: ' + v(3, kolValue + 2));
   let selisih = 0, unitLama = 0, unitBaru = 0;
   for (let r = 4; r <= akhir; r++) {
     for (let c = 1; c <= 3; c++) if ((lama.peek(r, c) ? lama.peek(r, c).v : '') !== v(r, c)) selisih++;
-    for (let k = 0; k < W; k++) {
-      const x = lama.peek(r, 4 + 2 * k); const lv = x && typeof x.v === 'number' ? x.v : '';
-      if (lv !== v(r, 4 + 3 * k)) selisih++;
-      if (v(r, 5 + 3 * k) !== '' || v(r, 6 + 3 * k) !== '') selisih++;
-      unitLama += lv || 0; unitBaru += v(r, 4 + 3 * k) || 0;
-    }
+    peta.forEach((k, i) => {
+      const x = k === null ? null : lama.peek(r, 4 + 2 * k); const lv = x && typeof x.v === 'number' ? x.v : '';
+      if (lv !== v(r, 4 + 3 * i)) selisih++;
+      if (v(r, 5 + 3 * i) !== '' || v(r, 6 + 3 * i) !== '') selisih++;
+      unitLama += lv || 0; unitBaru += v(r, 4 + 3 * i) || 0;
+    });
   }
   cek(selisih === 0 && unitLama === unitBaru, `${nama} data tersalin persis (selisih ${selisih}, unit ${unitLama}/${unitBaru})`);
   cek(v(akhir + 1, 2) === '' && v(akhir + 2, 2) === 'TOTAL STOK' && v(akhir + 3, 2) === 'MASUK / KELUAR HARI INI', nama + ' posisi total');
   cek(v(akhir + 2, 4) === `=SUM(D4:D${akhir})`, nama + ' total STOK: ' + v(akhir + 2, 4));
   cek(v(akhir + 3, 5).includes(`"${nama}"`), nama + ' mutasi merujuk nama sheet');
-  console.log(`${nama}: produk baris 4-${akhir}, total unit ${unitBaru}`);
-  return { sh, v };
+  console.log(`${nama}: produk baris 4-${akhir}, ${Wb} warna, total unit ${unitBaru}`);
+  return { sh, v, kolValue };
 }
-const uc = cekStruktur('Stok Cover UC', lamaUC, 196, 'Premium');
-const stp = cekStruktur('Stok Cover STP', lamaSTP, 107, 'Transparan');
+const uc = cekStruktur('Stok Cover UC', lamaUC, 196, 'Premium', [...Array(16).keys()]);
+const PETA_STP = [0, 1, 2, 3, 4, null, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];   // Orange disisip setelah Hijau Army
+const stp = cekStruktur('Stok Cover STP', lamaSTP, 107, 'Transparan', PETA_STP);
+cek(stp.v(2, 19) === 'Orange' && stp.v(2, 16) === 'Hijau Army' && stp.v(2, 22) === 'Elite Abu', 'STP Orange setelah Hijau Army');
+cek(stp.kolValue === 55 && uc.kolValue === 52, 'kolom value: UC AZ, STP BC');
+cek(stp.v(110, 20).includes('S$2'), 'STP mutasi Orange merujuk header Orange');
+cek(/Warna baru: Orange \(setelah Hijau Army, stok awal kosong, value ikut harga Reguler\)/.test(alertSTP), 'konfirmasi menyebut Orange');
 
 cek(uc.v(4, 52) === '=(D4+G4+J4+M4+P4)*281000' && uc.v(4, 53) === '=(S4+V4+Y4+AB4+AE4+AH4+AK4+AN4+AQ4)*341000', 'UC formula baris 4');
 cek(uc.v(4, 54) === '=(AT4)*680000' && uc.v(4, 55) === '=(AW4)*1180000' && uc.v(4, 56) === '=SUM(AZ4:BC4)', 'UC premium/excl/total');
 cek(uc.v(40, 54) === '' && uc.v(50, 52) === '', 'UC baris 40 premium & baris 50 kosong');
-cek(stp.v(10, 52) === '=(D10+G10+J10+M10+P10)*257000', 'STP baris 10 L9 dibetulkan: ' + stp.v(10, 52));
-cek(stp.v(5, 53) === '=(S5+V5+Y5+AB5+AE5+AH5+AK5+AN5+AQ5)*257000', 'STP baris 5 strip lengkap: ' + stp.v(5, 53));
-cek(stp.v(4, 53) === '' && stp.v(4, 55) === '' && stp.v(102, 52) === '', 'STP tanpa harga tetap kosong');
+cek(stp.v(10, 55) === '=(D10+G10+J10+M10+P10+S10)*257000', 'STP baris 10 L9 dibetulkan + Orange: ' + stp.v(10, 55));
+cek(stp.v(5, 56) === '=(V5+Y5+AB5+AE5+AH5+AK5+AN5+AQ5+AT5)*257000', 'STP baris 5 strip lengkap: ' + stp.v(5, 56));
+cek(stp.v(5, 57) === '=(AW5)*110000' && stp.v(5, 59) === '=SUM(BC5:BF5)', 'STP transparan/total baris 5: ' + stp.v(5, 57));
+cek(stp.v(4, 56) === '' && stp.v(4, 58) === '' && stp.v(102, 55) === '', 'STP tanpa harga tetap kosong');
 cek(/DIPERBAIKI baris 10 Toyota Innova/.test(alertSTP) && (alertSTP.match(/DIPERBAIKI baris (5|6|7|8|11) /g) || []).length === 5, 'STP catatan diperbaiki 5-8,10,11');
 cek(!/Exclusive: \d+ baris/.test(alertSTP), 'STP Exclusive tidak dilaporkan');
 
@@ -149,9 +168,14 @@ edit(U, 4, 6, 51); cek(uv(4, D) === 0, 'OUT habis -> 0');
 // STP
 const stpAwal = sv(4, G);
 edit(S, 4, 8, 2); cek(sv(4, G) === stpAwal + 2, 'STP IN Hitam: ' + stpAwal + '->' + sv(4, G));
-edit(S, 107, 4 + 3 * 14 + 2, 1); cek(sv(107, 4 + 3 * 14) === 0, 'STP C Class OUT Transparan 1 -> 0');
+edit(S, 107, 4 + 3 * 15 + 2, 1); cek(sv(107, 4 + 3 * 15) === 0, 'STP C Class OUT Transparan 1 -> 0');
 const lt = log().getRange(log().getLastRow(), 2, 1, 6).getValues()[0];
 cek(lt[0] === 'Stok Cover STP' && lt[1] === 107 && lt[2] === 'C Class' && lt[4] === 'Transparan' && lt[5] === 'OUT', 'log STP: ' + JSON.stringify(lt));
+edit(S, 4, 20, 3); cek(sv(4, 19) === 3 && sv(4, 20) === '', 'STP IN Orange 3');
+const lo = log().getRange(log().getLastRow(), 6, 1, 5).getValues()[0];
+cek(lo[0] === 'Orange' && lo[1] === 'IN' && lo[2] === 3 && lo[3] === 0 && lo[4] === 3, 'log Orange: ' + JSON.stringify(lo));
+edit(S, 4, 21, 5); cek(sv(4, 19) === 3 && /DITOLAK/.test(S.peek(4, 21).note), 'OUT Orange melebihi stok ditolak');
+edit(S, 4, 21, '');
 
 // sheet lain diedit -> diabaikan
 const resi = ss.getSheetByName('Resi Keluar Stok');
@@ -173,7 +197,7 @@ cek(sh2.peek(4, D).v === 39 && /sibuk/.test(sh2.peek(4, E).note) && !sh2.peek(4,
 ctx.__alerts.length = 0; ctx.kunciKolomStok(); ctx.kunciKolomStok();
 for (const sh of [U, S]) {
   const prot = sh.protections.filter(p => !p.removed);
-  cek(prot.length === 1 && prot[0].unprot.length === 32 && prot[0].editors.join() === 'owner@x', sh.name + ' proteksi');
+  cek(prot.length === 1 && prot[0].unprot.length === (sh === S ? 34 : 32) && prot[0].editors.join() === 'owner@x', sh.name + ' proteksi');
 }
 cek(lamaUC.protections.length === 0, 'arsip tidak dikunci');
 console.log('ALERT kunci:', ctx.__alerts.slice(-1)[0].replace(/\n/g, ' / '));

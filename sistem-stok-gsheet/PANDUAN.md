@@ -5,7 +5,7 @@ Untuk file **Stock Opname** (Google Sheet), 2 sheet:
 | Sheet | Produk | Total & rekap harian |
 |---|---|---|
 | **Stok Cover UC** | baris 4–196 (193 produk) | baris 198–199 |
-| **Stok Cover STP** | baris 4–107 (104 produk) | baris 109–110 |
+| **Stok Cover STP** | baris 4–107 (104 produk), **+ warna Orange** | baris 109–110 |
 
 Batas baris dicari otomatis saat migrasi (baris terakhir sebelum label "OUT"/"IN" di kolom B), jadi produk yang ditambah sebelum migrasi tetap ikut.
 Kode: [`Kode.gs`](Kode.gs).
@@ -29,6 +29,15 @@ Baris bawah tabel:
 - **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Otomatis reset tiap ganti hari.
 
 Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghitung dari kolom STOK.
+
+## Warna Orange (Stok Cover STP)
+
+Orange = warna **Reguler** ke-6 Smartprotection (SKU `-R-…-ORG`). Sheet lama STP belum punya kolom Orange, jadi migrasi STP otomatis menambahkan blok **Orange: STOK | IN | OUT** tepat setelah Hijau Army:
+- Stok awal kosong (0). Isi stok Orange yang ada lewat kolom IN, atau admin ketik langsung di STOK (tercatat `KOREKSI`).
+- Value Orange ikut harga **Reguler** per baris (sama dengan Abu-abu, Hitam, dst.).
+- Ikut TOTAL STOK, rekap harian, Log, validasi, dan kunci kolom.
+
+Diatur di `KONFIG.SISTEM[1].warnaTambahan`. Warna baru lain bisa ditambah dengan pola yang sama **sebelum migrasi**, mis. `{ nama: 'Silver', setelah: 'Orange' }`. Menambah warna **setelah** sheet aktif dipakai belum didukung script; minta dibuatkan dulu.
 
 ## Nama sheet setelah migrasi
 
@@ -122,6 +131,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 119/119 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-08: 130/130 lulus. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
-- STP: total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan).
+- STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.

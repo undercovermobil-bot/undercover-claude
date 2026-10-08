@@ -22,13 +22,17 @@ const KONFIG = {
   // barisAkhir hanya cadangan; migrasi mencari sendiri baris produk terakhir
   //   (baris sebelum label "OUT"/"IN" di kolom B).
   // tanpaValue: grup yang memang tidak dijual di toko itu (tidak dilaporkan "tanpa harga").
+  // warnaTambahan: warna baru yang belum ada di sheet lama. Dibuat kosong (stok 0) saat migrasi,
+  //   diletakkan setelah warna `setelah`, ikut grup Value warna itu (harga per baris sama).
   SISTEM: [
-    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', barisAwal: 4, barisAkhir: 196, tanpaValue: [] },
-    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', barisAwal: 4, barisAkhir: 107, tanpaValue: ['Exclusive'] },
+    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', barisAwal: 4, barisAkhir: 196,
+      tanpaValue: [], warnaTambahan: [] },
+    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', barisAwal: 4, barisAkhir: 107,
+      tanpaValue: ['Exclusive'], warnaTambahan: [{ nama: 'Orange', setelah: 'Hijau Army' }] },
   ],
   SHEET_LOG: 'Log Stok',
   BARIS_DATA: 4,            // baris produk pertama di sheet sistem
-  JUMLAH_WARNA: 16,
+  JUMLAH_WARNA: 16,         // jumlah warna di sheet LAMA (format IN/OUT)
   LABEL_TOTAL: 'TOTAL STOK',
   LABEL_MUTASI: 'MASUK / KELUAR HARI INI',
   IZINKAN_STOK_MINUS: false,
@@ -228,6 +232,13 @@ function migrasi_(cfg) {
     .filter((_, i) => i % 2 === 0).map(v => String(v).trim());
   const labelValue = src.getRange(3, 4 + 2 * W, 1, GRUP_VALUE.length + 1).getValues()[0]
     .map((v, i) => String(v).trim() || (i < GRUP_VALUE.length ? GRUP_VALUE[i].nama : 'Total Value'));
+  let daftar;
+  try {
+    daftar = susunWarna_(namaWarna, cfg);
+  } catch (err) {
+    ui.alert(err.message);
+    return;
+  }
   const lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
   const fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
@@ -245,6 +256,12 @@ function migrasi_(cfg) {
     'dipindah ke format STOK / IN / OUT.\n\n' +
     '• Sheet lama diganti nama jadi "' + cfg.arsip + '" (isinya tidak diubah, termasuk bagian di bawah baris ' +
     barisAkhir + ').\n• Sheet baru bernama "' + cfg.nama + '".\n• STOK awal = angka kolom IN sekarang.';
+  daftar.forEach((w, i) => {
+    if (w.kSumber === null) {
+      tanya += '\n• Warna baru: ' + w.nama + ' (setelah ' + daftar[i - 1].nama + ', stok awal kosong, value ikut harga ' +
+        labelValue[w.gi] + ').';
+    }
+  });
   if (outTerisi.length) {
     tanya += '\n\nPERHATIAN: ' + outTerisi.length + ' sel OUT masih terisi. Sistem menganggap IN sudah dikurangi OUT ' +
       '(sesuai alur lama). Kalau belum, batalkan dan rapikan dulu.\n' +
@@ -259,7 +276,7 @@ function migrasi_(cfg) {
   let sh = null;
   try {
     sh = ss.insertSheet(cfg.nama, src.getIndex() - 1);
-    bangunSheet_(sh, cfg, { n, namaWarna, labelValue, lama, fLama, peringatan });
+    bangunSheet_(sh, cfg, { n, daftar, labelValue, lama, fLama, peringatan });
   } catch (err) {
     if (sh) ss.deleteSheet(sh);
     src.setName(cfg.nama);
@@ -278,7 +295,7 @@ function migrasi_(cfg) {
 }
 
 function bangunSheet_(sh, cfg, d) {
-  const W = KONFIG.JUMLAH_WARNA;
+  const W = d.daftar.length;
   const n = d.n;
   const kolStok = k => 4 + 3 * k;
   const kolValue = 4 + 3 * W;
@@ -301,7 +318,7 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(1, kolValue, 2, totalKolom - kolValue + 1).merge();
   const label3 = [];
   for (let k = 0; k < W; k++) {
-    sh.getRange(2, kolStok(k)).setValue(d.namaWarna[k]);
+    sh.getRange(2, kolStok(k)).setValue(d.daftar[k].nama);
     sh.getRange(2, kolStok(k), 1, 3).merge();
     label3.push('STOK', 'IN', 'OUT');
   }
@@ -311,9 +328,10 @@ function bangunSheet_(sh, cfg, d) {
   const data = d.lama.map((row, i) => {
     const out = [row[0], row[1], row[2]];
     for (let k = 0; k < W; k++) {
-      const v = row[3 + 2 * k];
+      const w = d.daftar[k];
+      const v = w.kSumber === null ? '' : row[3 + 2 * w.kSumber];
       if (v !== '' && typeof v !== 'number') {
-        d.peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + d.namaWarna[k] + ': IN bukan angka ("' + v + '"), dikosongkan.');
+        d.peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + w.nama + ': IN bukan angka ("' + v + '"), dikosongkan.');
       }
       out.push(typeof v === 'number' ? v : '', '', '');
     }
@@ -342,7 +360,8 @@ function bangunSheet_(sh, cfg, d) {
         d.peringatan.push('DIPERBAIKI baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama ' + f[gi] +
           ' → sekarang semua warna ' + d.labelValue[gi] + ' baris ini × ' + harga + ' (sama seperti baris lain).');
       }
-      const refs = g.warna.map(k => huruf_(kolStok(k)) + r);
+      const refs = [];
+      d.daftar.forEach((w, k) => { if (w.gi === gi) refs.push(huruf_(kolStok(k)) + r); });
       return '=(' + refs.join('+') + ')*' + harga;
     });
     hasil.push(f[GRUP_VALUE.length] ? '=SUM(' + huruf_(kolValue) + r + ':' + huruf_(kolValue + GRUP_VALUE.length - 1) + r + ')' : '');
@@ -599,6 +618,26 @@ function aturanAngka_(sel, bolehNol) {
     .setAllowInvalid(false)
     .setHelpText(bolehNol ? 'STOK: angka bulat >= 0' : 'Isi angka bulat lebih dari 0 lalu Enter')
     .build();
+}
+
+/**
+ * Urutan warna sheet baru: warna sheet lama + warnaTambahan (disisip setelah warna `setelah`).
+ * kSumber = indeks warna di sheet lama (null untuk warna baru), gi = indeks GRUP_VALUE.
+ */
+function susunWarna_(namaWarna, cfg) {
+  const grupDari = k => GRUP_VALUE.findIndex(g => g.warna.indexOf(k) >= 0);
+  const tambahan = (cfg.warnaTambahan || []).filter(t => namaWarna.indexOf(t.nama) < 0);   // sudah ada → lewati
+  tambahan.forEach(t => {
+    if (namaWarna.indexOf(t.setelah) < 0) {
+      throw new Error('Warna tambahan "' + t.nama + '": warna "' + t.setelah + '" tidak ada di header "' + cfg.nama + '". Cek KONFIG.');
+    }
+  });
+  const daftar = [];
+  namaWarna.forEach((nama, k) => {
+    daftar.push({ nama: nama, kSumber: k, gi: grupDari(k) });
+    tambahan.filter(t => t.setelah === nama).forEach(t => daftar.push({ nama: t.nama, kSumber: null, gi: grupDari(k) }));
+  });
+  return daftar;
 }
 
 /** Baris produk terakhir = baris berisi terakhir sebelum label "OUT"/"IN" di kolom B. */
