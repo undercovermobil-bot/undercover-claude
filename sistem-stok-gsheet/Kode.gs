@@ -9,6 +9,7 @@
  *   - OUT melebihi stok ditolak (sel merah + catatan), stok tidak berubah.
  *
  * Berlaku untuk sheet "Stok Cover UC" dan "Stok Cover STP" (KONFIG.SISTEM).
+ * Urutan produk sheet baru diambil dari sheet "Urutan UC" / "Urutan STP" (diimpor dari file daftar urutan).
  * Pasang: lihat PANDUAN.md di folder yang sama.
  *
  * PENTING: jangan buat fungsi bernama onEdit di project ini.
@@ -19,6 +20,7 @@
 const KONFIG = {
   // nama  : sheet yang dipakai staf (setelah migrasi berformat STOK|IN|OUT)
   // arsip : nama baru untuk sheet lama saat migrasi (isinya tidak diubah)
+  // urutan: sheet berisi daftar produk sheet baru (urutan, nama, kode SKU, baris lama asal stoknya)
   // log   : sheet riwayat mutasi khusus sheet ini (terbaru di baris 2, paling atas)
   // barisAkhir hanya cadangan; migrasi mencari sendiri baris produk terakhir
   //   (baris sebelum label "OUT"/"IN" di kolom B).
@@ -26,9 +28,9 @@ const KONFIG = {
   // warnaTambahan: warna baru yang belum ada di sheet lama. Dibuat kosong (stok 0) saat migrasi,
   //   diletakkan setelah warna `setelah`, ikut grup Value warna itu (harga per baris sama).
   SISTEM: [
-    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', log: 'Log Stok UC', barisAwal: 4, barisAkhir: 196,
+    { nama: 'Stok Cover UC', arsip: 'Stok Cover UC (lama)', urutan: 'Urutan UC', log: 'Log Stok UC', barisAwal: 4, barisAkhir: 196,
       tanpaValue: [], warnaTambahan: [] },
-    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', log: 'Log Stok STP', barisAwal: 4, barisAkhir: 107,
+    { nama: 'Stok Cover STP', arsip: 'Stok Cover STP (lama)', urutan: 'Urutan STP', log: 'Log Stok STP', barisAwal: 4, barisAkhir: 107,
       tanpaValue: ['Exclusive'], warnaTambahan: [{ nama: 'Orange', setelah: 'Hijau Army' }] },
   ],
   BARIS_DATA: 4,            // baris produk pertama di sheet sistem
@@ -67,6 +69,9 @@ const GRUP_VALUE = [
   { nama: 'Exclusive', warna: [15] },
 ];
 
+// Judul kolom sheet "Urutan ..." (baris 1). Kolom lain (Bagian, Peringkat, Status, Catatan, dst.) diabaikan.
+const KOLOM_URUTAN = { nama: 'nama produk', sku: 'kode sku', baris: 'baris lama', namaLama: 'nama di sheet lama', harga: 'harga dari baris' };
+
 const HEADER_LOG = ['Waktu', 'Sheet', 'Baris', 'Produk', 'Kode SKU', 'Warna', 'Jenis',
   'Qty', 'Stok Sebelum', 'Stok Sesudah', 'User', 'Keterangan'];
 
@@ -74,8 +79,8 @@ const HEADER_LOG = ['Waktu', 'Sheet', 'Baris', 'Produk', 'Kode SKU', 'Warna', 'J
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('📦 Sistem Stok')
-    .addItem('1a. Ubah "' + KONFIG.SISTEM[0].nama + '" ke format STOK/IN/OUT', 'migrasiStokUC')
-    .addItem('1b. Ubah "' + KONFIG.SISTEM[1].nama + '" ke format STOK/IN/OUT', 'migrasiStokSTP')
+    .addItem('1a. Susun "' + KONFIG.SISTEM[0].nama + '" ke format STOK/IN/OUT (ikut "' + KONFIG.SISTEM[0].urutan + '")', 'migrasiStokUC')
+    .addItem('1b. Susun "' + KONFIG.SISTEM[1].nama + '" ke format STOK/IN/OUT (ikut "' + KONFIG.SISTEM[1].urutan + '")', 'migrasiStokSTP')
     .addItem('2. Aktifkan input otomatis', 'aktifkanInputOtomatis')
     .addItem('3. Kunci kolom STOK (opsional, pemilik file)', 'kunciKolomStok')
     .addSeparator()
@@ -241,8 +246,9 @@ function migrasiStokSTP() {
 }
 
 /**
- * Sheet lama diganti nama jadi cfg.arsip (isinya tidak diubah),
- * sheet baru format STOK|IN|OUT dibuat dengan nama asli di posisi tab yang sama.
+ * Sheet lama diganti nama jadi cfg.arsip (isinya tidak diubah).
+ * Sheet baru format STOK|IN|OUT dibuat dengan nama asli di posisi tab yang sama; urutan dan isi produknya
+ * mengikuti sheet cfg.urutan, stok tiap produk diambil dari baris sheet lama yang ditunjuk daftar itu.
  */
 function migrasi_(cfg) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -268,40 +274,47 @@ function migrasi_(cfg) {
     .filter((_, i) => i % 2 === 0).map(v => String(v).trim());
   const labelValue = src.getRange(3, 4 + 2 * W, 1, GRUP_VALUE.length + 1).getValues()[0]
     .map((v, i) => String(v).trim() || (i < GRUP_VALUE.length ? GRUP_VALUE[i].nama : 'Total Value'));
+  // Rencana dibuat dua kali: sekali untuk dialog, sekali lagi dengan data terbaru setelah user setuju
+  // (dialog bisa terbuka lama; staf lain mungkin mengubah sheet lama atau daftar urutan).
+  const rencanakan = () => {
+    const lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
+    const fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
+    return susunUrutan_(cfg, bacaDaftarUrutan_(ss, cfg), lama, fLama, namaWarna, labelValue);
+  };
   let daftar;
+  let rencana;
   try {
     daftar = susunWarna_(namaWarna, cfg);
+    rencana = rencanakan();
   } catch (err) {
     ui.alert(err.message);
     return;
   }
-  let lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
-  let fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
-  // OUT yang masih terisi: menurut alur lama, IN biasanya SUDAH dikurangi OUT.
-  const outTerisi = [];
-  lama.forEach((row, i) => {
-    for (let k = 0; k < W; k++) {
-      const o = row[4 + 2 * k];
-      if (typeof o === 'number' && o !== 0) {
-        outTerisi.push('baris ' + (cfg.barisAwal + i) + ' ' + String(row[1]).trim() + ' – ' + namaWarna[k] + ': OUT ' + o);
-      }
-    }
-  });
-  let tanya = 'Produk "' + cfg.nama + '" baris ' + cfg.barisAwal + '–' + barisAkhir + ' (' + n + ' produk) ' +
-    'dipindah ke format STOK / IN / OUT.\n\n' +
-    '• Sheet lama diganti nama jadi "' + cfg.arsip + '" (isinya tidak diubah, termasuk bagian di bawah baris ' +
-    barisAkhir + ').\n• Sheet baru bernama "' + cfg.nama + '".\n• STOK awal = angka kolom IN sekarang.';
+  const namaTampil = x => '"' + x.nama + '" (baris ' + x.r + ', stok ' + x.stok + ')';
+  let tanya = 'Produk "' + cfg.nama + '" disusun ulang mengikuti sheet "' + cfg.urutan + '": ' + rencana.entri.length +
+    ' produk (' + rencana.dariLama + ' dari sheet lama' + (rencana.digabung ? ', ' + rencana.digabung + ' di antaranya gabungan beberapa baris lama' : '') +
+    ', ' + rencana.baru + ' baris BARU dengan stok kosong).\n\n' +
+    '• Sheet lama (baris ' + cfg.barisAwal + '–' + barisAkhir + ') diganti nama jadi "' + cfg.arsip + '" (isinya tidak diubah, termasuk bagian di bawah baris ' +
+    barisAkhir + ').\n• Sheet baru bernama "' + cfg.nama + '".\n• STOK awal = angka kolom IN sekarang (baris gabungan dijumlahkan). ' +
+    'Total ' + rencana.stokBaru + ' unit, sama dengan sheet lama.';
+  if (rencana.dibuang.length) {
+    tanya += '\n• ' + rencana.dibuang.length + ' baris sheet lama tidak ikut karena tidak ada di daftar dan stoknya 0 (tetap ada di sheet "' + cfg.arsip + '").';
+  }
+  if (rencana.ditambah.length) {
+    tanya += '\n• PERHATIAN: ' + rencana.ditambah.length + ' baris sheet lama BERSTOK tapi tidak ada di daftar. Supaya stoknya tidak hilang, ditaruh di bagian paling bawah: ' +
+      rencana.ditambah.slice(0, 5).map(namaTampil).join(', ') + (rencana.ditambah.length > 5 ? ', …' : '') + '.';
+  }
   daftar.forEach((w, i) => {
     if (w.kSumber === null) {
       tanya += '\n• Warna baru: ' + w.nama + ' (setelah ' + daftar[i - 1].nama + ', stok awal kosong, value ikut harga ' +
         labelValue[w.gi] + ').';
     }
   });
-  if (outTerisi.length) {
-    tanya += '\n\nPERHATIAN: ' + outTerisi.length + ' sel OUT masih terisi. Sistem menganggap IN sudah dikurangi OUT ' +
+  if (rencana.outTerisi.length) {
+    tanya += '\n\nPERHATIAN: ' + rencana.outTerisi.length + ' sel OUT masih terisi. Sistem menganggap IN sudah dikurangi OUT ' +
       '(sesuai alur lama). Kalau belum, batalkan dan rapikan dulu.\n' +
-      outTerisi.slice(0, 8).join('\n') + (outTerisi.length > 8 ? '\n…' : '');
+      rencana.outTerisi.slice(0, 8).join('\n') + (rencana.outTerisi.length > 8 ? '\n…' : '');
   }
   const zonaLama = ss.getSpreadsheetTimeZone();
   if (zonaLama !== KONFIG.ZONA_WAKTU) {
@@ -310,18 +323,20 @@ function migrasi_(cfg) {
   }
   tanya += '\n\nLanjutkan?';
   if (ui.alert('Migrasi ' + cfg.nama, tanya, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  try {
+    rencana = rencanakan();
+  } catch (err) {
+    ui.alert('Data berubah selama dialog terbuka dan tidak bisa dipakai lagi. Tidak ada yang diubah.\n\n' + err.message);
+    return;
+  }
   if (zonaLama !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
-  // Dialog bisa terbuka lama; staf lain mungkin mengubah sheet lama. Pakai data terbaru.
-  lama = src.getRange(cfg.barisAwal, 1, n, 3 + 2 * W).getValues();
-  fLama = src.getRange(cfg.barisAwal, 4 + 2 * W, n, GRUP_VALUE.length + 1).getFormulas();
 
-  const peringatan = [];
   siapkanLog_(ss, cfg.log);
   src.setName(cfg.arsip);
   let sh = null;
   try {
     sh = ss.insertSheet(cfg.nama, src.getIndex() - 1);
-    bangunSheet_(sh, cfg, { n, daftar, labelValue, lama, fLama, peringatan });
+    bangunSheet_(sh, cfg, { daftar, labelValue, entri: rencana.entri });
   } catch (err) {
     if (sh) ss.deleteSheet(sh);
     src.setName(cfg.nama);
@@ -329,7 +344,8 @@ function migrasi_(cfg) {
     return;
   }
 
-  let selesai = 'Sheet "' + cfg.nama + '" siap: ' + n + ' produk. Sheet lama: "' + cfg.arsip + '".' +
+  const peringatan = rencana.peringatan;
+  let selesai = 'Sheet "' + cfg.nama + '" siap: ' + rencana.entri.length + ' produk. Sheet lama: "' + cfg.arsip + '".' +
     '\n\nLangkah berikutnya: menu 📦 Sistem Stok → 2. Aktifkan input otomatis (cukup sekali untuk semua sheet).';
   if (peringatan.length) {
     selesai += '\n\nCatatan (' + peringatan.length + '):\n' + peringatan.slice(0, 20).join('\n') +
@@ -339,9 +355,259 @@ function migrasi_(cfg) {
   ui.alert('Migrasi selesai', selesai, ui.ButtonSet.OK);
 }
 
+/**
+ * Baca sheet cfg.urutan. Baris 1 = judul kolom (KOLOM_URUTAN); kolom lain diabaikan.
+ * Tiap baris berikutnya = 1 produk sheet baru, sesuai urutan: nama, kode SKU, "Baris lama" (nomor baris sheet lama
+ * yang stoknya dipindah; boleh lebih dari satu, dipisah koma = stok dijumlahkan; kosong = produk baru, stok kosong),
+ * "Nama di sheet lama" (nama baris-baris itu dipisah "|", untuk memastikan baris yang ditunjuk masih benar),
+ * "Harga dari baris" (opsional: baris sheet lama yang harga Value-nya dipakai, untuk produk baru).
+ */
+function bacaDaftarUrutan_(ss, cfg) {
+  const sh = ss.getSheetByName(cfg.urutan);
+  if (!sh) {
+    throw new Error('Sheet "' + cfg.urutan + '" tidak ditemukan. Tidak ada yang diubah.\n\n' +
+      'Impor dulu file daftar urutan: menu File → Import → Upload → pilih file → "Insert new sheet(s)" → Import data. ' +
+      'Lihat PANDUAN.md bagian "Daftar urutan produk".');
+  }
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) throw new Error('Sheet "' + cfg.urutan + '" kosong. Tidak ada yang diubah.');
+  const isi = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  const kolom = {};
+  isi[0].forEach((v, c) => {
+    const k = normNama_(v);
+    Object.keys(KOLOM_URUTAN).forEach(f => { if (KOLOM_URUTAN[f] === k && kolom[f] === undefined) kolom[f] = c; });
+  });
+  const hilang = ['nama', 'sku', 'baris'].filter(f => kolom[f] === undefined);
+  if (hilang.length) {
+    throw new Error('Sheet "' + cfg.urutan + '": baris 1 harus berisi judul kolom ' +
+      hilang.map(f => '"' + KOLOM_URUTAN[f] + '"').join(', ') + '. Tidak ada yang diubah.');
+  }
+  const hasil = [];
+  const masalah = [];
+  for (let i = 1; i < isi.length; i++) {
+    const row = isi[i];
+    const nama = String(row[kolom.nama]).trim();
+    const sku = String(row[kolom.sku]).trim();
+    const mentahBaris = row[kolom.baris];
+    if (!nama && !sku && String(mentahBaris).trim() === '') continue;   // baris kosong
+    const ket = 'baris ' + (i + 1) + (nama ? ' (' + nama + ')' : '');
+    if (!nama) { masalah.push(ket + ': Nama Produk kosong'); continue; }
+    if (nama.charAt(0) === '=' || sku.charAt(0) === '=') { masalah.push(ket + ': nama/kode SKU tidak boleh diawali tanda "="'); continue; }
+    const sumber = parseBaris_(mentahBaris);
+    if (sumber === null) {
+      masalah.push(ket + ': "Baris lama" harus berisi nomor baris saja, dipisah koma dan spasi, mis. 76, 125 (isi terbaca: "' + mentahBaris + '")');
+      continue;
+    }
+    let hargaDari = null;
+    if (kolom.harga !== undefined && String(row[kolom.harga]).trim() !== '') {
+      const h = parseBaris_(row[kolom.harga]);
+      if (h === null || h.length !== 1) { masalah.push(ket + ': "Harga dari baris" harus satu nomor baris (isi: "' + row[kolom.harga] + '")'); continue; }
+      hargaDari = h[0];
+    }
+    const namaLama = kolom.namaLama === undefined ? [] :
+      String(row[kolom.namaLama]).split('|').map(x => x.trim()).filter(x => x !== '');
+    hasil.push({ nama: nama, sku: sku, sumber: sumber, namaLama: namaLama, hargaDari: hargaDari, barisDaftar: i + 1 });
+  }
+  if (masalah.length) {
+    throw new Error('Sheet "' + cfg.urutan + '" bermasalah (' + masalah.length + '). Tidak ada yang diubah.\n' +
+      masalah.slice(0, 10).join('\n') + (masalah.length > 10 ? '\n…' : ''));
+  }
+  if (!hasil.length) throw new Error('Sheet "' + cfg.urutan + '" tidak berisi produk. Tidak ada yang diubah.');
+  return hasil;
+}
+
+/** "76, 125" / 76 → [76, 125]; kosong → []; selain nomor baris → null. */
+function parseBaris_(v) {
+  if (v === '' || v === null || v === undefined) return [];
+  if (typeof v === 'number') return isFinite(v) && Math.floor(v) === v && v > 0 ? [v] : null;
+  const bagian = String(v).split(/[\s,;+|]+/).filter(x => x !== '');
+  const hasil = [];
+  for (let j = 0; j < bagian.length; j++) {
+    if (!/^\d+$/.test(bagian[j]) || Number(bagian[j]) < 1) return null;
+    hasil.push(Number(bagian[j]));
+  }
+  return hasil;
+}
+
+function normNama_(s) {
+  return String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Susun produk sheet baru dari daftar urutan + isi sheet lama. Tidak menulis apa pun.
+ * lama / fLama = isi baris produk sheet lama mulai cfg.barisAwal (nilai dan formula kolom Value).
+ * Melempar Error (pesan siap tampil) kalau daftar tidak cocok dengan sheet lama, supaya tidak ada stok yang salah tempat.
+ */
+function susunUrutan_(cfg, mentah, lama, fLama, namaWarna, labelValue) {
+  const W = KONFIG.JUMLAH_WARNA;
+  const G = GRUP_VALUE.length;
+  const awal = cfg.barisAwal;
+  const akhir = awal + lama.length - 1;
+  const peringatan = [];
+  const salah = [];
+  const perNama = {};
+  lama.forEach((row, i) => {
+    const k = normNama_(row[1]);
+    if (k) (perNama[k] = perNama[k] || []).push(awal + i);
+  });
+  const dalamRentang = r => r >= awal && r <= akhir;
+  const namaBaris = r => String(lama[r - awal][1]).trim();
+
+  // 1. Baris lama untuk tiap produk daftar. Nomor baris dicocokkan dengan namanya; kalau sheet lama sudah bergeser,
+  //    dicari lewat nama (hanya kalau namanya unik). Satu baris lama tidak boleh dipakai dua kali.
+  const dipakai = {};
+  const entri = mentah.map(m => {
+    const ket = 'Daftar "' + cfg.urutan + '" baris ' + m.barisDaftar + ' (' + m.nama + ')';
+    const cekNama = m.namaLama.length > 0;
+    if (cekNama && m.namaLama.length !== m.sumber.length) {
+      salah.push(ket + ': jumlah nama di "Nama di sheet lama" (' + m.namaLama.length + ') beda dengan jumlah "Baris lama" (' + m.sumber.length + ')');
+    }
+    const sumber = [];
+    m.sumber.forEach((r, j) => {
+      const harap = cekNama && m.namaLama.length === m.sumber.length ? m.namaLama[j] : null;
+      let pakai = r;
+      if (harap !== null && (!dalamRentang(r) || normNama_(namaBaris(r)) !== normNama_(harap))) {
+        const cocok = perNama[normNama_(harap)] || [];
+        const kini = dalamRentang(r) ? 'bernama "' + namaBaris(r) + '"' : 'di luar daftar produk sheet lama';
+        if (cocok.length !== 1) {
+          salah.push(ket + ': baris lama ' + r + ' ' + kini + ', daftar menulis "' + harap + '"; nama itu ' +
+            (cocok.length ? 'ada di ' + cocok.length + ' baris' : 'tidak ditemukan') + ' di sheet lama.');
+          return;
+        }
+        pakai = cocok[0];
+        peringatan.push(ket + ': baris lama ' + r + ' sekarang ' + kini + '; "' + harap + '" ditemukan di baris ' + pakai + ', stok diambil dari baris itu.');
+      } else if (!dalamRentang(r)) {
+        salah.push(ket + ': baris lama ' + r + ' di luar daftar produk sheet lama (baris ' + awal + '–' + akhir + ').');
+        return;
+      }
+      if (dipakai[pakai]) {
+        if (dipakai[pakai] === m.barisDaftar) return;   // nomor sama ditulis dua kali di baris daftar yang sama
+        salah.push(ket + ': baris lama ' + pakai + ' sudah dipakai oleh baris daftar ' + dipakai[pakai] + ' (stok akan terhitung dua kali).');
+        return;
+      }
+      dipakai[pakai] = m.barisDaftar;
+      sumber.push(pakai);
+    });
+    if (m.hargaDari !== null && !dalamRentang(m.hargaDari)) {
+      salah.push(ket + ': "Harga dari baris" ' + m.hargaDari + ' di luar daftar produk sheet lama (baris ' + awal + '–' + akhir + ').');
+    }
+    return { nama: m.nama, sku: m.sku, sumber: sumber, hargaDari: m.hargaDari, tambahan: false };
+  });
+  if (salah.length) {
+    throw new Error('Daftar "' + cfg.urutan + '" tidak cocok dengan sheet "' + cfg.nama + '" (' + salah.length + ' masalah). Tidak ada yang diubah.\n' +
+      salah.slice(0, 10).join('\n') + (salah.length > 10 ? '\n…' : ''));
+  }
+
+  // 2. Baris lama yang tidak disebut daftar: stok 0 → tidak ikut; berstok → ditaruh di bawah supaya stok tidak hilang.
+  const angkaIN = row => { const o = []; for (let k = 0; k < W; k++) { const v = row[3 + 2 * k]; o.push(typeof v === 'number' ? v : ''); } return o; };
+  const dibuang = [];
+  const ditambah = [];
+  lama.forEach((row, i) => {
+    const r = awal + i;
+    if (dipakai[r]) return;
+    const stok = angkaIN(row).reduce((a, v) => a + (v === '' ? 0 : Math.abs(v)), 0);
+    const nama = String(row[1]).trim();
+    if (stok > 0) {
+      const x = { nama: nama, sku: String(row[2]).trim(), sumber: [r], hargaDari: null, tambahan: true };
+      entri.push(x);
+      ditambah.push({ r: r, nama: nama, stok: angkaIN(row).reduce((a, v) => a + (v === '' ? 0 : v), 0) });
+      peringatan.push('Baris lama ' + r + ' "' + nama + '" berstok tapi tidak ada di daftar: ditambahkan di bagian bawah.');
+    } else if (nama) {
+      dibuang.push({ r: r, nama: nama });
+    }
+  });
+
+  // 3. Stok per warna: jumlah kolom IN semua baris lama yang digabung. Isi bukan angka dikosongkan (diberi catatan).
+  entri.forEach(e => {
+    e.stok = [];
+    for (let k = 0; k < W; k++) {
+      let total = null;
+      e.sumber.forEach(r => {
+        const v = lama[r - awal][3 + 2 * k];
+        if (typeof v === 'number') total = (total === null ? 0 : total) + v;
+        else if (v !== '') peringatan.push('Baris ' + r + ' ' + namaWarna[k] + ': IN bukan angka ("' + v + '"), dikosongkan.');
+      });
+      e.stok.push(total === null ? '' : total);
+    }
+  });
+  const jumlah = arr => arr.reduce((a, v) => a + (v === '' ? 0 : v), 0);
+  const stokLama = lama.reduce((a, row) => a + jumlah(angkaIN(row)), 0);
+  const stokBaru = entri.reduce((a, e) => a + jumlah(e.stok), 0);
+  if (Math.abs(stokLama - stokBaru) > 1e-6) {
+    throw new Error('Pemeriksaan total stok gagal (sheet lama ' + stokLama + ' unit, hasil susunan ' + stokBaru + ' unit). Tidak ada yang diubah.');
+  }
+
+  // 4. Harga Value tiap produk: dari formula baris sumbernya (yang pertama punya harga), atau dari "Harga dari baris".
+  const memo = {};
+  const hargaBaris = (r, lapor) => {
+    if (memo[r]) return memo[r];
+    const f = fLama[r - awal];
+    memo[r] = GRUP_VALUE.map((g, gi) => {
+      if (!f[gi]) return { harga: null, rusak: false };
+      const harga = hargaDariFormula_(f[gi]);
+      if (harga === null) {
+        if (lapor) peringatan.push('Baris ' + r + ' ' + namaBaris(r) + ': formula ' + labelValue[gi] + ' lama rusak (' + f[gi] + '), dikosongkan. Isi harga manual.');
+        return { harga: null, rusak: true };
+      }
+      if (lapor && !formulaLamaStandar_(f[gi], g.warna.map(k => 4 + 2 * k), r)) {
+        peringatan.push('DIPERBAIKI baris ' + r + ' ' + namaBaris(r) + ': formula ' + labelValue[gi] + ' lama ' + f[gi] +
+          ' → sekarang semua warna ' + labelValue[gi] + ' baris ini × ' + harga + ' (sama seperti baris lain).');
+      }
+      return { harga: harga, rusak: false };
+    });
+    return memo[r];
+  };
+  entri.forEach(e => e.sumber.forEach(r => hargaBaris(r, true)));
+  const tanpaHarga = GRUP_VALUE.map(() => []);
+  const hargaDonor = [];
+  entri.forEach((e, idx) => {
+    const kandidat = e.hargaDari === null ? e.sumber : e.sumber.concat([e.hargaDari]);
+    e.harga = [];
+    GRUP_VALUE.forEach((g, gi) => {
+      const dariSumber = e.sumber.map(r => hargaBaris(r, false)[gi].harga).filter(h => h !== null);
+      if (new Set(dariSumber).size > 1) {
+        peringatan.push('Baris lama ' + e.sumber.join('+') + ' "' + e.nama + '": harga ' + labelValue[gi] + ' beda antar baris yang digabung (' +
+          dariSumber.join(' / ') + '), dipakai ' + dariSumber[0] + '.');
+      }
+      const harga = kandidat.map(r => hargaBaris(r, false)[gi].harga).filter(h => h !== null)[0];
+      e.harga.push(harga === undefined ? null : harga);
+      if (harga === undefined && !e.sumber.some(r => hargaBaris(r, false)[gi].rusak)) tanpaHarga[gi].push(KONFIG.BARIS_DATA + idx);
+    });
+    e.adaTotal = kandidat.some(r => !!fLama[r - awal][G]);
+    if (!e.sumber.length && e.hargaDari !== null) hargaDonor.push(e.hargaDari);
+  });
+  tanpaHarga.forEach((rows, gi) => {
+    if (rows.length && (cfg.tanpaValue || []).indexOf(labelValue[gi]) < 0) {
+      peringatan.push(labelValue[gi] + ': ' + rows.length + ' baris tanpa formula harga, value kosong' +
+        (rows.length <= 15 ? ' (baris sheet baru ' + rows.join(', ') + ')' : '') + '.');
+    }
+  });
+  const baru = entri.filter(e => !e.sumber.length);
+  if (baru.length) {
+    peringatan.push(baru.length + ' produk BARU memakai harga Value dari baris sheet lama yang disebut daftar (model sama atau harga standar). ' +
+      'Cek kalau harganya perlu beda.');
+  }
+
+  // 5. OUT yang masih terisi: menurut alur lama, IN biasanya SUDAH dikurangi OUT.
+  const outTerisi = [];
+  entri.forEach(e => e.sumber.forEach(r => {
+    for (let k = 0; k < W; k++) {
+      const o = lama[r - awal][4 + 2 * k];
+      if (typeof o === 'number' && o !== 0) outTerisi.push('baris ' + r + ' ' + namaBaris(r) + ' – ' + namaWarna[k] + ': OUT ' + o);
+    }
+  }));
+
+  return {
+    entri: entri, peringatan: peringatan, dibuang: dibuang, ditambah: ditambah, outTerisi: outTerisi,
+    stokLama: stokLama, stokBaru: stokBaru,
+    dariLama: entri.filter(e => e.sumber.length).length, baru: baru.length, digabung: entri.filter(e => e.sumber.length > 1).length,
+  };
+}
+
 function bangunSheet_(sh, cfg, d) {
   const W = d.daftar.length;
-  const n = d.n;
+  const n = d.entri.length;
   const kolStok = k => 4 + 3 * k;
   const kolValue = 4 + 3 * W;
   const totalKolom = kolValue + GRUP_VALUE.length;   // 4 grup + Total Value
@@ -370,55 +636,29 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(3, 4, 1, label3.length + d.labelValue.length).setValues([label3.concat(d.labelValue)]);
 
   // Data
-  const data = d.lama.map((row, i) => {
-    const out = [row[0], row[1], row[2]];
+  const data = d.entri.map((e, i) => {
+    const out = [i + 1, e.nama, e.sku];
     for (let k = 0; k < W; k++) {
       const w = d.daftar[k];
-      const v = w.kSumber === null ? '' : row[3 + 2 * w.kSumber];
-      if (v !== '' && typeof v !== 'number') {
-        d.peringatan.push('Baris ' + (cfg.barisAwal + i) + ' ' + w.nama + ': IN bukan angka ("' + v + '"), dikosongkan.');
-      }
-      out.push(typeof v === 'number' ? v : '', '', '');
+      out.push(w.kSumber === null ? '' : e.stok[w.kSumber], '', '');
     }
     return out;
   });
   sh.getRange(KONFIG.BARIS_DATA, 1, n, 3 + 3 * W).setValues(data);
 
   // Value: harga per baris diambil dari formula lama, referensi diganti ke kolom STOK.
-  const tanpaHarga = GRUP_VALUE.map(() => []);
-  const fBaru = d.fLama.map((f, i) => {
+  const fBaru = d.entri.map((e, i) => {
     const r = KONFIG.BARIS_DATA + i;
-    const rLama = cfg.barisAwal + i;
-    const produk = String(d.lama[i][1]).trim();
     const hasil = GRUP_VALUE.map((g, gi) => {
-      if (!f[gi]) {
-        tanpaHarga[gi].push(rLama);
-        return '';
-      }
-      const harga = hargaDariFormula_(f[gi]);
-      if (harga === null) {
-        d.peringatan.push('Baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama rusak (' + f[gi] +
-          '), dikosongkan. Isi harga manual.');
-        return '';
-      }
-      if (!formulaLamaStandar_(f[gi], g.warna.map(k => 4 + 2 * k), rLama)) {
-        d.peringatan.push('DIPERBAIKI baris ' + rLama + ' ' + produk + ': formula ' + d.labelValue[gi] + ' lama ' + f[gi] +
-          ' → sekarang semua warna ' + d.labelValue[gi] + ' baris ini × ' + harga + ' (sama seperti baris lain).');
-      }
+      if (e.harga[gi] === null) return '';
       const refs = [];
       d.daftar.forEach((w, k) => { if (w.gi === gi) refs.push(huruf_(kolStok(k)) + r); });
-      return '=(' + refs.join('+') + ')*' + harga;
+      return '=(' + refs.join('+') + ')*' + e.harga[gi];
     });
-    hasil.push(f[GRUP_VALUE.length] ? '=SUM(' + huruf_(kolValue) + r + ':' + huruf_(kolValue + GRUP_VALUE.length - 1) + r + ')' : '');
+    hasil.push(e.adaTotal ? '=SUM(' + huruf_(kolValue) + r + ':' + huruf_(kolValue + GRUP_VALUE.length - 1) + r + ')' : '');
     return hasil;
   });
   sh.getRange(KONFIG.BARIS_DATA, kolValue, n, GRUP_VALUE.length + 1).setFormulas(fBaru);
-  tanpaHarga.forEach((rows, gi) => {
-    if (rows.length && (cfg.tanpaValue || []).indexOf(d.labelValue[gi]) < 0) {
-      d.peringatan.push(d.labelValue[gi] + ': ' + rows.length + ' baris tanpa formula harga, value kosong' +
-        (rows.length <= 15 ? ' (baris ' + rows.join(', ') + ')' : '') + '.');
-    }
-  });
 
   // Total + mutasi hari ini. SUM sengaja sampai baris kosong di bawah produk: produk baru ditambah dengan
   // "Insert row above" pada baris kosong itu, sehingga rentang SUM ikut melebar.
@@ -573,7 +813,8 @@ function cekStatus() {
     if (sh) {
       const peta = bacaPeta_(sh);
       if (!Object.keys(peta.kolom).length) {
-        status = 'format lama (belum dimigrasi)';
+        status = 'format lama (belum dimigrasi); daftar urutan "' + cfg.urutan + '" ' +
+          (ss.getSheetByName(cfg.urutan) ? 'sudah ada' : 'BELUM ada (impor dulu, lihat PANDUAN)');
       } else {
         status = 'format STOK/IN/OUT (aktif)';
         // rekap "hari ini" (baris di bawah TOTAL STOK, kolom IN warna pertama) harus merujuk log sheet ini

@@ -2,13 +2,50 @@
 
 Untuk file **Stock Opname** (Google Sheet), 2 sheet:
 
-| Sheet | Produk | Total & rekap harian |
-|---|---|---|
-| **Stok Cover UC** | baris 4–196 (193 produk) | baris 198–199 |
-| **Stok Cover STP** | baris 4–107 (104 produk), **+ warna Orange** | baris 109–110 |
+| Sheet | Sheet lama | Sheet baru (urutan 100 SKU terlaris) | Total & rekap harian (baru) |
+|---|---|---|---|
+| **Stok Cover UC** | baris 4–196 (193 produk) | 181 produk, baris 4–184 | baris 186–187 |
+| **Stok Cover STP** | baris 4–107 (104 produk), **+ warna Orange** | 126 produk, baris 4–129 | baris 131–132 |
 
-Batas baris dicari otomatis saat migrasi (baris terakhir sebelum label "OUT"/"IN" di kolom B), jadi produk yang ditambah sebelum migrasi tetap ikut.
+Batas baris sheet lama dicari otomatis saat migrasi (baris terakhir sebelum label "OUT"/"IN" di kolom B). Urutan dan isi sheet baru mengikuti sheet **Urutan UC / Urutan STP** (lihat "Daftar urutan produk").
 Kode: [`Kode.gs`](Kode.gs).
+
+## Daftar urutan produk (100 SKU terlaris)
+
+Urutan produk sheet baru **tidak sama dengan sheet lama**. Urutan, nama, dan Kode SKU diambil dari sheet **Urutan UC** dan **Urutan STP** (satu baris per produk). Isinya dibuat dari file `Urutan Stok UC STP.xlsx` (sumber data di repo: `uji/daftar-urutan.js`) dan harus **diimpor ke Google Sheet sebelum menu 1a / 1b**.
+
+Susunan (sama untuk UC dan STP; rinciannya beda karena isi sheet lama beda):
+1. **Bagian 1, hijau**: produk yang namanya berwarna hijau di sheet lama, urutan sheet lama dipertahankan (UC 38, STP 27).
+2. **Bagian 2, top-100**: produk 100 SKU terlaris (ranking 4 toko gabungan, `RANKING_TOP_100_PER_SKU.xlsx`) urut peringkat 1 → 100. Satu baris per **kode generasi** (mis. Civic Sedan G5–G11). Yang belum ada di sheet lama = **BARU**, stok kosong, supaya tinggal diisi lewat IN.
+3. **Bagian 3, sisa stok**: produk di luar top-100 yang masih ada stok, urutan sheet lama. Produk di luar top-100 dengan stok 0 **tidak ikut** (tetap ada di sheet "(lama)").
+
+Kode SKU tiap baris: `MEREK-MODEL-TOKO-R-GENERASI` (UC = toko `UA`, STP = toko `SP`), mis. `TYT-AVZ-SP-R-G3`. Kode generasi mengikuti listing Shopee Undercover (1 Okt 2026) dan aturan Total Formula. Baris bagian 3 tidak punya kode (seperti sheet lama).
+
+Aturan khusus yang sudah diputuskan: baris sheet lama berkode sama **digabung dan stoknya dijumlah** (mis. Triton, X-Over + S-Cross). Satu sel boleh berisi 2 kode kalau satu formula (HiAce Commuter / Premio, Starlet Kotak / Kapsul, STP Hardtop / Land Cruiser). Santa Fe dan Stargazer punya baris G1 dan G2; Mini Cooper 3P dan 5P; Livina X-Gear 5S dan 7S.
+
+**Kolom di sheet Urutan** (judul di baris 1; script mencarinya lewat judul, urutan kolom bebas):
+
+| Kolom | Dipakai script? | Isi |
+|---|---|---|
+| Nama Produk | ya | nama di sheet baru |
+| Kode SKU | ya | kode di sheet baru |
+| Baris lama | ya | nomor baris sheet lama asal stok. Beberapa nomor dipisah koma = digabung, stok dijumlah per warna. Kosong = produk baru |
+| Nama di sheet lama | ya | nama baris-baris tadi, dipisah `|`. Dipakai script memastikan nomor baris masih benar |
+| Harga dari baris | ya | khusus produk baru: baris sheet lama yang harga Value-nya ditiru (model sama, atau harga standar sheet) |
+| No, Stok sekarang, Bagian, Peringkat, Status, Catatan | tidak | informasi untuk dibaca |
+
+**Pengaman saat menu 1a / 1b** (kalau ada yang tidak cocok: muncul pesan dan **tidak ada yang diubah**):
+- Nama di baris yang ditunjuk harus sama dengan "Nama di sheet lama". Kalau sheet lama sudah bergeser, script mencari nama itu di baris lain (hanya kalau cuma ada satu) dan memberi catatan; kalau tidak unik, ditolak.
+- Satu baris lama tidak boleh dipakai dua baris daftar (stok jadi dobel).
+- Baris sheet lama yang **tidak disebut daftar**: stok 0 → tidak ikut; **stok > 0 → otomatis ditaruh di paling bawah** dan disebut di dialog, jadi stok tidak pernah hilang.
+- Total stok sheet baru harus sama dengan sheet lama; kalau tidak, dibatalkan.
+- Produk baru tanpa harga di sheet lama: kolom Value dikosongkan dan disebut di catatan.
+
+**Cara impor** (dari tampilan Google bahasa Inggris): buka Google Sheet → **File → Import → Upload** → pilih `Urutan Stok UC STP.xlsx` → **Import location: Insert new sheet(s)** → **Import data**. Muncul sheet **Urutan UC**, **Urutan STP**, dan **Tidak masuk** (daftar baris stok 0 yang dibuang, hanya informasi; boleh dihapus).
+
+**Mengubah daftar sebelum migrasi**: edit langsung di sheet Urutan UC / Urutan STP (ganti nama, pindah baris, hapus baris, tambah produk baru dengan "Baris lama" kosong). Jangan sisakan baris yang "Baris lama"-nya menunjuk baris yang sama dua kali. Setelah migrasi, sheet Urutan boleh dihapus.
+
+Setelah migrasi, urutan sudah ada di sheet baru: tambah / hapus produk dikerjakan langsung di sana (lihat "Aturan pakai"), bukan lewat sheet Urutan.
 
 ## Cara kerja
 
@@ -55,7 +92,7 @@ Kalau di file trial masih ada sheet **"Log Stok"** lama (satu log bersama dari v
 
 Tempel kode baru di Apps Script lalu simpan (Ctrl+S) cukup untuk **logika input** (validasi, zona waktu, log baru, arsip). Tampilan yang dibuat saat migrasi (warna, format STOK 0 kosong, rumus rekap harian, log per sheet) **tidak berubah otomatis** di sheet yang sudah dimigrasi. Menu **Cek status** memberi peringatan bila rekap harian masih merujuk log versi lama.
 
-- **File trial**: boleh migrasi ulang. Hapus sheet "Stok Cover UC" / "Stok Cover STP" baru dan semua sheet "Log Stok…", ganti nama "(lama)" kembali ke nama asli, lalu jalankan menu 1a dan 1b. Mutasi yang sudah dicatat di sheet baru ikut hilang.
+- **File trial**: boleh migrasi ulang. Hapus sheet "Stok Cover UC" / "Stok Cover STP" baru dan semua sheet "Log Stok…", ganti nama "(lama)" kembali ke nama asli, lalu jalankan menu 1a dan 1b (sheet Urutan UC / Urutan STP harus masih ada). Mutasi yang sudah dicatat di sheet baru ikut hilang.
 - **File asli yang sudah dipakai sungguhan**: **jangan** migrasi ulang (stok sekarang ada di sheet baru, sheet "(lama)" sudah basi). Ubah tampilan manual, atau minta perubahan khusus dibuatkan.
 - Ubah `FORMAT_STOK` di kode hanya berlaku untuk migrasi berikutnya.
 
@@ -124,20 +161,21 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 4. Di Apps Script, panel kiri **Files**:
    - Project baru (cuma ada `Code.gs` berisi `function myFunction() {}`): klik `Code.gs`.
    - Sudah ada script lain: **jangan dihapus**. Klik **+ → Script**, beri nama `SistemStok`, klik file itu. Kalau script lama juga punya `function onOpen`, gabungkan isinya jadi satu fungsi.
-5. Klik di area kode → **Ctrl+A** → **Delete** (hapus `function myFunction() {}`) → **Ctrl+V**. Baris pertama harus `/**`, paling bawah `function huruf_(c) {…}` (±710 baris).
+5. Klik di area kode → **Ctrl+A** → **Delete** (hapus `function myFunction() {}`) → **Ctrl+V**. Baris pertama harus `/**`, paling bawah `function huruf_(c) {…}` (±1.200 baris).
 6. **Ctrl+S** (atau ikon disket "Save project"). Tidak perlu klik **Run** atau **Deploy**.
 
-**B. Jalankan dari spreadsheet**
+**B. Impor daftar urutan, lalu jalankan dari spreadsheet**
 7. Kembali ke tab spreadsheet → **refresh (F5)**. Tunggu ±5 detik: menu **📦 Sistem Stok** muncul setelah **Help**.
-8. Klik **📦 Sistem Stok → 1a. Ubah "Stok Cover UC"…**. Pertama kali muncul izin:
+   Impor daftar urutan (cara di bagian "Daftar urutan produk"): sheet **Urutan UC** dan **Urutan STP** harus ada sebelum langkah 8. Menu **Cek status** memberi tahu kalau belum ada.
+8. Klik **📦 Sistem Stok → 1a. Susun "Stok Cover UC"…**. Pertama kali muncul izin:
    **Authorization required → OK / Review permissions** → pilih akun → **"Google hasn't verified this app" → Advanced → Go to Untitled project (unsafe) → Allow**. Wajar untuk script buatan sendiri.
    Setelah Allow, kalau tidak terjadi apa-apa, klik menu **1a** sekali lagi.
-9. Muncul ringkasan (jumlah produk, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok UC".
-10. **📦 Sistem Stok → 1b. Ubah "Stok Cover STP"…** → **Yes** → **OK**. Kolom Orange muncul setelah Hijau Army.
+9. Muncul ringkasan (jumlah produk, produk baru, baris digabung, total stok, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok UC". Kalau muncul pesan masalah daftar, tidak ada yang berubah: perbaiki sheet Urutan sesuai pesan, lalu ulangi.
+10. **📦 Sistem Stok → 1b. Susun "Stok Cover STP"…** → **Yes** → **OK**. Kolom Orange muncul setelah Hijau Army.
 11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet).
 
 **C. Tes**
-12. Stok Cover UC, baris 4 (Honda Brio): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok UC" ada baris baru di paling atas (baris 2).
+12. Stok Cover UC, baris 4 (Honda Brio, produk pertama): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok UC" ada baris baru di paling atas (baris 2).
 13. Ketik `1` di **F4** (OUT Abu-abu) → D4 kembali semula.
 14. Ketik `999` di F4 → sel merah + catatan "DITOLAK", D4 tidak berubah. Hapus isi F4 → warna kembali normal.
 15. Stok Cover STP: coba kolom Orange (**T** = IN, **U** = OUT, **S** = STOK).
@@ -210,6 +248,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-08: 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-09: 217/217 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.

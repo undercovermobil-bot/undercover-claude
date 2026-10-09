@@ -19,8 +19,29 @@ function siapkan(opsi = {}) {
       if (typeof v === 'string' && v.startsWith('=')) sh.cell(r, c).f = v; else sh.cell(r, c).v = v;
     }
   }
+  if (!opsi.tanpaUrutan) {
+    buatUrutanCermin(ss, 'UC', 'Stok Cover UC', 196);
+    buatUrutanCermin(ss, 'STP', 'Stok Cover STP', 107);
+  }
   const ctx = buatKonteks(ss, Object.assign({ kode: KODE }, opsi));
   return { ss, ctx };
+}
+// Daftar urutan "cermin": urutan dan isi sama persis dengan sheet lama (baris 4..akhir). Dasar semua uji lama.
+const HEADER_URUTAN = ['No', 'Nama Produk', 'Kode SKU', 'Baris lama', 'Nama di sheet lama', 'Harga dari baris', 'Catatan'];
+function tulisUrutan(ss, nama, baris) {
+  const sh = ss.insertSheet(nama);
+  sh.maxCols = 12; sh.maxRows = Math.max(400, baris.length + 20);
+  sh.getRange(1, 1, 1, HEADER_URUTAN.length).setValues([HEADER_URUTAN]);
+  if (baris.length) sh.getRange(2, 1, baris.length, HEADER_URUTAN.length).setValues(baris.map((b, i) => [i + 1, b.nama, b.sku || '', b.baris, b.namaLama === undefined ? b.nama : b.namaLama, b.harga === undefined ? '' : b.harga, '']));
+  return sh;
+}
+function buatUrutanCermin(ss, kode, namaLama, akhir) {
+  const lama = ss.getSheetByName(namaLama), baris = [];
+  for (let r = 4; r <= akhir; r++) {
+    const nm = lama.peek(r, 2) ? lama.peek(r, 2).v : '', sk = lama.peek(r, 3) ? lama.peek(r, 3).v : '';
+    baris.push({ nama: nm, sku: sk, baris: r });
+  }
+  return tulisUrutan(ss, 'Urutan ' + kode, baris);
 }
 function siapkanSalinan(dari, jawab) {
   const b = siapkan();
@@ -63,7 +84,7 @@ cek(/Zona waktu file diubah dari America\/Los_Angeles ke Asia\/Jakarta/.test(bz.
 // ---------- migrasi dibatalkan user
 const b0 = siapkan({ jawab: 'NO' });
 b0.ctx.migrasiStokUC();
-cek(b0.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok', 'batal: tidak ada perubahan');
+cek(b0.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok|Urutan UC|Urutan STP', 'batal: tidak ada perubahan');
 
 // ---------- warnaTambahan: 'setelah' tidak ada -> dibatalkan tanpa perubahan; sudah ada -> tidak dobel
 const b3 = siapkan();
@@ -82,7 +103,7 @@ const asli = Object.getPrototypeOf(b1.ss.sheets[0]).setFrozenColumns;
 Object.getPrototypeOf(b1.ss.sheets[0]).setFrozenColumns = function () { throw new Error('simulasi error'); };
 b1.ctx.migrasiStokUC();
 Object.getPrototypeOf(b1.ss.sheets[0]).setFrozenColumns = asli;
-cek(b1.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok|Log Stok UC' &&
+cek(b1.ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok|Urutan UC|Urutan STP|Log Stok UC' &&
   snap(b1.ss.getSheetByName('Stok Cover UC')) === snapUC, 'rollback saat gagal: ' + b1.ss.sheets.map(s => s.name).join('|'));
 
 // ---------- migrasi UC & STP
@@ -94,7 +115,7 @@ ctx.__alerts.length = 0;
 ctx.migrasiStokSTP();
 const alertSTP = ctx.__alerts.join('\n');
 console.log('ALERT STP:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
-cek(ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover UC (lama)|Stok Cover STP|Stok Cover STP (lama)|Resi Keluar Stok|Log Stok UC|Log Stok STP',
+cek(ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover UC (lama)|Stok Cover STP|Stok Cover STP (lama)|Resi Keluar Stok|Urutan UC|Urutan STP|Log Stok UC|Log Stok STP',
   'urutan tab: ' + ss.sheets.map(s => s.name).join('|'));
 cek(snap(lamaUC) === snapUC && lamaUC.name === 'Stok Cover UC (lama)', 'isi sheet lama UC utuh (termasuk reseller baris 201+)');
 cek(snap(lamaSTP) === snapSTP && lamaSTP.name === 'Stok Cover STP (lama)', 'isi sheet lama STP utuh');
@@ -113,7 +134,8 @@ function cekStruktur(nama, lama, akhir, labelPrem, peta) {
   cek(v(3, kolValue) === 'Reguler' && v(3, kolValue + 2) === labelPrem && v(3, kolValue + 4) === 'Total Value', nama + ' label value: ' + v(3, kolValue + 2));
   let selisih = 0, unitLama = 0, unitBaru = 0;
   for (let r = 4; r <= akhir; r++) {
-    for (let c = 1; c <= 3; c++) if ((lama.peek(r, c) ? lama.peek(r, c).v : '') !== v(r, c)) selisih++;
+    if (v(r, 1) !== r - 3) selisih++;   // kolom No = nomor urut baru
+    for (let c = 2; c <= 3; c++) if (String(lama.peek(r, c) ? lama.peek(r, c).v : '').trim() !== v(r, c)) selisih++;   // nama & SKU di-trim
     peta.forEach((k, i) => {
       const x = k === null ? null : lama.peek(r, 4 + 2 * k); const lv = x && typeof x.v === 'number' ? x.v : '';
       if (lv !== v(r, 4 + 3 * i)) selisih++;
@@ -469,6 +491,118 @@ cek(b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v === 17, 'data diambil ul
     const col = a1.getRange(2, 1, a1.getLastRow() - 1, 1).getValues().map(r => r[0]);
     cek(a1.getLastRow() === sebelum + 1 && col.includes('catatan manual'), 'waktu teks di arsip tidak hilang saat digabung');
   }
+}
+
+// ---------- daftar urutan: susun ulang, gabung, produk baru, pengaman
+{
+  const nm = r => String(lamaUC.peek(r, 2).v).trim();
+  const sk = r => String((lamaUC.peek(r, 3) || { v: '' }).v);
+  const cermin = () => { const a = []; for (let r = 4; r <= 196; r++) a.push({ nama: nm(r), sku: sk(r), baris: r, namaLama: nm(r), harga: '' }); return a; };
+  const siapkanUC = (daftar, opsi = {}) => { const b = siapkan(Object.assign({ tanpaUrutan: true }, opsi)); if (daftar) tulisUrutan(b.ss, 'Urutan UC', daftar); return b; };
+  const namaTab = b => b.ss.sheets.map(x => x.name).join('|');
+  const TAB_AWAL = 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok|Urutan UC';
+  const semuaAlert = b => b.ctx.__alerts.join(' || ');
+  const barisUC = b => b.ss.getSheetByName('Stok Cover UC');
+  const stokWarna = (sh, r) => { const o = []; for (let k = 0; k < 16; k++) o.push((sh.peek(r, 4 + 3 * k) || { v: '' }).v); return o; };
+  const lamaWarna = r => { const o = []; for (let k = 0; k < 16; k++) { const x = lamaUC.peek(r, 4 + 2 * k); o.push(x && typeof x.v === 'number' ? x.v : ''); } return o; };
+
+  // (d) sheet Urutan tidak ada
+  { const b = siapkanUC(null); b.ctx.migrasiStokUC();
+    cek(/"Urutan UC" tidak ditemukan/.test(semuaAlert(b)) && namaTab(b) === 'Stok Cover UC|Stok Cover STP|Resi Keluar Stok', 'tanpa sheet Urutan: ditolak, tidak ada perubahan'); }
+  // (e) judul kolom hilang
+  { const d = cermin(); const b = siapkanUC(d); b.ss.getSheetByName('Urutan UC').getRange(1, 4).setValue('Lain'); b.ctx.migrasiStokUC();
+    cek(/harus berisi judul kolom "baris lama"/.test(semuaAlert(b)) && namaTab(b) === TAB_AWAL, 'judul kolom hilang: ditolak'); }
+  // (h) nama berawalan "="
+  { const d = cermin(); const b = siapkanUC(d); const c = b.ss.getSheetByName('Urutan UC').cell(5, 2); c.v = '=SUM(A1)'; c.f = ''; b.ctx.migrasiStokUC();
+    cek(/tidak boleh diawali tanda "="/.test(semuaAlert(b)) && namaTab(b) === TAB_AWAL, 'nama berawalan "=": ditolak'); }
+  // (c) satu baris lama dipakai dua kali
+  { const d = cermin(); d[5].baris = 4; d[5].namaLama = nm(4); const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    cek(/sudah dipakai oleh baris daftar/.test(semuaAlert(b)) && namaTab(b) === TAB_AWAL, 'baris lama ganda: ditolak'); }
+  // (l) baris di luar rentang, tanpa nama lama
+  { const d = cermin(); d[0].baris = 300; d[0].namaLama = ''; const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    cek(/di luar daftar produk sheet lama/.test(semuaAlert(b)) && namaTab(b) === TAB_AWAL, 'baris di luar rentang: ditolak'); }
+  // (b) nama tidak cocok & tidak unik → ditolak
+  { const d = cermin(); d[0].baris = 99; d[0].namaLama = nm(10); d[1].baris = 98; d[1].namaLama = nm(10);
+    const b = siapkanUC(d); b.ss.getSheetByName('Stok Cover UC').getRange(12, 2).setValue(nm(10)); b.ctx.migrasiStokUC();
+    cek(/ada di 2 baris/.test(semuaAlert(b)) && namaTab(b) === TAB_AWAL, 'nama ganda di sheet lama: ditolak, tidak menebak'); }
+  // jumlah nama ≠ jumlah baris
+  { const d = cermin(); d[2].baris = '6, 7'; d[2].namaLama = nm(6); const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    cek(/jumlah nama di "Nama di sheet lama"/.test(semuaAlert(b)), 'jumlah nama ≠ jumlah baris: ditolak'); }
+  // (a) sheet lama bergeser: nomor baris salah tapi nama unik → ditemukan lewat nama, ada catatan
+  { const d = cermin(); d[6].baris = 11;   // produk baris 10 ditulis "baris 11"; produk baris 11 tetap baris 11
+    const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    const sh = barisUC(b);
+    cek(namaTab(b).includes('Stok Cover UC (lama)') && /ditemukan di baris 10/.test(semuaAlert(b)), 'nomor baris geser: dicari lewat nama + catatan');
+    cek(JSON.stringify(stokWarna(sh, 10)) === JSON.stringify(lamaWarna(10)) && JSON.stringify(stokWarna(sh, 11)) === JSON.stringify(lamaWarna(11)), 'nomor baris geser: stok tetap milik produk yang benar'); }
+  // tanpa kolom nama lama: tidak diperiksa
+  { const d = cermin().map(x => Object.assign({}, x, { namaLama: '' })); const b = siapkanUC(d); b.ss.getSheetByName('Urutan UC').getRange(1, 5).setValue('Catatan lain'); b.ctx.migrasiStokUC();
+    cek(namaTab(b).includes('Stok Cover UC (lama)') && barisUC(b).peek(4, 2).v === 'Honda Brio', 'tanpa kolom nama lama: tetap jalan'); }
+  // (f) baris berstok tak disebut daftar → ditambahkan di bawah; baris stok 0 tak disebut → tidak ikut
+  { const d = cermin().filter(x => x.baris !== 4 && x.baris !== 195);
+    const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    const sh = barisUC(b), a0 = b.ctx.__alerts[0];
+    cek(/PERHATIAN: 1 baris sheet lama BERSTOK/.test(a0) && /1 baris sheet lama tidak ikut/.test(a0) && /Honda Brio/.test(a0), 'baris berstok tak ada di daftar: peringatan di dialog');
+    cek(sh.peek(4 + 191, 2).v === 'Honda Brio' && JSON.stringify(stokWarna(sh, 4 + 191)) === JSON.stringify(lamaWarna(4)) && !sh.peek(4 + 192, 2) && sh.peek(4 + 193, 2).v === 'TOTAL STOK', 'baris berstok ditaruh di bawah, 192 produk'); }
+  // (g) produk BARU: harga dari baris lama / tanpa harga
+  { const d = cermin(); d.splice(3, 0, { nama: 'Mobil Baru A', sku: 'XXX-AAA-UA-R-G1', baris: '', namaLama: '', harga: 4 }, { nama: 'Mobil Baru B', sku: 'XXX-BBB-UA-R-G1', baris: '', namaLama: '', harga: '' });
+    const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    const sh = barisUC(b), f = (r, c) => (sh.peek(r, c) || { f: '' }).f;
+    cek(sh.peek(7, 2).v === 'Mobil Baru A' && stokWarna(sh, 7).every(v => v === '') && stokWarna(sh, 8).every(v => v === ''), 'produk baru: stok kosong');
+    cek(f(7, 52) === '=(D7+G7+J7+M7+P7)*281000' && f(7, 56) === '=SUM(AZ7:BC7)', 'produk baru: harga mengikuti baris 4 yang ditunjuk: ' + f(7, 52));
+    cek(f(8, 52) === '' && f(8, 56) === '' && /baris sheet baru [0-9, ]*\b8\b/.test(semuaAlert(b)), 'produk baru tanpa harga: value kosong & dilaporkan');
+    cek(/2 produk BARU/.test(semuaAlert(b)), 'catatan produk baru');
+    cek(sh.peek(9, 2).v === nm(7) && JSON.stringify(stokWarna(sh, 9)) === JSON.stringify(lamaWarna(7)) && sh.peek(4, 2).v === 'Honda Brio', 'produk lama sesudah produk baru bergeser benar'); }
+  // (i) gabung dua baris: stok dijumlah, harga baris pertama, catatan kalau beda
+  { const d = cermin().filter(x => x.baris !== 5); d[0] = { nama: 'Gabungan', sku: 'GAB-UA-R-G1', baris: '4, 5', namaLama: nm(4) + ' | ' + nm(5), harga: '' };
+    const b = siapkanUC(d); b.ctx.migrasiStokUC();
+    const sh = barisUC(b), esp = lamaWarna(4).map((v, k) => (v === '' && lamaWarna(5)[k] === '') ? '' : (v || 0) + (lamaWarna(5)[k] || 0));
+    cek(JSON.stringify(stokWarna(sh, 4)) === JSON.stringify(esp) && sh.peek(4, 2).v === 'Gabungan', 'gabung: stok dijumlah per warna');
+    cek(sh.peek(4, 52).f === '=(D4+G4+J4+M4+P4)*281000' && /harga Reguler beda antar baris yang digabung \(281000 \/ 277000\)/.test(semuaAlert(b)), 'gabung: harga baris pertama + catatan harga beda');
+    cek(/gabungan beberapa baris lama/.test(b.ctx.__alerts[0]) && /sama dengan sheet lama/.test(b.ctx.__alerts[0]), 'gabung: dialog menyebut gabungan & total sama'); }
+}
+
+// daftar urutan sungguhan (100 SKU terlaris) terhadap data asli
+let DAFTAR = null;
+try { DAFTAR = require('./daftar-urutan'); } catch (e) { console.log('LEWATI uji daftar sungguhan (uji/daftar-urutan.js tidak ada)'); }
+if (DAFTAR) {
+  const bd = siapkan({ tanpaUrutan: true });
+  const kePeta = e => ({ nama: e.nama, sku: e.sku, baris: e.baris.join(', '), namaLama: e.namaLama.join(' | '), harga: e.harga });
+  tulisUrutan(bd.ss, 'Urutan UC', DAFTAR.UC.map(kePeta)); tulisUrutan(bd.ss, 'Urutan STP', DAFTAR.STP.map(kePeta));
+  bd.ctx.migrasiStokUC(); const alertUCd = bd.ctx.__alerts.join('\n'); bd.ctx.__alerts.length = 0; bd.ctx.migrasiStokSTP();
+  for (const [kode, nama, daftar, peta, akhir] of [['UC', 'Stok Cover UC', DAFTAR.UC, [...Array(16).keys()], 196], ['STP', 'Stok Cover STP', DAFTAR.STP, PETA_STP, 107]]) {
+    const sh = bd.ss.getSheetByName(nama), lama = bd.ss.getSheetByName(nama + ' (lama)');
+    let salah = 0, unitBaru = 0, unitLama = 0;
+    daftar.forEach((e, i) => {
+      const r = 4 + i;
+      if (sh.peek(r, 2).v !== e.nama.trim() || String((sh.peek(r, 3) || { v: '' }).v) !== e.sku || sh.peek(r, 1).v !== i + 1) salah++;
+      peta.forEach((k, w) => {
+        let exp = '';
+        if (k !== null) e.baris.forEach(rl => { const x = lama.peek(rl, 4 + 2 * k); if (x && typeof x.v === 'number') exp = (exp === '' ? 0 : exp) + x.v; });
+        const got = (sh.peek(r, 4 + 3 * w) || { v: '' }).v;
+        if (got !== exp) salah++;
+        unitBaru += got || 0;
+      });
+    });
+    for (let r = 4; r <= akhir; r++) for (let k = 0; k < 16; k++) { const x = lama.peek(r, 4 + 2 * k); if (x && typeof x.v === 'number') unitLama += x.v; }
+    cek(salah === 0 && unitBaru === unitLama, `${kode} daftar sungguhan: ${daftar.length} baris sesuai, stok per warna & total ${unitBaru}/${unitLama} (salah ${salah})`);
+    const nBaru = daftar.length;
+    cek(!sh.peek(4 + nBaru, 2) && sh.peek(5 + nBaru, 2).v === 'TOTAL STOK' && sh.peek(5 + nBaru, 4).f === `=SUM(D4:D${4 + nBaru})`, `${kode} daftar sungguhan: baris TOTAL STOK di bawah produk terakhir`);
+    // Value produk baru: harga mengikuti baris yang ditunjuk
+    let sf = 0;
+    const kolV = 4 + 3 * peta.length;
+    daftar.filter(e => !e.baris.length && e.harga !== '').forEach(e => {
+      const r = 4 + daftar.indexOf(e);
+      for (let gi = 0; gi < 4; gi++) {
+        const fl = lama.peek(e.harga, 36 + gi) ? lama.peek(e.harga, 36 + gi).f : '';
+        const m = String(fl).match(/\*\s*\(?\s*(\d+)\s*\)?\s*$/);
+        const got = (sh.peek(r, kolV + gi) || { f: '' }).f;
+        if (m ? !got.endsWith('*' + m[1]) : got !== '') sf++;
+      }
+    });
+    cek(sf === 0, `${kode} daftar sungguhan: harga Value produk baru mengikuti baris donor (salah ${sf})`);
+  }
+  cek(/181 produk/.test(alertUCd) && /BARU/.test(alertUCd) && /sama dengan sheet lama/.test(alertUCd) && /29 baris sheet lama tidak ikut/.test(alertUCd), 'dialog UC daftar sungguhan: ' + alertUCd.split('\n')[0]);
+  cek(bd.ss.getSheetByName('Stok Cover UC').peek(4, 2).v === 'Honda Brio' && bd.ss.getSheetByName('Stok Cover UC').peek(4 + 180, 2).v === 'Motor', 'UC: hijau di atas, sisa stok (Motor) di bawah');
 }
 
 // kunci
