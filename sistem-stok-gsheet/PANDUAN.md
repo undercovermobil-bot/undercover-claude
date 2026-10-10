@@ -30,20 +30,24 @@ Aturan khusus yang sudah diputuskan: baris sheet lama berkode sama **digabung da
 | Nama Produk | ya | nama di sheet baru |
 | Kode SKU | ya | kode di sheet baru |
 | Baris lama | ya | nomor baris sheet lama asal stok. Beberapa nomor dipisah koma = digabung, stok dijumlah per warna. Kosong = produk baru |
-| Nama di sheet lama | ya | nama baris-baris tadi, dipisah `|`. Dipakai script memastikan nomor baris masih benar |
+| Nama di sheet lama | ya, **wajib** | nama baris-baris tadi, dipisah `|` (satu nama per nomor). Dipakai script memastikan nomor baris masih benar |
 | Harga dari baris | ya | khusus produk baru: baris sheet lama yang harga Value-nya ditiru (model sama, atau harga standar sheet) |
 | No, Stok sekarang, Bagian, Peringkat, Status, Catatan | tidak | informasi untuk dibaca |
 
 **Pengaman saat menu 1a / 1b** (kalau ada yang tidak cocok: muncul pesan dan **tidak ada yang diubah**):
-- Nama di baris yang ditunjuk harus sama dengan "Nama di sheet lama". Kalau sheet lama sudah bergeser, script mencari nama itu di baris lain (hanya kalau cuma ada satu) dan memberi catatan; kalau tidak unik, ditolak.
-- Satu baris lama tidak boleh dipakai dua baris daftar (stok jadi dobel).
-- Baris sheet lama yang **tidak disebut daftar**: stok 0 → tidak ikut; **stok > 0 → otomatis ditaruh di paling bawah** dan disebut di dialog, jadi stok tidak pernah hilang.
-- Total stok sheet baru harus sama dengan sheet lama; kalau tidak, dibatalkan.
+- Kolom "Nama di sheet lama" wajib ada dan terisi untuk setiap baris yang punya "Baris lama". Nama di baris yang ditunjuk harus sama dengan isinya. Kalau sheet lama sudah bergeser (baris disisip/dihapus), script mencari nama itu di baris lain (hanya kalau cuma ada satu), memetakan stok **dan harga produk baru** ke baris yang benar, dan menyebutnya di dialog (bukan diam-diam).
+- Nama Produk baru harus masih berkaitan dengan nama baris lamanya (minimal satu kata sama). Kalau tidak, biasanya kolom daftar terlepas (mis. Data → Sort pada sebagian kolom saja): ditolak. **Jangan sort sebagian kolom di sheet Urutan.**
+- Satu baris lama tidak boleh dipakai dua baris daftar (stok jadi dobel). Baris tanpa "Baris lama" **dan** tanpa Kode SKU (mis. baris TOTAL/catatan) ditolak.
+- Baris sheet lama yang **tidak disebut daftar**: stok 0 → tidak ikut; **berstok, atau isi IN-nya aneh → otomatis ditaruh di paling bawah** dan disebut di dialog, jadi tidak ada yang hilang diam-diam.
+- Sel IN berisi angka berformat teks (mis. `'6`) dibaca sebagai angka dan disebut di dialog. Isi lain yang bukan angka (huruf, tanggal) dikosongkan dan dilaporkan dengan nomor baris.
+- Hanya satu sheet daftar per toko: kalau ada sheet lain bernama mirip (mis. "Urutan UC 1" hasil impor ganda), ditolak sampai dirapikan.
+- Total stok sheet baru harus sama dengan sheet lama; kalau tidak, dibatalkan. Sesudah sheet baru jadi, data sheet lama dibaca ulang dan dibandingkan; kalau ada yang berubah selama proses (staf masih mengedit), dibatalkan. **Minta semua staf menutup file saat migrasi.**
+- Sheet baru dibangun dulu dengan nama sementara "Stok Cover UC (baru)"; sheet lama baru diganti nama di langkah paling akhir. Kalau terhenti di tengah, sheet lama tetap utuh (hapus sheet "(baru)" yang tersisa lalu ulangi).
 - Produk baru tanpa harga di sheet lama: kolom Value dikosongkan dan disebut di catatan.
 
-**Cara impor** (dari tampilan Google bahasa Inggris): buka Google Sheet → **File → Import → Upload** → pilih `Urutan Stok UC STP.xlsx` → **Import location: Insert new sheet(s)** → **Import data**. Muncul sheet **Urutan UC**, **Urutan STP**, dan **Tidak masuk** (daftar baris stok 0 yang dibuang, hanya informasi; boleh dihapus).
+**Cara impor** (dari tampilan Google bahasa Inggris): buka Google Sheet → **File → Import → Upload** → pilih `Urutan Stok UC STP.xlsx` → **Import location: Insert new sheet(s)** → **Import data**. Muncul sheet **Urutan UC**, **Urutan STP**, dan **Tidak masuk** (daftar baris stok 0 yang dibuang, hanya informasi; boleh dihapus). Kalau mengimpor ulang, **hapus dulu** sheet Urutan yang lama: Google menamai sheet duplikat "Urutan UC 1" dan script akan menolak sampai tinggal satu.
 
-**Mengubah daftar sebelum migrasi**: edit langsung di sheet Urutan UC / Urutan STP (ganti nama, pindah baris, hapus baris, tambah produk baru dengan "Baris lama" kosong). Jangan sisakan baris yang "Baris lama"-nya menunjuk baris yang sama dua kali. Setelah migrasi, sheet Urutan boleh dihapus.
+**Mengubah daftar sebelum migrasi**: edit langsung di sheet Urutan UC / Urutan STP: ganti nama, pindahkan **baris utuh** (klik nomor baris, drag; jangan sort sebagian kolom), hapus baris, atau tambah produk baru dengan "Baris lama" kosong dan Kode SKU terisi. Jangan sisakan dua baris yang "Baris lama"-nya sama. Setelah migrasi, sheet Urutan boleh dihapus.
 
 Setelah migrasi, urutan sudah ada di sheet baru: tambah / hapus produk dikerjakan langsung di sana (lihat "Aturan pakai"), bukan lewat sheet Urutan.
 
@@ -194,7 +198,7 @@ Kalau semua pengguna dipercaya dan Log cukup, boleh tidak dikunci. Untuk membuka
 
 **Waktu migrasi terbaik di file asli: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
 
-Kalau migrasi error di tengah jalan, script mengembalikan sheet lama ke nama semula dan menghapus sheet setengah jadi.
+Kalau migrasi error di tengah jalan, sheet lama tidak berubah (script menghapus sheet setengah jadi dan sheet Log kosong yang dibuatnya). Zona waktu file baru diubah setelah migrasi berhasil.
 
 Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps Script dibuka lewat **Extensions → Apps Script** dari spreadsheet yang sama, file sudah format Google Sheets (bukan .xlsx), lalu refresh lagi.
 
@@ -206,7 +210,7 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 - Tunggu sel IN/OUT kosong lagi (±1 detik) sebelum mengetik di **sel yang sama**.
 - **Jangan ganti nama** sheet "Stok Cover UC", "Stok Cover STP", "Log Stok UC", "Log Stok STP", (sheet "(lama)" boleh dihapus setelah tidak dibutuhkan; migrasi ulang tetap ditolak karena sheet baru sudah berformat STOK/IN/OUT. Pindahkan dulu Stok Reseller ASTA/ROBY di UC (lama) baris 201+ kalau masih dipakai). Kalau perlu ganti nama, ubah juga `KONFIG` di Kode.gs.
 - Staf jangan mengisi stok di sheet "(lama)". Isinya tidak lagi diupdate.
-- **Tambah produk baru**: klik kanan **baris kosong tepat di atas TOTAL STOK** (mis. baris 197 di UC) → **Insert 1 row above**. Baris baru jatuh di dalam rumus TOTAL, jadi ikut terhitung. Isi nama, Kode SKU, STOK awal; salin rumus Value dari baris produk di atasnya. Jangan sisip di bawah baris kosong itu: baris tersebut tidak masuk TOTAL.
+- **Tambah produk baru**: klik kanan **baris kosong tepat di atas TOTAL STOK** (setelah migrasi: baris 185 di UC, baris 130 di STP; lihat baris bertuliskan TOTAL STOK) → **Insert 1 row above**. Baris baru jatuh di dalam rumus TOTAL, jadi ikut terhitung. Isi nama, Kode SKU, STOK awal; salin rumus Value dari baris produk di atasnya. Jangan sisip di bawah baris kosong itu: baris tersebut tidak masuk TOTAL.
 - Header baris 2 (nama warna) dan baris 3 (STOK/IN/OUT) jadi patokan script. Jangan diubah.
 
 ## Batasan yang perlu dites sendiri
@@ -248,6 +252,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-09: 217/217 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-10: 236/236 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Review fitur daftar urutan (4 lensa, tiap temuan dibantah 2 skeptis): 12 temuan bertahan (pengaman nama bisa mati, harga produk baru tidak ikut bergeser, sel IN teks, catatan terpotong, migrasi tidak atomik, dll.), semuanya diperbaiki dan diuji. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.
