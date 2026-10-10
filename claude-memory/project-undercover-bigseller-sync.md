@@ -787,3 +787,9 @@ Order gagal; kolom SKU Big Seller cuma teks varian mentah ("Hitam, S", "Hitam, L
 File: `impor_sku_gudang_Travel_Pouch (2026-10-05).xlsx`, 15 baris, Judul `Undercover Autocare - Travel Pouch Organizer Waterproof {Warna} {Ukuran}`. 0 tabrakan prefix TPO- di snapshot gudang 08-08.
 
 **BELUM dikerjakan**: Seller SKU listing TikTok pouch masih teks varian -> perlu diubah ke kode TPO-UA-* (file edit TikTok, aturan: kirim SEMUA varian produk, bukan cuma yg berubah) -- BUTUH export TikTok produk pouch dari user (user bilang mau kirim; blm diterima). Di export TikTok pouch kadang jadi file `_1/_2/_3` tergantung ekspor -> selalu cek isi, bukan nomor file.
+
+## 2026-10-10: Mitsubishi L300 Transparan (SP, TikTok) -- master tak py Transparan, Seller SKU listing = rentang tahun
+
+Screenshot Big Seller: "Cover Mobil Mitsubishi L300 Transparan Anti Air - Smartprotection - Body Cover Selimut Sarung Mobil", **kolom SKU berisi "1981-2021"** (= nilai variasi tahun yg ke-copy jadi Seller SKU, bukan kode). Master `Mitsubishi L300 Pickup` (kode `MTB-LP`, TF=1): 28 kode unik (R10+S18), **tanpa Transparan**; 28/28 sudah di gudang (snapshot 08-08). Dibuat `MTB-LP-SP-T-G1-TRP` (1 baris), pola Transparan standar. File: `impor_sku_gudang_Mitsubishi_L300_Transparan (2026-10-10).xlsx`.
+
+Catatan: (1) gudang py 1 kode nyasar `MTB-LP-UA-R-G1-WBR` (judul "Reguler Warrior Biru", kategori R tp tier Warrior = salah-kategori, harusnya UA-S-G1-WBR) -- sisa lama, tak diutak-atik. (2) Listing ini TIDAK ada di export TikTok SP lokal (0 baris L300) -> listing baru; Seller SKU "1981-2021" perlu diganti ke `MTB-LP-SP-T-G1-TRP` lewat export TikTok SP fresh (belum diminta/dikerjakan; aturan TikTok: kirim semua varian produk). (3) Judul listing gaya baru "Anti Air - Body Cover Selimut Sarung Mobil" = format listing Transparan terbaru, tak mengikuti pola nama lama.
