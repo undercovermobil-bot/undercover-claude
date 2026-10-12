@@ -388,9 +388,10 @@ function bacaDaftarUrutan_(ss, cfg) {
   const sh = ss.getSheetByName(cfg.urutan);
   const kembar = ss.getSheets().map(x => x.getName()).filter(n => n !== cfg.urutan && n.indexOf(cfg.urutan) === 0);
   if (!sh) {
-    throw new Error('Sheet "' + cfg.urutan + '" tidak ditemukan. Tidak ada yang diubah.\n\n' +
+    throw new Error('Sheet "' + cfg.urutan + '" tidak ditemukan di spreadsheet ini. Tidak ada yang diubah.\n\n' +
       (kembar.length ? 'Yang ada: ' + kembar.map(n => '"' + n + '"').join(', ') + '. Ganti namanya jadi persis "' + cfg.urutan + '".\n\n' : '') +
-      'Impor dulu file daftar urutan: menu File → Import → Upload → pilih file → "Insert new sheet(s)" → Import data. ' +
+      'File xlsx yang hanya ada di Google Drive belum cukup: isinya harus masuk sebagai TAB di spreadsheet ini (deretan tab di bagian bawah layar). ' +
+      'Caranya: buka spreadsheet ini → menu File → Import → Upload (atau tab My Drive) → pilih file → Import location: "Insert new sheet(s)" → Import data. ' +
       'Lihat PANDUAN.md bagian "Daftar urutan produk".');
   }
   if (kembar.length) {
