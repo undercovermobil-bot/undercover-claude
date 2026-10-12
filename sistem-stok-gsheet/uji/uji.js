@@ -70,7 +70,7 @@ const snapUC = snap(lamaUC), snapSTP = snap(lamaSTP);
 
 // ---------- sebelum migrasi: trigger aktif, edit sheet format lama tidak diproses
 ctx.aktifkanInputOtomatis(); ctx.aktifkanInputOtomatis();
-cek(ctx.__triggers.length === 1, 'trigger tidak dobel');
+cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === 5).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap 5 menit');
 lamaUC.getRange(4, 5).setValue(9);
 ctx.prosesInputStok({ range: lamaUC.getRange(4, 5), source: ss });
 cek(lamaUC.peek(4, 4).v === 39 && lamaUC.peek(4, 5).v === 9 && !ss.getSheetByName('Log Stok UC'), 'sheet format lama tidak disentuh trigger');
@@ -327,7 +327,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   let sudah = false;
   Rg.getValues = function () {
     const out = asli.call(this);
-    if (!sudah && this.sh === U && this.r === 4 && this.c === 1 && this.nr === 1 && this.nc >= 40) {
+    if (!sudah && this.sh === U && this.r === 4 && this.c === 1 && this.nc >= 40) {
       sudah = true;                                   // pembacaan blok awal oleh trigger
       U.getRange(4, E).setValue(5);                   // staf mengetik ulang 5 sebelum trigger selesai
     }
@@ -341,6 +341,91 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });   // eksekusi berikutnya memproses ketikan baru
   cek(uv(4, D) === stokAwal + 55 && uv(4, E) === '', 'ketikan susulan diproses eksekusi berikutnya: ' + uv(4, D));
   edit(U, 4, F, 55);
+}
+
+// ---------- input cepat: kejadian edit terlewat / pembacaan ketinggalan tidak meninggalkan angka
+{
+  const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.migrasiStokSTP(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC'), BS = b.ss.getSheetByName('Stok Cover STP');
+  const LU = b.ss.getSheetByName('Log Stok UC'), LS = b.ss.getSheetByName('Log Stok STP');
+  const picu = (sh, r, c, extra = {}) => b.ctx.prosesInputStok(Object.assign({ range: sh.getRange(r, c), source: b.ss }, extra));
+  const v = (sh, r, c) => (sh.peek(r, c) || { v: '' }).v;
+  const nLogU = () => LU.getLastRow() - 1;
+  const keterangan = () => LU.getRange(2, 12, nLogU(), 1).getValues().map(x => x[0]);
+
+  // 1. lima sel diketik cepat, trigger hanya sampai untuk sel pertama dan ketiga (kejadian lain terlewat)
+  const awal = [5, 6, 7, 8, 9].map(r => v(BU, r, 4));
+  [5, 6, 7, 8, 9].forEach(r => BU.getRange(r, 5).setValue(2));
+  picu(BU, 5, 5); picu(BU, 7, 5);
+  cek([5, 6, 7, 8, 9].every((r, i) => v(BU, r, 4) === awal[i] + 2 && v(BU, r, 5) === ''), 'kejadian terlewat: semua sel IN diproses oleh trigger berikutnya: ' + [5, 6, 7, 8, 9].map(r => v(BU, r, 4) + '/' + v(BU, r, 5)).join(' '));
+  cek(nLogU() === 5 && keterangan().filter(k => /Diproses ulang otomatis/.test(k)).length === 4, 'kejadian terlewat: 5 baris log, 4 ditandai diproses ulang (' + nLogU() + ')');
+  picu(BU, 5, 5);
+  cek(nLogU() === 5 && [5, 6, 7, 8, 9].every((r, i) => v(BU, r, 4) === awal[i] + 2), 'trigger berikutnya tidak menghitung dobel');
+
+  // 2. sel yang ditolak (catatan merah) tidak disentuh penyapuan, meski stok sudah cukup; diketik ulang → diproses
+  const s4 = v(BU, 4, 4);
+  BU.getRange(4, 6).setValue(s4 + 50); picu(BU, 4, 6);
+  cek(v(BU, 4, 4) === s4 && /DITOLAK/.test(BU.peek(4, 6).note), 'OUT berlebih ditolak (catatan merah)');
+  BU.getRange(4, 5).setValue(100); picu(BU, 4, 5);   // stok naik 100 → OUT tadi sekarang muat
+  cek(v(BU, 4, 4) === s4 + 100 && v(BU, 4, 6) === s4 + 50 && /DITOLAK/.test(BU.peek(4, 6).note), 'sapuan melewati sel bercatatan: OUT yang pernah ditolak tidak dieksekusi sendiri');
+  BU.getRange(4, 6).setValue(s4 + 50); picu(BU, 4, 6);
+  cek(v(BU, 4, 4) === 50 && v(BU, 4, 6) === '' && BU.peek(4, 6).note === '', 'sel bercatatan diketik ulang oleh staf: diproses');
+
+  // 3. pembacaan ketinggalan: sel IN terbaca kosong padahal e.value ada → tunggu, baca ulang
+  {
+    const Rg = Object.getPrototypeOf(BU.getRange(1, 1)), asli = Rg.getValues; let sekali = false;
+    const stokAwal = v(BU, 12, 4), tidur = b.ctx.__sleep || 0;
+    BU.getRange(12, 5).setValue(3);
+    Rg.getValues = function () { const o = asli.call(this); if (!sekali && this.sh === BU && this.r === 4 && this.c === 1 && this.nc >= 40) { sekali = true; o[12 - 4][5 - 1] = ''; } return o; };
+    picu(BU, 12, 5, { value: '3' });
+    Rg.getValues = asli;
+    cek(v(BU, 12, 4) === stokAwal + 3 && v(BU, 12, 5) === '' && (b.ctx.__sleep || 0) === tidur + 1, 'pembacaan ketinggalan: dibaca ulang setelah jeda, diproses (stok ' + v(BU, 12, 4) + ')');
+    // sel memang kosong (sudah diproses eksekusi lain) → tidak dihitung dobel
+    const s12 = v(BU, 12, 4); picu(BU, 12, 5, { value: '3' });
+    cek(v(BU, 12, 4) === s12, 'e.value ada tapi sel sudah kosong: tidak dobel');
+  }
+
+  // 4. penyapu waktu: angka tertinggal di kedua sheet tanpa kejadian edit sama sekali
+  {
+    const u13 = v(BU, 13, 4), s6 = v(BS, 6, 4);
+    BU.getRange(13, 5).setValue(1); BS.getRange(6, 5).setValue(4); BS.getRange(6, 6).setValue(1);
+    const n0 = nLogU(), m0 = LS.getLastRow() - 1;
+    b.ctx.sapuInputStok();
+    cek(v(BU, 13, 4) === u13 + 1 && v(BU, 13, 5) === '' && v(BS, 6, 5) === '' && v(BS, 6, 6) === '', 'penyapu: angka tertinggal di UC dan STP diproses');
+    cek(nLogU() === n0 + 1 && LS.getLastRow() - 1 === m0 + 2 && /Diproses ulang otomatis/.test(LS.getRange(2, 12).getValue()), 'penyapu: tercatat di log masing-masing, ditandai diproses ulang');
+    b.ctx.sapuInputStok();
+    cek(nLogU() === n0 + 1 && LS.getLastRow() - 1 === m0 + 2, 'penyapu kedua kali: tidak ada yang berubah');
+  }
+
+  // 5. sel tertunda karena sistem sibuk dicoba lagi otomatis
+  {
+    const u14 = v(BU, 14, 4); BU.getRange(14, 5).setValue(2); BU.getRange(14, 5).setNote('Sistem sibuk, belum diproses. Akan dicoba lagi otomatis');
+    b.ctx.sapuInputStok();
+    cek(v(BU, 14, 4) === u14 + 2 && v(BU, 14, 5) === '' && BU.peek(14, 5).note === '', 'catatan "sistem sibuk": dicoba lagi dan berhasil');
+  }
+
+  // 6. edit di luar area IN/OUT/STOK (kolom Value) tidak memicu penyapuan
+  {
+    const u15 = v(BU, 15, 4); BU.getRange(15, 5).setValue(1);
+    b.ctx.prosesInputStok({ range: BU.getRange(15, 52), source: b.ss, value: '1' });
+    cek(v(BU, 15, 4) === u15 && v(BU, 15, 5) === 1, 'edit kolom Value: tidak ada penyapuan (hanya penyapu waktu / edit IN/OUT berikutnya)');
+    b.ctx.sapuInputStok(); cek(v(BU, 15, 4) === u15 + 1, 'penyapu waktu memprosesnya');
+  }
+
+  // 7. pasang / matikan trigger: edit + penyapu; instalasi lama (hanya edit) ditambahi penyapu
+  {
+    const c = siapkan(); c.ctx.migrasiStokUC();
+    c.ctx.aktifkanInputOtomatis(); const dua = c.ctx.__triggers.map(t => t.getHandlerFunction()).sort().join();
+    c.ctx.aktifkanInputOtomatis();
+    cek(dua === 'prosesInputStok,sapuInputStok' && c.ctx.__triggers.length === 2 && /sudah aktif/.test(c.ctx.__alerts.slice(-1)[0]), 'aktifkan: edit + penyapu, tidak dobel');
+    c.ctx.matikanInputOtomatis();
+    cek(c.ctx.__triggers.length === 0 && /2 trigger dihapus/.test(c.ctx.__alerts.slice(-1)[0]), 'matikan: kedua trigger dihapus');
+    c.ctx.__triggers.push({ getHandlerFunction: () => 'prosesInputStok' });   // pemasangan versi lama: hanya trigger edit
+    c.ctx.cekStatus();
+    cek(/Penyapu angka tertinggal \(tiap 5 menit\): 0\s+← belum ada/.test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
+    c.ctx.aktifkanInputOtomatis();
+    cek(c.ctx.__triggers.length === 2, 'aktifkan ulang menambah penyapu pada instalasi lama');
+  }
 }
 
 // lock gagal

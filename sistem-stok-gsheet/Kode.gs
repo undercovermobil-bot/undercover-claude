@@ -42,6 +42,8 @@ const KONFIG = {
   FORMAT_STOK: '0;-0;;@',       // angka 0 tidak ditampilkan (sel tampak kosong); nilainya tetap 0
   FORMAT_ANGKA: '0',            // IN / OUT
   FORMAT_WAKTU: 'dd/MM/yyyy HH:mm:ss',
+  TUNGGU_BACA_ULANG_MS: 1500,   // jeda sebelum membaca ulang sel IN/OUT yang terbaca kosong padahal baru diketik
+  SAPU_MENIT: 5,                // trigger waktu penyapu input tertinggal (1, 5, 10, 15, atau 30)
   MAKS_QTY: 9999,               // batas IN/OUT/STOK per sel; sekaligus menolak tanggal yang terketik ("1/2" = 46024)
   WARNA_SEL: { ERROR: '#e06666', HEADER: '#cfe2f3', BANNER_BG: '#00ffff', BANNER_FG: '#ff0000' },
   // Warna header & kolom STOK per warna cover, dicocokkan dari nama warna (huruf kecil, mengandung `kunci`).
@@ -70,6 +72,8 @@ const GRUP_VALUE = [
 ];
 
 // Judul kolom sheet "Urutan ..." (baris 1). Kolom lain (Bagian, Peringkat, Status, Catatan, dst.) diabaikan.
+const CATATAN_SIBUK = 'Sistem sibuk';   // awal catatan sel yang tertunda karena lock; dicoba lagi otomatis
+
 const KOLOM_URUTAN = { nama: 'nama produk', sku: 'kode sku', baris: 'baris lama', namaLama: 'nama di sheet lama', harga: 'harga dari baris' };
 
 const HEADER_LOG = ['Waktu', 'Sheet', 'Baris', 'Produk', 'Kode SKU', 'Warna', 'Jenis',
@@ -98,6 +102,10 @@ function onOpen() {
  * Nilai sel dibaca ulang SETELAH lock didapat, jadi trigger ganda
  * (mis. 2 orang sama-sama memasang trigger) tidak menghitung dobel:
  * eksekusi kedua menemukan sel IN/OUT sudah kosong.
+ *
+ * Tiap eksekusi juga MENYAPU seluruh sel IN/OUT sheet itu (bukan hanya sel yang diedit): kalau staf mengetik cepat
+ * dan Google melewatkan satu kejadian edit, atau pembacaan sel sempat ketinggalan, angka yang tertinggal diproses
+ * oleh eksekusi berikutnya. Sel yang ditolak (ada catatan merah) tidak disentuh sampai staf menghapus/mengetik ulang.
  */
 function prosesInputStok(e) {
   if (!e || !e.range) return;
@@ -130,7 +138,7 @@ function prosesInputStok(e) {
         if (info && isi[r - barisAwal][c - c0] !== '') {
           tandaiError_(sheet.getRange(r, c), info.jenis === 'STOK'
             ? 'Sistem sibuk: koreksi STOK ini belum tercatat di Log. Ketik ulang angkanya.'
-            : 'Sistem sibuk, belum diproses. Hapus lalu ketik ulang.');
+            : CATATAN_SIBUK + ', belum diproses. Akan dicoba lagi otomatis; kalau tetap tertinggal, hapus lalu ketik ulang.');
         }
       }
     }
@@ -139,99 +147,157 @@ function prosesInputStok(e) {
 
   try {
     const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
-    // Rekap "hari ini" memakai TODAY() menurut zona file, jam Log memakai WIB: samakan.
-    if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
-    const blok = sheet.getRange(barisAwal, 1, barisAkhir - barisAwal + 1, peta.kolomTerakhir).getValues();
-    const satuSel = r0 === r1 && c0 === c1;
-    const user = emailUser_(e);
-    const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script
-    const log = [];
-    const pesan = [];
-    const selesai = [];   // sel IN/OUT yang sudah diproses, dikosongkan setelah dicek ulang
-
-    for (let r = barisAwal; r <= barisAkhir; r++) {
-      const baris = blok[r - barisAwal];
-      const produk = String(baris[1]).trim();
-      const sku = String(baris[2]).trim();
-
-      for (let c = c0; c <= kolomAkhir; c++) {
-        const info = peta.kolom[c];
-        if (!info) continue;
-        const sel = sheet.getRange(r, c);
-        const nilai = baris[c - 1];
-
-        // Admin mengetik langsung di kolom STOK (opname / koreksi).
-        // Tulisan script sendiri tidak memicu onEdit, jadi ini pasti edit manusia.
-        if (info.jenis === 'STOK') {
-          const baru = angkaStok_(nilai);
-          if (baru === null) {
-            tandaiError_(sel, 'STOK harus angka bulat >= 0.');
-            continue;
-          }
-          resetSel_(sel, 'STOK', info.warna);
-          const lama = satuSel ? (angkaStok_(e.oldValue === undefined ? '' : e.oldValue)) : '';
-          log.push([waktu, namaSheet, r, produk, sku, info.warna, 'KOREKSI', '', lama === null ? '' : lama, baru, user,
-            satuSel ? 'Edit langsung kolom STOK' : 'Edit banyak sel sekaligus, stok sebelum tidak terbaca']);
-          continue;
-        }
-
-        const qty = angkaInput_(nilai);
-        if (qty === null) {               // sel dikosongkan
-          resetSel_(sel, info.jenis, info.warna);
-          continue;
-        }
-        if (!produk) {
-          tandaiError_(sel, 'Baris ini tanpa nama produk, input tidak diproses.');
-          continue;
-        }
-        if (isNaN(qty)) {
-          tandaiError_(sel, 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + '.');
-          continue;
-        }
-        const sebelum = angkaStok_(baris[info.kolomStok - 1]);
-        if (sebelum === null) {
-          tandaiError_(sel, 'Kolom STOK warna ini berisi bukan angka. Perbaiki STOK dulu.');
-          continue;
-        }
-        const sesudah = info.jenis === 'IN' ? sebelum + qty : sebelum - qty;
-        if (sesudah < 0 && !KONFIG.IZINKAN_STOK_MINUS) {
-          const catatan = 'DITOLAK: OUT ' + qty + ' melebihi stok ' + sebelum +
-            '. Stok tidak berubah. Cek fisik barang, lalu hapus/ketik ulang.';
-          if (tandaiError_(sel, catatan)) {
-            log.push([waktu, namaSheet, r, produk, sku, info.warna, 'DITOLAK', qty, sebelum, sebelum, user,
-              'OUT melebihi stok']);
-          }
-          continue;
-        }
-
-        sheet.getRange(r, info.kolomStok).setValue(sesudah);
-        baris[info.kolomStok - 1] = sesudah;
-        selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna });
-        baris[c - 1] = '';
-        log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qty, sebelum, sesudah, user, '']);
-        pesan.push(produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
-      }
-    }
-
-    if (selesai.length) {
-      // Staf bisa mengetik ulang di sel yang sama selagi script berjalan: sel yang isinya sudah berubah
-      // jangan dihapus; ketikan baru itu diproses eksekusi berikutnya.
-      const terkini = sheet.getRange(barisAwal, c0, barisAkhir - barisAwal + 1, kolomAkhir - c0 + 1).getValues();
-      selesai.forEach(x => {
-        if (terkini[x.r - barisAwal][x.c - c0] === x.nilai) {
-          x.sel.clearContent();
-          resetSel_(x.sel, x.jenis, x.warna);
-        }
-      });
-    }
-    if (log.length) tulisLog_(ss, cfg, log);
-    SpreadsheetApp.flush();   // wajib sebelum lock dilepas, supaya eksekusi berikutnya baca nilai terbaru
-    if (pesan.length) {
-      ss.toast(pesan.slice(0, 5).join('\n') + (pesan.length > 5 ? '\n+' + (pesan.length - 5) + ' lainnya' : ''),
-        'Stok diperbarui', 5);
-    }
+    prosesBlok_(ss, sheet, cfg, peta, { r0: barisAwal, r1: barisAkhir, c0: c0, c1: kolomAkhir }, e);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/**
+ * Jaring pengaman (trigger waktu, tiap KONFIG.SAPU_MENIT menit): proses sel IN/OUT yang masih tertinggal di sheet sistem.
+ * Dipasang menu "2. Aktifkan input otomatis" bersama trigger edit.
+ */
+function sapuInputStok() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  KONFIG.SISTEM.forEach(cfg => {
+    const sheet = ss.getSheetByName(cfg.nama);
+    if (!sheet) return;
+    const peta = bacaPeta_(sheet);
+    if (!Object.keys(peta.kolom).length) return;
+    const lock = LockService.getDocumentLock();
+    if (!lock.tryLock(10000)) return;   // sibuk: giliran berikutnya
+    try {
+      prosesBlok_(ss, sheet, cfg, peta, null, null);
+    } finally {
+      lock.releaseLock();
+    }
+  });
+}
+
+/**
+ * Inti pemrosesan. Lock sudah dipegang pemanggil.
+ * edit = { r0, r1, c0, c1 } area yang diedit staf (sel STOK di area ini = koreksi manual; sel kosong di area ini
+ * dikembalikan ke tampilan normal), atau null untuk penyapuan murni.
+ * Sel IN/OUT berisi angka di luar area edit ikut diproses, kecuali yang punya catatan (ditolak sebelumnya).
+ */
+function prosesBlok_(ss, sheet, cfg, peta, edit, e) {
+  const namaSheet = sheet.getName();
+  const baris0 = KONFIG.BARIS_DATA;
+  const baris1 = peta.barisTotal - 1;
+  const kol1 = peta.kolomTerakhir;
+  if (baris1 < baris0 || kol1 < 1) return;
+  // Rekap "hari ini" memakai TODAY() menurut zona file, jam Log memakai WIB: samakan.
+  if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
+  const bacaBlok = () => sheet.getRange(baris0, 1, baris1 - baris0 + 1, kol1).getValues();
+  let blok = bacaBlok();
+  const diEdit = (r, c) => !!edit && r >= edit.r0 && r <= edit.r1 && c >= edit.c0 && c <= edit.c1;
+  const satuSel = !!edit && edit.r0 === edit.r1 && edit.c0 === edit.c1;
+  // Google memberi nilai yang baru diketik di e.value. Kalau sel IN/OUT itu terbaca kosong padahal e.value ada,
+  // kemungkinan pembacaan ketinggalan: tunggu sebentar lalu baca ulang (bukan menganggap sel sudah kosong).
+  if (satuSel && e && e.value !== undefined && String(e.value) !== '') {
+    const inf = peta.kolom[edit.c0];
+    if (inf && inf.jenis !== 'STOK' && blok[edit.r0 - baris0][edit.c0 - 1] === '') {
+      Utilities.sleep(KONFIG.TUNGGU_BACA_ULANG_MS);
+      SpreadsheetApp.flush();
+      blok = bacaBlok();
+    }
+  }
+  const user = emailUser_(e || {});
+  const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script
+  const log = [];
+  const pesan = [];
+  const selesai = [];   // sel IN/OUT yang sudah diproses, dikosongkan setelah dicek ulang
+
+  for (let r = baris0; r <= baris1; r++) {
+    const baris = blok[r - baris0];
+    const produk = String(baris[1]).trim();
+    const sku = String(baris[2]).trim();
+
+    for (let c = 1; c <= kol1; c++) {
+      const info = peta.kolom[c];
+      if (!info) continue;
+      const dalam = diEdit(r, c);
+      const nilai = baris[c - 1];
+
+      // Admin mengetik langsung di kolom STOK (opname / koreksi).
+      // Tulisan script sendiri tidak memicu onEdit, jadi ini pasti edit manusia. Hanya untuk sel yang diedit.
+      if (info.jenis === 'STOK') {
+        if (!dalam) continue;
+        const sel = sheet.getRange(r, c);
+        const baru = angkaStok_(nilai);
+        if (baru === null) {
+          tandaiError_(sel, 'STOK harus angka bulat >= 0.');
+          continue;
+        }
+        resetSel_(sel, 'STOK', info.warna);
+        const lama = satuSel ? (angkaStok_(e.oldValue === undefined ? '' : e.oldValue)) : '';
+        log.push([waktu, namaSheet, r, produk, sku, info.warna, 'KOREKSI', '', lama === null ? '' : lama, baru, user,
+          satuSel ? 'Edit langsung kolom STOK' : 'Edit banyak sel sekaligus, stok sebelum tidak terbaca']);
+        continue;
+      }
+
+      const qty = angkaInput_(nilai);
+      if (qty === null) {               // sel dikosongkan
+        if (dalam) resetSel_(sheet.getRange(r, c), info.jenis, info.warna);
+        continue;
+      }
+      const sel = sheet.getRange(r, c);
+      if (!dalam) {
+        // Penyapuan: sel di luar edit ini yang masih berisi angka. Yang ditolak sebelumnya (ada catatan) dibiarkan;
+        // yang hanya tertunda karena sistem sibuk dicoba lagi.
+        const catatanSel = sel.getNote();
+        if (catatanSel !== '' && catatanSel.indexOf(CATATAN_SIBUK) !== 0) continue;
+      }
+      const ket = dalam ? '' : 'Diproses ulang otomatis (kejadian edit sebelumnya terlewat)';
+      if (!produk) {
+        tandaiError_(sel, 'Baris ini tanpa nama produk, input tidak diproses.');
+        continue;
+      }
+      if (isNaN(qty)) {
+        tandaiError_(sel, 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + '.');
+        continue;
+      }
+      const sebelum = angkaStok_(baris[info.kolomStok - 1]);
+      if (sebelum === null) {
+        tandaiError_(sel, 'Kolom STOK warna ini berisi bukan angka. Perbaiki STOK dulu.');
+        continue;
+      }
+      const sesudah = info.jenis === 'IN' ? sebelum + qty : sebelum - qty;
+      if (sesudah < 0 && !KONFIG.IZINKAN_STOK_MINUS) {
+        const catatan = 'DITOLAK: OUT ' + qty + ' melebihi stok ' + sebelum +
+          '. Stok tidak berubah. Cek fisik barang, lalu hapus/ketik ulang.';
+        if (tandaiError_(sel, catatan)) {
+          log.push([waktu, namaSheet, r, produk, sku, info.warna, 'DITOLAK', qty, sebelum, sebelum, user,
+            ket || 'OUT melebihi stok']);
+        }
+        continue;
+      }
+
+      sheet.getRange(r, info.kolomStok).setValue(sesudah);
+      baris[info.kolomStok - 1] = sesudah;
+      selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna });
+      baris[c - 1] = '';
+      log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qty, sebelum, sesudah, user, ket]);
+      pesan.push(produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
+    }
+  }
+
+  if (selesai.length) {
+    // Staf bisa mengetik ulang di sel yang sama selagi script berjalan: sel yang isinya sudah berubah
+    // jangan dihapus; ketikan baru itu diproses eksekusi berikutnya.
+    const terkini = bacaBlok();
+    selesai.forEach(x => {
+      if (terkini[x.r - baris0][x.c - 1] === x.nilai) {
+        x.sel.clearContent();
+        resetSel_(x.sel, x.jenis, x.warna);
+      }
+    });
+  }
+  if (log.length) tulisLog_(ss, cfg, log);
+  SpreadsheetApp.flush();   // wajib sebelum lock dilepas, supaya eksekusi berikutnya baca nilai terbaru
+  if (pesan.length) {
+    ss.toast(pesan.slice(0, 5).join('\n') + (pesan.length > 5 ? '\n+' + (pesan.length - 5) + ' lainnya' : ''),
+      'Stok diperbarui', 5);
   }
 }
 
@@ -824,14 +890,17 @@ function bangunSheet_(sh, cfg, d) {
 function aktifkanInputOtomatis() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  const ada = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'prosesInputStok');
-  if (ada.length) {
-    ui.alert('Input otomatis sudah aktif (' + ada.length + ' trigger milik akun ini).');
+  const trigger = fn => ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === fn);
+  const adaEdit = trigger('prosesInputStok');
+  const adaSapu = trigger('sapuInputStok');
+  if (adaEdit.length && adaSapu.length) {
+    ui.alert('Input otomatis sudah aktif (' + adaEdit.length + ' trigger edit + ' + adaSapu.length + ' penyapu milik akun ini).');
     return;
   }
-  ScriptApp.newTrigger('prosesInputStok').forSpreadsheet(ss).onEdit().create();
+  if (!adaEdit.length) ScriptApp.newTrigger('prosesInputStok').forSpreadsheet(ss).onEdit().create();
+  if (!adaSapu.length) ScriptApp.newTrigger('sapuInputStok').timeBased().everyMinutes(KONFIG.SAPU_MENIT).create();
   if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
-  let pesan = 'Input otomatis AKTIF.\nTrigger berjalan atas nama akun: ' + Session.getEffectiveUser().getEmail() +
+  let pesan = 'Input otomatis AKTIF (trigger edit + penyapu tiap ' + KONFIG.SAPU_MENIT + ' menit untuk angka yang tertinggal).\nTrigger berjalan atas nama akun: ' + Session.getEffectiveUser().getEmail() +
     '\n\nCoba: ketik 1 di kolom IN salah satu produk lalu Enter. STOK harus bertambah 1 dan sel IN kosong lagi.';
   const pemilik = ss.getOwner();
   if (pemilik && pemilik.getEmail() !== Session.getEffectiveUser().getEmail()) {
@@ -844,7 +913,7 @@ function aktifkanInputOtomatis() {
 function matikanInputOtomatis() {
   let n = 0;
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'prosesInputStok') {
+    if (t.getHandlerFunction() === 'prosesInputStok' || t.getHandlerFunction() === 'sapuInputStok') {
       ScriptApp.deleteTrigger(t);
       n++;
     }
@@ -907,7 +976,10 @@ function setelZonaWaktu() {
 function cekStatus() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const t = ScriptApp.getProjectTriggers().filter(x => x.getHandlerFunction() === 'prosesInputStok').length;
-  const baris = ['Trigger aktif (akun ini): ' + t + (t > 1 ? '  ← lebih dari 1, hapus lewat menu Matikan lalu aktifkan lagi' : '')];
+  const sapu = ScriptApp.getProjectTriggers().filter(x => x.getHandlerFunction() === 'sapuInputStok').length;
+  const baris = ['Trigger edit aktif (akun ini): ' + t + (t > 1 ? '  ← lebih dari 1, hapus lewat menu Matikan lalu aktifkan lagi' : '') +
+    '\nPenyapu angka tertinggal (tiap ' + KONFIG.SAPU_MENIT + ' menit): ' + sapu +
+    (t && !sapu ? '  ← belum ada, jalankan menu 2. Aktifkan input otomatis sekali lagi' : '')];
   KONFIG.SISTEM.forEach(cfg => {
     const sh = ss.getSheetByName(cfg.nama);
     let status = 'TIDAK ADA';

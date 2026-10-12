@@ -162,6 +162,7 @@ function buatKonteks(ss, opsi = {}) {
     },
     LockService: { getDocumentLock: () => ({ tryLock: () => (opsi.lockGagal ? false : true), releaseLock() {} }) },
     Utilities: {
+      sleep() { ctx.__sleep = (ctx.__sleep || 0) + 1; },
       formatDate(d, tz, fmt) {
         const p = {};
         new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
@@ -172,7 +173,7 @@ function buatKonteks(ss, opsi = {}) {
     Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@x' }), getActiveUser: () => ({ getEmail: () => '' }) },
     ScriptApp: {
       getProjectTriggers: () => triggers.slice(),
-      newTrigger(fn) { const t = { getHandlerFunction: () => fn }; const b = { forSpreadsheet: () => b, onEdit: () => b, create: () => { triggers.push(t); return t; } }; return b; },
+      newTrigger(fn) { const t = { getHandlerFunction: () => fn }; const b = { forSpreadsheet: () => b, onEdit: () => b, timeBased: () => b, everyMinutes: n => { t.menit = n; return b; }, create: () => { triggers.push(t); return t; } }; return b; },
       deleteTrigger(t) { triggers.splice(triggers.indexOf(t), 1); },
     },
   };
