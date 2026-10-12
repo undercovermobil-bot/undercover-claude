@@ -70,7 +70,7 @@ const snapUC = snap(lamaUC), snapSTP = snap(lamaSTP);
 
 // ---------- sebelum migrasi: trigger aktif, edit sheet format lama tidak diproses
 ctx.aktifkanInputOtomatis(); ctx.aktifkanInputOtomatis();
-cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === 5).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap 5 menit');
+cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === 10).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap 10 menit');
 lamaUC.getRange(4, 5).setValue(9);
 ctx.prosesInputStok({ range: lamaUC.getRange(4, 5), source: ss });
 cek(lamaUC.peek(4, 4).v === 39 && lamaUC.peek(4, 5).v === 9 && !ss.getSheetByName('Log Stok UC'), 'sheet format lama tidak disentuh trigger');
@@ -209,7 +209,7 @@ edit(U, 4, E, -2); cek(uv(4, D) === 44, 'negatif ditolak');
 edit(U, 4, E, ' 7 '); cek(uv(4, D) === 51 && uv(4, E) === '', 'string angka diterima');
 paste(U, 5, E, [[2], [3]]); cek(uv(5, D) === 26 && uv(6, D) === 10, 'paste multi-baris');
 paste(U, 7, D, [[10, 2, 1]]); cek(uv(7, D) === 11, 'paste STOK+IN+OUT');
-cek(logUC().getRange(2, 7, 3, 1).getValues().map(r => r[0]).join() === 'OUT,IN,KOREKSI', 'satu batch: yang diproses terakhir paling atas');
+cek(logUC().getRange(2, 7, 3, 1).getValues().map(r => r[0]).join() === 'IN,OUT,KOREKSI', 'satu batch: yang diproses terakhir paling atas (per warna: STOK, OUT, IN)');
 edit(U, 8, D, 20, { oldValue: '16' });
 const lk = logUC().getRange(2, 7, 1, 4).getValues()[0];   // terbaru = baris 2
 cek(lk[0] === 'KOREKSI' && lk[2] === 16 && lk[3] === 20, 'koreksi manual: ' + JSON.stringify(lk));
@@ -337,9 +337,10 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   U.getRange(4, E).setValue(50);
   ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });
   Rg.getValues = asli;
-  cek(uv(4, D) === stokAwal + 50 && uv(4, E) === 5, 'ketikan susulan tidak terhapus: stok ' + uv(4, D) + ', sel IN ' + uv(4, E));
-  ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });   // eksekusi berikutnya memproses ketikan baru
-  cek(uv(4, D) === stokAwal + 55 && uv(4, E) === '', 'ketikan susulan diproses eksekusi berikutnya: ' + uv(4, D));
+  // ketikan susulan tidak terhapus begitu saja: putaran penyapuan berikutnya (masih dalam eksekusi yang sama) memprosesnya
+  cek(uv(4, D) === stokAwal + 55 && uv(4, E) === '', 'ketikan susulan diproses putaran berikutnya, tidak hilang: stok ' + uv(4, D) + ', sel IN ' + uv(4, E));
+  ctx.prosesInputStok({ range: U.getRange(4, E), source: ss });   // eksekusi susulan: tidak ada yang tersisa, tidak dobel
+  cek(uv(4, D) === stokAwal + 55 && uv(4, E) === '', 'eksekusi susulan tidak menghitung dobel: ' + uv(4, D));
   edit(U, 4, F, 55);
 }
 
@@ -358,7 +359,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   [5, 6, 7, 8, 9].forEach(r => BU.getRange(r, 5).setValue(2));
   picu(BU, 5, 5); picu(BU, 7, 5);
   cek([5, 6, 7, 8, 9].every((r, i) => v(BU, r, 4) === awal[i] + 2 && v(BU, r, 5) === ''), 'kejadian terlewat: semua sel IN diproses oleh trigger berikutnya: ' + [5, 6, 7, 8, 9].map(r => v(BU, r, 4) + '/' + v(BU, r, 5)).join(' '));
-  cek(nLogU() === 5 && keterangan().filter(k => /Diproses ulang otomatis/.test(k)).length === 4, 'kejadian terlewat: 5 baris log, 4 ditandai diproses ulang (' + nLogU() + ')');
+  cek(nLogU() === 5 && keterangan().filter(k => /Diproses penyapuan otomatis/.test(k)).length === 4, 'kejadian terlewat: 5 baris log, 4 ditandai penyapuan (' + nLogU() + ')');
   picu(BU, 5, 5);
   cek(nLogU() === 5 && [5, 6, 7, 8, 9].every((r, i) => v(BU, r, 4) === awal[i] + 2), 'trigger berikutnya tidak menghitung dobel');
 
@@ -371,18 +372,66 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   BU.getRange(4, 6).setValue(s4 + 50); picu(BU, 4, 6);
   cek(v(BU, 4, 4) === 50 && v(BU, 4, 6) === '' && BU.peek(4, 6).note === '', 'sel bercatatan diketik ulang oleh staf: diproses');
 
-  // 3. pembacaan ketinggalan: sel IN terbaca kosong padahal e.value ada → tunggu, baca ulang
+  // 3. galat sementara di tengah proses: sel yang STOK-nya sudah naik dikosongkan + dilog (tidak dobel saat disapu lagi)
+  {
+    const r3 = [40, 41, 42], awal3 = r3.map(r => v(BU, r, 4));
+    r3.forEach(r => BU.getRange(r, 5).setValue(1));
+    const Rg = Object.getPrototypeOf(BU.getRange(1, 1)), asliSet = Rg.setValue; let n = 0;
+    const logSebelum = nLogU();
+    Rg.setValue = function (x) { if (this.sh === BU && this.c === 4 && ++n === 3) throw new Error('Service error: Spreadsheets'); return asliSet.call(this, x); };
+    let galat = null;
+    try { picu(BU, 40, 5); } catch (err) { galat = err; }
+    Rg.setValue = asliSet;
+    cek(galat && /Service error/.test(galat.message), 'galat layanan dilempar ulang (terlihat di Executions)');
+    cek(v(BU, 40, 4) === (awal3[0] || 0) + 1 && v(BU, 41, 4) === (awal3[1] || 0) + 1 && v(BU, 42, 4) === awal3[2] && v(BU, 40, 5) === '' && v(BU, 41, 5) === '' && v(BU, 42, 5) === 1, 'galat tengah proses: sel yang sudah masuk STOK dikosongkan, sisanya tetap menunggu');
+    cek(nLogU() === logSebelum + 2, 'galat tengah proses: baris yang sudah masuk tetap dicatat di Log');
+    b.ctx.sapuInputStok();
+    cek(r3.every((r, i) => v(BU, r, 4) === (awal3[i] || 0) + 1 && v(BU, r, 5) === '') && nLogU() === logSebelum + 3, 'penyapu berikutnya: tiap sel dihitung tepat sekali');
+  }
+  // 3b. OUT diperiksa sebelum IN pada warna yang sama (OUT yang tak muat ditolak, tidak lolos karena IN yang baru diketik)
+  {
+    const s16 = v(BU, 16, 4); BU.getRange(16, 5).setValue(10); BU.getRange(16, 6).setValue(s16 + 5);
+    b.ctx.sapuInputStok();
+    cek(v(BU, 16, 4) === s16 + 10 && v(BU, 16, 5) === '' && v(BU, 16, 6) === s16 + 5 && /DITOLAK/.test(BU.peek(16, 6).note), 'IN dan OUT bersamaan: OUT dicek lebih dulu terhadap stok (ditolak), IN diproses');
+    BU.getRange(16, 6).setValue(''); b.ctx.prosesInputStok({ range: BU.getRange(16, 6), source: b.ss });
+  }
+  // 3c. atribusi Log: sel yang disapu tidak diberi nama staf yang kebetulan menjalankan eksekusi
+  {
+    BU.getRange(17, 5).setValue(1); BU.getRange(18, 5).setValue(1);
+    picu(BU, 17, 5, { user: { getEmail: () => 'stafB@x' } });
+    const baris = LU.getRange(2, 1, 2, 12).getValues();   // terbaru di atas: 2 baris terakhir ditulis
+    const edit17 = baris.find(x => x[2] === 17), sapu18 = baris.find(x => x[2] === 18);
+    cek(edit17 && edit17[10] === 'stafB@x' && edit17[11] === '' && sapu18 && sapu18[10] === '' && /Diproses penyapuan otomatis/.test(sapu18[11]), 'Log: sel yang diedit atas nama editor, sel yang disapu tanpa nama + keterangan penyapuan');
+  }
+  // 3d. rentang edit banyak sel yang terpotong ke satu sel tetap dicatat "banyak sel"
+  {
+    const sebelum = nLogU();
+    const rg = { getSheet: () => BU, getRow: () => 197, getColumn: () => 4, getNumRows: () => 3, getNumColumns: () => 1 };   // baris 197 (kosong) .. 199 (rekap): terpotong ke 1 sel
+    b.ctx.prosesInputStok({ range: rg, source: b.ss });
+    cek(nLogU() === sebelum + 1 && /Edit banyak sel sekaligus/.test(LU.getRange(2, 12).getValue()), 'rentang banyak sel yang terpotong ke satu sel: tetap dicatat "banyak sel", bukan "edit langsung"');
+  }
+  // 3d2. staf menghapus angka yang akan ditolak selagi diproses: sel kosong tidak boleh tertinggal merah, tidak ada log DITOLAK palsu
   {
     const Rg = Object.getPrototypeOf(BU.getRange(1, 1)), asli = Rg.getValues; let sekali = false;
-    const stokAwal = v(BU, 12, 4), tidur = b.ctx.__sleep || 0;
-    BU.getRange(12, 5).setValue(3);
-    Rg.getValues = function () { const o = asli.call(this); if (!sekali && this.sh === BU && this.r === 4 && this.c === 1 && this.nc >= 40) { sekali = true; o[12 - 4][5 - 1] = ''; } return o; };
-    picu(BU, 12, 5, { value: '3' });
+    BU.getRange(26, 6).setValue(5000);   // OUT jauh melebihi stok → akan ditolak
+    const logSebelum = nLogU();
+    Rg.getValues = function () { const o = asli.call(this); if (!sekali && this.sh === BU && this.r === 4 && this.c === 1 && this.nc >= 40) { sekali = true; BU.getRange(26, 6).setValue(''); } return o; };
+    picu(BU, 26, 5);
     Rg.getValues = asli;
-    cek(v(BU, 12, 4) === stokAwal + 3 && v(BU, 12, 5) === '' && (b.ctx.__sleep || 0) === tidur + 1, 'pembacaan ketinggalan: dibaca ulang setelah jeda, diproses (stok ' + v(BU, 12, 4) + ')');
-    // sel memang kosong (sudah diproses eksekusi lain) → tidak dihitung dobel
-    const s12 = v(BU, 12, 4); picu(BU, 12, 5, { value: '3' });
-    cek(v(BU, 12, 4) === s12, 'e.value ada tapi sel sudah kosong: tidak dobel');
+    cek((BU.peek(26, 6) || { note: '' }).note === '' && (BU.peek(26, 6) || { bg: null }).bg === null && nLogU() === logSebelum, 'angka dihapus staf selagi diproses: tidak ada tanda merah / log DITOLAK palsu');
+  }
+  // 3e. semua catatan buatan script dikenali pembersih (tidak ada tanda yang tertinggal selamanya / catatan staf yang ikut terhapus)
+  {
+    const catatan = [];
+    BU.getRange(20, 5).setValue('abc'); picu(BU, 20, 5); catatan.push(BU.peek(20, 5).note);                   // teks
+    BU.getRange(197, 5).setValue(1); picu(BU, 197, 5); catatan.push(BU.peek(197, 5).note);                    // tanpa nama produk
+    BU.getRange(21, 4).setValue('x'); BU.getRange(21, 5).setValue(1); picu(BU, 21, 5); catatan.push(BU.peek(21, 5).note);   // STOK bukan angka
+    BU.getRange(22, 4).setValue('x'); picu(BU, 22, 4); catatan.push(BU.peek(22, 4).note);                    // STOK diedit jadi teks
+    BU.getRange(23, 6).setValue(99999); picu(BU, 23, 6); catatan.push(BU.peek(23, 6).note);                   // OUT melebihi stok / di atas batas
+    BU.cell(24, 5).note = 'Sistem sibuk: koreksi'; catatan.push('Sistem sibuk, belum diproses');
+    cek(catatan.length === 6 && catatan.every(n => n && b.ctx.catatanSistem_(n)) && !b.ctx.catatanSistem_('catatan buatan staf'), 'semua jenis catatan script dikenali catatanSistem_: ' + JSON.stringify(catatan.map(n => String(n).slice(0, 18))));
+    [[20, 5], [197, 5], [21, 5], [23, 6]].forEach(([r, c]) => { BU.getRange(r, c).setValue(''); picu(BU, r, c); });
+    BU.getRange(21, 4).setValue(3); picu(BU, 21, 4); BU.getRange(22, 4).setValue(3); picu(BU, 22, 4);
   }
 
   // 4. penyapu waktu: angka tertinggal di kedua sheet tanpa kejadian edit sama sekali
@@ -392,7 +441,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
     const n0 = nLogU(), m0 = LS.getLastRow() - 1;
     b.ctx.sapuInputStok();
     cek(v(BU, 13, 4) === u13 + 1 && v(BU, 13, 5) === '' && v(BS, 6, 5) === '' && v(BS, 6, 6) === '', 'penyapu: angka tertinggal di UC dan STP diproses');
-    cek(nLogU() === n0 + 1 && LS.getLastRow() - 1 === m0 + 2 && /Diproses ulang otomatis/.test(LS.getRange(2, 12).getValue()), 'penyapu: tercatat di log masing-masing, ditandai diproses ulang');
+    cek(nLogU() === n0 + 1 && LS.getLastRow() - 1 === m0 + 2 && /Diproses penyapuan otomatis/.test(LS.getRange(2, 12).getValue()), 'penyapu: tercatat di log masing-masing, ditandai diproses ulang');
     b.ctx.sapuInputStok();
     cek(nLogU() === n0 + 1 && LS.getLastRow() - 1 === m0 + 2, 'penyapu kedua kali: tidak ada yang berubah');
   }
@@ -422,7 +471,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
     cek(c.ctx.__triggers.length === 0 && /2 trigger dihapus/.test(c.ctx.__alerts.slice(-1)[0]), 'matikan: kedua trigger dihapus');
     c.ctx.__triggers.push({ getHandlerFunction: () => 'prosesInputStok' });   // pemasangan versi lama: hanya trigger edit
     c.ctx.cekStatus();
-    cek(/Penyapu angka tertinggal \(tiap 5 menit\): 0\s+← belum ada/.test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
+    cek(/Penyapu angka tertinggal \(tiap 10 menit\): 0\s+← belum ada/.test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
     c.ctx.aktifkanInputOtomatis();
     cek(c.ctx.__triggers.length === 2, 'aktifkan ulang menambah penyapu pada instalasi lama');
   }
@@ -447,13 +496,65 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   cek(BU.peek(20, 6).v === 9999 && /DITOLAK/.test(BU.peek(20, 6).note) && (BU.peek(20, 4) || { v: '' }).v === s20, 'sel berisi angka & ditolak tetap merah setelah penyapuan');
 }
 
+// ---------- hemat kuota: lock singkat, putaran verifikasi, penyapu hanya jam kerja
+{
+  const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC');
+  const v = (r, c) => (BU.peek(r, c) || { v: '' }).v;
+  // a. waktu tunggu lock: IN/OUT singkat, koreksi STOK lama
+  const dicatat = []; const asliLock = b.ctx.LockService.getDocumentLock;
+  b.ctx.LockService.getDocumentLock = () => ({ tryLock: ms => { dicatat.push(ms); return true; }, releaseLock() {} });
+  BU.getRange(30, 5).setValue(1); b.ctx.prosesInputStok({ range: BU.getRange(30, 5), source: b.ss });
+  BU.getRange(30, 4).setValue(40); b.ctx.prosesInputStok({ range: BU.getRange(30, 4), source: b.ss });
+  b.ctx.LockService.getDocumentLock = asliLock;
+  cek(dicatat[0] === 3000 && dicatat[1] === 25000, 'lock: IN/OUT menunggu ' + dicatat[0] + ' ms, koreksi STOK ' + dicatat[1] + ' ms');
+  // b. sel yang diketik selagi putaran pertama berjalan diproses putaran kedua; tidak ada putaran sia-sia
+  const Rg = Object.getPrototypeOf(BU.getRange(1, 1)), asli = Rg.getValues; let sekali = false, bacaan = 0;
+  const s31 = v(31, 4), s32 = v(32, 4);
+  BU.getRange(31, 5).setValue(2);
+  Rg.getValues = function () { const o = asli.call(this); if (this.sh === BU && this.r === 4 && this.c === 1 && this.nc >= 40) { bacaan++; if (!sekali) { sekali = true; BU.getRange(32, 5).setValue(3); } } return o; };
+  b.ctx.prosesInputStok({ range: BU.getRange(31, 5), source: b.ss, value: '2' });
+  Rg.getValues = asli;
+  cek(v(31, 4) === s31 + 2 && v(32, 4) === s32 + 3 && v(32, 5) === '', 'sel yang diketik selagi diproses ikut terbawa putaran berikutnya');
+  cek(bacaan >= 3 && bacaan <= 6, 'jumlah putaran wajar (' + bacaan + ' pembacaan blok)');
+  // c. putaran maksimum membatasi (tidak berputar tanpa akhir)
+  const n0 = b.ss.getSheetByName('Log Stok UC').getLastRow();
+  // d. penyapu di luar jam kerja langsung berhenti; di dalam jam kerja bekerja
+  const jamWib = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+  BU.getRange(33, 5).setValue(1); const s33 = v(33, 4);
+  b.ctx.__KONFIG.SAPU_JAM = { awal: (jamWib + 1) % 24, akhir: (jamWib + 2) % 24 || 24 };
+  if (b.ctx.__KONFIG.SAPU_JAM.awal < b.ctx.__KONFIG.SAPU_JAM.akhir) { b.ctx.sapuInputStok(); cek(v(33, 4) === s33 && v(33, 5) === 1, 'penyapu di luar jam kerja: tidak memproses'); }
+  b.ctx.__KONFIG.SAPU_JAM = { awal: 0, akhir: 24 }; b.ctx.sapuInputStok();
+  cek(v(33, 4) === s33 + 1 && v(33, 5) === '', 'penyapu di dalam jam kerja: memproses');
+  // e. penyapu tanpa apa pun tertinggal tidak membaca catatan (hemat) dan tidak mengubah apa pun
+  let catatanDibaca = 0; const asliCat = Rg.getNotes; Rg.getNotes = function () { catatanDibaca++; return asliCat.call(this); };
+  const logSebelum = b.ss.getSheetByName('Log Stok UC').getLastRow();
+  b.ctx.sapuInputStok();
+  Rg.getNotes = asliCat;
+  cek(catatanDibaca === 0 && b.ss.getSheetByName('Log Stok UC').getLastRow() === logSebelum, 'penyapu kosong: tanpa baca catatan, log tetap');
+}
+
+// ---------- penyapu: galat satu sheet tidak menghentikan sheet lain
+{
+  const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.migrasiStokSTP(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC'), BS = b.ss.getSheetByName('Stok Cover STP');
+  BU.getRange(5, 5).setValue(1); BS.getRange(5, 5).setValue(1);
+  const s5 = (BS.peek(5, 4) || { v: '' }).v;
+  const Rg = Object.getPrototypeOf(BU.getRange(1, 1)), asli = Rg.getValues;
+  Rg.getValues = function () { if (this.sh === BU && this.nc >= 40) throw new Error('Service error: Spreadsheets'); return asli.call(this); };
+  b.ctx.__KONFIG.SAPU_JAM = { awal: 0, akhir: 24 };
+  let galat = null; try { b.ctx.sapuInputStok(); } catch (err) { galat = err; }
+  Rg.getValues = asli;
+  cek(galat && /Penyapu gagal: Stok Cover UC/.test(galat.message) && (BS.peek(5, 4) || { v: '' }).v === s5 + 1 && (BS.peek(5, 5) || { v: '' }).v === '', 'penyapu: galat di UC dilaporkan, STP tetap disapu');
+}
+
 // lock gagal
 const b2 = siapkan({ lockGagal: true });
 b2.ctx.migrasiStokUC();
 const sh2 = b2.ss.getSheetByName('Stok Cover UC');
 sh2.getRange(4, E).setValue(5);
 b2.ctx.prosesInputStok({ range: sh2.getRange(4, E, 1, 2), source: b2.ss });
-cek(sh2.peek(4, D).v === 39 && sh2.peek(4, E).v === 5 && !sh2.peek(4, E).note && sh2.peek(4, E).bg === null && b2.ss.toasts.some(t => /Sistem sibuk/.test(t)), 'lock gagal: angka IN tetap, TIDAK ditandai merah (diproses penyapuan berikutnya), ada toast');
+cek(sh2.peek(4, D).v === 39 && sh2.peek(4, E).v === 5 && !sh2.peek(4, E).note && sh2.peek(4, E).bg === null && !b2.ss.toasts.some(t => /Sistem sibuk/.test(t)), 'lock gagal: angka IN tetap, TIDAK ditandai merah dan tanpa toast (diproses pemegang lock / penyapu)');
 { b2.ctx.__opsi.lockGagal = false; b2.ctx.sapuInputStok(); cek(sh2.peek(4, D).v === 44 && sh2.peek(4, E).v === '', 'lock gagal: angka yang tertunda diproses penyapu setelah lock bebas'); b2.ctx.__opsi.lockGagal = true; }
 sh2.getRange(4, D).setValue(77);
 b2.ctx.prosesInputStok({ range: sh2.getRange(4, D), source: b2.ss });
