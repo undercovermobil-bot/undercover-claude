@@ -152,3 +152,16 @@ Lazada tidak ditulis krn bukan mobil beda; label diperjelas: "Hyundai Avega
 Skrip: `hpp-per-merk-scripts/build_docx_top100_produksi.js` (docx-js).
 LibreOffice rusak di cloud -> verifikasi pakai validate.py skill docx +
 baca ulang teks XML (pandoc juga tidak terpasang).
+
+## Peta SKU -> produk untuk tim desain (2026-10-12)
+
+User minta daftar produk (nama mobil) per SKU supaya tim bisa membuat desain.
+Skrip: `hpp-per-merk-scripts/build_pemetaan_sku_produk.py <RANKING_TOP_100_PER_SKU.xlsx> <out.xlsx>`.
+Hasil: 100 SKU = **110 produk** (tiap nama mobil tetap produk sendiri walau
+cover sama). 8 SKU berisi lebih dari 1 produk: Avanza/Xenia/Veloz (3), Agya/
+Ayla, Rush/Terios, Calya/Sigra, Raize/Rocky 2019+, Alphard/Vellfire,
+Luxio/Gran Max Minibus, Feroza/Taft GT/Rocky lama (3).
+- Rocky dipisah: 2019+ (cover Raize, No. 15) dan lama F70/F300 (cover Feroza, No. 33).
+- Listing gabungan "Daihatsu Gran Max" tidak didesain.
+- Satu listing, beberapa tipe bodi (dicatat di kolom catatan): Hilux + Hilux
+  Rangga, HiAce Commuter + Premio, Vitara (Grand Vitara/Vitara gen 4/e Vitara).
