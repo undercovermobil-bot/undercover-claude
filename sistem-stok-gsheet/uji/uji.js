@@ -572,6 +572,18 @@ cek(b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v === 17, 'data diambil ul
     cek(sh.peek(4, 52).f === '=(D4+G4+J4+M4+P4)*281000' && /harga Reguler beda antar baris yang digabung \(281000 \/ 277000\)/.test(semuaAlert(b)), 'gabung: harga baris pertama + catatan harga beda');
     cek(/gabungan beberapa baris lama/.test(b.ctx.__alerts[0]) && /sama dengan sheet lama/.test(b.ctx.__alerts[0]), 'gabung: dialog menyebut gabungan & total sama'); }
 
+  // nama baris lama dibetulkan user setelah daftar dibuat ("Toyota Swift" → "Suzuki Swift"): diterima, nama ikut, disebut
+  { const b = siapkanUC(cermin()); b.ss.getSheetByName('Stok Cover UC').getRange(19, 2).setValue('Suzuki Swift'); b.ctx.migrasiStokUC();
+    const sh = barisUC(b);
+    cek(namaTab(b).includes('(lama)') && sh.peek(19, 2).v === 'Suzuki Swift' && JSON.stringify(stokWarna(sh, 19)) === JSON.stringify(lamaWarna(19)) &&
+      /1 nama baris lama sudah diganti.*"Toyota Swift" → "Suzuki Swift" \(baris 19\)/.test(b.ctx.__alerts[0]), 'nama baris lama dibetulkan: dipakai, nama ikut, disebut di dialog'); }
+  // diganti total (tak ada kata sama): ditolak, dengan petunjuk cara memperbaiki daftar
+  { const b = siapkanUC(cermin()); b.ss.getSheetByName('Stok Cover UC').getRange(19, 2).setValue('Mobil Lain Sekali'); b.ctx.migrasiStokUC();
+    cek(namaTab(b) === TAB_AWAL && /tidak ditemukan di sheet lama\. Kalau nama baris itu memang sudah diganti, ubah kolom "Nama di sheet lama"/.test(semuaAlert(b)), 'nama baris lama diganti total: ditolak + petunjuk'); }
+  // nama di baris itu adalah produk lain di daftar (baris bertukar nama): bukan "diganti", ditangani lewat nama
+  { const b = siapkanUC(cermin()); const lm = b.ss.getSheetByName('Stok Cover UC'); lm.getRange(19, 2).setValue(nm(20)); lm.getRange(20, 2).setValue(nm(19)); b.ctx.migrasiStokUC();
+    const sh = barisUC(b);
+    cek(namaTab(b).includes('(lama)') && /2 nomor "Baris lama" di daftar sudah tidak cocok/.test(b.ctx.__alerts[0]) && !/sudah diganti sejak daftar dibuat/.test(b.ctx.__alerts[0]) && JSON.stringify(stokWarna(sh, 19)) === JSON.stringify(lamaWarna(20)) && sh.peek(19, 2).v === 'Toyota Swift', 'nama bertukar antar baris: dipetakan lewat nama, bukan dianggap diganti'); }
   // sel IN berupa teks: angka murni dibaca sebagai angka (dengan catatan); bukan angka → dikosongkan + dilaporkan
   { const b = siapkanUC(cermin()); const lm = b.ss.getSheetByName('Stok Cover UC');
     lm.getRange(4, 4).setValue('39');      // Honda Brio Abu-abu, aslinya 39 → teks

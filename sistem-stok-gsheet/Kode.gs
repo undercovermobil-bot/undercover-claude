@@ -313,6 +313,10 @@ function migrasi_(cfg) {
     tanya += '\n• ' + rencana.geser.length + ' nomor "Baris lama" di daftar sudah tidak cocok dengan sheet lama (baris bergeser?). Stoknya dicari lewat nama baris, mis. ' +
       rencana.geser.slice(0, 3).map(g => g.nama + ' (baris ' + g.dari + ' → ' + g.ke + ')').join('; ') + '.';
   }
+  if (rencana.diganti.length) {
+    tanya += '\n• ' + rencana.diganti.length + ' nama baris lama sudah diganti sejak daftar dibuat, mis. ' +
+      rencana.diganti.slice(0, 3).map(g => '"' + g.dari + '" → "' + g.ke + '" (baris ' + g.baris + ')').join('; ') + '. Barisnya sama, jadi dianggap produk yang sama.';
+  }
   if (rencana.teksAngka) tanya += '\n• ' + rencana.teksAngka + ' sel IN berisi angka berformat teks; dibaca sebagai angka.';
   if (rencana.bukanAngka) tanya += '\n• PERHATIAN: ' + rencana.bukanAngka + ' sel IN bukan angka (teks/tanggal); stoknya dikosongkan, daftar sel ada di catatan setelah selesai.';
   if (rencana.dibuang.length) {
@@ -514,22 +518,34 @@ function susunUrutan_(cfg, mentah, lama, fLama, namaWarna, labelValue) {
   const dipakai = {};
   const asal = {};   // nomor baris yang tertulis di daftar → baris lama yang benar-benar dipakai
   const geser = [];
+  const diganti = [];   // nama baris lama sudah diganti sejak daftar dibuat, barisnya tetap
+  const diharapkan = {};
+  mentah.forEach(m => m.namaLama.forEach(n => { diharapkan[normNama_(n)] = true; }));
   const entri = mentah.map(m => {
     const ket = 'Daftar "' + cfg.urutan + '" baris ' + m.barisDaftar + ' (' + m.nama + ')';
     const sumber = [];
+    let namaProduk = m.nama;
     m.sumber.forEach((r, j) => {
       const harap = m.namaLama[j];
       let pakai = r;
       if (!dalamRentang(r) || normNama_(namaBaris(r)) !== normNama_(harap)) {
         const cocok = perNama[normNama_(harap)] || [];
         const kini = dalamRentang(r) ? 'bernama "' + namaBaris(r) + '"' : 'di luar daftar produk sheet lama (baris ' + awal + '–' + akhir + ')';
-        if (cocok.length !== 1) {
+        if (cocok.length === 1) {
+          pakai = cocok[0];
+          geser.push({ nama: m.nama, dari: r, ke: pakai });
+        } else if (dalamRentang(r) && cocok.length === 0 && !diharapkan[normNama_(namaBaris(r))] &&
+          kataNama_(namaBaris(r)).some(k => kataNama_(harap).indexOf(k) >= 0)) {
+          // Nama di baris ini sudah diganti (mis. salah ketik dibetulkan): bukan nama produk lain di daftar, nama lama tidak ada
+          // di baris lain, dan masih ada kata yang sama. Dianggap produk yang sama.
+          diganti.push({ nama: m.nama, baris: r, dari: harap, ke: namaBaris(r) });
+          if (m.sumber.length === 1 && normNama_(m.nama) === normNama_(harap)) namaProduk = namaBaris(r);
+        } else {
           salah.push(ket + ': baris lama ' + r + ' ' + kini + ', daftar menulis "' + harap + '"; nama itu ' +
-            (cocok.length ? 'ada di ' + cocok.length + ' baris' : 'tidak ditemukan') + ' di sheet lama.');
+            (cocok.length ? 'ada di ' + cocok.length + ' baris' : 'tidak ditemukan') + ' di sheet lama.' +
+            (dalamRentang(r) && cocok.length === 0 ? ' Kalau nama baris itu memang sudah diganti, ubah kolom "Nama di sheet lama" (dan Nama Produk) di daftar menjadi "' + namaBaris(r) + '".' : ''));
           return;
         }
-        pakai = cocok[0];
-        geser.push({ nama: m.nama, dari: r, ke: pakai });
       }
       asal[r] = pakai;
       if (dipakai[pakai]) {
@@ -547,7 +563,7 @@ function susunUrutan_(cfg, mentah, lama, fLama, namaWarna, labelValue) {
       salah.push(ket + ': nama baru sama sekali beda dari nama baris lama ' + sumber.join('+') + ' ("' + sumber.map(namaBaris).join('" + "') +
         '"). Kolom daftar mungkin terlepas (mis. habis Sort sebagian kolom). Kalau memang sengaja diganti, sisakan minimal satu kata yang sama.');
     }
-    return { nama: m.nama, sku: m.sku, sumber: sumber, hargaDari: m.hargaDari, tambahan: false };
+    return { nama: namaProduk, sku: m.sku, sumber: sumber, hargaDari: m.hargaDari, tambahan: false };
   });
   // "Harga dari baris" ikut dipetakan lewat baris-baris yang sudah dicocokkan namanya.
   entri.forEach((e, idx) => {
@@ -677,13 +693,15 @@ function susunUrutan_(cfg, mentah, lama, fLama, namaWarna, labelValue) {
     }
   }));
 
+  diganti.forEach(g => kritis.push('Nama baris lama ' + g.baris + ' sudah diganti sejak daftar dibuat: "' + g.dari + '" → "' + g.ke +
+    '". Dianggap produk yang sama, stok diambil dari baris itu' + (g.dari === g.nama ? ' dan nama di sheet baru ikut nama sekarang.' : '.')));
   const ringkasGeser = geser.length
     ? ['' + geser.length + ' nomor "Baris lama" di daftar sudah bergeser; stok diambil lewat nama baris. Contoh: ' +
       geser.slice(0, 5).map(g => g.nama + ' (' + g.dari + ' → ' + g.ke + ')').join('; ') + '.']
     : [];
   return {
     entri: entri, peringatan: kritis.concat(ringkasGeser, info), dibuang: dibuang, ditambah: ditambah, outTerisi: outTerisi,
-    stokLama: stokLama, stokBaru: stokBaru, geser: geser, teksAngka: teksAngka, bukanAngka: bukanAngka,
+    stokLama: stokLama, stokBaru: stokBaru, geser: geser, diganti: diganti, teksAngka: teksAngka, bukanAngka: bukanAngka,
     dariLama: entri.filter(e => e.sumber.length).length, baru: baru.length, digabung: entri.filter(e => e.sumber.length > 1).length,
   };
 }
