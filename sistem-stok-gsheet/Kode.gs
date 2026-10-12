@@ -131,17 +131,20 @@ function prosesInputStok(e) {
 
   const lock = LockService.getDocumentLock();
   if (!lock.tryLock(25000)) {
+    // Sel IN/OUT sengaja TIDAK ditandai merah: pemegang lock bisa saja sudah memprosesnya (dan menghapus tandanya) sebelum
+    // tanda ini terpasang, sehingga sel kosong tertinggal merah. Angka yang belum hilang diproses eksekusi berikutnya / penyapu.
+    // Koreksi STOK manual tidak ikut disapu, jadi tetap ditandai.
     const isi = sheet.getRange(barisAwal, c0, barisAkhir - barisAwal + 1, kolomAkhir - c0 + 1).getValues();
+    let tertunda = false;
     for (let r = barisAwal; r <= barisAkhir; r++) {
       for (let c = c0; c <= kolomAkhir; c++) {
         const info = peta.kolom[c];
-        if (info && isi[r - barisAwal][c - c0] !== '') {
-          tandaiError_(sheet.getRange(r, c), info.jenis === 'STOK'
-            ? 'Sistem sibuk: koreksi STOK ini belum tercatat di Log. Ketik ulang angkanya.'
-            : CATATAN_SIBUK + ', belum diproses. Akan dicoba lagi otomatis; kalau tetap tertinggal, hapus lalu ketik ulang.');
-        }
+        if (!info || isi[r - barisAwal][c - c0] === '') continue;
+        if (info.jenis === 'STOK') tandaiError_(sheet.getRange(r, c), 'Sistem sibuk: koreksi STOK ini belum tercatat di Log. Ketik ulang angkanya.');
+        else tertunda = true;
       }
     }
+    if (tertunda && e.source) e.source.toast('Sistem sibuk. Angka IN/OUT yang belum hilang akan diproses otomatis (paling lama ' + KONFIG.SAPU_MENIT + ' menit).', 'Sistem sibuk', 8);
     return;
   }
 
@@ -190,6 +193,7 @@ function prosesBlok_(ss, sheet, cfg, peta, edit, e) {
   if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
   const bacaBlok = () => sheet.getRange(baris0, 1, baris1 - baris0 + 1, kol1).getValues();
   let blok = bacaBlok();
+  const catatan = sheet.getRange(baris0, 1, baris1 - baris0 + 1, kol1).getNotes();
   const diEdit = (r, c) => !!edit && r >= edit.r0 && r <= edit.r1 && c >= edit.c0 && c <= edit.c1;
   const satuSel = !!edit && edit.r0 === edit.r1 && edit.c0 === edit.c1;
   // Google memberi nilai yang baru diketik di e.value. Kalau sel IN/OUT itu terbaca kosong padahal e.value ada,
@@ -237,15 +241,17 @@ function prosesBlok_(ss, sheet, cfg, peta, edit, e) {
       }
 
       const qty = angkaInput_(nilai);
-      if (qty === null) {               // sel dikosongkan
-        if (dalam) resetSel_(sheet.getRange(r, c), info.jenis, info.warna);
+      const catatanSel = catatan[r - baris0][c - 1];
+      if (qty === null) {               // sel kosong
+        // Di area edit: kembalikan ke tampilan normal. Di luar area edit: bersihkan tanda merah buatan script yang tertinggal
+        // di sel yang sudah kosong (mis. staf menghapus angkanya tapi kejadian hapus terlewat).
+        if (dalam || (catatanSel !== '' && catatanSistem_(catatanSel))) resetSel_(sheet.getRange(r, c), info.jenis, info.warna);
         continue;
       }
       const sel = sheet.getRange(r, c);
       if (!dalam) {
         // Penyapuan: sel di luar edit ini yang masih berisi angka. Yang ditolak sebelumnya (ada catatan) dibiarkan;
         // yang hanya tertunda karena sistem sibuk dicoba lagi.
-        const catatanSel = sel.getNote();
         if (catatanSel !== '' && catatanSel.indexOf(CATATAN_SIBUK) !== 0) continue;
       }
       const ket = dalam ? '' : 'Diproses ulang otomatis (kejadian edit sebelumnya terlewat)';
@@ -536,6 +542,11 @@ function parseBaris_(v) {
     hasil.push(Number(bagian[j]));
   }
   return hasil;
+}
+
+/** Catatan yang dipasang script sendiri pada sel IN/OUT/STOK yang bermasalah (bukan catatan buatan staf). */
+function catatanSistem_(n) {
+  return /^(DITOLAK:|Sistem sibuk|Isi angka bulat|Baris ini tanpa nama produk|Kolom STOK warna ini berisi|STOK harus angka)/.test(String(n));
 }
 
 function normNama_(s) {

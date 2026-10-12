@@ -96,6 +96,7 @@ class Range {
   clearContent() { return this.each(x => { x.v = ''; x.f = ''; }); }
   setNote(n) { return this.each(x => { x.note = n || ''; }); }
   getNote() { return this.sh.cell(this.r, this.c).note; }
+  getNotes() { const o = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? x.note : ''); } o.push(row); } return o; }
   setBackground(b) { return this.each(x => { x.bg = b; }); }
   setFontColor(c) { return this.each(x => { x.fc = c; }); }
   getBackground() { return this.sh.cell(this.r, this.c).bg; }

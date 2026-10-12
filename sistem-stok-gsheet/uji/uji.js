@@ -428,13 +428,33 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   }
 }
 
+// ---------- tanda merah basi pada sel kosong dibersihkan penyapuan
+{
+  const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC');
+  const merah = (r, c, cat) => { const x = BU.cell(r, c); x.bg = '#e06666'; x.note = cat; };
+  merah(9, 5, 'Sistem sibuk, belum diproses. Akan dicoba lagi otomatis');   // sel kosong + tanda sistem (sisa balapan)
+  merah(10, 6, 'DITOLAK: OUT 9 melebihi stok 2. Stok tidak berubah.');      // staf menghapus angkanya, kejadian hapus terlewat
+  merah(11, 5, 'catatan buatan staf: jangan hapus');                         // catatan staf di sel kosong: dibiarkan
+  BU.getRange(12, 5).setValue(1);
+  b.ctx.prosesInputStok({ range: BU.getRange(12, 5), source: b.ss, value: '1' });
+  cek(BU.peek(9, 5).bg === null && BU.peek(9, 5).note === '' && BU.peek(10, 6).bg === null && BU.peek(10, 6).note === '', 'tanda sistem basi di sel kosong dibersihkan oleh penyapuan');
+  cek(BU.peek(11, 5).note === 'catatan buatan staf: jangan hapus' && BU.peek(11, 5).bg === '#e06666', 'catatan buatan staf di sel kosong tidak disentuh');
+  // sel berisi angka dengan tanda DITOLAK tetap dibiarkan
+  const s20 = (BU.peek(20, 4) || { v: '' }).v;
+  BU.getRange(20, 6).setValue(9999); b.ctx.prosesInputStok({ range: BU.getRange(20, 6), source: b.ss });
+  b.ctx.sapuInputStok();
+  cek(BU.peek(20, 6).v === 9999 && /DITOLAK/.test(BU.peek(20, 6).note) && (BU.peek(20, 4) || { v: '' }).v === s20, 'sel berisi angka & ditolak tetap merah setelah penyapuan');
+}
+
 // lock gagal
 const b2 = siapkan({ lockGagal: true });
 b2.ctx.migrasiStokUC();
 const sh2 = b2.ss.getSheetByName('Stok Cover UC');
 sh2.getRange(4, E).setValue(5);
 b2.ctx.prosesInputStok({ range: sh2.getRange(4, E, 1, 2), source: b2.ss });
-cek(sh2.peek(4, D).v === 39 && /sibuk/.test(sh2.peek(4, E).note) && !sh2.peek(4, F).note, 'lock gagal: input tetap, ditandai');
+cek(sh2.peek(4, D).v === 39 && sh2.peek(4, E).v === 5 && !sh2.peek(4, E).note && sh2.peek(4, E).bg === null && b2.ss.toasts.some(t => /Sistem sibuk/.test(t)), 'lock gagal: angka IN tetap, TIDAK ditandai merah (diproses penyapuan berikutnya), ada toast');
+{ b2.ctx.__opsi.lockGagal = false; b2.ctx.sapuInputStok(); cek(sh2.peek(4, D).v === 44 && sh2.peek(4, E).v === '', 'lock gagal: angka yang tertunda diproses penyapu setelah lock bebas'); b2.ctx.__opsi.lockGagal = true; }
 sh2.getRange(4, D).setValue(77);
 b2.ctx.prosesInputStok({ range: sh2.getRange(4, D), source: b2.ss });
 cek(sh2.peek(4, D).v === 77 && /belum tercatat di Log/.test(sh2.peek(4, D).note), 'lock gagal: koreksi STOK ditandai');

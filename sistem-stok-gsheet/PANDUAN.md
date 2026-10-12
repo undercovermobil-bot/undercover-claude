@@ -70,7 +70,9 @@ Tidak ada lagi langkah "kurangi IN manual" dan "hapus OUT akhir hari".
 2. Kalau sel yang baru diketik terbaca kosong padahal Google melaporkan ada isinya (pembacaan ketinggalan), script menunggu ±1,5 detik lalu membaca ulang.
 3. **Penyapu waktu** tiap 5 menit memproses angka yang masih tertinggal walau tidak ada edit baru. Dipasang bersama trigger edit oleh menu **2. Aktifkan input otomatis** (≈290 eksekusi singkat per hari, jauh di bawah kuota Google).
 
-Sel yang **ditolak** (merah, ada catatan, mis. OUT melebihi stok) tidak disentuh penyapuan: tunggu staf menghapus atau mengetik ulang. Sel yang tertunda karena "Sistem sibuk" dicoba lagi otomatis. Edit di luar area IN/OUT/STOK (mis. kolom Value) tidak memicu penyapuan; penyapu waktu yang menanganinya.
+Sel yang **ditolak** (merah, ada catatan, mis. OUT melebihi stok) tidak disentuh penyapuan: tunggu staf menghapus atau mengetik ulang. Kalau sistem sibuk (banyak input bersamaan), angka IN/OUT **tidak** ditandai merah; muncul pemberitahuan kecil "Sistem sibuk" dan angkanya diproses otomatis (paling lama 5 menit). Tanda merah buatan script yang tertinggal di sel yang sudah kosong dibersihkan otomatis oleh penyapuan; catatan buatan staf tidak disentuh.
+
+**Biaya:** tiap edit kini membaca seluruh area IN/OUT (±9.000 sel, sebelumnya satu baris), jadi eksekusi sedikit lebih lama (perkiraan +0,5–1 detik). Penyapu 5 menit membaca kedua sheet ±290 kali per hari (perkiraan 5–15 menit dari kuota trigger harian akun biasa 90 menit; belum diukur di Google asli). Kalau kuota jadi masalah, naikkan `SAPU_MENIT` di Kode.gs ke 10 atau 15 lalu jalankan Matikan dan Aktifkan input otomatis lagi. Edit di luar area IN/OUT/STOK (mis. kolom Value) tidak memicu penyapuan; penyapu waktu yang menanganinya.
 
 Baris bawah tabel:
 - **TOTAL STOK**: total per warna + total unit (kolom C) + total value.
@@ -259,6 +261,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-12: 258/258 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Review fitur daftar urutan (4 lensa, tiap temuan dibantah 2 skeptis): 12 temuan bertahan (pengaman nama bisa mati, harga produk baru tidak ikut bergeser, sel IN teks, catatan terpotong, migrasi tidak atomik, dll.), semuanya diperbaiki dan diuji. Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-12: 262/262 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Review fitur daftar urutan (4 lensa, tiap temuan dibantah 2 skeptis): 12 temuan bertahan (pengaman nama bisa mati, harga produk baru tidak ikut bergeser, sel IN teks, catatan terpotong, migrasi tidak atomik, dll.), semuanya diperbaiki dan diuji. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.
