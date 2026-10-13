@@ -1,4 +1,4 @@
-"""Pemakaian: python3 isi_campaign_shopee.py <eligible_Product_list.xlsx> <template.xlsx> <prefix_out> <diskon_desimal, mis. 0.0633>
+"""Pemakaian: python3 isi_campaign_shopee.py <eligible_Product_list.xlsx> <template.xlsx> <prefix_out> <diskon_desimal, mis. 0.06326> [maks_baris_per_file; 0 = satu file]
 (file input sudah lewat repair_xlsx.py)
 
 Isi template campaign Shopee dari eligible list: hanya produk 'Signature',
@@ -6,7 +6,8 @@ Harga Diskon = floor(Harga Awal x (1 - DISKON)), dipecah per produk (<= MAKS bar
 import sys, math, openpyxl
 from openpyxl.styles import PatternFill
 eligible, template, out_prefix, diskon = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
-HANYA, MAKS = 'Signature', 2600
+HANYA = 'Signature'
+MAKS = int(sys.argv[5]) if len(sys.argv) > 5 else 2600      # 0 = semua dalam 1 file
 ORANGE = PatternFill('solid', fgColor='FFC000')
 src = openpyxl.load_workbook(eligible).active
 hdr = [src.cell(1, c).value for c in range(1, 16)]
@@ -22,13 +23,16 @@ for r in range(4, src.max_row + 1):
     row[C['Harga Diskon']] = math.floor(awal * (1 - diskon))
     per_produk.setdefault(str(row[C['Kode Produk']]), []).append(row)
 total = sum(map(len, per_produk.values()))
-n_file = -(-total // MAKS)
-target = -(-total // n_file)
 bagian, isi = [], []
-for rows in per_produk.values():
-    if isi and sum(map(len, isi)) + len(rows) > target + 80:
-        bagian.append(isi); isi = []
-    isi.append(rows)
+if MAKS <= 0:
+    isi = list(per_produk.values())
+else:
+    n_file = -(-total // MAKS)
+    target = -(-total // n_file)
+    for rows in per_produk.values():
+        if isi and sum(map(len, isi)) + len(rows) > target + 80:
+            bagian.append(isi); isi = []
+        isi.append(rows)
 bagian.append(isi)
 print(f'dilewati (bukan {HANYA}): {lewat} varian | diisi: {len(per_produk)} produk, {total} varian -> {len(bagian)} file')
 for k, isi in enumerate(bagian, 1):
@@ -40,6 +44,6 @@ for k, isi in enumerate(bagian, 1):
                 ws.cell(r, c).value = v
             ws.cell(r, 11).fill = ORANGE
             r += 1
-    out = f'{out_prefix}_{k}.xlsx'
+    out = f'{out_prefix}.xlsx' if len(bagian) == 1 else f'{out_prefix}_{k}.xlsx'
     wb.save(out)
     print(f'  {out.split("/")[-1]}: {len(isi)} produk, {r - 4} varian')
