@@ -43,7 +43,7 @@ const KONFIG = {
   FORMAT_ANGKA: '0',            // IN / OUT
   FORMAT_WAKTU: 'dd/MM/yyyy HH:mm:ss',
   SAPU_MENIT: 15,               // trigger waktu penyapu input tertinggal (1, 5, 10, 15, atau 30). Tiap jalan ±8-10 detik dari kuota harian
-  SAPU_JAM: { awal: 7, akhir: 18 },   // penyapu hanya bekerja pada jam ini (WIB), di luar jam itu langsung berhenti
+  SAPU_JAM: { awal: 6, akhir: 19 },   // penyapu hanya bekerja pada jam ini (WIB), di luar jam itu langsung berhenti
   TUNGGU_LOCK_MS: 3000,         // lama trigger edit menunggu lock. Singkat: yang kalah giliran berhenti, pemegang lock sudah menyapu semua sel
   PUTARAN_MAKS: 3,              // pemegang lock mengulang penyapuan sampai tidak ada yang tersisa (maks. putaran ini)
   MAKS_QTY: 9999,               // batas IN/OUT/STOK per sel; sekaligus menolak tanggal yang terketik ("1/2" = 46024)
