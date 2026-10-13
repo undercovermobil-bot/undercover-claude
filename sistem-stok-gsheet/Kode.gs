@@ -42,8 +42,8 @@ const KONFIG = {
   FORMAT_STOK: '0;-0;;@',       // angka 0 tidak ditampilkan (sel tampak kosong); nilainya tetap 0
   FORMAT_ANGKA: '0',            // IN / OUT
   FORMAT_WAKTU: 'dd/MM/yyyy HH:mm:ss',
-  SAPU_MENIT: 10,               // trigger waktu penyapu input tertinggal (1, 5, 10, 15, atau 30). Tiap jalan ±5-10 detik dari kuota harian
-  SAPU_JAM: { awal: 6, akhir: 22 },   // penyapu hanya bekerja pada jam ini (WIB), di luar jam itu langsung berhenti
+  SAPU_MENIT: 15,               // trigger waktu penyapu input tertinggal (1, 5, 10, 15, atau 30). Tiap jalan ±8-10 detik dari kuota harian
+  SAPU_JAM: { awal: 7, akhir: 18 },   // penyapu hanya bekerja pada jam ini (WIB), di luar jam itu langsung berhenti
   TUNGGU_LOCK_MS: 3000,         // lama trigger edit menunggu lock. Singkat: yang kalah giliran berhenti, pemegang lock sudah menyapu semua sel
   PUTARAN_MAKS: 3,              // pemegang lock mengulang penyapuan sampai tidak ada yang tersisa (maks. putaran ini)
   MAKS_QTY: 9999,               // batas IN/OUT/STOK per sel; sekaligus menolak tanggal yang terketik ("1/2" = 46024)
@@ -281,7 +281,8 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
       if (qty === null) {               // sel kosong
         // Di area edit: kembalikan ke tampilan normal. Di luar area edit: bersihkan tanda merah buatan script yang tertinggal
         // di sel yang sudah kosong (mis. staf menghapus angkanya tapi kejadian hapus terlewat).
-        if (dalam || (catatanSel !== '' && catatanSistem_(catatanSel))) resetSel_(sheet.getRange(r, c), info.jenis, info.warna);
+        // Tanda merah selalu disertai catatan: sel kosong tanpa catatan sudah tampil normal, tidak perlu 4 panggilan reset (kuota).
+        if (catatanSel !== '' && (dalam || catatanSistem_(catatanSel))) resetSel_(sheet.getRange(r, c), info.jenis, info.warna);
         continue;
       }
       const sel = sheet.getRange(r, c);
@@ -319,7 +320,7 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
 
       sheet.getRange(r, info.kolomStok).setValue(sesudah);
       baris[info.kolomStok - 1] = sesudah;
-      selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna });
+      selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna, catatan: catatanSel });
       baris[c - 1] = '';
       log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qty, sebelum, sesudah, pelaku, ket]);
       pesan.push(produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
@@ -333,7 +334,8 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
     selesai.forEach(x => {
       if (terkini[x.r - baris0][x.c - 1] === x.nilai) {
         x.sel.clearContent();
-        resetSel_(x.sel, x.jenis, x.warna);
+        // Sel yang diterima tanpa catatan tidak pernah diberi tanda merah: tampilannya sudah normal (hemat 4 panggilan per sel).
+        if (x.catatan !== '') resetSel_(x.sel, x.jenis, x.warna);
       }
     });
   }

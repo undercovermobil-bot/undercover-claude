@@ -70,7 +70,7 @@ const snapUC = snap(lamaUC), snapSTP = snap(lamaSTP);
 
 // ---------- sebelum migrasi: trigger aktif, edit sheet format lama tidak diproses
 ctx.aktifkanInputOtomatis(); ctx.aktifkanInputOtomatis();
-cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === 10).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap 10 menit');
+cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === ctx.__KONFIG.SAPU_MENIT).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap SAPU_MENIT menit');
 lamaUC.getRange(4, 5).setValue(9);
 ctx.prosesInputStok({ range: lamaUC.getRange(4, 5), source: ss });
 cek(lamaUC.peek(4, 4).v === 39 && lamaUC.peek(4, 5).v === 9 && !ss.getSheetByName('Log Stok UC'), 'sheet format lama tidak disentuh trigger');
@@ -471,7 +471,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
     cek(c.ctx.__triggers.length === 0 && /2 trigger dihapus/.test(c.ctx.__alerts.slice(-1)[0]), 'matikan: kedua trigger dihapus');
     c.ctx.__triggers.push({ getHandlerFunction: () => 'prosesInputStok' });   // pemasangan versi lama: hanya trigger edit
     c.ctx.cekStatus();
-    cek(/Penyapu angka tertinggal \(tiap 10 menit\): 0\s+← belum ada/.test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
+    cek(new RegExp('Penyapu angka tertinggal \\(tiap ' + c.ctx.__KONFIG.SAPU_MENIT + ' menit\\): 0\\s+← belum ada').test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
     c.ctx.aktifkanInputOtomatis();
     cek(c.ctx.__triggers.length === 2, 'aktifkan ulang menambah penyapu pada instalasi lama');
   }
@@ -494,6 +494,42 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   BU.getRange(20, 6).setValue(9999); b.ctx.prosesInputStok({ range: BU.getRange(20, 6), source: b.ss });
   b.ctx.sapuInputStok();
   cek(BU.peek(20, 6).v === 9999 && /DITOLAK/.test(BU.peek(20, 6).note) && (BU.peek(20, 4) || { v: '' }).v === s20, 'sel berisi angka & ditolak tetap merah setelah penyapuan');
+}
+
+// ---------- hemat kuota: reset tampilan sel hanya bila sel punya catatan (tanda merah selalu disertai catatan)
+{
+  const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC');
+  const Rg = Object.getPrototypeOf(BU.getRange(1, 1));
+  const hit = {};
+  ['setBackground', 'setFontColor', 'setNumberFormat', 'setNote'].forEach(n => { const asli = Rg[n]; Rg[n] = function (...a) { hit[n] = (hit[n] || 0) + 1; return asli.apply(this, a); }; });
+  const reset = () => { for (const k of Object.keys(hit)) delete hit[k]; };
+  const jml = () => Object.values(hit).reduce((a, x) => a + x, 0);
+  const stok = (r, c) => Number((BU.peek(r, c) || { v: 0 }).v) || 0;
+  // 1. entri IN biasa: STOK naik, sel kosong lagi, TIDAK ada panggilan reset format/catatan pada sel (hanya Log yang mengatur format)
+  const sebelum = stok(9, 4);
+  BU.getRange(9, 5).setValue(3); reset();
+  b.ctx.prosesInputStok({ range: BU.getRange(9, 5), source: b.ss, value: '3' });
+  cek(stok(9, 4) === sebelum + 3 && BU.peek(9, 5).v === '' && !hit.setBackground && !hit.setFontColor && !hit.setNote && hit.setNumberFormat === 1, 'entri IN biasa: tanpa reset warna/catatan sel (' + JSON.stringify(hit) + ')');
+  // 2. sel menolak (merah + catatan) lalu diketik ulang valid: tanda merah dibersihkan
+  BU.getRange(9, 6).setValue(9999); b.ctx.prosesInputStok({ range: BU.getRange(9, 6), source: b.ss, value: '9999' });
+  cek(BU.peek(9, 6).bg === '#e06666' && /DITOLAK/.test(BU.peek(9, 6).note), 'OUT berlebih: merah + catatan');
+  BU.getRange(9, 6).setValue(1); reset();
+  b.ctx.prosesInputStok({ range: BU.getRange(9, 6), source: b.ss, value: '1' });
+  cek(BU.peek(9, 6).v === '' && BU.peek(9, 6).bg === null && BU.peek(9, 6).note === '' && hit.setNote === 1 && hit.setBackground === 1, 'sel bercatatan diketik ulang valid: tanda merah dibersihkan (' + JSON.stringify(hit) + ')');
+  // 3. menghapus angka di sel biasa (tanpa catatan): tidak ada panggilan reset; sel bercatatan: reset
+  BU.getRange(10, 5).setValue(''); reset();
+  b.ctx.prosesInputStok({ range: BU.getRange(10, 5), source: b.ss, value: '' });
+  cek(jml() === 0, 'hapus sel biasa: tanpa panggilan reset (' + JSON.stringify(hit) + ')');
+  const x = BU.cell(10, 6); x.bg = '#e06666'; x.note = 'DITOLAK: contoh';
+  BU.getRange(10, 6).setValue(''); reset();
+  b.ctx.prosesInputStok({ range: BU.getRange(10, 6), source: b.ss, value: '' });
+  cek(BU.peek(10, 6).bg === null && BU.peek(10, 6).note === '' && hit.setNote === 1, 'hapus sel bercatatan: tampilan dikembalikan');
+  // catatan buatan staf (bukan tanda sistem) pada sel kosong di area edit: perilaku lama, tampilan dikembalikan
+  const y = BU.cell(11, 5); y.bg = '#e06666'; y.note = 'catatan staf';
+  BU.getRange(11, 5).setValue(''); reset();
+  b.ctx.prosesInputStok({ range: BU.getRange(11, 5), source: b.ss, value: '' });
+  cek(BU.peek(11, 5).bg === null && BU.peek(11, 5).note === '', 'sel kosong di area edit bercatatan staf: tampilan dikembalikan (perilaku lama)');
 }
 
 // ---------- hemat kuota: lock singkat, putaran verifikasi, penyapu hanya jam kerja
