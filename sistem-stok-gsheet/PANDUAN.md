@@ -10,6 +10,29 @@ Untuk file **Stock Opname** (Google Sheet), 2 sheet:
 Batas baris sheet lama dicari otomatis saat migrasi (baris terakhir sebelum label "OUT"/"IN" di kolom B). Urutan dan isi sheet baru mengikuti sheet **Urutan UC / Urutan STP** (lihat "Daftar urutan produk").
 Kode: [`Kode.gs`](Kode.gs).
 
+## Mulai di sini: 3 file dan urutan pasang
+
+**Hanya 3 file yang dibutuhkan.** Data stok tidak butuh file lain: dibaca langsung dari sheet "Stok Cover UC / STP" yang sudah ada di Google Sheet Stock Opname.
+
+| File | Fungsi | Dipakai di mana |
+|---|---|---|
+| `Kode.gs` | Script sistem stok | **Extensions → Apps Script**, ditempel lalu Ctrl+S |
+| `Urutan Stok UC STP.xlsx` | Daftar urutan 100 SKU terlaris + Kode SKU (tab **Urutan UC**, **Urutan STP**, **Tidak masuk**) | **File → Import → Insert new sheet(s)** di Google Sheet Stock Opname |
+| `PANDUAN.md` | Panduan ini | dibaca |
+
+Folder `uji/` (simulasi untuk menguji kode) tidak perlu dipakai.
+
+**Urutan ringkas** (rincian tiap langkah ada di bagian "Pasang"):
+1. **Akhir hari**, minta semua staf **menutup file**. Pastikan IN sudah final (dipakai apa adanya sebagai stok awal) dan OUT sudah dikosongkan.
+2. **File → Make a copy** sebagai cadangan.
+3. **File → Import → Upload** `Urutan Stok UC STP.xlsx` → **Insert new sheet(s)**. **Sekali saja** (impor ulang membuat "Urutan UC 1" dan migrasi ditolak sampai dirapikan).
+4. **Extensions → Apps Script** → tempel isi `Kode.gs` → **Ctrl+S**.
+5. Refresh spreadsheet (F5) → menu **📦 Sistem Stok → 1a** (UC) → **Yes**, lalu **1b** (STP) → **Yes**.
+6. **2. Aktifkan input otomatis** (sekali, dari **satu akun** saja, sebaiknya pemilik file). Cek di Apps Script → ikon jam **Triggers**: harus ada 2 trigger, penyapu "Every 15 minutes".
+7. Tes langkah 12–14 di bagian "Pasang", juga dari aplikasi Sheets di HP.
+8. Opsional: **3. Kunci kolom STOK**. Sheet Log boleh disembunyikan.
+9. 1–3 hari pertama: pantau **Executions** (lihat "Biaya").
+
 ## Daftar urutan produk (100 SKU terlaris)
 
 Urutan produk sheet baru **tidak sama dengan sheet lama**. Urutan, nama, dan Kode SKU diambil dari sheet **Urutan UC** dan **Urutan STP** (satu baris per produk). Isinya dibuat dari file `Urutan Stok UC STP.xlsx` (sumber data di repo: `uji/daftar-urutan.js`) dan harus **diimpor ke Google Sheet sebelum menu 1a / 1b**.
@@ -30,7 +53,7 @@ Aturan khusus yang sudah diputuskan: baris sheet lama berkode sama **digabung da
 | Nama Produk | ya | nama di sheet baru |
 | Kode SKU | ya | kode di sheet baru |
 | Baris lama | ya | nomor baris sheet lama asal stok. Beberapa nomor dipisah koma = digabung, stok dijumlah per warna. Kosong = produk baru |
-| Nama di sheet lama | ya, **wajib** | nama baris-baris tadi, dipisah `|` (satu nama per nomor). Dipakai script memastikan nomor baris masih benar |
+| Nama di sheet lama | ya, **wajib** | nama baris-baris tadi, dipisah tanda garis tegak \| (satu nama per nomor). Dipakai script memastikan nomor baris masih benar |
 | Harga dari baris | ya | khusus produk baru: baris sheet lama yang harga Value-nya ditiru (model sama, atau harga standar sheet) |
 | No, Stok sekarang, Bagian, Peringkat, Status, Catatan | tidak | informasi untuk dibaca |
 
@@ -72,11 +95,17 @@ Tidak ada lagi langkah "kurangi IN manual" dan "hapus OUT akhir hari".
 4. Kalau IN dan OUT warna yang sama tertunda bersamaan, **OUT diperiksa lebih dulu** terhadap stok yang ada (OUT yang tak muat ditolak, tidak lolos karena IN yang baru diketik).
 5. Kalau layanan Google error di tengah proses, sel yang STOK-nya sudah naik dikosongkan dan dicatat di Log, lalu galatnya muncul di **Executions**. Sel yang belum sempat diproses tetap menunggu penyapuan berikutnya, jadi tidak ada yang dihitung dua kali.
 
+**Kapan angka tertinggal diproses:** langsung di edit berikutnya pada sheet yang sama; kalau tidak ada edit, oleh penyapu paling lambat ±15 menit (Google tidak menjamin menit tepatnya) pada jam 06.00–19.00 WIB. Di luar jam itu menunggu edit berikutnya atau penyapu pertama setelah 06.00. Mau tidak menunggu: ketik satu angka di sel mana pun pada sheet itu, edit itu menyapu semuanya.
+
 Sel yang **ditolak** (merah, ada catatan, mis. OUT melebihi stok) tidak disentuh penyapuan: tunggu staf menghapus atau mengetik ulang. Kalau sistem sibuk, angka IN/OUT **tidak** ditandai merah: angkanya tetap di sel dan diproses pemegang kunci atau penyapu. **Jangan ketik ulang** angka yang masih ada di sel. Tanda merah buatan script yang tertinggal di sel yang sudah kosong dibersihkan otomatis oleh penyapuan; catatan buatan staf tidak disentuh (dan sel berangka yang punya catatan staf tidak ikut disapu). Edit di luar area IN/OUT/STOK (mis. kolom Value) tidak memicu penyapuan.
 
 **Sebelum menempel kode ini di file yang sudah dipakai:** pastikan **tidak ada angka tertinggal** di kolom IN/OUT kedua sheet. Edit pertama sesudahnya akan memprosesnya. Kalau angka itu sebenarnya sudah kamu masukkan manual ke STOK, hapus dulu angkanya, kalau tidak stok jadi dobel.
 
 **Biaya (dari Executions file ini, 12 Okt):** satu proses edit memakan 4–9 detik, penyapu yang tidak menemukan apa-apa 8–10 detik, dan rangkaian ±14 edit beruntun sebelum perbaikan lock memakan 7–29 detik **per proses** (waktu tunggu kunci ikut dihitung) ≈ 4 menit kuota. Kuota yang relevan: **total waktu semua trigger per hari** (Google: 90 menit untuk akun Gmail biasa, 6 jam untuk Workspace; angka dari sumber pihak ketiga, cek halaman kuota Apps Script). Habis kuota → trigger berhenti sampai kuota pulih (±24 jam), gejalanya sama dengan angka tertinggal. Pantau **Extensions → Apps Script → Executions** 1–3 hari: jumlahkan durasi sehari (waspada di atas 45 menit), cari status Failed / "too much computer time". Kalau mendekati, naikkan `SAPU_MENIT` (30) atau persempit `SAPU_JAM`, lalu **Matikan** dan **Aktifkan input otomatis** sekali lagi (interval trigger hanya berubah lewat dua langkah itu). Sejak 2026-10-13 bawaannya sudah 15 menit dan jam 06–19, dan sel IN/OUT yang diterima tidak lagi di-reset tampilannya kalau tidak punya catatan (±4 panggilan lebih sedikit per entri; sel yang ditempel dari sel berwarna ikut menyimpan warnanya, pakai **Ctrl+Shift+V** / tempel nilai saja). Perkiraan, belum diukur di Google: pemakaian penyapu ±8–10 menit per hari (sebelumnya ±14–16). Jumlah baris Log sehari kira-kira sama dengan jumlah edit sehari.
+
+**Perkiraan volume** (dari Histori versi file lama, 8–12 Okt: 49–90 "edit" per hari; satu "edit" di Histori versi = blok sel berdekatan, bukan satu sel, jadi entri sebenarnya bisa lebih banyak): pemakaian sehari ±25–60% dari 90 menit, **belum terukur di Google**. Ukuran sebenarnya hanya dari Executions.
+
+**Kalau kuota habis** (trigger berhenti, angka IN/OUT tetap di sel): paling aman **menunggu** kuota pulih (±24 jam); angka diproses sendiri dan tercatat di Log. Kalau tidak bisa menunggu: **hapus dulu angka IN/OUT sampai selnya kosong, baru ubah STOK secara manual** (STOK baru = STOK lama + IN − OUT). Jangan sebaliknya: kalau STOK diubah selagi angka masih di sel, angka itu diproses lagi saat trigger pulih dan stok jadi dobel. Perubahan STOK manual saat trigger mati **tidak tercatat di Log** (catat sendiri).
 
 **Satu akun saja** yang menjalankan menu 2: dua akun menggandakan trigger edit dan penyapu (biaya dua kali). Jangan menyisip atau menghapus baris produk selagi staf sedang mengetik.
 
@@ -109,7 +138,7 @@ Kalau di file trial masih ada sheet **"Log Stok"** lama (satu log bersama dari v
 
 ## Memasang versi kode baru (sheet sudah pernah dimigrasi)
 
-Tempel kode baru di Apps Script lalu simpan (Ctrl+S) cukup untuk **logika input** (validasi, zona waktu, log baru, arsip, penyapuan input cepat). **Trigger baru (penyapu 15 menit) baru terpasang setelah menu 2. Aktifkan input otomatis dijalankan sekali lagi** (aman: trigger edit yang sudah ada tidak digandakan); menu **Cek status** menunjukkan jumlah penyapu. Tampilan yang dibuat saat migrasi (warna, format STOK 0 kosong, rumus rekap harian, log per sheet) **tidak berubah otomatis** di sheet yang sudah dimigrasi. Menu **Cek status** memberi peringatan bila rekap harian masih merujuk log versi lama.
+Tempel kode baru di Apps Script lalu simpan (Ctrl+S) cukup untuk **logika input** (validasi, zona waktu, log baru, arsip, penyapuan input cepat). **Trigger baru (penyapu 15 menit) baru terpasang setelah menu 2. Aktifkan input otomatis dijalankan sekali lagi** (aman: trigger edit yang sudah ada tidak digandakan). Kalau penyapu lama (mis. 10 menit) sudah terpasang, menu 2 tidak menggantinya: jalankan **Matikan input otomatis** lalu **Aktifkan input otomatis** supaya interval jadi 15 menit. Jam kerja penyapu (`SAPU_JAM`) dibaca dari kode, jadi cukup tempel kode + Ctrl+S. Menu **Cek status** menunjukkan **jumlah** trigger yang terpasang; angka "tiap … menit" di dialognya hanya membaca nilai di kode, bukan interval trigger yang sebenarnya. Interval sebenarnya dilihat di Apps Script → ikon jam **Triggers** (penyapu harus bertulisan "Every 15 minutes"). Tampilan yang dibuat saat migrasi (warna, format STOK 0 kosong, rumus rekap harian, log per sheet) **tidak berubah otomatis** di sheet yang sudah dimigrasi. Menu **Cek status** memberi peringatan bila rekap harian masih merujuk log versi lama.
 
 - **File trial**: boleh migrasi ulang. Hapus sheet "Stok Cover UC" / "Stok Cover STP" baru dan semua sheet "Log Stok…", ganti nama "(lama)" kembali ke nama asli, lalu jalankan menu 1a dan 1b (sheet Urutan UC / Urutan STP harus masih ada). Mutasi yang sudah dicatat di sheet baru ikut hilang.
 - **File asli yang sudah dipakai sungguhan**: **jangan** migrasi ulang (stok sekarang ada di sheet baru, sheet "(lama)" sudah basi). Ubah tampilan manual, atau minta perubahan khusus dibuatkan.
@@ -184,6 +213,7 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 6. **Ctrl+S** (atau ikon disket "Save project"). Tidak perlu klik **Run** atau **Deploy**.
 
 **B. Impor daftar urutan, lalu jalankan dari spreadsheet**
+
 7. Kembali ke tab spreadsheet → **refresh (F5)**. Tunggu ±5 detik: menu **📦 Sistem Stok** muncul setelah **Help**.
    Impor daftar urutan (cara di bagian "Daftar urutan produk"): sheet **Urutan UC** dan **Urutan STP** harus ada sebelum langkah 8. Menu **Cek status** memberi tahu kalau belum ada.
 8. Klik **📦 Sistem Stok → 1a. Susun "Stok Cover UC"…**. Pertama kali muncul izin:
@@ -194,6 +224,7 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
 11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet; memasang 2 trigger: edit dan penyapu 15 menit).
 
 **C. Tes**
+
 12. Stok Cover UC, baris 4 (Honda Brio, produk pertama): ketik `1` di **E4** (IN Abu-abu) → Enter → tunggu 1–2 detik → D4 bertambah 1, E4 kosong lagi, tab "Log Stok UC" ada baris baru di paling atas (baris 2).
 13. Ketik `1` di **F4** (OUT Abu-abu) → D4 kembali semula.
 14. Ketik `999` di F4 → sel merah + catatan "DITOLAK", D4 tidak berubah. Hapus isi F4 → warna kembali normal.
@@ -227,6 +258,8 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 - Staf jangan mengisi stok di sheet "(lama)". Isinya tidak lagi diupdate.
 - **Tambah produk baru**: klik kanan **baris kosong tepat di atas TOTAL STOK** (setelah migrasi: baris 185 di UC, baris 130 di STP; lihat baris bertuliskan TOTAL STOK) → **Insert 1 row above**. Baris baru jatuh di dalam rumus TOTAL, jadi ikut terhitung. Isi nama, Kode SKU, STOK awal; salin rumus Value dari baris produk di atasnya. Jangan sisip di bawah baris kosong itu: baris tersebut tidak masuk TOTAL.
 - Header baris 2 (nama warna) dan baris 3 (STOK/IN/OUT) jadi patokan script. Jangan diubah.
+- **Sheet Log boleh disembunyikan** (klik kanan tab → **Hide sheet**; buka lagi lewat **View → Hidden sheets**). Script mencari Log lewat nama, jadi tetap menulis dan rekap harian tetap menghitung. Jangan hapus atau ganti namanya. Sheet arsip bulanan dibuat dalam keadaan terlihat, sembunyikan sendiri kalau perlu.
+- **Kolom Value boleh diedit** (diuji: tidak mengubah STOK dan tidak menambah Log). Ubah harga lewat angka setelah tanda `*` di rumus, mis. `=(D5+G5+J5+M5+P5)*277000` jadi `...*300000`. Jangan hapus atau geser kolom STOK (rumus jadi `#REF!`), jangan timpa rumus dengan angka tetap, dan jangan ketik `STOK`, `IN`, atau `OUT` di baris 3 area Value (script membaca baris itu untuk memetakan kolom). Edit di Value memicu satu eksekusi singkat tanpa efek: tempel atau isi sekaligus, jangan satu-satu dalam jumlah ratusan. Kalau kolom STOK dikunci (menu 3), Value ikut terkunci untuk selain pemilik.
 
 ## Batasan yang perlu dites sendiri
 
