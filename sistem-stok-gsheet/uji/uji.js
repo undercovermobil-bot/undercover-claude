@@ -496,6 +496,42 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   cek(BU.peek(20, 6).v === 9999 && /DITOLAK/.test(BU.peek(20, 6).note) && (BU.peek(20, 4) || { v: '' }).v === s20, 'sel berisi angka & ditolak tetap merah setelah penyapuan');
 }
 
+// ---------- lokal file menolak rumus validasi berkoma (id_ID: "Argumen aturan validasi data ... tidak valid"): migrasi tidak boleh gagal
+{
+  const koma = f => f.indexOf(',') >= 0;
+  const stokKoma = '=AND(ISNUMBER(D4),D4>=0,D4<=9999,D4=INT(D4))', stokTitik = '=AND(ISNUMBER(D4);D4>=0;D4<=9999;D4=INT(D4))';
+  const inTitik = '=AND(ISNUMBER(E4);E4>0;E4<=9999;E4=INT(E4))';   // satu aturan untuk IN dan OUT (rumus relatif; mock tidak menggeser E4 ke F4)
+  const jalan = opsi => {
+    const b = siapkan(opsi); b.ctx.migrasiStokUC();
+    const BU = b.ss.getSheetByName('Stok Cover UC');
+    return { b, BU, akhir: b.ctx.__alerts.slice(-1)[0], semua: b.ctx.__alerts.join('\n'), dv: (r, c) => (BU.peek(r, c) || {}).dv };
+  };
+  // normal (lokal en_US): rumus berkoma dipakai, tanpa catatan validasi
+  { const r = jalan({}); cek(!!r.dv(4, 4) && r.dv(4, 4).f === stokKoma && /Migrasi selesai|siap/.test(r.akhir) && !/Validasi angka/.test(r.akhir), 'lokal en_US: rumus berkoma, tanpa catatan validasi'); }
+  // lokal titik koma: rumus berkoma ditolak di tiap titik (require / build / apply) → pakai titik koma, migrasi selesai
+  for (const di of ['require', 'build', 'apply']) {
+    const r = jalan({ tolakValidasi: { di, formula: koma } });
+    cek(!/GAGAL/.test(r.semua) && /siap/.test(r.akhir) && r.b.ss.getSheetByName('Stok Cover UC (lama)') && !r.b.ss.getSheetByName('Stok Cover UC (baru)'), 'lokal titik koma (' + di + '): migrasi selesai');
+    cek(!!r.dv(4, 4) && !!r.dv(4, 5) && !!r.dv(4, 6) && r.dv(4, 4).f === stokTitik && r.dv(4, 5).f === inTitik && r.dv(4, 6).f === inTitik && r.dv(4, 5).invalid === false, 'lokal titik koma (' + di + '): validasi memakai rumus bertitik koma, tolak isian salah');
+    cek(!/Validasi angka/.test(r.akhir), 'lokal titik koma (' + di + '): tanpa catatan (perilaku sama)');
+    cek(!!r.dv(184, 5) && !!r.dv(184, 4), 'lokal titik koma (' + di + '): validasi sampai baris produk terakhir (184)');
+  }
+  // semua rumus ditolak: aturan "angka antara"
+  { const r = jalan({ tolakValidasi: { di: 'apply', formula: () => true } });
+    cek(/siap/.test(r.akhir) && !/GAGAL/.test(r.semua) && !!r.dv(4, 4) && !!r.dv(4, 5) && !!r.dv(4, 6) && String((r.dv(4, 4) || {}).angka) === '0,9999' && String((r.dv(4, 5) || {}).angka) === '1,9999' && String((r.dv(4, 6) || {}).angka) === '1,9999', 'rumus ditolak semua: aturan angka antara (STOK 0-9999, IN/OUT 1-9999)');
+    cek(/aturan sederhana/.test(r.akhir) && /desimal lolos/.test(r.akhir), 'rumus ditolak semua: catatan menjelaskan desimal lolos ke sel'); }
+  // semua ditolak: validasi dilewati, migrasi tetap selesai, script tetap menolak isian salah
+  { const r = jalan({ tolakValidasi: { di: 'apply', formula: () => true, rentang: true } });
+    cek(/siap/.test(r.akhir) && !/GAGAL/.test(r.semua) && !r.dv(4, 5) && !r.dv(4, 4), 'semua aturan ditolak: migrasi selesai tanpa validasi');
+    cek(/TIDAK terpasang/.test(r.akhir) && /tanda merah/.test(r.akhir), 'semua aturan ditolak: catatan jelas');
+    r.b.ctx.aktifkanInputOtomatis();
+    const sebelum = Number(r.BU.getRange(4, 4).getValue()) || 0;
+    r.BU.getRange(4, 5).setValue('abc'); r.b.ctx.prosesInputStok({ range: r.BU.getRange(4, 5), source: r.b.ss, value: 'abc' });
+    cek(r.BU.peek(4, 5).bg === '#e06666' && /angka bulat/.test(r.BU.peek(4, 5).note) && (Number(r.BU.getRange(4, 4).getValue()) || 0) === sebelum, 'tanpa validasi sel: huruf tetap ditolak script (merah + catatan)');
+    r.BU.getRange(4, 5).setValue(3); r.b.ctx.prosesInputStok({ range: r.BU.getRange(4, 5), source: r.b.ss, value: '3' });
+    cek((Number(r.BU.getRange(4, 4).getValue()) || 0) === sebelum + 3 && r.BU.peek(4, 5).v === '', 'tanpa validasi sel: angka valid tetap diproses'); }
+}
+
 // ---------- hemat kuota: reset tampilan sel hanya bila sel punya catatan (tanda merah selalu disertai catatan)
 {
   const b = siapkan(); b.ctx.migrasiStokUC(); b.ctx.aktifkanInputOtomatis();

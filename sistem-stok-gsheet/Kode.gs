@@ -467,11 +467,12 @@ function migrasi_(cfg) {
 
   const logSudahAda = !!ss.getSheetByName(cfg.log);
   let sh = null;
+  let infoBangun = { catatan: [] };
   try {
     rencana = rencanakan();   // data terbaru setelah dialog
     siapkanLog_(ss, cfg.log);
     sh = ss.insertSheet(sementara, src.getIndex() - 1);
-    bangunSheet_(sh, cfg, { daftar, labelValue, entri: rencana.entri });
+    infoBangun = bangunSheet_(sh, cfg, { daftar, labelValue, entri: rencana.entri });
     if (sidik(rencanakan()) !== sidik(rencana)) {
       throw new Error('Sheet lama atau daftar berubah selama migrasi (ada yang masih mengedit?). Minta semua staf menutup file ini, lalu ulangi.');
     }
@@ -489,7 +490,7 @@ function migrasi_(cfg) {
   }
   if (zonaLama !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
 
-  const peringatan = rencana.peringatan;
+  const peringatan = rencana.peringatan.concat(infoBangun.catatan);
   const BATAS = 25;
   let selesai = 'Sheet "' + cfg.nama + '" siap: ' + rencana.entri.length + ' produk. Sheet lama: "' + cfg.arsip + '".' +
     '\n\nLangkah berikutnya: menu 📦 Sistem Stok → 2. Aktifkan input otomatis (cukup sekali untuk semua sheet).';
@@ -915,6 +916,7 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(1, 1, 3, totalKolom).setFontWeight('bold').setHorizontalAlignment('center')
     .setVerticalAlignment('middle').setWrap(true);
   sh.getRange(1, 4, 1, 3 * W).setBackground(KONFIG.WARNA_SEL.BANNER_BG).setFontColor(KONFIG.WARNA_SEL.BANNER_FG);
+  const hasilValidasi = [];
   for (let k = 0; k < W; k++) {
     const c = kolStok(k);
     const w = warnaCover_(d.daftar[k].nama);   // IN / OUT sengaja tanpa warna
@@ -925,8 +927,8 @@ function bangunSheet_(sh, cfg, d) {
     }
     sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setFontWeight('bold');
     sh.getRange(2, c, barisMutasi - 1, 3).setBorder(null, true, null, true, null, null);
-    sh.getRange(KONFIG.BARIS_DATA, c, n, 1).setDataValidation(aturanAngka_(huruf_(c) + KONFIG.BARIS_DATA, true));
-    sh.getRange(KONFIG.BARIS_DATA, c + 1, n, 2).setDataValidation(aturanAngka_(huruf_(c + 1) + KONFIG.BARIS_DATA, false));
+    hasilValidasi.push(pasangValidasi_(sh.getRange(KONFIG.BARIS_DATA, c, n, 1), huruf_(c) + KONFIG.BARIS_DATA, true));
+    hasilValidasi.push(pasangValidasi_(sh.getRange(KONFIG.BARIS_DATA, c + 1, n, 2), huruf_(c + 1) + KONFIG.BARIS_DATA, false));
   }
   sh.getRange(KONFIG.BARIS_DATA, 4, barisMutasi - KONFIG.BARIS_DATA + 1, 3 * W).setHorizontalAlignment('center');
   sh.getRange(KONFIG.BARIS_DATA, 4, n, 3 * W).setNumberFormat(KONFIG.FORMAT_ANGKA);   // angka bulat; cegah format tanggal menempel
@@ -942,6 +944,19 @@ function bangunSheet_(sh, cfg, d) {
   sh.setColumnWidths(kolValue, totalKolom - kolValue + 1, 110);
   sh.setFrozenRows(3);
   sh.setFrozenColumns(2);
+  // Hanya kasus yang mengubah perilaku dilaporkan (varian rumus berkoma / titik koma bekerja sama).
+  const catatan = [];
+  const tanpa = hasilValidasi.filter(x => x === null).length;
+  const sederhana = hasilValidasi.filter(x => x === 'rentang').length;
+  if (tanpa) {
+    catatan.push('Validasi angka TIDAK terpasang di ' + tanpa + ' dari ' + hasilValidasi.length + ' bagian kolom (Google menolak aturannya). ' +
+      'Script tetap menolak isian yang salah dengan tanda merah + catatan, tapi sel tidak menahan ketikan huruf.');
+  }
+  if (sederhana) {
+    catatan.push('Validasi angka memakai aturan sederhana "angka antara" di ' + sederhana + ' dari ' + hasilValidasi.length +
+      ' bagian kolom (rumus ditolak Google): desimal lolos ke sel, lalu ditolak script dengan tanda merah.');
+  }
+  return { catatan: catatan };
 }
 
 // ---------------------------------------------------------------- trigger & proteksi
@@ -1331,13 +1346,31 @@ function pastikanUkuran_(sh, baris, kolom) {
 }
 
 /** Validasi data: STOK bulat >= 0, IN/OUT bulat > 0. sel = sel kiri-atas range. */
-function aturanAngka_(sel, bolehNol) {
-  const syarat = bolehNol ? sel + '>=0' : sel + '>0';
-  return SpreadsheetApp.newDataValidation()
-    .requireFormulaSatisfied('=AND(ISNUMBER(' + sel + '),' + syarat + ',' + sel + '<=' + KONFIG.MAKS_QTY + ',' + sel + '=INT(' + sel + '))')
-    .setAllowInvalid(false)
-    .setHelpText(bolehNol ? 'STOK: angka bulat 0–' + KONFIG.MAKS_QTY : 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + ' lalu Enter')
-    .build();
+/**
+ * Pasang validasi "angka bulat" pada `range`; `sel` = sel pertama range (mis. "D4"), dipakai rumus relatif.
+ * Google membaca rumus validasi dengan pemisah argumen sesuai LOKAL file (koma di en_US; titik koma di id_ID dan banyak lokal lain),
+ * beda dengan rumus sel (setFormulas) yang selalu berbahasa Inggris. Rumus berkoma di file berlokal Indonesia ditolak Google
+ * ("Argumen aturan validasi data ... tidak valid") dan dulu menggagalkan migrasi. Urutan percobaan:
+ *   1. rumus berkoma   2. rumus bertitik koma   3. aturan "angka antara" (tanpa rumus: desimal lolos validasi, ditolak script)
+ * Kalau semuanya ditolak, validasi dilewati: script sendiri menolak isian salah (tanda merah + catatan), jadi ini tidak boleh
+ * menggagalkan migrasi. Mengembalikan 'koma' | 'titik koma' | 'rentang' | null.
+ */
+function pasangValidasi_(range, sel, bolehNol) {
+  const awal = bolehNol ? 0 : 1;
+  const bantuan = bolehNol ? 'STOK: angka bulat 0–' + KONFIG.MAKS_QTY : 'Isi angka bulat 1–' + KONFIG.MAKS_QTY + ' lalu Enter';
+  const rumus = pisah => '=AND(' + ['ISNUMBER(' + sel + ')', sel + (bolehNol ? '>=0' : '>0'), sel + '<=' + KONFIG.MAKS_QTY, sel + '=INT(' + sel + ')'].join(pisah) + ')';
+  const percobaan = [
+    ['koma', b => b.requireFormulaSatisfied(rumus(','))],
+    ['titik koma', b => b.requireFormulaSatisfied(rumus(';'))],
+    ['rentang', b => b.requireNumberBetween(awal, KONFIG.MAKS_QTY)],
+  ];
+  for (let i = 0; i < percobaan.length; i++) {
+    try {
+      range.setDataValidation(percobaan[i][1](SpreadsheetApp.newDataValidation()).setAllowInvalid(false).setHelpText(bantuan).build());
+      return percobaan[i][0];
+    } catch (err) { /* lokal file menolak varian ini: coba berikutnya */ }
+  }
+  return null;
 }
 
 /**

@@ -100,7 +100,7 @@ class Range {
   setBackground(b) { return this.each(x => { x.bg = b; }); }
   setFontColor(c) { return this.each(x => { x.fc = c; }); }
   getBackground() { return this.sh.cell(this.r, this.c).bg; }
-  setDataValidation(dv) { return this.each(x => { x.dv = dv; }); }
+  setDataValidation(dv) { if (dv && dv.galat && dv.galatDi === 'apply') throw dv.galat; return this.each(x => { x.dv = dv; }); }
   merge() { this.sh.merges.push([this.r, this.c, this.nr, this.nc]); return this; }
   setFontWeight() { return this; } setHorizontalAlignment() { return this; } setVerticalAlignment() { return this; }
   setWrap() { return this; }
@@ -147,9 +147,25 @@ function colNum(s) { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0
 function buatKonteks(ss, opsi = {}) {
   const alerts = [];
   const triggers = [];
-  const dvBuilder = () => { const o = { f: null, help: '', invalid: true }; const b = {
-    requireFormulaSatisfied(f) { o.f = f; return b; }, setAllowInvalid(x) { o.invalid = x; return b; },
-    setHelpText(h) { o.help = h; return b; }, build() { return o; } }; return b; };
+  // opsi.tolakValidasi = { di: 'require' | 'build' | 'apply', formula: f => bool, rentang: bool } mensimulasikan lokal file yang menolak
+  // rumus validasi (mis. id_ID: pemisah argumen titik koma, rumus berkoma ditolak Google dengan "Argumen aturan validasi data ... tidak valid").
+  const dvBuilder = () => {
+    const o = { f: null, angka: null, help: '', invalid: true };
+    const tolak = (isi, salah) => {
+      const t = opsi.tolakValidasi;
+      if (!t || !salah) return;
+      const e = new Error('Argumen aturan validasi data "' + isi + '" tidak valid.');
+      if ((t.di || 'apply') === 'require') throw e;
+      o.galat = e; o.galatDi = t.di || 'apply';
+    };
+    const b = {
+      requireFormulaSatisfied(f) { o.f = f; tolak(f, opsi.tolakValidasi && opsi.tolakValidasi.formula && opsi.tolakValidasi.formula(f)); return b; },
+      requireNumberBetween(a, z) { o.angka = [a, z]; tolak(a + '..' + z, opsi.tolakValidasi && opsi.tolakValidasi.rentang); return b; },
+      setAllowInvalid(x) { o.invalid = x; return b; }, setHelpText(h) { o.help = h; return b; },
+      build() { if (o.galat && o.galatDi === 'build') throw o.galat; return o; },
+    };
+    return b;
+  };
   const ui = {
     ButtonSet: { YES_NO: 'YES_NO', OK: 'OK' }, Button: { YES: 'YES', NO: 'NO' },
     alert(...a) { alerts.push(a.filter(x => typeof x === 'string' && !['YES_NO', 'OK'].includes(x)).join(' | ')); if (opsi.saatAlert) opsi.saatAlert(a); return opsi.jawab || 'YES'; },

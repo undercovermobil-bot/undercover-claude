@@ -200,6 +200,8 @@ Nama menu di bawah memakai **tampilan Google bahasa Inggris**.
 
 Migrasi di file asli memakai data saat itu, bukan data file trial.
 
+**Catatan:** file hasil konversi `.xlsx` memakai lokal Amerika dan zona waktu Pacific, sedangkan Google Sheet asli bisa berlokal Indonesia. Perbedaan lokal pernah menggagalkan migrasi di file asli padahal trial lancar. Uji coba paling mirip kenyataan: **File → Make a copy** dari Google Sheet asli (lokal dan zona waktu ikut tersalin), bukan konversi xlsx.
+
 ## Pasang (sekali, oleh pemilik file)
 
 **A. Tempel kode**
@@ -245,6 +247,8 @@ Kalau semua pengguna dipercaya dan Log cukup, boleh tidak dikunci. Untuk membuka
 **Waktu migrasi terbaik di file asli: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
 
 Kalau migrasi error di tengah jalan, sheet lama tidak berubah (script menghapus sheet setengah jadi dan sheet Log kosong yang dibuatnya). Zona waktu file baru diubah setelah migrasi berhasil.
+
+**Migrasi gagal dengan pesan "Argumen aturan validasi data "=AND(ISNUMBER(D4),…" tidak valid"** (kode sebelum 2026-10-20 di file berlokal Indonesia, yang memakai titik koma sebagai pemisah argumen rumus): tempel `Kode.gs` terbaru lalu ulangi menu 1a/1b. Sheet tidak diubah saat migrasi gagal, jadi aman diulang (kalau ada tab sisa bernama "… (baru)", hapus dulu). Kode baru mencoba rumus validasi berkoma, lalu bertitik koma, lalu aturan "angka antara"; kalau semuanya ditolak Google, migrasi tetap selesai tanpa validasi dan menyebutnya di catatan akhir (script tetap menolak isian salah dengan tanda merah + catatan). Lokal file dilihat di **File → Settings → General → Locale**. Cadangan kalau masih gagal: ubah Locale ke United States sementara, jalankan migrasi, lalu kembalikan (rumus ikut menyesuaikan sendiri).
 
 Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps Script dibuka lewat **Extensions → Apps Script** dari spreadsheet yang sama, file sudah format Google Sheets (bukan .xlsx), lalu refresh lagi.
 
@@ -300,6 +304,6 @@ python3 uji/ekstrak.py "Stock Opname.xlsx" uji/fixture.json   # data tidak di-co
 node uji/uji.js Kode.gs
 ```
 
-Hasil 2026-10-13: 282/282 lulus. Hasil 2026-10-12: 276/276 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Review fitur daftar urutan (4 lensa, tiap temuan dibantah 2 skeptis): 12 temuan bertahan (pengaman nama bisa mati, harga produk baru tidak ikut bergeser, sel IN teks, catatan terpotong, migrasi tidak atomik, dll.), semuanya diperbaiki dan diuji. Formula hasil migrasi juga dihitung ulang di LibreOffice:
+Hasil 2026-10-20: 301/301 lulus (termasuk simulasi lokal titik koma: rumus validasi berkoma ditolak Google). Hasil 2026-10-13: 282/282 lulus. Hasil 2026-10-12: 276/276 lulus (termasuk daftar urutan sungguhan `uji/daftar-urutan.js` terhadap data asli: stok per warna tiap baris, total unit, harga produk baru, pengaman daftar). Hasil 2026-10-08 (sebelum daftar urutan): 189/189 lulus. Kode juga diperiksa 3 reviewer independen + 2 skeptis per temuan (22 kandidat, 9 terbukti, semuanya sudah diperbaiki atau dicatat di atas). Review fitur daftar urutan (4 lensa, tiap temuan dibantah 2 skeptis): 12 temuan bertahan (pengaman nama bisa mati, harga produk baru tidak ikut bergeser, sel IN teks, catatan terpotong, migrasi tidak atomik, dll.), semuanya diperbaiki dan diuji. Formula hasil migrasi juga dihitung ulang di LibreOffice:
 - UC: total unit 1.161, value per baris sama persis dengan sheet lama.
 - STP (17 warna, + Orange): total unit 246; value per baris sama dengan sheet lama kecuali baris 6 dan 10 (formula lama salah, lihat Temuan). Tes IN Orange 4 di Brio: Value Reguler +924.000 (4 × 231.000), total 250.
