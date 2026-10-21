@@ -190,7 +190,7 @@ function buatKonteks(ss, opsi = {}) {
     Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@x' }), getActiveUser: () => ({ getEmail: () => '' }) },
     ScriptApp: {
       getProjectTriggers: () => triggers.slice(),
-      newTrigger(fn) { const t = { getHandlerFunction: () => fn }; const b = { forSpreadsheet: () => b, onEdit: () => b, timeBased: () => b, everyMinutes: n => { t.menit = n; return b; }, create: () => { triggers.push(t); return t; } }; return b; },
+      newTrigger(fn) { const t = { getHandlerFunction: () => fn }; const b = { forSpreadsheet: () => b, onEdit: () => b, timeBased: () => b, everyMinutes: n => { t.menit = n; return b; }, everyDays: n => { t.hari = n; return b; }, atHour: h => { t.jam = h; return b; }, nearMinute: m => { t.nearMenit = m; return b; }, inTimezone: z => { t.zona = z; return b; }, create: () => { triggers.push(t); return t; } }; return b; },
       deleteTrigger(t) { triggers.splice(triggers.indexOf(t), 1); },
     },
   };
