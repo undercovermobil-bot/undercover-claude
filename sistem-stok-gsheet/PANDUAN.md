@@ -123,7 +123,7 @@ Sel yang **ditolak** (merah, ada catatan, mis. OUT melebihi stok) tidak disentuh
 
 Baris bawah tabel:
 - **TOTAL STOK**: total per warna + total unit (kolom C) + total value.
-- **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Di **kolom C baris itu = total KELUAR hari ini** (semua warna, mis. "Keluar 4 unit"), dan **di bawahnya total MASUK hari ini**. Dihitung langsung dari Log, jadi bersih setelah pembatalan (B1).
+- **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Di **kolom C baris itu = total KELUAR hari ini** (semua warna, mis. "Keluar 4 unit"), dan **di bawahnya**, berurutan: total MASUK hari ini, **Keluar kemarin**, **Keluar 7 hari** (hari ini + 6 hari sebelumnya), **Keluar bulan ini** (tanggal 1 sampai hari ini). Staf tidak perlu pindah sheet. Semuanya rumus langsung ke Log, jadi bersih setelah pembatalan (B1), tanpa trigger dan tanpa kuota tambahan. Konsekuensi: angka "kemarin/7 hari/bulan ini" ikut hilang bila baris Log dipindah ke arsip (menu Arsipkan log bulan lalu). Angka bulan lalu dan sebelumnya tetap ada di **Rekap Harian**.
 - **Kapan angka hari ini reset:** tengah malam WIB. Artinya angkanya masih ada pada jam 19.00 dan tetap ada sampai tengah malam. Syarat: **zona waktu file = Asia/Jakarta** (menu "Setel zona waktu file ke WIB"; kalau tidak, resetnya terjadi di jam lain, mis. 14.00 WIB di zona Pacific) dan **File → Settings → Calculation = "On change and every hour"** supaya hari berganti walau tidak ada yang mengedit. Mau menyimpan angka sebelum reset: lihat "Rekap harian".
 
 Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghitung dari kolom STOK.

@@ -96,6 +96,15 @@ const HEADER_REKAP = ['Tanggal', 'Masuk (unit)', 'Keluar (unit)', 'Selisih', 'En
 const KOLOM_REKAP_STATUS = 15;
 const FORMAT_TOTAL_KELUAR = '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"';
 const FORMAT_TOTAL_MASUK = '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"';
+// Total di kolom C mulai baris "MASUK / KELUAR HARI INI" ke bawah (semua rumus langsung ke Log; periode dihitung dari TODAY()).
+const TOTAL_HARIAN = [
+  { nama: 'Keluar', jenis: 'OUT', periode: 'hari', format: FORMAT_TOTAL_KELUAR },
+  { nama: 'Masuk', jenis: 'IN', periode: 'hari', format: FORMAT_TOTAL_MASUK },
+  { nama: 'Keluar kemarin', jenis: 'OUT', periode: 'kemarin', format: '"Keluar kemarin "#,##0" unit";"Keluar kemarin -"#,##0" unit"' },
+  { nama: 'Keluar 7 hari', jenis: 'OUT', periode: 'minggu', format: '"Keluar 7 hari "#,##0" unit";"Keluar 7 hari -"#,##0" unit"' },
+  { nama: 'Keluar bulan ini', jenis: 'OUT', periode: 'bulan', format: '"Keluar bulan ini "#,##0" unit";"Keluar bulan ini -"#,##0" unit"' },
+];
+const LEBAR_KOLOM_TOTAL = 170;
 const TEKS_BANNER_LAMA = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Jangan ketik di kolom STOK.';
 const TEKS_BANNER_BARU = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Salah ketik hari ini? Ketik B + jumlah (mis. B1) di sel yang sama untuk membatalkan. Jangan ketik di kolom STOK.';
 
@@ -906,9 +915,16 @@ function teksBanner_() {
 }
 
 /** Total IN atau OUT HARI INI (semua warna) langsung dari Log. Sama dengan rumus per warna di baris rekap, tanpa kriteria warna; bersih (Qty negatif = pembatalan). */
-function rumusTotalHarian_(logNama, jenis) {
+function rumusTotalHarian_(logNama, jenis, periode) {
   const q = "'" + logNama + "'!";
-  return '=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"' + jenis + '",' + q + '$A:$A,">="&TODAY(),' + q + '$A:$A,"<"&(TODAY()+1))';
+  // batas [dari, sampai) dalam nomor hari; "7 hari" = hari ini + 6 hari sebelumnya; "bulan ini" = tanggal 1 sampai hari ini
+  const batas = {
+    hari: ['TODAY()', '(TODAY()+1)'],
+    kemarin: ['(TODAY()-1)', 'TODAY()'],
+    minggu: ['(TODAY()-6)', '(TODAY()+1)'],
+    bulan: ['DATE(YEAR(TODAY()),MONTH(TODAY()),1)', '(TODAY()+1)'],
+  }[periode || 'hari'];
+  return '=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"' + jenis + '",' + q + '$A:$A,">="&' + batas[0] + ',' + q + '$A:$A,"<"&' + batas[1] + ')';
 }
 
 function bangunSheet_(sh, cfg, d) {
@@ -920,7 +936,7 @@ function bangunSheet_(sh, cfg, d) {
   const barisDataAkhir = KONFIG.BARIS_DATA + n - 1;
   const barisTotal = barisDataAkhir + 2;
   const barisMutasi = barisTotal + 1;
-  pastikanUkuran_(sh, barisMutasi + 1, totalKolom);   // +1: baris total MASUK hari ini di bawah baris rekap
+  pastikanUkuran_(sh, barisMutasi + TOTAL_HARIAN.length - 1, totalKolom);   // total harian lain di bawah baris rekap
 
   // Header
   sh.getRange(1, 1).setValue('No');
@@ -971,7 +987,7 @@ function bangunSheet_(sh, cfg, d) {
   const akhirStok = huruf_(kolValue - 1);
   const q = "'" + cfg.log + "'!";
   const fTotal = ['=SUMIF($D$3:$' + akhirStok + '$3,"STOK",D' + barisTotal + ':' + akhirStok + barisTotal + ')'];
-  const fMutasi = [rumusTotalHarian_(cfg.log, 'OUT')];   // C: total KELUAR hari ini (semua warna), langsung dari Log
+  const fMutasi = [rumusTotalHarian_(cfg.log, 'OUT', 'hari')];   // C: total KELUAR hari ini (semua warna), langsung dari Log
   for (let k = 0; k < W; k++) {
     const hs = huruf_(kolStok(k));
     fTotal.push('=SUM(' + hs + KONFIG.BARIS_DATA + ':' + hs + (barisDataAkhir + 1) + ')', '', '');
@@ -990,9 +1006,10 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(barisMutasi, 2).setValue(KONFIG.LABEL_MUTASI);
   sh.getRange(barisTotal, 3, 1, fTotal.length).setFormulas([fTotal]);
   sh.getRange(barisMutasi, 3, 1, fMutasi.length).setFormulas([fMutasi]);
-  sh.getRange(barisMutasi + 1, 3).setFormulas([[rumusTotalHarian_(cfg.log, 'IN')]]);   // total MASUK hari ini
-  sh.getRange(barisMutasi, 3).setNumberFormat(FORMAT_TOTAL_KELUAR);
-  sh.getRange(barisMutasi + 1, 3).setNumberFormat(FORMAT_TOTAL_MASUK);
+  TOTAL_HARIAN.slice(1).forEach((t, i) => {   // baris di bawah baris rekap: masuk hari ini, keluar kemarin / 7 hari / bulan ini
+    sh.getRange(barisMutasi + 1 + i, 3).setFormulas([[rumusTotalHarian_(cfg.log, t.jenis, t.periode)]]);
+  });
+  TOTAL_HARIAN.forEach((t, i) => sh.getRange(barisMutasi + i, 3).setNumberFormat(t.format).setFontWeight('bold'));
 
   // Format
   sh.getRange(1, 1, 3, totalKolom).setFontWeight('bold').setHorizontalAlignment('center')
@@ -1021,7 +1038,7 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(barisTotal, 1, 3, totalKolom).setFontWeight('bold');
   sh.setColumnWidth(1, 40);
   sh.setColumnWidth(2, 190);
-  sh.setColumnWidth(3, 130);
+  sh.setColumnWidth(3, LEBAR_KOLOM_TOTAL);
   sh.setColumnWidths(4, 3 * W, 48);
   sh.setColumnWidths(kolValue, totalKolom - kolValue + 1, 110);
   sh.setFrozenRows(3);
@@ -1716,10 +1733,10 @@ function perbaruiSatu_(ss, cfg) {
 
   // 2. total harian di kolom C (baris rekap harian dan satu baris di bawahnya)
   try {
-    pastikanUkuran_(sh, barisMutasi + 1, 3);
-    const f = sh.getRange(barisMutasi, 3, 2, 1).getFormulas();
-    const v = sh.getRange(barisMutasi, 3, 2, 1).getValues();
-    const rencana = [['OUT', FORMAT_TOTAL_KELUAR], ['IN', FORMAT_TOTAL_MASUK]];
+    pastikanUkuran_(sh, barisMutasi + TOTAL_HARIAN.length - 1, 3);
+    const f = sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getFormulas();
+    const v = sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getValues();
+    const rencana = TOTAL_HARIAN;
     const ditulis = [];
     rencana.forEach((rc, i) => {
       const r = barisMutasi + i;
@@ -1729,10 +1746,11 @@ function perbaruiSatu_(ss, cfg) {
         lapor.push(awal + 'sel C' + r + ' berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa. Kosongkan dulu bila memang mau diganti.');
         return;
       }
-      sh.getRange(r, 3).setFormulas([[rumusTotalHarian_(cfg.log, rc[0])]]).setNumberFormat(rc[1]);
+      sh.getRange(r, 3).setFormulas([[rumusTotalHarian_(cfg.log, rc.jenis, rc.periode)]]).setNumberFormat(rc.format);
       sh.getRange(r, 3).setFontWeight('bold');
-      ditulis.push('C' + r + ' (' + (rc[0] === 'OUT' ? 'Keluar' : 'Masuk') + ')');
+      ditulis.push('C' + r + ' (' + rc.nama + ')');
     });
+    if (ditulis.length && sh.getColumnWidth(3) < LEBAR_KOLOM_TOTAL) sh.setColumnWidth(3, LEBAR_KOLOM_TOTAL);
     if (ditulis.length) lapor.push(awal + 'total harian ' + ditulis.join(', ') + '.');
   } catch (err) {
     lapor.push(awal + 'total harian GAGAL (' + err.message + '). Aman diulang.');
@@ -1771,7 +1789,7 @@ function perbaruiSatu_(ss, cfg) {
   // pemeriksaan akhir: rumus total harian tidak boleh menampilkan galat
   try {
     SpreadsheetApp.flush();
-    sh.getRange(barisMutasi, 3, 2, 1).getValues().forEach((x, i) => {
+    sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getValues().forEach((x, i) => {
       if (/^#/.test(String(x[0]))) lapor.push(awal + 'PERIKSA: C' + (barisMutasi + i) + ' menampilkan ' + x[0] + '.');
     });
   } catch (err) { /* hanya pemeriksaan */ }

@@ -46,7 +46,8 @@ class Sheet {
     this.cells = baru; this.maxRows -= n;
   }
   setFrozenColumns(n) { this.frozenCols = n; }
-  setColumnWidth() {}
+  setColumnWidth(c, w) { (this.lebar = this.lebar || {})[c] = w; }
+  getColumnWidth(c) { return (this.lebar || {})[c] || 100; }
   setColumnWidths() {}
   protect() { const p = new Protection(); this.protections.push(p); return p; }
   getProtections() { return this.protections.slice(); }
