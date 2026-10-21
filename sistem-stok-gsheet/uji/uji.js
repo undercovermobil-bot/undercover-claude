@@ -782,6 +782,33 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(!u.ss.getSheetByName('Rekap Harian UC'), 'trigger rekap tidak membuat sheet yang hilang');
 }
 
+// ---------- rekap harian: tabel yang ada dirapikan tanpa sisa (tanggal ganda digabung, baris kosong dirapatkan)
+{
+  const u = SEDIA_UC();
+  const rk = () => u.ss.getSheetByName('Rekap Harian UC');
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  u.kirim(4, A_OUT, 2);
+  u.ctx.rekapHarianOtomatis();
+  // tanggal ganda (salin-tempel staf): dua baris untuk hari yang sama, satu baris kosong di tengah, satu hari lama
+  rk().insertRowsBefore(3, 3);
+  rk().getRange(3, 1, 3, 13).setValues([[hari0, 0, 99, -99, 1, 0, 0, 0, 0, 0, hari0, 'OK', 'catatan ganda'], ['', '', '', '', '', '', '', '', '', '', '', '', ''], [hari0 - 9, 5, 4, 1, 3, 0, 0, 0, 0, 0, hari0 - 9, 'OK', '']]);
+  u.ctx.rekapHarianOtomatis();
+  const n = rk().getLastRow() - 1;
+  const isi = rk().getRange(2, 1, n, 13).getValues();
+  const nilaiA = isi.map(r => r[0] instanceof Date ? Math.floor(u.ctx.waktuSerial_(r[0])) : r[0]);
+  cek(n === 2 && nilaiA[0] === hari0 && nilaiA[1] === hari0 - 9 && isi[0][2] === 2 && isi[1][1] === 5, 'rekap: tanggal ganda digabung (angka dari Log menang), baris kosong dirapatkan, tidak ada sisa di bawah: ' + JSON.stringify(nilaiA));
+  cek(/catatan ganda/.test(isi[0][12]), 'rekap: catatan dari baris ganda digabung');
+}
+
+// ---------- aktifkan melengkapi instalasi 2 trigger (edit + penyapu) dengan rekap harian saja
+{
+  const c = siapkan(); c.ctx.migrasiStokUC();
+  c.ctx.__triggers.push({ getHandlerFunction: () => 'prosesInputStok' }, { getHandlerFunction: () => 'sapuInputStok' });
+  c.ctx.aktifkanInputOtomatis();
+  const f = c.ctx.__triggers.map(t => t.getHandlerFunction()).sort().join();
+  cek(f === 'prosesInputStok,rekapHarianOtomatis,sapuInputStok' && /Ditambahkan sekarang: rekap harian\./.test(c.ctx.__alerts.slice(-1)[0]), 'aktifkan: instalasi edit+penyapu hanya ditambah rekap harian, tanpa menggandakan: ' + f);
+}
+
 // ---------- rekap harian: sumber campuran (urutan acak, Date vs angka, arsip, duplikat, batas hari WIB, zona file lain, catch-up)
 {
   const u = SEDIA_UC();
@@ -925,6 +952,10 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
     u.ctx.perbaruiSheetLama();
     cek(!u.BU.peek(4, A_IN).dv && !u.BU.peek(4, A_OUT).dv && u.BU.peek(4, A_STOK).dv && /validasi IN\/OUT diperbarui di 0 dari 16 warna/.test(u.ctx.__alerts.slice(-1)[0]) && /DITOLAK Google/.test(u.ctx.__alerts.slice(-1)[0]),
       'menu 4: Google menolak semua aturan -> validasi IN/OUT lama dikosongkan dan dilaporkan'); }
+  // banner D1 yang sudah diubah manual tidak ditimpa
+  { const u = SIAP(); u.BU.getRange(1, 4).setValue('Banner buatan sendiri');
+    u.ctx.perbaruiSheetLama();
+    cek(u.BU.peek(1, 4).v === 'Banner buatan sendiri' && /banner D1 sudah diubah manual; tidak diganti/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: banner yang diubah manual tidak ditimpa dan dilaporkan'); }
   // lokal titik koma: menu 4 memakai varian titik koma (diingat untuk area berikutnya)
   { const u = SIAP(); u.ctx.__opsi.tolakValidasi = { di: 'apply', formula: f => f.indexOf(',') >= 0 };
     u.ctx.perbaruiSheetLama();

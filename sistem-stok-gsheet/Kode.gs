@@ -1415,9 +1415,10 @@ function agregasiBaris_(baris, dari, sampai) {
 
 /** Tabel rekap yang ada: baris per hari ({hari, nilai}) + baris bertanggal tak terbaca (dipertahankan). Tanggal ganda digabung (Entri terbesar menang). */
 function bacaTabelRekap_(sh, zona) {
-  const hasil = { baris: [], lain: [] };
+  const hasil = { baris: [], lain: [], n: 0 };   // n = jumlah baris data yang dibaca (termasuk baris kosong), untuk membersihkan sisa saat menulis
   const n = sh.getLastRow() - 1;
   if (n < 1) return hasil;
+  hasil.n = n;
   const nilai = sh.getRange(2, 1, n, HEADER_REKAP.length).getValues();
   const ubahA = konversiKolomWaktu_(nilai.map(b => b[0]), zona);
   const ubahK = konversiKolomWaktu_(nilai.map(b => b[10]), zona);
@@ -1466,7 +1467,9 @@ function gabungRekap_(lama, baru, paksa, sekarang) {
   return { baris: baris.concat(lama.lain), ditulis: ditulis, dipertahankan: dipertahankan };
 }
 
-function tulisTabelRekap_(sh, baris, sekarang) {
+function tulisTabelRekap_(sh, baris, sekarang, nLama) {
+  // Tabel baru bisa lebih pendek dari yang lama (tanggal ganda digabung, baris kosong dirapatkan): bersihkan sisa di bawahnya.
+  if (nLama > baris.length) sh.getRange(baris.length + 2, 1, nLama - baris.length, HEADER_REKAP.length).clearContent();
   if (baris.length) {
     pastikanUkuran_(sh, baris.length + 1, KOLOM_REKAP_STATUS);
     sh.getRange(2, 1, baris.length, HEADER_REKAP.length).setValues(baris);
@@ -1496,7 +1499,7 @@ function perbaruiRekapSatu_(ss, cfg, opsi) {
   }
   const agr = agregasiBaris_(kumpulkanBarisLog_(ss, cfg, semuaSumber), dari, hariIni);
   const gabung = gabungRekap_(lama, agr.hari, !!opsi.paksa, sekarang);
-  tulisTabelRekap_(sh, gabung.baris, sekarang);
+  tulisTabelRekap_(sh, gabung.baris, sekarang, lama.n);
   return { ditulis: gabung.ditulis, dipertahankan: gabung.dipertahankan, info: agr.info, semuaSumber: semuaSumber };
 }
 
