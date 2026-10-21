@@ -28,9 +28,9 @@ Folder `uji/` (simulasi untuk menguji kode) tidak perlu dipakai.
 3. **File → Import → Upload** `Urutan Stok UC STP.xlsx` → **Insert new sheet(s)**. **Sekali saja** (impor ulang membuat "Urutan UC 1" dan migrasi ditolak sampai dirapikan).
 4. **Extensions → Apps Script** → tempel isi `Kode.gs` → **Ctrl+S**.
 5. Refresh spreadsheet (F5) → menu **📦 Sistem Stok → 1a** (UC) → **Yes**, lalu **1b** (STP) → **Yes**.
-6. **2. Aktifkan input otomatis** (sekali, dari **satu akun** saja, sebaiknya pemilik file). Cek di Apps Script → ikon jam **Triggers**: harus ada 2 trigger, penyapu "Every 15 minutes".
+6. **2. Aktifkan input otomatis** (sekali, dari **satu akun** saja, sebaiknya pemilik file). Cek di Apps Script → ikon jam **Triggers**: harus ada 3 trigger, penyapu "Every 15 minutes" dan rekap harian "Day timer".
 7. Tes langkah 12–14 di bagian "Pasang", juga dari aplikasi Sheets di HP.
-8. Opsional: **3. Kunci kolom STOK**. Sheet Log boleh disembunyikan.
+8. Opsional: **3. Kunci kolom STOK**. Sheet Log boleh disembunyikan. **Sheet yang sudah pernah dimigrasi** (bukan migrasi baru): jalankan menu **4** sebelum langkah 6 (lihat "Memasang versi kode baru").
 9. 1–3 hari pertama: pantau **Executions** (lihat "Biaya").
 
 ## Daftar urutan produk (100 SKU terlaris)
@@ -83,10 +83,19 @@ Tiap warna jadi 3 kolom: **STOK | IN | OUT**.
 | Ketik `5` di **IN**, Enter | STOK +5, sel IN kosong lagi (beberapa detik), tercatat di Log sheet itu (UC → "Log Stok UC", STP → "Log Stok STP") |
 | Ketik `2` di **OUT**, Enter | STOK −2, sel OUT kosong lagi, tercatat |
 | OUT lebih besar dari STOK | **Ditolak**: sel merah + catatan, STOK tidak berubah |
-| Ketik huruf / desimal / minus | Ditolak oleh validasi sheet |
+| Ketik huruf / desimal / minus | Ditolak oleh validasi sheet; kalau validasi tidak terpasang (Google menolak aturannya), ditolak script: sel merah + catatan. **Minus sengaja tidak dipakai** |
+| **Salah ketik hari ini**: ketik `B1` (B + jumlah) di sel IN/OUT yang sama | Membatalkan 1 unit dari entri HARI INI: salah OUT → STOK naik, salah IN → STOK turun. Tercatat di Log (Jenis tetap IN/OUT, Qty **negatif**, keterangan "BATAL OUT/IN"); rekap hari ini otomatis bersih |
 | Admin ketik langsung di **STOK** | Diterima, tercatat sebagai `KOREKSI` (untuk opname) |
 
 Tidak ada lagi langkah "kurangi IN manual" dan "hapus OUT akhir hari".
+
+**Revisi salah ketik (pembatalan "B").** Contoh: seharusnya OUT 2 tapi terketik 3. Ketik **`B1`** di sel OUT yang sama (huruf kecil dan spasi boleh: `b 1`). Aturannya:
+- Hanya boleh membatalkan sampai sejumlah entri **hari ini** (WIB) untuk produk **dan** warna **dan** jenis (IN/OUT) yang sama, dihitung dari Log. Lebih dari itu, atau produk/warna/jenis lain, atau entri hari lain: **ditolak** (sel merah, catatan "DITOLAK: ...", tercatat DITOLAK di Log) dan stok tidak berubah.
+- Membatalkan **IN** juga butuh STOK yang cukup (stok tidak boleh jadi minus).
+- **Salah catat di hari lain**: minta admin mengoreksi **STOK** langsung (opname; tercatat `KOREKSI`). Rekap hari yang sudah lewat sengaja tidak diubah.
+- Kenapa bukan angka minus: `OUT -3` mudah terbaca staf sebagai "kurangi stok 3", padahal artinya menaikkan stok. Huruf B tidak mungkin terketik tanpa sengaja. Minus tetap ditolak dengan petunjuk "ketik B1".
+- Matikan fitur ini dengan `IZINKAN_PEMBATALAN = false` di kode (B1 lalu ditolak seperti teks biasa).
+- Kolom IN/OUT hanya menerima `B` + angka bila validasi barunya terpasang (migrasi baru: otomatis; sheet yang sudah dimigrasi: menu **4**).
 
 **Mengetik cepat di banyak sel.** Google bisa melewatkan atau menunda satu kejadian edit kalau diketik cepat, sehingga angka IN/OUT sempat tertinggal di sel. Pengamannya:
 1. Tiap kali sebuah edit diproses, script menyapu **semua** sel IN/OUT di sheet itu (bukan hanya sel yang diedit), lalu **mengulang** sampai tidak ada yang tersisa (maks. `PUTARAN_MAKS` = 3 putaran), sebelum melepas kunci. Angka yang diketik selagi script berjalan ikut terbawa. Sel hasil sapuan dicatat di Log dengan keterangan "Diproses penyapuan otomatis" dan kolom User **kosong** (pemilik angkanya tidak diketahui).
@@ -111,9 +120,24 @@ Sel yang **ditolak** (merah, ada catatan, mis. OUT melebihi stok) tidak disentuh
 
 Baris bawah tabel:
 - **TOTAL STOK**: total per warna + total unit (kolom C) + total value.
-- **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Otomatis reset tiap ganti hari.
+- **MASUK / KELUAR HARI INI**: jumlah IN/OUT hari ini per warna, dari Log. Di **kolom C baris itu = total KELUAR hari ini** (semua warna, mis. "Keluar 4 unit"), dan **di bawahnya total MASUK hari ini**. Dihitung langsung dari Log, jadi bersih setelah pembatalan (B1).
+- **Kapan angka hari ini reset:** tengah malam WIB. Artinya angkanya masih ada pada jam 19.00 dan tetap ada sampai tengah malam. Syarat: **zona waktu file = Asia/Jakarta** (menu "Setel zona waktu file ke WIB"; kalau tidak, resetnya terjadi di jam lain, mis. 14.00 WIB di zona Pacific) dan **File → Settings → Calculation = "On change and every hour"** supaya hari berganti walau tidak ada yang mengedit. Mau menyimpan angka sebelum reset: lihat "Rekap harian".
 
 Kolom **Value** memakai harga per baris dari formula lama, tapi sekarang menghitung dari kolom STOK.
+
+## Rekap harian (disimpan per hari)
+
+Sheet **Rekap Harian UC** dan **Rekap Harian STP** (satu per sheet stok): satu baris per hari, terbaru di atas, nilai **tetap** (bukan rumus) supaya bertahan walau Log diarsipkan. Kolom: Tanggal | Masuk (unit) | Keluar (unit) | Selisih | Entri | Dibatalkan IN (unit) | Dibatalkan OUT (unit) | Opname STOK (entri) | Selisih opname (unit) | Ditolak (entri) | Dihitung | Status | Catatan. Masuk/Keluar sudah **bersih** setelah pembatalan; "Entri" menghitung entri IN/OUT biasa (bukan pembatalan). Kolom **Catatan** boleh Anda isi sendiri (ikut tersimpan per tanggal). Kolom O2 = kapan terakhir dihitung.
+
+Cara kerja:
+- Sumber kebenaran = **Log + sheet arsip log**. Rekap dihitung ulang dari sana, bukan diperbarui per entri, jadi tidak menambah kuota di jalur input.
+- **Otomatis tiap malam** (trigger ketiga "rekap harian", sekitar 00.30 WIB; dipasang menu **2**): menghitung ulang hari ini dan 3 hari sebelumnya (lebih jauh bila ada hari yang terlewat). Hari kemarin jadi final.
+- **Hari ini belum final sampai tengah malam.** Mau menyimpan angka hari ini pada jam 19.00: menu **Perbarui rekap harian sekarang** (angka live ada juga di kolom C di bawah TOTAL STOK).
+- **Bangun ulang rekap harian dari Log (semua hari)**: menghitung seluruh riwayat dari Log + arsip dan boleh menurunkan angka lama (dengan konfirmasi). Dipakai bila ada yang tidak cocok.
+- Pengaman: hari yang barisnya sudah tidak ada di Log/arsip **tidak pernah dihapus atau dinolkan**. Kalau sumber sebuah hari kini lebih sedikit dari yang tersimpan (mis. Log dipotong), angka lama dipertahankan dan Status berbunyi "SUMBER BERKURANG" (hanya "Bangun ulang" yang boleh menurunkan). Baris Log yang Waktu-nya tak terbaca atau Qty-nya bukan angka dilaporkan, tidak dihitung.
+- Rekap membaca seluruh Log sekali per malam (±5–20 detik kuota). Kalau Log + arsip lebih dari 60.000 baris, rekap berhenti dengan pesan "arsipkan log lama dulu".
+- Ada satu hal yang bisa membuat satu hari terlihat salah: entri yang diproses **setelah** tengah malam (mis. angka tertinggal yang baru diproses penyapu keesokan paginya) dicatat di hari proses, bukan hari ketik.
+- Sheet rekap ikut dikunci oleh menu **3**. Cek status menampilkan jumlah hari tersimpan dan kapan terakhir dihitung (peringatan bila lebih dari 26 jam).
 
 ## Log Stok (satu per sheet)
 
@@ -141,7 +165,20 @@ Kalau di file trial masih ada sheet **"Log Stok"** lama (satu log bersama dari v
 Tempel kode baru di Apps Script lalu simpan (Ctrl+S) cukup untuk **logika input** (validasi, zona waktu, log baru, arsip, penyapuan input cepat). **Trigger baru (penyapu 15 menit) baru terpasang setelah menu 2. Aktifkan input otomatis dijalankan sekali lagi** (aman: trigger edit yang sudah ada tidak digandakan). Kalau penyapu lama (mis. 10 menit) sudah terpasang, menu 2 tidak menggantinya: jalankan **Matikan input otomatis** lalu **Aktifkan input otomatis** supaya interval jadi 15 menit. Jam kerja penyapu (`SAPU_JAM`) dibaca dari kode, jadi cukup tempel kode + Ctrl+S. Menu **Cek status** menunjukkan **jumlah** trigger yang terpasang; angka "tiap … menit" di dialognya hanya membaca nilai di kode, bukan interval trigger yang sebenarnya. Interval sebenarnya dilihat di Apps Script → ikon jam **Triggers** (penyapu harus bertulisan "Every 15 minutes"). Tampilan yang dibuat saat migrasi (warna, format STOK 0 kosong, rumus rekap harian, log per sheet) **tidak berubah otomatis** di sheet yang sudah dimigrasi. Menu **Cek status** memberi peringatan bila rekap harian masih merujuk log versi lama.
 
 - **File trial**: boleh migrasi ulang. Hapus sheet "Stok Cover UC" / "Stok Cover STP" baru dan semua sheet "Log Stok…", ganti nama "(lama)" kembali ke nama asli, lalu jalankan menu 1a dan 1b (sheet Urutan UC / Urutan STP harus masih ada). Mutasi yang sudah dicatat di sheet baru ikut hilang.
-- **File asli yang sudah dipakai sungguhan**: **jangan** migrasi ulang (stok sekarang ada di sheet baru, sheet "(lama)" sudah basi). Ubah tampilan manual, atau minta perubahan khusus dibuatkan.
+- **File asli yang sudah dipakai sungguhan**: **jangan** migrasi ulang (stok sekarang ada di sheet baru, sheet "(lama)" sudah basi). Naikkan versi dengan menu **4. Perbarui sheet yang sudah dimigrasi** (di bawah).
+
+**Menu 4 (sheet yang sudah dimigrasi, tanpa migrasi ulang).** Memasang fitur pembatalan B dan rekap harian di sheet yang sudah dipakai: validasi kolom IN/OUT (menerima `B1`), total harian di kolom C (baris di bawah TOTAL STOK, dicari lewat label "TOTAL STOK"/"MASUK / KELUAR HARI INI", bukan alamat tetap), teks banner baris 1, dan sheet **Rekap Harian** beserta riwayatnya dari Log + arsip. **Tidak mengubah** STOK, isi IN/OUT, Log, catatan, atau warna sel data. Sebelum menulis, tiap sheet diperiksa: sudah berformat STOK/IN/OUT, label TOTAL STOK ada, Log ada, tidak terkunci untuk akun ini, dan sel total harian kosong atau milik rumus ini (kalau berisi hal lain, **tidak ditimpa** dan dilaporkan); satu sheet yang gagal diperiksa dilewati dengan alasan, tidak menghentikan sheet lain. Laporan per langkah muncul di dialog akhir. **Aman diulang** (hasil sama).
+
+Urutan aman untuk file asli yang sudah dipakai (kerjakan di luar jam kerja, mis. setelah 19.00 saat penyapu sudah berhenti):
+1. Semua staf menutup file. Pastikan tidak ada angka tertinggal di IN/OUT dan tidak ada sel merah.
+2. **File → Make a copy** sebagai cadangan (di file asli: **File → Version history → Name current version**).
+3. Tempel `Kode.gs` baru di Apps Script, Ctrl+S, refresh. **Jangan jalankan menu apa pun dulu**; **Cek status** boleh (hanya membaca).
+4. Menu **4** dari akun pemilik (akun yang menjalankan menu 2 dan 3). Baca laporannya: tiap langkah harus "diperbarui"/"ditulis", bukan GAGAL atau DILEWATI.
+5. Menu **2. Aktifkan input otomatis**: melengkapi trigger rekap harian tanpa menggandakan trigger lama. Cek di Apps Script → **Triggers**: 3 trigger milik satu akun (edit, penyapu "Every 15 minutes", rekap harian "Day timer", sekitar 00.00–01.00 GMT+7).
+6. Kalau menu 3 dipakai, jalankan **ulang** supaya sheet Rekap ikut terkunci.
+7. Tes: ketik OUT 1, lalu `B1` di sel yang sama (stok kembali, Log punya 2 baris: OUT 1 dan OUT −1); coba `B1` lagi (harus ditolak). Cek kolom C di bawah TOTAL STOK. Tes juga dari HP.
+8. Hari 1–3: pantau Executions dan sheet Rekap (Cek status menampilkan umur rekap).
+- **Jalan mundur:** menu **Matikan input otomatis**, hapus sheet Rekap Harian, kembalikan banner D1/kolom C secara manual, atau pulihkan dari salinan/Version history. Tempel `Kode.gs` lama bila perlu.
 - Ubah `FORMAT_STOK` di kode hanya berlaku untuk migrasi berikutnya.
 
 ## Tampilan STOK 0
@@ -223,7 +260,7 @@ Migrasi di file asli memakai data saat itu, bukan data file trial.
    Setelah Allow, kalau tidak terjadi apa-apa, klik menu **1a** sekali lagi.
 9. Muncul ringkasan (jumlah produk, produk baru, baris digabung, total stok, OUT yang masih terisi) → **Yes**. Lalu catatan formula Value → **OK**. Tab berubah: "Stok Cover UC" (baru), "Stok Cover UC (lama)", "Log Stok UC". Kalau muncul pesan masalah daftar, tidak ada yang berubah: perbaiki sheet Urutan sesuai pesan, lalu ulangi.
 10. **📦 Sistem Stok → 1b. Susun "Stok Cover STP"…** → **Yes** → **OK**. Kolom Orange muncul setelah Hijau Army.
-11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet; memasang 2 trigger: edit dan penyapu 15 menit).
+11. **📦 Sistem Stok → 2. Aktifkan input otomatis** → **OK** (sekali, berlaku untuk kedua sheet; memasang 3 trigger: edit, penyapu 15 menit, dan rekap harian tiap malam).
 
 **C. Tes**
 
@@ -256,7 +293,7 @@ Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps S
 
 - **Satu orang saja** yang menekan "Aktifkan input otomatis" (sebaiknya pemilik file). Trigger dari 2 akun tidak menghitung dobel, tapi bikin log penolakan/koreksi tercatat 2×.
 - **Jangan buat fungsi bernama `onEdit`** di Apps Script. Bisa memicu proses ganda.
-- **Jangan pakai Ctrl+Z** untuk membatalkan input stok. Koreksi dengan input kebalikan (salah IN 5 → OUT 5). Semua tercatat di Log.
+- **Jangan pakai Ctrl+Z** untuk membatalkan input stok. Salah ketik **hari ini**: ketik `B` + jumlah di sel yang sama (mis. `B1`). Salah catat di hari lain: admin mengoreksi STOK (opname). **Jangan** memakai input kebalikan (salah OUT 3 → IN 1): itu membuat rekap Masuk/Keluar hari itu salah. Semua tercatat di Log.
 - Tunggu sel IN/OUT kosong lagi (beberapa detik) sebelum mengetik di **sel yang sama**. Mengetik cepat di sel berbeda aman: angka yang tertinggal disapu otomatis (lihat "Mengetik cepat di banyak sel").
 - **Jangan ganti nama** sheet "Stok Cover UC", "Stok Cover STP", "Log Stok UC", "Log Stok STP", (sheet "(lama)" boleh dihapus setelah tidak dibutuhkan; migrasi ulang tetap ditolak karena sheet baru sudah berformat STOK/IN/OUT. Pindahkan dulu Stok Reseller ASTA/ROBY di UC (lama) baris 201+ kalau masih dipakai). Kalau perlu ganti nama, ubah juga `KONFIG` di Kode.gs.
 - Staf jangan mengisi stok di sheet "(lama)". Isinya tidak lagi diupdate.

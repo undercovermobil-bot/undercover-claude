@@ -101,6 +101,7 @@ class Range {
   setFontColor(c) { return this.each(x => { x.fc = c; }); }
   getBackground() { return this.sh.cell(this.r, this.c).bg; }
   setDataValidation(dv) { if (dv && dv.galat && dv.galatDi === 'apply') throw dv.galat; return this.each(x => { x.dv = dv; }); }
+  clearDataValidations() { return this.each(x => { x.dv = null; }); }
   merge() { this.sh.merges.push([this.r, this.c, this.nr, this.nc]); return this; }
   setFontWeight() { return this; } setHorizontalAlignment() { return this; } setVerticalAlignment() { return this; }
   setWrap() { return this; }
@@ -144,6 +145,11 @@ function instanKeSerial(ms, tz) { return (ms + tzOffsetMs(ms, tz) - Date.UTC(189
 
 function colNum(s) { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0) - 64; return n; }
 
+// Konstanta `const` tingkat atas tidak jadi properti global di vm: diekspor lewat globalThis.__KONFIG / __K supaya uji bisa membacanya.
+const EKSPOR_KONSTANTA = "\n;globalThis.__KONFIG = KONFIG; globalThis.__K = {}; " +
+  "['HEADER_LOG', 'HEADER_REKAP', 'TEKS_BANNER_LAMA', 'TEKS_BANNER_BARU', 'FORMAT_TOTAL_KELUAR', 'FORMAT_TOTAL_MASUK', 'KOLOM_REKAP_STATUS']" +
+  ".forEach(n => { try { globalThis.__K[n] = eval(n); } catch (e) { /* konstanta belum ada di versi kode ini */ } });";
+
 function buatKonteks(ss, opsi = {}) {
   const alerts = [];
   const triggers = [];
@@ -177,7 +183,10 @@ function buatKonteks(ss, opsi = {}) {
       getActiveSpreadsheet: () => ss, getActive: () => ss, getUi: () => ui, flush() { ctx.__flush = (ctx.__flush || 0) + 1; },
       newDataValidation: dvBuilder, ProtectionType: { SHEET: 'SHEET', RANGE: 'RANGE' },
     },
-    LockService: { getDocumentLock: () => ({ tryLock: () => (opsi.lockGagal ? false : true), releaseLock() {} }) },
+    LockService: {
+      getDocumentLock: () => ({ tryLock: () => (opsi.lockGagal ? false : true), releaseLock() {} }),
+      getScriptLock: () => ({ tryLock: () => (opsi.lockSkripGagal ? false : true), releaseLock() {} }),
+    },
     Utilities: {
       sleep() { ctx.__sleep = (ctx.__sleep || 0) + 1; },
       formatDate(d, tz, fmt) {
@@ -195,7 +204,7 @@ function buatKonteks(ss, opsi = {}) {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + '\n;globalThis.__KONFIG = KONFIG;', ctx, { filename: 'Kode.gs' });
+  vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + EKSPOR_KONSTANTA, ctx, { filename: 'Kode.gs' });
   ctx.__alerts = alerts; ctx.__triggers = triggers; ctx.__opsi = opsi;
   return ctx;
 }

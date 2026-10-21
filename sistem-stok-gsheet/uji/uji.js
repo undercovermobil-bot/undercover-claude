@@ -70,7 +70,8 @@ const snapUC = snap(lamaUC), snapSTP = snap(lamaSTP);
 
 // ---------- sebelum migrasi: trigger aktif, edit sheet format lama tidak diproses
 ctx.aktifkanInputOtomatis(); ctx.aktifkanInputOtomatis();
-cek(ctx.__triggers.length === 2 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === ctx.__KONFIG.SAPU_MENIT).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap SAPU_MENIT menit');
+cek(ctx.__triggers.length === 3 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'prosesInputStok').length === 1 && ctx.__triggers.filter(t => t.getHandlerFunction() === 'sapuInputStok' && t.menit === ctx.__KONFIG.SAPU_MENIT).length === 1, 'trigger tidak dobel: 1 edit + 1 penyapu tiap SAPU_MENIT menit + 1 rekap harian');
+cek(ctx.__triggers.filter(t => t.getHandlerFunction() === 'rekapHarianOtomatis' && t.hari === 1 && t.jam === ctx.__KONFIG.REKAP_JAM && t.nearMenit === ctx.__KONFIG.REKAP_MENIT && t.zona === 'Asia/Jakarta').length === 1, 'trigger rekap harian: tiap hari, jam/menit KONFIG, zona WIB');
 lamaUC.getRange(4, 5).setValue(9);
 ctx.prosesInputStok({ range: lamaUC.getRange(4, 5), source: ss });
 cek(lamaUC.peek(4, 4).v === 39 && lamaUC.peek(4, 5).v === 9 && !ss.getSheetByName('Log Stok UC'), 'sheet format lama tidak disentuh trigger');
@@ -117,7 +118,7 @@ ctx.__alerts.length = 0;
 ctx.migrasiStokSTP();
 const alertSTP = ctx.__alerts.join('\n');
 console.log('ALERT STP:\n  ' + ctx.__alerts.join('\n  ').replace(/\n/g, '\n    '));
-cek(ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover UC (lama)|Stok Cover STP|Stok Cover STP (lama)|Resi Keluar Stok|Urutan UC|Urutan STP|Log Stok UC|Log Stok STP',
+cek(ss.sheets.map(s => s.name).join('|') === 'Stok Cover UC|Stok Cover UC (lama)|Stok Cover STP|Stok Cover STP (lama)|Resi Keluar Stok|Urutan UC|Urutan STP|Log Stok UC|Rekap Harian UC|Log Stok STP|Rekap Harian STP',
   'urutan tab: ' + ss.sheets.map(s => s.name).join('|'));
 cek(snap(lamaUC) === snapUC && lamaUC.name === 'Stok Cover UC (lama)', 'isi sheet lama UC utuh (termasuk reseller baris 201+)');
 cek(snap(lamaSTP) === snapSTP && lamaSTP.name === 'Stok Cover STP (lama)', 'isi sheet lama STP utuh');
@@ -318,7 +319,8 @@ cek(uv(5, D) === 26 && /1–9999/.test(U.peek(5, E).note) && U.peek(5, E).bg ===
 edit(U, 5, E, '');
 cek(U.peek(5, E).bg === null, 'reset sel setelah angka ditolak');
 const dvAkhir = U.peek(5, E).dv;
-cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.peek(4, E).dv.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))', 'validasi IN memuat batas atas: ' + U.peek(4, E).dv.f);
+const FORMULA_IN_KOMA = '=OR(AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4)),AND(ISTEXT(E4),REGEXMATCH(E4,"^[Bb][0-9]+$")))';
+cek(dvAkhir && dvAkhir.f === FORMULA_IN_KOMA || U.peek(4, E).dv.f === FORMULA_IN_KOMA, 'validasi IN memuat batas atas + pola B1: ' + U.peek(4, E).dv.f);
 
 // ---------- hasil review: ketikan susulan di sel yang sama tidak terhapus
 {
@@ -466,14 +468,14 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
     const c = siapkan(); c.ctx.migrasiStokUC();
     c.ctx.aktifkanInputOtomatis(); const dua = c.ctx.__triggers.map(t => t.getHandlerFunction()).sort().join();
     c.ctx.aktifkanInputOtomatis();
-    cek(dua === 'prosesInputStok,sapuInputStok' && c.ctx.__triggers.length === 2 && /sudah aktif/.test(c.ctx.__alerts.slice(-1)[0]), 'aktifkan: edit + penyapu, tidak dobel');
+    cek(dua === 'prosesInputStok,rekapHarianOtomatis,sapuInputStok' && c.ctx.__triggers.length === 3 && /sudah aktif/.test(c.ctx.__alerts.slice(-1)[0]), 'aktifkan: edit + penyapu + rekap harian, tidak dobel');
     c.ctx.matikanInputOtomatis();
-    cek(c.ctx.__triggers.length === 0 && /2 trigger dihapus/.test(c.ctx.__alerts.slice(-1)[0]), 'matikan: kedua trigger dihapus');
+    cek(c.ctx.__triggers.length === 0 && /3 trigger dihapus/.test(c.ctx.__alerts.slice(-1)[0]), 'matikan: ketiga trigger dihapus');
     c.ctx.__triggers.push({ getHandlerFunction: () => 'prosesInputStok' });   // pemasangan versi lama: hanya trigger edit
     c.ctx.cekStatus();
     cek(new RegExp('Penyapu angka tertinggal \\(tiap ' + c.ctx.__KONFIG.SAPU_MENIT + ' menit\\): 0\\s+← belum ada').test(c.ctx.__alerts.slice(-1)[0]), 'cekStatus: peringatan penyapu belum ada');
     c.ctx.aktifkanInputOtomatis();
-    cek(c.ctx.__triggers.length === 2, 'aktifkan ulang menambah penyapu pada instalasi lama');
+    cek(c.ctx.__triggers.length === 3 && /Ditambahkan sekarang: penyapu, rekap harian/.test(c.ctx.__alerts.slice(-1)[0]), 'aktifkan ulang melengkapi penyapu + rekap harian pada instalasi lama, tanpa menggandakan edit');
   }
 }
 
@@ -500,7 +502,7 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
 {
   const koma = f => f.indexOf(',') >= 0;
   const stokKoma = '=AND(ISNUMBER(D4),D4>=0,D4<=9999,D4=INT(D4))', stokTitik = '=AND(ISNUMBER(D4);D4>=0;D4<=9999;D4=INT(D4))';
-  const inTitik = '=AND(ISNUMBER(E4);E4>0;E4<=9999;E4=INT(E4))';   // satu aturan untuk IN dan OUT (rumus relatif; mock tidak menggeser E4 ke F4)
+  const inTitik = '=OR(AND(ISNUMBER(E4);E4>0;E4<=9999;E4=INT(E4));AND(ISTEXT(E4);REGEXMATCH(E4;"^[Bb][0-9]+$")))';   // satu aturan untuk IN dan OUT (rumus relatif; mock tidak menggeser E4 ke F4)
   const jalan = opsi => {
     const b = siapkan(opsi); b.ctx.migrasiStokUC();
     const BU = b.ss.getSheetByName('Stok Cover UC');
@@ -518,8 +520,8 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
   }
   // semua rumus ditolak: aturan "angka antara"
   { const r = jalan({ tolakValidasi: { di: 'apply', formula: () => true } });
-    cek(/siap/.test(r.akhir) && !/GAGAL/.test(r.semua) && !!r.dv(4, 4) && !!r.dv(4, 5) && !!r.dv(4, 6) && String((r.dv(4, 4) || {}).angka) === '0,9999' && String((r.dv(4, 5) || {}).angka) === '1,9999' && String((r.dv(4, 6) || {}).angka) === '1,9999', 'rumus ditolak semua: aturan angka antara (STOK 0-9999, IN/OUT 1-9999)');
-    cek(/aturan sederhana/.test(r.akhir) && /desimal lolos/.test(r.akhir), 'rumus ditolak semua: catatan menjelaskan desimal lolos ke sel'); }
+    cek(/siap/.test(r.akhir) && !/GAGAL/.test(r.semua) && !!r.dv(4, 4) && String((r.dv(4, 4) || {}).angka) === '0,9999' && !r.dv(4, 5) && !r.dv(4, 6), 'rumus ditolak semua: STOK aturan angka antara 0-9999; IN/OUT tanpa validasi (aturan angka antara akan memblokir B1)');
+    cek(/aturan sederhana/.test(r.akhir) && /desimal lolos/.test(r.akhir) && /TIDAK terpasang/.test(r.akhir), 'rumus ditolak semua: catatan menjelaskan STOK sederhana dan IN/OUT tanpa validasi'); }
   // semua ditolak: validasi dilewati, migrasi tetap selesai, script tetap menolak isian salah
   { const r = jalan({ tolakValidasi: { di: 'apply', formula: () => true, rentang: true } });
     cek(/siap/.test(r.akhir) && !/GAGAL/.test(r.semua) && !r.dv(4, 5) && !r.dv(4, 4), 'semua aturan ditolak: migrasi selesai tanpa validasi');
@@ -530,6 +532,418 @@ cek(dvAkhir && dvAkhir.f === '=AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4))' || U.
     cek(r.BU.peek(4, 5).bg === '#e06666' && /angka bulat/.test(r.BU.peek(4, 5).note) && (Number(r.BU.getRange(4, 4).getValue()) || 0) === sebelum, 'tanpa validasi sel: huruf tetap ditolak script (merah + catatan)');
     r.BU.getRange(4, 5).setValue(3); r.b.ctx.prosesInputStok({ range: r.BU.getRange(4, 5), source: r.b.ss, value: '3' });
     cek((Number(r.BU.getRange(4, 4).getValue()) || 0) === sebelum + 3 && r.BU.peek(4, 5).v === '', 'tanpa validasi sel: angka valid tetap diproses'); }
+}
+
+// =====================================================================================================
+// Pembatalan salah ketik ("B" + jumlah), total harian, rekap harian, menu 4, pengaman label (hasil kritik desain 2026-10-21)
+// =====================================================================================================
+const SEDIA_UC = opsi => {
+  const b = siapkan(opsi); b.ctx.migrasiStokUC(); b.ctx.aktifkanInputOtomatis();
+  const BU = b.ss.getSheetByName('Stok Cover UC');
+  const o = {
+    b, BU, ctx: b.ctx, ss: b.ss,
+    LG: () => b.ss.getSheetByName('Log Stok UC'),
+    st: (r, c) => Number((BU.peek(r, c) || { v: 0 }).v) || 0,
+    sel: (r, c) => BU.peek(r, c) || { v: '', note: '', bg: null },
+    kirim: (r, c, v) => { BU.getRange(r, c).setValue(v); b.ctx.prosesInputStok({ range: BU.getRange(r, c), source: b.ss, value: String(v) }); },
+    log1: () => o.LG().getRange(2, 1, 1, 12).getValues()[0],
+    nLog: () => o.LG().getLastRow() - 1,
+    kons: () => b.ctx.__KONFIG,
+  };
+  return o;
+};
+const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // warna 1 (Abu-abu) dan 2 (Hitam), baris 4 = Honda Brio
+
+// ---------- pembatalan B: alur dasar OUT, batas = net hari ini, tercatat Qty negatif
+{
+  const u = SEDIA_UC();
+  const s0 = u.st(4, A_STOK);
+  u.kirim(4, A_OUT, 3);
+  cek(u.st(4, A_STOK) === s0 - 3 && u.sel(4, A_OUT).v === '', 'B: OUT 3 biasa');
+  u.kirim(4, A_OUT, 'B1');
+  const l = u.log1();
+  cek(u.st(4, A_STOK) === s0 - 2 && u.sel(4, A_OUT).v === '' && l[6] === 'OUT' && l[7] === -1 && l[8] === s0 - 3 && l[9] === s0 - 2 && /BATAL OUT/.test(l[11]) && u.nLog() === 2,
+    'B1 membatalkan 1 OUT: STOK naik 1, Log OUT Qty -1 "BATAL OUT" (' + JSON.stringify(l) + ')');
+  cek(u.ss.toasts.slice(-1)[0].indexOf('BATAL OUT 1') >= 0, 'B: toast menyebut BATAL OUT 1');
+  u.kirim(4, A_OUT, ' b 2 ');   // sisa net = 2: pas
+  cek(u.st(4, A_STOK) === s0 && u.nLog() === 3, 'b 2 (huruf kecil + spasi) membatalkan sisa OUT hari ini');
+  u.kirim(4, A_OUT, 'B1');       // net 0 -> ditolak
+  const n = { bg: u.sel(4, A_OUT).bg, note: u.sel(4, A_OUT).note };
+  cek(u.st(4, A_STOK) === s0 && n.bg === '#e06666' && /^DITOLAK: batal OUT 1 melebihi OUT HARI INI .*tercatat 0/.test(n.note) && u.log1()[6] === 'DITOLAK' && u.log1()[7] === 1,
+    'B melebihi net hari ini ditolak (merah + catatan + Log DITOLAK): ' + n.note);
+  u.kirim(4, A_OUT, '');
+  cek(u.sel(4, A_OUT).bg === null && u.sel(4, A_OUT).note === '', 'sel B ditolak bisa dihapus (tampilan kembali normal)');
+  // catatan penolakan dikenali sebagai catatan sistem: pembersih tanda basi
+  const peta = u.ctx.bacaPeta_(u.BU);
+  cek(u.ctx.catatanSistem_(n.note) && peta.labelAda === true, 'catatan DITOLAK B dikenali catatanSistem_; peta.labelAda true');
+}
+
+// ---------- pembatalan B: IN (butuh STOK cukup), produk/warna/jenis harus sama, minus tetap ditolak, flag mati
+{
+  const u = SEDIA_UC();
+  u.BU.getRange(4, A_STOK).setValue(2);                // setup: STOK kecil
+  u.kirim(4, A_IN, 10);                                // STOK 12
+  u.kirim(4, A_OUT, 11);                               // STOK 1
+  u.kirim(4, A_IN, 'B9');                              // net IN hari ini 10 >= 9, tapi STOK 1 < 9
+  cek(u.st(4, A_STOK) === 1 && /DITOLAK: batal IN 9 melebihi stok 1/.test(u.sel(4, A_IN).note), 'B IN melebihi STOK ditolak: ' + u.sel(4, A_IN).note);
+  u.kirim(4, A_IN, 'B1');
+  const l = u.log1();
+  cek(u.st(4, A_STOK) === 0 && l[6] === 'IN' && l[7] === -1 && /BATAL IN/.test(l[11]), 'B1 pada IN: STOK turun 1, Log IN Qty -1');
+  u.kirim(4, A_IN, 'B20');
+  cek(/melebihi IN HARI INI .*tercatat 9/.test(u.sel(4, A_IN).note), 'B melebihi net IN hari ini ditolak (net setelah B sebelumnya = 9)');
+  u.kirim(4, A_IN, '');
+  // warna lain / jenis lain tidak bisa dipakai
+  u.kirim(4, H_OUT, 3);                                // OUT Hitam
+  u.kirim(4, A_OUT, 'B1');                             // Abu-abu OUT: net sudah dikoreksi ke 0 oleh uji di atas? (OUT 11) -> pakai kombinasi jelas berbeda
+  const stokAbu = u.st(4, A_STOK);
+  u.kirim(4, A_OUT, '');
+  u.kirim(4, H_IN, 'B1');                              // Hitam IN: tidak ada IN hari ini untuk Hitam
+  cek(/DITOLAK: batal IN 1 melebihi IN HARI INI .*tercatat 0/.test(u.sel(4, H_IN).note), 'B pada jenis lain (IN) untuk warna yang hanya punya OUT ditolak');
+  u.kirim(4, H_IN, '');
+  // produk lain
+  u.kirim(5, A_OUT, 'B1');
+  cek(/tercatat 0/.test(u.sel(5, A_OUT).note), 'B pada produk lain yang tidak punya OUT hari ini ditolak');
+  u.kirim(5, A_OUT, '');
+  // minus tetap ditolak dan petunjuknya menyebut B
+  const s = u.st(4, H_STOK);
+  u.kirim(4, H_OUT, -1);
+  cek(u.st(4, H_STOK) === s && u.sel(4, H_OUT).bg === '#e06666' && /B1/.test(u.sel(4, H_OUT).note) && /minus tidak dipakai/.test(u.sel(4, H_OUT).note), 'minus ditolak dengan petunjuk B1: ' + u.sel(4, H_OUT).note);
+  u.kirim(4, H_OUT, '');
+  // varian B yang tidak valid
+  for (const v of ['B0', 'B99999', 'B1.5', 'B', 'BB1', 'B-1']) {
+    u.kirim(4, H_OUT, v);
+    cek(u.sel(4, H_OUT).bg === '#e06666' && /^Isi angka bulat/.test(u.sel(4, H_OUT).note) && u.st(4, H_STOK) === s, 'B tidak valid ditolak: "' + v + '"');
+    u.kirim(4, H_OUT, '');
+  }
+  // flag mati: B diperlakukan seperti teks biasa
+  u.kons().IZINKAN_PEMBATALAN = false;
+  u.kirim(4, H_OUT, 'B1');
+  cek(u.sel(4, H_OUT).bg === '#e06666' && /^Isi angka bulat 1–9999\.$/.test(u.sel(4, H_OUT).note), 'IZINKAN_PEMBATALAN=false: B1 ditolak seperti teks (tanpa petunjuk B): ' + u.sel(4, H_OUT).note);
+}
+
+// ---------- pembatalan B: lintas hari ditolak; B tertinggal diproses penyapu; Log dibaca hanya bila ada B
+{
+  const u = SEDIA_UC();
+  const cfg = u.kons().SISTEM[0];
+  const kemarin = Math.floor(u.ctx.waktuSerial_(new Date())) - 1 + 0.5;
+  u.ctx.tulisLog_(u.ss, cfg, [[kemarin, 'Stok Cover UC', 4, 'Honda Brio', 'HND-BRI-UA-R-G1', 'Abu-abu', 'OUT', 5, 40, 35, '', '']]);
+  const s0 = u.st(4, A_STOK);
+  u.kirim(4, A_OUT, 'B2');
+  cek(u.st(4, A_STOK) === s0 && /DITOLAK: batal OUT 2 melebihi OUT HARI INI .*tercatat 0.*hari lain/.test(u.sel(4, A_OUT).note), 'B untuk entri kemarin ditolak (lintas hari ke admin): ' + u.sel(4, A_OUT).note);
+  u.kirim(4, A_OUT, '');
+  // penyapu memproses B yang tertinggal di sel (tanpa event edit)
+  u.kirim(4, A_OUT, 4);                                 // OUT 4 hari ini
+  u.BU.getRange(4, A_OUT).setValue('B3');               // tertinggal, tanpa event
+  u.kons().SAPU_JAM = { awal: 0, akhir: 24 };
+  u.ctx.sapuInputStok();
+  const l = u.log1();
+  cek(u.st(4, A_STOK) === s0 - 1 && u.sel(4, A_OUT).v === '' && l[7] === -3 && /BATAL OUT; Diproses penyapuan/.test(l[11]), 'penyapu memproses B tertinggal: ' + JSON.stringify(l));
+  // anggaran pembacaan: entri biasa tidak membaca Log; entri B membaca Log
+  let bacaLog = 0;
+  const RgProto = Object.getPrototypeOf(u.BU.getRange(1, 1));
+  const asliGV = RgProto.getValues;
+  RgProto.getValues = function () { if (this.sh.name === 'Log Stok UC') bacaLog++; return asliGV.apply(this, arguments); };
+  u.kirim(4, A_IN, 2);
+  const biasa = bacaLog;
+  u.kirim(4, A_OUT, 'B1');
+  const denganB = bacaLog;
+  RgProto.getValues = asliGV;
+  cek(biasa === 0 && denganB === 1, 'Log dibaca hanya saat ada entri B (entri biasa 0 pembacaan, entri B 1): ' + biasa + '/' + denganB);
+}
+
+// ---------- jalur penyelamatan prosesPutaran_ tidak menggandakan baris Log
+{
+  for (const sesudahTulis of [true, false]) {
+    const u = SEDIA_UC();
+    const asli = u.ctx.tulisLog_;
+    let sekali = true;
+    u.ctx.tulisLog_ = function (...a) {
+      if (!sesudahTulis && sekali) { sekali = false; throw new Error('Service Spreadsheets timed out'); }
+      asli.apply(this, a);
+      if (sekali) { sekali = false; throw new Error('Service Spreadsheets timed out'); }
+    };
+    const s0 = u.st(4, A_STOK);
+    let galat = null;
+    try { u.kirim(4, A_OUT, 2); } catch (e) { galat = e; }
+    cek(galat && /timed out/.test(galat.message) && u.st(4, A_STOK) === s0 - 2 && u.sel(4, A_OUT).v === '', 'penyelamatan (' + (sesudahTulis ? 'galat sesudah log tertulis' : 'galat sebelum log tertulis') + '): STOK benar, sel kosong, galat dilempar ulang');
+    cek(u.nLog() === 1 && u.log1()[6] === 'OUT' && u.log1()[7] === 2, 'penyelamatan (' + (sesudahTulis ? 'sesudah' : 'sebelum') + '): tepat SATU baris Log (' + u.nLog() + ')');
+  }
+}
+
+// ---------- label TOTAL STOK hilang: tidak ada yang diproses (baris rekap/total tidak terbaca sebagai produk)
+{
+  const u = SEDIA_UC();
+  const peta = u.ctx.bacaPeta_(u.BU);
+  cek(peta.labelAda === true && u.BU.peek(peta.barisTotal, 2).v === 'TOTAL STOK', 'label TOTAL STOK terdeteksi');
+  const lbl = u.BU.peek(peta.barisTotal, 2).v;
+  u.BU.getRange(peta.barisTotal, 2).setValue('');
+  const s0 = u.st(4, A_STOK), n0 = u.nLog();
+  u.kirim(4, A_IN, 2);
+  cek(u.st(4, A_STOK) === s0 && u.sel(4, A_IN).v === 2 && u.nLog() === n0, 'label hilang: edit IN tidak diproses (stok/Log tetap)');
+  u.kons().SAPU_JAM = { awal: 0, akhir: 24 };
+  u.ctx.sapuInputStok();
+  cek(u.st(4, A_STOK) === s0 && u.sel(4, A_IN).v === 2 && u.nLog() === n0, 'label hilang: penyapu tidak memproses');
+  u.ctx.cekStatus();
+  cek(/label "TOTAL STOK" di kolom B HILANG/.test(u.ctx.__alerts.slice(-1)[0]), 'label hilang: cekStatus memperingatkan');
+  u.BU.getRange(peta.barisTotal, 2).setValue(lbl);
+  u.ctx.sapuInputStok();
+  cek(u.st(4, A_STOK) === s0 + 2 && u.sel(4, A_IN).v === '', 'label dikembalikan: sel yang tertinggal diproses penyapu');
+}
+
+// ---------- total harian di bawah TOTAL STOK (rumus langsung ke Log) + validasi IN/OUT memuat pola B
+{
+  const u = SEDIA_UC();
+  const peta = u.ctx.bacaPeta_(u.BU);
+  const rm = peta.barisTotal + 1;
+  cek(u.BU.peek(rm, 2).v === 'MASUK / KELUAR HARI INI', 'baris rekap harian tepat di bawah TOTAL STOK');
+  cek(u.BU.peek(rm, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') && u.BU.peek(rm + 1, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'IN'), 'C(rekap) = total KELUAR, C(rekap+1) = total MASUK, langsung dari Log');
+  cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') === "=SUMIFS('Log Stok UC'!$H:$H,'Log Stok UC'!$G:$G,\"OUT\",'Log Stok UC'!$A:$A,\">=\"&TODAY(),'Log Stok UC'!$A:$A,\"<\"&(TODAY()+1))", 'rumus total harian: SUMIFS atas Qty (bersih) tanpa kriteria warna');
+  cek(u.BU.peek(rm, 3).nf === '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"' && u.BU.peek(rm + 1, 3).nf === '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"', 'format total harian dua seksi (negatif tidak tampil "-Keluar")');
+  cek(u.BU.peek(1, 4).v === u.ctx.__K.TEKS_BANNER_BARU && /B1/.test(u.BU.peek(1, 4).v), 'banner memuat petunjuk pembatalan');
+  cek(u.BU.peek(4, A_IN).dv && /REGEXMATCH/.test(u.BU.peek(4, A_IN).dv.f) && /Ketik B/.test(u.BU.peek(4, A_IN).dv.help) && !/REGEXMATCH/.test(u.BU.peek(4, A_STOK).dv.f), 'validasi IN/OUT memuat pola B + teks bantuan; STOK tanpa pola B');
+  const sel1 = u.ctx.rumusTotalHarian_('Log Stok UC', 'IN');
+  cek(sel1.indexOf('"IN"') > 0 && sel1.indexOf('$F:$F') < 0, 'total masuk: tanpa kriteria warna');
+}
+
+// ---------- fungsi agregasi rekap: bersih, pembatalan, opname, ditolak, waktu tak terbaca, masa depan
+{
+  const u = SEDIA_UC();
+  const t = h => h + 0.5;
+  const baris = [
+    [t(100), 'S', 4, 'P', 'K', 'W', 'IN', 5, 10, 15, '', ''], [t(100), 'S', 4, 'P', 'K', 'W', 'OUT', 3, 15, 12, '', ''],
+    [t(100), 'S', 4, 'P', 'K', 'W', 'OUT', -1, 12, 13, '', 'BATAL OUT'], [t(100), 'S', 4, 'P', 'K', 'W', 'IN', -2, 13, 11, '', 'BATAL IN'],
+    [t(100), 'S', 4, 'P', 'K', 'W', 'KOREKSI', '', 11, 20, '', ''], [t(100), 'S', 4, 'P', 'K', 'W', 'KOREKSI', '', '', 7, '', ''],
+    [t(100), 'S', 4, 'P', 'K', 'W', 'DITOLAK', 9, 11, 11, '', ''],
+    [t(101), 'S', 4, 'P', 'K', 'W', 'OUT', 2, 11, 9, '', ''],
+    [null, 'S', 4, 'P', 'K', 'W', 'OUT', 2, 11, 9, '', ''],              // waktu tak terbaca
+    [t(100), 'S', 4, 'P', 'K', 'W', 'OUT', 'x', 11, 9, '', ''],          // Qty rusak
+    [t(500), 'S', 4, 'P', 'K', 'W', 'OUT', 2, 11, 9, '', ''],            // masa depan (> sampai)
+    [t(50), 'S', 4, 'P', 'K', 'W', 'OUT', 7, 11, 4, '', ''],             // lebih tua dari "dari"
+  ];
+  const a = u.ctx.agregasiBaris_(baris, 90, 200);
+  const h = a.hari[100], h2 = a.hari[101];
+  cek(h.masuk === 3 && h.keluar === 2 && h.entri === 2 && h.batalIN === 2 && h.batalOUT === 1 && h.opnameEntri === 2 && h.opnameSelisih === 9 && h.ditolak === 1, 'agregasi hari 100: ' + JSON.stringify(h));
+  cek(h2.keluar === 2 && h2.entri === 1 && !a.hari[50] && !a.hari[500], 'agregasi: hari 101 benar; hari lebih tua dari "dari" dan masa depan tidak ikut');
+  cek(a.info.tidakTerbaca === 1 && a.info.qtyRusak === 1 && a.info.masaDepan === 1 && a.info.dibaca === baris.length, 'agregasi: info tidak terbaca/qty rusak/masa depan: ' + JSON.stringify(a.info));
+}
+
+// ---------- rekap harian: alur nyata, idempoten, tidak pernah menurun otomatis, hari tanpa sumber dipertahankan, bangun ulang
+{
+  const u = SEDIA_UC();
+  const cfg = u.kons().SISTEM[0];
+  const rk = () => u.ss.getSheetByName('Rekap Harian UC');
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  const tabel = () => { const n = rk().getLastRow() - 1; return n > 0 ? rk().getRange(2, 1, n, 13).getValues().map(r => r.map((x, i) => (i === 0 || i === 10) && x instanceof Date ? (i === 0 ? Math.floor(u.ctx.waktuSerial_(x)) : 'W') : x)) : []; };
+  cek(!!rk() && rk().getRange(1, 1, 1, 13).getValues()[0].join('|') === u.ctx.__K.HEADER_REKAP.join('|') && rk().frozenRows === 1, 'migrasi membuat sheet Rekap Harian UC dengan judul kolom');
+  u.kirim(4, A_OUT, 3); u.kirim(4, A_OUT, 'B1'); u.kirim(4, A_IN, 4); u.kirim(5, A_OUT, 2);
+  u.ctx.rekapHarianOtomatis();
+  const t1 = tabel();
+  cek(t1.length === 1, 'rekap: satu baris (hari ini)');
+  const r = t1[0];
+  cek(r[1] === 4 && r[2] === 4 && r[3] === 0 && r[4] === 3 && r[5] === 0 && r[6] === 1 && r[9] === 0 && r[11] === 'OK', 'rekap hari ini: Masuk 4, Keluar 3+2-1=4, Entri 3, Dibatalkan OUT 1: ' + JSON.stringify(r));
+  cek(rk().peek(1, 1).bg === '#cfe2f3' && Number(rk().peek(2, 15).v) > hari0, 'rekap: header berwarna + O2 = waktu hitung terakhir');
+  u.ctx.rekapHarianOtomatis();
+  cek(JSON.stringify(tabel().map(x => x.slice(0, 10))) === JSON.stringify(t1.map(x => x.slice(0, 10))), 'rekap: jalan dua kali, hasil sama (idempoten)');
+  // hari lama yang sumbernya tidak ada dipertahankan; baris manual (catatan) terbawa
+  rk().insertRowsBefore(3, 1);
+  rk().getRange(3, 1, 1, 13).setValues([[hari0 - 40, 9, 8, 1, 7, 0, 0, 0, 0, 0, hari0 - 40, 'OK', 'catatan saya']]);
+  rk().getRange(2, 13).setValue('cek stok');
+  u.ctx.rekapHarianOtomatis();
+  const t2 = tabel();
+  cek(t2.length === 2 && t2[1][1] === 9 && t2[1][12] === 'catatan saya' && t2[0][12] === 'cek stok', 'rekap: hari lama tanpa sumber dipertahankan; kolom Catatan terbawa per tanggal');
+  cek(t2[0][0] === hari0 && t2[1][0] === hari0 - 40, 'rekap: kolom Tanggal = nomor hari WIB, terbaru di atas');
+  // tidak pernah menurun otomatis (mis. Log sudah diarsipkan): Entri tersimpan lebih besar dari sumber
+  rk().getRange(2, 5).setValue(99);
+  u.ctx.rekapHarianOtomatis();
+  const t3 = tabel();
+  cek(t3[0][4] === 99 && /^SUMBER BERKURANG/.test(t3[0][11]), 'rekap otomatis tidak menurunkan angka tersimpan: Status SUMBER BERKURANG');
+  // menu "Bangun ulang": boleh menurunkan
+  u.ctx.__opsi.jawab = 'YES';
+  u.ctx.bangunUlangRekap();
+  const t4 = tabel();
+  cek(t4[0][4] === 3 && t4[0][11] === 'OK' && /Rekap harian dibangun ulang|dibangun ulang/.test(u.ctx.__alerts.slice(-2).join('|')), 'Bangun ulang (paksa) menurunkan ke angka sumber, Status OK');
+  // menu "Perbarui sekarang"
+  u.ctx.perbaruiRekapSekarang();
+  cek(/Rekap Harian UC: 1 hari ditulis/.test(u.ctx.__alerts.slice(-1)[0]) && /Rekap Harian STP: belum ada|Rekap Harian STP: 0 hari/.test(u.ctx.__alerts.slice(-1)[0]) === true, 'Perbarui sekarang: laporan per sheet (STP belum dimigrasi -> belum ada)');
+  // tryLock skrip gagal -> galat (Executions berstatus Failed), tidak diam-diam
+  u.ctx.__opsi.lockSkripGagal = true;
+  let g = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { g = e; }
+  u.ctx.__opsi.lockSkripGagal = false;
+  cek(g && /Rekap lain sedang berjalan/.test(g.message), 'rekap harian: lock gagal dilempar sebagai galat');
+  // Log terlalu besar -> berhenti dengan petunjuk, tanpa menulis
+  const sebelum = JSON.stringify(tabel());
+  u.kons().REKAP_BATAS_BARIS = 2;
+  g = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { g = e; }
+  u.kons().REKAP_BATAS_BARIS = 60000;
+  cek(g && /terlalu besar/.test(g.message) && /Arsipkan log/.test(g.message) && JSON.stringify(tabel()) === sebelum, 'rekap: Log terlalu besar -> galat jelas, tabel tidak berubah');
+  // trigger tanpa sheet rekap (STP belum dimigrasi / rekap dihapus): lewati, tidak membuat sheet, tidak galat
+  u.ss.deleteSheet(rk());
+  u.ctx.rekapHarianOtomatis();
+  cek(!u.ss.getSheetByName('Rekap Harian UC'), 'trigger rekap tidak membuat sheet yang hilang');
+}
+
+// ---------- rekap harian: sumber campuran (urutan acak, Date vs angka, arsip, duplikat, batas hari WIB, zona file lain, catch-up)
+{
+  const u = SEDIA_UC();
+  const cfg = u.kons().SISTEM[0];
+  const rk = () => u.ss.getSheetByName('Rekap Harian UC');
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  const baris = (w, jenis, q, k) => [w, 'Stok Cover UC', 4, 'Honda Brio', 'HND-BRI-UA-R-G1', 'Abu-abu', jenis, q, 10, 10, '', k || ''];
+  const sebelumTengah = hari0 - 3 + 0.9999, sesudahTengah = hari0 - 2 + 1e-4;   // 23:59:50 hari D dan 00:00:08 hari D+1 (WIB)
+  const rows = [baris(sesudahTengah, 'OUT', 4), baris(sebelumTengah, 'OUT', 5), baris(hari0 - 3 + 0.5, 'IN', 9), baris(hari0 - 2 + 0.2, 'OUT', 1), baris(hari0 - 3 + 0.3, 'OUT', -1, 'BATAL OUT')];
+  const tulis = rs => { rs.forEach(x => u.ctx.tulisLog_(u.ss, cfg, [x])); };
+  tulis(rows);
+  // Log DIACAK manual (tidak terurut) + baris teks: hasil harus sama
+  u.ctx.rekapHarianOtomatis();
+  const tabelNilai = () => { const n = rk().getLastRow() - 1; return n > 0 ? rk().getRange(2, 1, n, 13).getValues().map(r => r.slice(1, 7)) : []; };
+  const acuan = JSON.stringify(tabelNilai());
+  // hari D+1 (hari0-2): OUT 4 (00:00:08) + OUT 1; hari D (hari0-3): OUT 5 (23:59:50) - 1 (batal) = 4, IN 9
+  cek(acuan === JSON.stringify([[0, 5, -5, 2, 0, 0], [9, 4, 5, 2, 0, 1]]), 'rekap campuran: dua hari, batas tengah malam WIB benar, pembatalan bersih: ' + acuan);
+  const LG = u.LG();
+  const n = LG.getLastRow() - 1;
+  const isi = LG.getRange(2, 1, n, 12).getValues(); // Date di kolom A
+  const ac = isi.slice().reverse();
+  LG.getRange(2, 1, n, 12).setValues(ac.map(r => { const c = r.slice(); if (c[0] instanceof Date) c[0] = u.ctx.waktuSerial_(c[0]); return c; }));
+  rk().getRange(2, 1, rk().getLastRow() - 1, 13).clearContent();
+  u.ctx.rekapHarianOtomatis();
+  cek(JSON.stringify(tabelNilai()) === acuan, 'rekap: Log diurutkan terbalik -> hasil sama dengan Log terurut');
+  // zona file lain (jalur lambat)
+  rk().getRange(2, 1, rk().getLastRow() - 1, 13).clearContent();
+  u.ss.tz = 'America/Los_Angeles';
+  u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false });
+  u.ss.tz = 'Asia/Jakarta';
+  cek(JSON.stringify(tabelNilai()) === acuan, 'rekap: zona file bukan WIB (jalur lambat) -> hasil sama');
+  // arsip: pindahkan baris bulan lalu; rekap bangun ulang dari Log + arsip, dan duplikat (arsip terhenti sebelum hapus) dihitung sekali
+  rk().getRange(2, 1, rk().getLastRow() - 1, 13).clearContent();
+  const arsip = u.ss.insertSheet('Arsip Log Stok UC 2026-01');
+  arsip.getRange(1, 1, 1, 12).setValues([u.ctx.__K.HEADER_LOG]);
+  const lamaHari = hari0 - 200;
+  arsip.getRange(2, 1, 2, 12).setValues([baris(lamaHari + 0.4, 'OUT', 6), baris(lamaHari + 0.1, 'IN', 2)]);
+  arsip.getRange(2, 1, 2, 1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  // duplikat: salin salah satu baris arsip ke Log juga
+  u.ctx.tulisLog_(u.ss, cfg, [baris(lamaHari + 0.4, 'OUT', 6)]);
+  u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false });
+  const tb = rk().getRange(2, 1, rk().getLastRow() - 1, 13).getValues();
+  const hariLama = tb.find(r => r[2] === 6 && r[1] === 2);
+  cek(!!hariLama && tb.length === 3 && hariLama[4] === 2, 'rekap penuh: arsip ikut dibaca; baris duplikat Log+arsip dihitung sekali (Keluar 6 bukan 12, Entri 2)');
+  // nama arsip yang menyerupai tidak ikut
+  const mirip = u.ss.insertSheet('Arsip Log Stok UC 2026-01 salinan');
+  mirip.getRange(1, 1, 1, 12).setValues([u.ctx.__K.HEADER_LOG]);
+  mirip.getRange(2, 1, 1, 12).setValues([baris(lamaHari - 5 + 0.4, 'OUT', 77)]);
+  u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false });
+  cek(!rk().getRange(2, 1, rk().getLastRow() - 1, 13).getValues().some(r => r[2] === 77), 'rekap: sheet yang namanya hanya mirip arsip diabaikan');
+  // catch-up: tabel berhenti jauh di belakang -> jendela melebar sampai hari tersimpan terakhir - 1
+  rk().getRange(2, 1, rk().getLastRow() - 1, 13).clearContent();
+  rk().getRange(2, 1, 1, 13).setValues([[hari0 - 6, 1, 1, 0, 1, 0, 0, 0, 0, 0, hari0 - 6, 'OK', '']]);
+  rk().getRange(2, 1, 1, 1).setNumberFormat('dd/MM/yyyy');
+  u.ctx.tulisLog_(u.ss, cfg, [baris(hari0 - 5 + 0.5, 'OUT', 8)]);
+  u.ctx.rekapHarianOtomatis();
+  cek(rk().getRange(2, 1, rk().getLastRow() - 1, 13).getValues().some(r => r[2] === 8), 'rekap otomatis: hari terlewat (trigger bolong) ikut dihitung (catch-up)');
+}
+
+// ---------- menu 4: naikkan versi sheet yang sudah dimigrasi (tanpa migrasi ulang)
+{
+  const keKeadaLama = u => {
+    const peta = u.ctx.bacaPeta_(u.BU);
+    const rm = peta.barisTotal + 1;
+    u.BU.getRange(rm, 3, 2, 1).clearContent(); u.BU.getRange(rm, 3, 2, 1).setNumberFormat(null);
+    u.BU.getRange(1, 4).setValue(u.ctx.__K.TEKS_BANNER_LAMA);
+    Object.keys(peta.kolom).forEach(c => {
+      if (peta.kolom[c].jenis === 'STOK') return;
+      for (let r = 4; r < peta.barisTotal - 1; r++) { const x = u.BU.cell(r, Number(c)); x.dv = { f: '=AND(ISNUMBER(' + 'X' + '),X>0)', invalid: false, help: 'lama' }; }
+    });
+    u.ss.deleteSheet(u.ss.getSheetByName('Rekap Harian UC'));
+    return rm;
+  };
+  const cuplik = u => {
+    const peta = u.ctx.bacaPeta_(u.BU), rm = peta.barisTotal + 1;
+    const rk = u.ss.getSheetByName('Rekap Harian UC');
+    return JSON.stringify([u.BU.peek(rm, 3).f, u.BU.peek(rm + 1, 3).f, u.BU.peek(rm, 3).nf, u.BU.peek(1, 4).v, u.BU.peek(4, A_IN).dv && u.BU.peek(4, A_IN).dv.f, u.BU.peek(4, A_OUT).dv && u.BU.peek(4, A_OUT).dv.f,
+      u.BU.peek(peta.barisTotal - 2, A_IN).dv && u.BU.peek(peta.barisTotal - 2, A_IN).dv.f, !!rk, rk && rk.getLastRow()]);
+  };
+  const u = SEDIA_UC();
+  const baru = cuplik(u);
+  u.kirim(4, A_OUT, 3);                                  // ada log sebelum menu 4: riwayat ikut terbangun
+  const rm = keKeadaLama(u);
+  cek(cuplik(u) !== baru && !u.BU.peek(rm, 3).f && u.BU.peek(1, 4).v === u.ctx.__K.TEKS_BANNER_LAMA && !u.ss.getSheetByName('Rekap Harian UC'), 'menu 4 (setup): keadaan lama dibuat ulang (tanpa total harian, banner lama, tanpa rekap)');
+  const stokSebelum = [u.st(4, A_STOK), u.st(4, H_STOK)];
+  u.ctx.__opsi.jawab = 'YES';
+  u.ctx.perbaruiSheetLama();
+  const lapor = u.ctx.__alerts.slice(-1)[0];
+  const sesudah = cuplik(u);
+  cek(u.BU.peek(rm, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') && u.BU.peek(rm + 1, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'IN'), 'menu 4: total harian ditulis di baris yang ditemukan lewat label');
+  cek(u.BU.peek(1, 4).v === u.ctx.__K.TEKS_BANNER_BARU && /REGEXMATCH/.test(u.BU.peek(4, A_IN).dv.f) && /REGEXMATCH/.test(u.BU.peek(4, A_OUT).dv.f), 'menu 4: banner dan validasi IN/OUT diperbarui');
+  cek(!!u.ss.getSheetByName('Rekap Harian UC') && u.ss.getSheetByName('Rekap Harian UC').getLastRow() === 2, 'menu 4: sheet Rekap Harian dibuat dan riwayat dari Log terisi (1 hari)');
+  cek(/validasi IN\/OUT diperbarui di 16 dari 16 warna/.test(lapor) && new RegExp('total harian C' + rm + ' \\(Keluar\\), C' + (rm + 1) + ' \\(Masuk\\)').test(lapor) && /banner diperbarui/.test(lapor) && /Rekap Harian UC: 1 hari ditulis/.test(lapor) && !/GAGAL/.test(lapor), 'menu 4: laporan per langkah: ' + lapor.replace(/\n/g, ' / ').slice(0, 500));
+  cek(/"Stok Cover STP": belum berformat STOK\/IN\/OUT/.test(lapor), 'menu 4: STP yang belum dimigrasi dilewati tanpa galat');
+  cek(u.st(4, A_STOK) === stokSebelum[0] && u.st(4, H_STOK) === stokSebelum[1] && u.nLog() === 1, 'menu 4: STOK dan Log tidak berubah');
+  // hasil sama dengan migrasi baru (cuplikan sel) dan idempoten
+  const ringkas = x => JSON.stringify(JSON.parse(x).slice(0, 8));
+  cek(ringkas(sesudah) === ringkas(baru), 'menu 4: hasil sama dengan migrasi baru (rumus total harian, format, banner, validasi IN/OUT, sheet rekap ada)');
+  const sebelumUlang = cuplik(u);
+  u.ctx.perbaruiSheetLama();
+  cek(cuplik(u) === sebelumUlang && !/GAGAL/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: dijalankan dua kali -> hasil sama (idempoten)');
+  // trigger rekap belum terpasang -> diingatkan
+  u.ctx.matikanInputOtomatis();
+  u.ctx.perbaruiSheetLama();
+  cek(/Trigger rekap harian BELUM terpasang/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: mengingatkan trigger rekap harian bila belum ada');
+}
+
+// ---------- menu 4: pengaman (akun non-pemilik, sel terisi, produk bertambah, label hilang, validasi ditolak Google)
+{
+  const SIAP = () => { const u = SEDIA_UC(); u.ctx.__opsi.jawab = 'YES'; return u; };
+  const peta0 = u => u.ctx.bacaPeta_(u.BU);
+  // akun tanpa hak edit: tidak ada yang berubah
+  { const u = SIAP(); const rm = peta0(u).barisTotal + 1;
+    u.BU.getRange(rm, 3, 2, 1).clearContent();
+    u.BU.protections.push(Object.assign(new (Object.getPrototypeOf(u.BU.protect()).constructor)(), { bolehEdit: false }));
+    u.ctx.perbaruiSheetLama();
+    cek(!u.BU.peek(rm, 3).f && /DILEWATI. Sheet dikunci/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: sheet dikunci + bukan pemilik -> dilewati, tidak ada perubahan'); }
+  // sel target berisi sesuatu: tidak ditimpa, sel lain tetap diproses
+  { const u = SIAP(); const rm = peta0(u).barisTotal + 1;
+    u.BU.getRange(rm, 3).clearContent(); u.BU.getRange(rm, 3).setValue('catatan staf'); u.BU.getRange(rm + 1, 3).clearContent();
+    u.ctx.perbaruiSheetLama();
+    cek(u.BU.peek(rm, 3).v === 'catatan staf' && !u.BU.peek(rm, 3).f && u.BU.peek(rm + 1, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'IN') && new RegExp('sel C' + rm + ' berisi sesuatu').test(u.ctx.__alerts.slice(-1)[0]),
+      'menu 4: sel C berisi teks tidak ditimpa dan dilaporkan; sel di bawahnya tetap diisi'); }
+  // produk bertambah (baris disisip di atas TOTAL): total harian di baris label, kolom SKU produk tidak tertimpa
+  { const u = SIAP(); const p = peta0(u);
+    const kosong = p.barisTotal - 1;
+    u.BU.insertRowsBefore(kosong, 3);
+    for (let i = 0; i < 3; i++) { u.BU.cell(kosong + i, 2).v = 'Produk Baru ' + i; u.BU.cell(kosong + i, 3).v = 'SKU-BARU-' + i; }
+    const p2 = peta0(u);
+    cek(p2.barisTotal === p.barisTotal + 3 && p2.labelAda, 'setup: 3 produk disisip, TOTAL STOK bergeser 3 baris');
+    u.ctx.perbaruiSheetLama();
+    const rm2 = p2.barisTotal + 1;
+    cek(u.BU.peek(rm2, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') && u.BU.peek(kosong, 3).v === 'SKU-BARU-0' && !u.BU.peek(kosong, 3).f && u.BU.peek(p2.barisTotal, 3).f !== u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT'),
+      'menu 4: total harian di baris berlabel (bukan alamat tetap); kolom SKU produk baru tidak tertimpa'); }
+  // label hilang
+  { const u = SIAP(); const p = peta0(u); u.BU.getRange(p.barisTotal, 2).setValue('');
+    u.ctx.perbaruiSheetLama();
+    cek(/label "TOTAL STOK" di kolom B tidak ditemukan, dilewati/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: label TOTAL STOK hilang -> dilewati'); }
+  // semua rumus validasi ditolak Google: validasi IN/OUT dikosongkan (B1 harus bisa diketik), STOK tidak disentuh, dilaporkan
+  { const u = SIAP(); u.ctx.__opsi.tolakValidasi = { di: 'apply', formula: () => true, rentang: true };
+    u.ctx.perbaruiSheetLama();
+    cek(!u.BU.peek(4, A_IN).dv && !u.BU.peek(4, A_OUT).dv && u.BU.peek(4, A_STOK).dv && /validasi IN\/OUT diperbarui di 0 dari 16 warna/.test(u.ctx.__alerts.slice(-1)[0]) && /DITOLAK Google/.test(u.ctx.__alerts.slice(-1)[0]),
+      'menu 4: Google menolak semua aturan -> validasi IN/OUT lama dikosongkan dan dilaporkan'); }
+  // lokal titik koma: menu 4 memakai varian titik koma (diingat untuk area berikutnya)
+  { const u = SIAP(); u.ctx.__opsi.tolakValidasi = { di: 'apply', formula: f => f.indexOf(',') >= 0 };
+    u.ctx.perbaruiSheetLama();
+    cek(/REGEXMATCH\(E4;"/.test(u.BU.peek(4, A_IN).dv.f) && /rumus titik koma/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: lokal titik koma -> rumus bertitik koma terpasang'); }
+}
+
+// ---------- cekStatus, kunci, migrasi: rekap ikut dilaporkan/dikunci/dibuat
+{
+  const u = SEDIA_UC();
+  u.ctx.cekStatus();
+  const st = u.ctx.__alerts.slice(-1)[0];
+  cek(/Rekap harian \(tiap malam ±00\.30 WIB\): 1/.test(st) && /"Rekap Harian UC": 0 hari tersimpan; belum pernah dihitung/.test(st) && /interval trigger sebenarnya dilihat di Apps Script/.test(st), 'cekStatus: trigger rekap + status sheet rekap + catatan interval: ' + st.replace(/\n/g, ' / ').slice(0, 300));
+  u.kirim(4, A_OUT, 1); u.ctx.rekapHarianOtomatis(); u.ctx.cekStatus();
+  cek(/"Rekap Harian UC": 1 hari tersimpan; terakhir dihitung \d\d\/\d\d\/\d{4} \d\d:\d\d WIB/.test(u.ctx.__alerts.slice(-1)[0]) && !/lebih dari 26 jam/.test(u.ctx.__alerts.slice(-1)[0]), 'cekStatus: rekap terakhir dihitung ditampilkan');
+  u.ss.getSheetByName('Rekap Harian UC').getRange(2, 15).setValue(u.ctx.waktuSerial_(new Date()) - 2);
+  u.ctx.cekStatus();
+  cek(/lebih dari 26 jam lalu/.test(u.ctx.__alerts.slice(-1)[0]), 'cekStatus: rekap basi (>26 jam) diperingatkan');
+  u.ctx.kunciKolomStok();
+  cek(u.ss.getSheetByName('Rekap Harian UC').protections.length === 1 && u.ss.getSheetByName('Log Stok UC').protections.length === 1, 'kunci kolom STOK: sheet Rekap Harian ikut dikunci');
 }
 
 // ---------- hemat kuota: reset tampilan sel hanya bila sel punya catatan (tanda merah selalu disertai catatan)
@@ -712,7 +1126,7 @@ cek(b6.ss.getSheetByName('Stok Cover UC').peek(10, 4).v === 17, 'data diambil ul
   cek(!/versi lama/.test(bs.ctx.__alerts[0]), 'cekStatus: rekap baru tidak diperingatkan');
   sU.getRange(199, 5).setValue("=SUMIFS('Log Stok'!$H:$H,'Log Stok'!$B:$B,\"Stok Cover UC\")");
   bs.ctx.__alerts.length = 0; bs.ctx.cekStatus();
-  cek(/rekap harian masih merujuk log versi lama/.test(bs.ctx.__alerts[0]), 'cekStatus: rekap merujuk log lama diperingatkan');
+  cek(/rekap per warna masih merujuk log versi lama/.test(bs.ctx.__alerts[0]), 'cekStatus: rekap merujuk log lama diperingatkan');
 }
 {
   const nowS = (Date.now() + 7 * 3600e3 - Date.UTC(1899, 11, 30)) / 86400000;
