@@ -89,9 +89,12 @@ Tiap warna jadi 3 kolom: **STOK | IN | OUT**.
 
 Tidak ada lagi langkah "kurangi IN manual" dan "hapus OUT akhir hari".
 
-**Revisi salah ketik (pembatalan "B").** Contoh: seharusnya OUT 2 tapi terketik 3. Ketik **`B1`** di sel OUT yang sama (huruf kecil dan spasi boleh: `b 1`). Aturannya:
+**Revisi salah ketik (pembatalan "B").** Contoh: seharusnya OUT 2 tapi terketik 3. Ketik **`B1`** di sel OUT yang sama (huruf kecil dan spasi boleh: `b 1`, `B 1`). Aturannya:
 - Hanya boleh membatalkan sampai sejumlah entri **hari ini** (WIB) untuk produk **dan** warna **dan** jenis (IN/OUT) yang sama, dihitung dari Log. Lebih dari itu, atau produk/warna/jenis lain, atau entri hari lain: **ditolak** (sel merah, catatan "DITOLAK: ...", tercatat DITOLAK di Log) dan stok tidak berubah.
 - Membatalkan **IN** juga butuh STOK yang cukup (stok tidak boleh jadi minus).
+- Pengecekan per **produk + warna + jenis**, bukan per baris. Kalau dua baris sheet punya nama dan SKU yang sama, `B` di baris yang salah tetap diterima (totalnya benar, stok per baris tertukar): hindari baris ganda.
+- Kalau nama produk atau SKU diubah di hari yang sama dengan entrinya, `B` ditolak ("tercatat 0") karena dianggap produk lain. Jalan keluarnya: koreksi STOK oleh admin.
+- Sel yang ditolak lalu dibiarkan berisi teks bisa membuat Sheets menyarankan isian otomatis (mis. `B1` jadi `B10`). Hapus sel yang merah sebelum mengetik lagi.
 - **Salah catat di hari lain**: minta admin mengoreksi **STOK** langsung (opname; tercatat `KOREKSI`). Rekap hari yang sudah lewat sengaja tidak diubah.
 - Kenapa bukan angka minus: `OUT -3` mudah terbaca staf sebagai "kurangi stok 3", padahal artinya menaikkan stok. Huruf B tidak mungkin terketik tanpa sengaja. Minus tetap ditolak dengan petunjuk "ketik B1".
 - Matikan fitur ini dengan `IZINKAN_PEMBATALAN = false` di kode (B1 lalu ditolak seperti teks biasa).
@@ -134,8 +137,9 @@ Cara kerja:
 - **Otomatis tiap malam** (trigger ketiga "rekap harian", sekitar 00.30 WIB; dipasang menu **2**): menghitung ulang hari ini dan 3 hari sebelumnya (lebih jauh bila ada hari yang terlewat). Hari kemarin jadi final.
 - **Hari ini belum final sampai tengah malam.** Mau menyimpan angka hari ini pada jam 19.00: menu **Perbarui rekap harian sekarang** (angka live ada juga di kolom C di bawah TOTAL STOK).
 - **Bangun ulang rekap harian dari Log (semua hari)**: menghitung seluruh riwayat dari Log + arsip dan boleh menurunkan angka lama (dengan konfirmasi). Dipakai bila ada yang tidak cocok.
-- Pengaman: hari yang barisnya sudah tidak ada di Log/arsip **tidak pernah dihapus atau dinolkan**. Kalau sumber sebuah hari kini lebih sedikit dari yang tersimpan (mis. Log dipotong), angka lama dipertahankan dan Status berbunyi "SUMBER BERKURANG" (hanya "Bangun ulang" yang boleh menurunkan). Baris Log yang Waktu-nya tak terbaca atau Qty-nya bukan angka dilaporkan, tidak dihitung.
-- Rekap membaca seluruh Log sekali per malam (±5–20 detik kuota). Kalau Log + arsip lebih dari 60.000 baris, rekap berhenti dengan pesan "arsipkan log lama dulu".
+- Pengaman: hari yang barisnya sudah tidak ada di Log/arsip **tidak pernah dihapus atau dinolkan**. Kalau sumber sebuah hari kini lebih sedikit dari yang tersimpan (mis. Log dipotong), angka lama dipertahankan dan Status berbunyi "SUMBER BERKURANG" (hanya "Bangun ulang" yang boleh menurunkan). Baris Log yang Waktu-nya tak terbaca atau Qty-nya bukan angka tidak dihitung; peringatannya muncul di dialog menu, di sel **O3** sheet Rekap, dan di **Cek status**.
+- Rekap membaca seluruh Log sekali per malam (±5–20 detik kuota). Batas `REKAP_BATAS_BARIS` = 60.000 baris (Log + arsip) berlaku untuk "Bangun ulang"; trigger malam memakai batas 3× lebih longgar. **Memindahkan baris ke arsip tidak mengurangi hitungan ini** (arsip ikut dibaca); kalau sampai terlewati, naikkan `REKAP_BATAS_BARIS` di kode. Trigger malam juga membaca arsip bulan yang memuat jendela 4 hari terakhir, jadi hari yang sempat pindah ke arsip sebelum dihitung final tetap benar.
+- Tabel Rekap **ditulis ulang seluruhnya** tiap kali dihitung: rumus, warna sorot, atau catatan-sel yang Anda taruh di dalam tabel tidak dijamin bertahan. Hanya kolom **Catatan** (M) yang dibawa per tanggal. Taruh rumus/analisis Anda di sheet lain yang merujuk ke Rekap.
 - Ada satu hal yang bisa membuat satu hari terlihat salah: entri yang diproses **setelah** tengah malam (mis. angka tertinggal yang baru diproses penyapu keesokan paginya) dicatat di hari proses, bukan hari ketik.
 - Sheet rekap ikut dikunci oleh menu **3**. Cek status menampilkan jumlah hari tersimpan dan kapan terakhir dihitung (peringatan bila lebih dari 26 jam).
 
@@ -176,9 +180,9 @@ Urutan aman untuk file asli yang sudah dipakai (kerjakan di luar jam kerja, mis.
 4. Menu **4** dari akun pemilik (akun yang menjalankan menu 2 dan 3). Baca laporannya: tiap langkah harus "diperbarui"/"ditulis", bukan GAGAL atau DILEWATI.
 5. Menu **2. Aktifkan input otomatis**: melengkapi trigger rekap harian tanpa menggandakan trigger lama. Cek di Apps Script → **Triggers**: 3 trigger milik satu akun (edit, penyapu "Every 15 minutes", rekap harian "Day timer", sekitar 00.00–01.00 GMT+7).
 6. Kalau menu 3 dipakai, jalankan **ulang** supaya sheet Rekap ikut terkunci.
-7. Tes: ketik OUT 1, lalu `B1` di sel yang sama (stok kembali, Log punya 2 baris: OUT 1 dan OUT −1); coba `B1` lagi (harus ditolak). Cek kolom C di bawah TOTAL STOK. Tes juga dari HP.
+7. Tes: ketik OUT 1, lalu `B1` di sel yang sama (stok kembali, Log punya 2 baris: OUT 1 dan OUT −1); coba `B1` lagi (harus ditolak). **Pastikan `B1` benar-benar bisa diketik tanpa popup penolakan dari Sheets** (laporan menu 4 hanya membuktikan Google menerima rumusnya, bukan cara kerjanya). Cek kolom C di bawah TOTAL STOK. Tes juga dari HP. Catatan: tes ini tercatat permanen di Log dan Rekap hari itu (Keluar bersih 0, Entri 1, Dibatalkan OUT 1); itu normal. Lebih bersih: coba dulu di salinan file (File → Make a copy).
 8. Hari 1–3: pantau Executions dan sheet Rekap (Cek status menampilkan umur rekap).
-- **Jalan mundur:** menu **Matikan input otomatis**, hapus sheet Rekap Harian, kembalikan banner D1/kolom C secara manual, atau pulihkan dari salinan/Version history. Tempel `Kode.gs` lama bila perlu.
+- **Jalan mundur:** menu **Matikan input otomatis** (ini menghentikan SEMUA pemrosesan input staf; pulihkan dengan menu **2. Aktifkan input otomatis** setelah kode lama ditempel), hapus sheet Rekap Harian, kembalikan banner D1/kolom C secara manual, atau pulihkan dari salinan/Version history. Tempel `Kode.gs` lama bila perlu.
 - Ubah `FORMAT_STOK` di kode hanya berlaku untuk migrasi berikutnya.
 
 ## Tampilan STOK 0

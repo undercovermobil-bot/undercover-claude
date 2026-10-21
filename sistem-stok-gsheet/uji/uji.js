@@ -319,7 +319,8 @@ cek(uv(5, D) === 26 && /1–9999/.test(U.peek(5, E).note) && U.peek(5, E).bg ===
 edit(U, 5, E, '');
 cek(U.peek(5, E).bg === null, 'reset sel setelah angka ditolak');
 const dvAkhir = U.peek(5, E).dv;
-const FORMULA_IN_KOMA = '=OR(AND(ISNUMBER(E4),E4>0,E4<=9999,E4=INT(E4)),AND(ISTEXT(E4),REGEXMATCH(E4,"^[Bb][0-9]+$")))';
+const FORMULA_IN_KOMA = '=IF(ISNUMBER(E4),AND(E4>0,E4<=9999,E4=INT(E4)),IF(ISTEXT(E4),REGEXMATCH(E4,"^\\s*[Bb]\\s*[0-9]+\\s*$"),FALSE))';
+cek(FORMULA_IN_KOMA.indexOf('OR(') < 0 && FORMULA_IN_KOMA.indexOf('INT(') < FORMULA_IN_KOMA.indexOf('ISTEXT('), 'rumus validasi IN/OUT: INT() hanya di cabang angka, tanpa OR/AND yang merambatkan #VALUE! untuk "B1"');
 cek(dvAkhir && dvAkhir.f === FORMULA_IN_KOMA || U.peek(4, E).dv.f === FORMULA_IN_KOMA, 'validasi IN memuat batas atas + pola B1: ' + U.peek(4, E).dv.f);
 
 // ---------- hasil review: ketikan susulan di sel yang sama tidak terhapus
@@ -502,7 +503,7 @@ cek(dvAkhir && dvAkhir.f === FORMULA_IN_KOMA || U.peek(4, E).dv.f === FORMULA_IN
 {
   const koma = f => f.indexOf(',') >= 0;
   const stokKoma = '=AND(ISNUMBER(D4),D4>=0,D4<=9999,D4=INT(D4))', stokTitik = '=AND(ISNUMBER(D4);D4>=0;D4<=9999;D4=INT(D4))';
-  const inTitik = '=OR(AND(ISNUMBER(E4);E4>0;E4<=9999;E4=INT(E4));AND(ISTEXT(E4);REGEXMATCH(E4;"^[Bb][0-9]+$")))';   // satu aturan untuk IN dan OUT (rumus relatif; mock tidak menggeser E4 ke F4)
+  const inTitik = '=IF(ISNUMBER(E4);AND(E4>0;E4<=9999;E4=INT(E4));IF(ISTEXT(E4);REGEXMATCH(E4;"^\\s*[Bb]\\s*[0-9]+\\s*$");FALSE))';   // satu aturan untuk IN dan OUT (rumus relatif; mock tidak menggeser E4 ke F4)
   const jalan = opsi => {
     const b = siapkan(opsi); b.ctx.migrasiStokUC();
     const BU = b.ss.getSheetByName('Stok Cover UC');
@@ -670,6 +671,38 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   }
 }
 
+// ---------- galat DI TENGAH tulisLog_ (sesudah sisip, sebelum isi): jalur penyelamatan tidak menggandakan entri lama
+{
+  for (const tahap of ['copyTo', 'setValues']) {
+    for (const nEntri of [1, 2]) {
+      const u = SEDIA_UC();
+      u.kirim(4, A_OUT, 3);   // entri lama di puncak Log
+      if (nEntri === 2) { u.kons().SAPU_JAM = { awal: 0, akhir: 24 }; }
+      const nLama = u.nLog();
+      const RgProto = Object.getPrototypeOf(u.BU.getRange(1, 1));
+      const asli = RgProto[tahap];
+      let sekali = true;
+      RgProto[tahap] = function () {
+        const isiLog = this.sh.name === 'Log Stok UC' && (tahap === 'copyTo' || arguments[0].length === nEntri);
+        if (sekali && isiLog) { sekali = false; throw new Error('Service Spreadsheets timed out'); }
+        return asli.apply(this, arguments);
+      };
+      let galat = null;
+      try {
+        if (nEntri === 1) u.kirim(6, A_OUT, 2);
+        else { u.BU.getRange(6, A_OUT).setValue(2); u.BU.getRange(7, A_OUT).setValue(1); u.ctx.prosesInputStok({ range: u.BU.getRange(6, A_OUT, 2, 1), source: u.ss }); }
+      } catch (e) { galat = e; }
+      RgProto[tahap] = asli;
+      const ket = 'galat di ' + tahap + ' (' + nEntri + ' entri)';
+      const baris = u.LG().getRange(2, 1, u.nLog(), 12).getValues();
+      cek(galat && /timed out/.test(galat.message), ket + ': galat dilempar ulang');
+      cek(baris.length === nLama + nEntri && baris.every(r => r[0] !== ''), ket + ': Log bertambah tepat ' + nEntri + ' baris, tanpa baris kosong (' + nLama + ' → ' + baris.length + ')');
+      cek(baris.filter(r => r[7] === 3).length === 1, ket + ': entri lama (OUT 3) tetap SATU');
+      cek(baris.slice(0, nEntri).every(r => r[6] === 'OUT' && (r[7] === 2 || r[7] === 1)), ket + ': entri baru di puncak');
+    }
+  }
+}
+
 // ---------- label TOTAL STOK hilang: tidak ada yang diproses (baris rekap/total tidak terbaca sebagai produk)
 {
   const u = SEDIA_UC();
@@ -685,6 +718,8 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(u.st(4, A_STOK) === s0 && u.sel(4, A_IN).v === 2 && u.nLog() === n0, 'label hilang: penyapu tidak memproses');
   u.ctx.cekStatus();
   cek(/label "TOTAL STOK" di kolom B HILANG/.test(u.ctx.__alerts.slice(-1)[0]), 'label hilang: cekStatus memperingatkan');
+  u.ctx.kunciKolomStok();
+  cek(/Stok Cover UC: label "TOTAL STOK" di kolom B hilang.*DILEWATI/.test(u.ctx.__alerts.slice(-1)[0]), 'label hilang: kunciKolomStok melewati sheet itu (tidak membuka sel rekap)');
   u.BU.getRange(peta.barisTotal, 2).setValue(lbl);
   u.ctx.sapuInputStok();
   cek(u.st(4, A_STOK) === s0 + 2 && u.sel(4, A_IN).v === '', 'label dikembalikan: sel yang tertinggal diproses penyapu');
@@ -700,7 +735,7 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') === "=SUMIFS('Log Stok UC'!$H:$H,'Log Stok UC'!$G:$G,\"OUT\",'Log Stok UC'!$A:$A,\">=\"&TODAY(),'Log Stok UC'!$A:$A,\"<\"&(TODAY()+1))", 'rumus total harian: SUMIFS atas Qty (bersih) tanpa kriteria warna');
   cek(u.BU.peek(rm, 3).nf === '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"' && u.BU.peek(rm + 1, 3).nf === '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"', 'format total harian dua seksi (negatif tidak tampil "-Keluar")');
   cek(u.BU.peek(1, 4).v === u.ctx.__K.TEKS_BANNER_BARU && /B1/.test(u.BU.peek(1, 4).v), 'banner memuat petunjuk pembatalan');
-  cek(u.BU.peek(4, A_IN).dv && /REGEXMATCH/.test(u.BU.peek(4, A_IN).dv.f) && /Ketik B/.test(u.BU.peek(4, A_IN).dv.help) && !/REGEXMATCH/.test(u.BU.peek(4, A_STOK).dv.f), 'validasi IN/OUT memuat pola B + teks bantuan; STOK tanpa pola B');
+  cek(u.BU.peek(4, A_IN).dv && /REGEXMATCH/.test(u.BU.peek(4, A_IN).dv.f) && /ketik B/.test(u.BU.peek(4, A_IN).dv.help) && !/REGEXMATCH/.test(u.BU.peek(4, A_STOK).dv.f), 'validasi IN/OUT memuat pola B + teks bantuan; STOK tanpa pola B');
   const sel1 = u.ctx.rumusTotalHarian_('Log Stok UC', 'IN');
   cek(sel1.indexOf('"IN"') > 0 && sel1.indexOf('$F:$F') < 0, 'total masuk: tanpa kriteria warna');
 }
@@ -772,10 +807,10 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(g && /Rekap lain sedang berjalan/.test(g.message), 'rekap harian: lock gagal dilempar sebagai galat');
   // Log terlalu besar -> berhenti dengan petunjuk, tanpa menulis
   const sebelum = JSON.stringify(tabel());
-  u.kons().REKAP_BATAS_BARIS = 2;
+  u.kons().REKAP_BATAS_BARIS = 1;
   g = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { g = e; }
   u.kons().REKAP_BATAS_BARIS = 60000;
-  cek(g && /terlalu besar/.test(g.message) && /Arsipkan log/.test(g.message) && JSON.stringify(tabel()) === sebelum, 'rekap: Log terlalu besar -> galat jelas, tabel tidak berubah');
+  cek(g && /terlalu besar/.test(g.message) && /TIDAK mengurangi/.test(g.message) && /REKAP_BATAS_BARIS/.test(g.message) && JSON.stringify(tabel()) === sebelum, 'rekap: Log terlalu besar -> galat jelas, tabel tidak berubah');
   // trigger tanpa sheet rekap (STP belum dimigrasi / rekap dihapus): lewati, tidak membuat sheet, tidak galat
   u.ss.deleteSheet(rk());
   u.ctx.rekapHarianOtomatis();
@@ -866,6 +901,95 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   u.ctx.tulisLog_(u.ss, cfg, [baris(hari0 - 5 + 0.5, 'OUT', 8)]);
   u.ctx.rekapHarianOtomatis();
   cek(rk().getRange(2, 1, rk().getLastRow() - 1, 13).getValues().some(r => r[2] === 8), 'rekap otomatis: hari terlewat (trigger bolong) ikut dihitung (catch-up)');
+}
+
+// ---------- rekap: hari yang sudah pindah ke arsip sebelum dihitung final tetap benar; peringatan baris rusak; kolom status terhapus
+{
+  const u = SEDIA_UC();
+  const cfg = u.kons().SISTEM[0];
+  const rk = () => u.ss.getSheetByName('Rekap Harian UC');
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  const baris = (w, jenis, q) => [w, 'Stok Cover UC', 4, 'Honda Brio', 'HND-BRI-UA-R-G1', 'Abu-abu', jenis, q, 10, 10, '', ''];
+  const tabel = () => rk().getRange(2, 1, Math.max(1, rk().getLastRow() - 1), 13).getValues().filter(r => r[0] !== '');
+  // tabel menyimpan hari-1 baru sebagian (Keluar 1, Entri 1); sisa harinya (OUT 40, 8 entri) hanya ada di arsip bulan yang sama
+  const bulan = u.ctx.bulanDariNomor_(hari0 - 1);
+  const arsip = u.ss.insertSheet('Arsip Log Stok UC ' + bulan);
+  arsip.getRange(1, 1, 1, 12).setValues([u.ctx.__K.HEADER_LOG]);
+  const isiArsip = []; for (let i = 0; i < 8; i++) isiArsip.push(baris(hari0 - 1 + 0.1 + i * 0.05, 'OUT', 5));
+  arsip.getRange(2, 1, 8, 12).setValues(isiArsip);
+  rk().getRange(2, 1, 1, 13).setValues([[hari0 - 1, 0, 1, -1, 1, 0, 0, 0, 0, 0, hari0 - 1, 'OK', '']]);
+  rk().getRange(2, 1, 1, 1).setNumberFormat('dd/MM/yyyy');
+  u.ctx.tulisLog_(u.ss, cfg, [baris(hari0 + 0.01, 'OUT', 2)]);
+  u.ctx.rekapHarianOtomatis();
+  const t = tabel();
+  const kemarin = t.find(r => Math.floor(u.ctx.waktuSerial_(r[0])) === hari0 - 1 || r[0] === hari0 - 1);
+  cek(!!kemarin && kemarin[2] === 40 && kemarin[4] === 8, 'rekap malam: hari yang sudah pindah ke arsip tetap dihitung penuh (Keluar 40, Entri 8): ' + JSON.stringify(kemarin));
+  // baris rusak: Waktu teks + Qty kosong -> peringatan di O3 (jalur malam), tidak ada hari nol palsu
+  u.ctx.tulisLog_(u.ss, cfg, [baris(hari0 - 3 + 0.5, 'OUT', ''), baris('21/10/2026 14:03:11', 'OUT', 100)]);
+  u.ctx.rekapHarianOtomatis();
+  const o3 = String(rk().getRange(2, 15, 2, 1).getValues()[1][0]);
+  cek(/^PERIKSA/.test(o3) && /Waktu tak terbaca/.test(o3) && /Qty bukan angka/.test(o3), 'rekap malam: peringatan baris rusak tersimpan di O3: ' + o3);
+  cek(!tabel().some(r => (r[0] === hari0 - 3 || Math.floor(u.ctx.waktuSerial_(r[0])) === hari0 - 3) && r[4] === 0 && r[1] === 0 && r[2] === 0), 'rekap: hari yang hanya berisi Qty rusak tidak tampil sebagai baris nol "OK"');
+  u.ctx.cekStatus();
+  cek(/PERIKSA: .*Waktu tak terbaca/.test(u.ctx.__alerts.slice(-1)[0]), 'cekStatus menampilkan peringatan rekap');
+  // bersih lagi -> O3 kosong
+  const LG = u.LG(); const nLog = LG.getLastRow() - 1;
+  const semua = LG.getRange(2, 1, nLog, 12).getValues().filter(r => !(r[7] === '' || r[3] === 'Honda Brio' && r[7] === 100));
+  LG.getRange(2, 1, nLog, 12).clearContent();
+  LG.getRange(2, 1, semua.length, 12).setValues(semua);
+  u.ctx.rekapHarianOtomatis();
+  cek(String(rk().getRange(3, 15).getValue()) === '' || /^PERIKSA/.test(String(rk().getRange(3, 15).getValue())), 'O3 diperbarui tiap hitung');
+  // kolom status terhapus: cekStatus tetap tampil, malam tetap jalan
+  rk().getRange(1, 14, 3, 2).clearContent(); rk().maxCols = 13;   // staf menghapus kolom N dst.
+  let galat = null; try { u.ctx.cekStatus(); } catch (e) { galat = e; }
+  cek(!galat && /Rekap Harian UC/.test(u.ctx.__alerts.slice(-1)[0]), 'cekStatus tidak galat bila kolom status rekap terhapus: ' + (galat && galat.message));
+  galat = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { galat = e; }
+  cek(!galat, 'rekap malam tetap jalan bila kolom status terhapus: ' + (galat && galat.message));
+}
+
+// ---------- rekap: tabel kosong + sheet tanpa kolom status → malam tetap bisa menulis; batas baris jalur malam 3x lebih longgar
+{
+  const u = SEDIA_UC();
+  const rk = u.ss.getSheetByName('Rekap Harian UC');
+  rk.maxCols = 13;
+  let galat = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { galat = e; }
+  cek(!galat && rk.maxCols >= 15, 'rekap malam pada tabel kosong dan sheet tanpa kolom status: kolom ditambah, tidak galat: ' + (galat && galat.message));
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  const cfg = u.kons().SISTEM[0];
+  for (let i = 0; i < 6; i++) u.ctx.tulisLog_(u.ss, cfg, [[hari0 + 0.01 * (i + 1), 'Stok Cover UC', 4, 'Honda Brio', 'X', 'Abu-abu', 'OUT', 1, 10, 9, '', '']]);
+  rk.getRange(2, 1, 1, 13).setValues([[hari0 - 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, hari0 - 1, 'OK', '']]);   // tabel berisi → jalur malam (jendela)
+  u.kons().REKAP_BATAS_BARIS = 2;   // 6 baris: lewat batas penuh (2) tetapi di bawah batas jalur malam (6)
+  galat = null; try { u.ctx.rekapHarianOtomatis(); } catch (e) { galat = e; }
+  let galatPenuh = null; try { u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false }); } catch (e) { galatPenuh = e; }
+  u.kons().REKAP_BATAS_BARIS = 60000;
+  cek(!galat && !!galatPenuh && /terlalu besar/.test(galatPenuh.message), 'batas baris: jalur malam longgar (3x), jalur penuh tetap ketat');
+}
+
+// ---------- petunjuk B hanya pada isian yang mirip usaha membatalkan; validasi: galat layanan tidak menghapus validasi lama
+{
+  const u = SEDIA_UC();
+  const tolak = v => { u.kirim(4, A_OUT, v); return u.sel(4, A_OUT).note; };
+  cek(/Ketik B \+ jumlah/.test(tolak(-1)) || /ketik B \+ jumlah/i.test(u.sel(4, A_OUT).note), 'isian minus: petunjuk B ditampilkan');
+  u.kirim(4, A_OUT, ''); 
+  cek(!/B \+ jumlah/.test(tolak('2pcs')) && /belum tercatat/.test(u.sel(4, A_OUT).note), 'isian teks biasa: tanpa petunjuk B, "belum tercatat"');
+  u.kirim(4, A_OUT, '');
+  cek(!/B \+ jumlah/.test(tolak('1,5')) && /belum tercatat/.test(u.sel(4, A_OUT).note), 'isian desimal: tanpa petunjuk B');
+  u.kirim(4, A_OUT, '');
+  cek(/B \+ jumlah/.test(tolak('B0')), 'B0: petunjuk B ditampilkan');
+  u.kirim(4, A_OUT, '');
+  // flag mati: pesan lama persis
+  u.kons().IZINKAN_PEMBATALAN = false;
+  cek(tolak('2pcs') === 'Isi angka bulat 1–9999.', 'flag mati: pesan lama tidak berubah: ' + u.sel(4, A_OUT).note);
+  u.kons().IZINKAN_PEMBATALAN = true;
+  // pasangValidasi_: galat layanan -> 'sementara', validasi lama dibiarkan
+  const rg = u.BU.getRange(4, A_IN, 5, 2);
+  rg.setDataValidation(u.ctx.SpreadsheetApp.newDataValidation().requireNumberBetween(1, 9999).build());
+  const RgProto = Object.getPrototypeOf(rg);
+  const asli = RgProto.setDataValidation;
+  RgProto.setDataValidation = function () { throw new Error('Service Spreadsheets timed out'); };
+  const hasil = u.ctx.pasangValidasi_(rg, 'E4', 'inout');
+  RgProto.setDataValidation = asli;
+  cek(hasil === 'sementara' && !!u.BU.peek(4, A_IN).dv, 'galat layanan: dilaporkan sementara, validasi lama TIDAK dihapus (' + hasil + ')');
 }
 
 // ---------- menu 4: naikkan versi sheet yang sudah dimigrasi (tanpa migrasi ulang)

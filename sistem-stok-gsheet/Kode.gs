@@ -324,8 +324,11 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
         continue;
       }
       if (isNaN(qty)) {
+        // Petunjuk B hanya untuk isian yang tampak seperti usaha membatalkan (minus, 0, atau berawalan B); isian lain jelas belum tercatat.
+        const mirip = KONFIG.IZINKAN_PEMBATALAN && ((typeof nilai === 'number' && nilai <= 0) || /^\s*[-−–]/.test(String(nilai)) || /^\s*[Bb]/.test(String(nilai)));
         tandai(sel, nilai, 'Isi angka bulat 1–' + KONFIG.MAKS_QTY +
-          (KONFIG.IZINKAN_PEMBATALAN ? '. Salah ketik hari ini? Ketik B + jumlah yang dibatalkan, mis. B1 (minus tidak dipakai).' : '.'));
+          (mirip ? '. Mau membatalkan entri sebelumnya? Ketik B + jumlah, mis. B1 (minus tidak dipakai).'
+            : (KONFIG.IZINKAN_PEMBATALAN ? '. Entri ini belum tercatat.' : '.')));
         continue;
       }
       const sebelum = angkaStok_(baris[info.kolomStok - 1]);
@@ -401,7 +404,7 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
     // tertinggal berisi angka (penyapu akan menghitungnya lagi = stok dobel), lalu catat ke Log, lalu lempar ulang galatnya.
     selesai.forEach(x => { try { x.sel.clearContent(); } catch (e2) { /* sudah mentok */ } });
     // Jangan menulis dua kali kalau tulisLog_ sudah berhasil di server (galat bisa datang sesudahnya, mis. timeout): cek puncak Log dulu.
-    try { if (log.length && !logSudahAda_(ss, cfg, log)) tulisLog_(ss, cfg, log); } catch (e3) { /* sudah mentok */ }
+    try { if (log.length && !logSudahAda_(ss, cfg, log) && !lanjutkanTulisLog_(ss, cfg, log)) tulisLog_(ss, cfg, log); } catch (e3) { /* sudah mentok */ }
     throw err;
   }
   SpreadsheetApp.flush();   // wajib sebelum lock dilepas, supaya eksekusi berikutnya baca nilai terbaru
@@ -1025,7 +1028,7 @@ function bangunSheet_(sh, cfg, d) {
   sh.setFrozenColumns(2);
   // Hanya kasus yang mengubah perilaku dilaporkan (varian rumus berkoma / titik koma bekerja sama).
   const catatan = [];
-  const tanpa = hasilValidasi.filter(x => x === null).length;
+  const tanpa = hasilValidasi.filter(x => x === null || x === 'sementara').length;
   const sederhana = hasilValidasi.filter(x => x === 'rentang').length;
   // Catatan tambahan di dialog akhir: lihat migrasi_ (infoBangun.catatan).
   if (tanpa) {
@@ -1105,6 +1108,10 @@ function kunciKolomStok() {
       hasil.push(cfg.nama + ': belum dimigrasi, dilewati');
       return;
     }
+    if (!peta.labelAda) {
+      hasil.push(cfg.nama + ': label "TOTAL STOK" di kolom B hilang, batas area tidak pasti, DILEWATI (pulihkan label itu dulu)');
+      return;
+    }
     hapusProteksiLama_(sh);
     const bebas = [];
     Object.keys(peta.kolom).forEach(c => {
@@ -1180,7 +1187,9 @@ function cekStatus() {
   KONFIG.SISTEM.forEach(cfg => {
     const rk = ss.getSheetByName(cfg.rekap);
     if (!rk) { baris.push('"' + cfg.rekap + '": BELUM ada (migrasi baru membuatnya; sheet yang sudah dimigrasi: menu 4)'); return; }
-    const w = waktuNomor_(rk.getRange(2, KOLOM_REKAP_STATUS).getValue(), zona);
+    let sel = [[''], ['']];
+    try { sel = rk.getRange(2, KOLOM_REKAP_STATUS, 2, 1).getValues(); } catch (err) { /* kolom status terhapus: laporan tetap tampil */ }
+    const w = waktuNomor_(sel[0][0], zona);
     // getLastRow ikut menghitung sel status (O2): hitung hari dari kolom A saja.
     const nHari = rk.getLastRow() > 1 ? rk.getRange(2, 1, rk.getLastRow() - 1, 1).getValues().filter(x => x[0] !== '').length : 0;
     let teks = nHari + ' hari tersimpan; ';
@@ -1190,6 +1199,7 @@ function cekStatus() {
       teks += 'terakhir dihitung ' + Utilities.formatDate(new Date(Math.round(w * 86400000) + Date.UTC(1899, 11, 30)), 'UTC', 'dd/MM/yyyy HH:mm') + ' WIB';
       if (rekapT && waktuSerial_(new Date()) - w > 26 / 24) teks += '  ← lebih dari 26 jam lalu: cek Executions (trigger rekap gagal atau kuota habis?)';
     }
+    if (String(sel[1][0]) !== '') teks += '  ← ' + sel[1][0];
     baris.push('"' + cfg.rekap + '": ' + teks);
   });
   baris.push('Zona waktu file: ' + zona + (zona === KONFIG.ZONA_WAKTU ? '' : '  ← bukan ' + KONFIG.ZONA_WAKTU + ', pilih menu "Setel zona waktu file ke WIB"'));
@@ -1313,6 +1323,32 @@ function tulisLog_(ss, cfg, rows) {
   sh.getRange(2, 1, n, lebar).setValues(rows.slice().reverse());
 }
 
+/**
+ * Jalur penyelamatan: tulisLog_ bisa terputus (timeout) SESUDAH baris disisipkan tetapi SEBELUM baris baru terisi. Dua keadaan setengah jadi:
+ *   A. baris 3..n+2 kosong (disisipkan saja)           → salin dulu baris 2 lama ke n+2, lalu isi
+ *   B. baris n+2 sama dengan baris 2, baris 3..n+1 kosong (sudah disalin) → tinggal isi
+ * Menulis ulang dengan tulisLog_ pada keadaan itu menyisipkan lagi dan menggandakan entri lama. Mengembalikan true bila keadaan itu dikenali
+ * dan baris sudah diisi; false bila Log tampak utuh (panggil tulisLog_ biasa).
+ */
+function lanjutkanTulisLog_(ss, cfg, rows) {
+  const sh = ss.getSheetByName(cfg.log);
+  const n = rows.length;
+  const lebar = HEADER_LOG.length;
+  if (!sh || sh.getLastRow() < 2 || sh.getMaxRows() < n + 2) return false;
+  const atas = sh.getRange(2, 1, n + 1, lebar).getValues();   // baris 2..n+2
+  const kosong = r => r.every(x => x === '' || x === null);
+  if (kosong(atas[0])) return false;
+  const tengahKosong = atas.slice(1, n).every(kosong);   // baris 3..n+1
+  const akhir = atas[n];
+  const sudahSalin = !kosong(akhir) && akhir.every((x, i) => String(x) === String(atas[0][i]));
+  if (!tengahKosong || !(kosong(akhir) || sudahSalin)) return false;
+  if (kosong(akhir)) sh.getRange(2, 1, 1, lebar).copyTo(sh.getRange(n + 2, 1, 1, lebar));
+  sh.getRange(2, 1, n, lebar).clearFormat();
+  sh.getRange(2, 1, n, 1).setNumberFormat(KONFIG.FORMAT_WAKTU);
+  sh.getRange(2, 1, n, lebar).setValues(rows.slice().reverse());
+  return true;
+}
+
 function siapkanLog_(ss, nama) {
   let sh = ss.getSheetByName(nama);
   if (sh) return sh;
@@ -1345,19 +1381,26 @@ function siapkanRekap_(ss, nama) {
 }
 
 /** Baca seluruh Log (dan arsipnya bila semuaSumber) dalam satu getValues per sheet. Waktu (kolom A) diubah ke nomor seri WIB; null = tak terbaca. */
-function kumpulkanBarisLog_(ss, cfg, semuaSumber) {
+function kumpulkanBarisLog_(ss, cfg, semuaSumber, dari) {
   const zona = ss.getSpreadsheetTimeZone();
   const log = ss.getSheetByName(cfg.log);
   if (!log) throw new Error('Sheet "' + cfg.log + '" tidak ada.');
   const sumber = [log];
-  if (semuaSumber) {
-    const pola = new RegExp('^Arsip ' + cfg.log.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d{4}-\\d{2}$');
-    ss.getSheets().forEach(sh => { if (pola.test(sh.getName())) sumber.push(sh); });
+  // Jendela malam juga membaca arsip dari bulan(dari) ke atas: hari yang sudah pindah ke arsip sebelum sempat dihitung final tetap terhitung.
+  const bulanDari = !semuaSumber && dari !== null && dari !== undefined ? bulanDariNomor_(dari) : null;
+  if (semuaSumber || bulanDari !== null) {
+    const pola = new RegExp('^Arsip ' + cfg.log.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' (\\d{4}-\\d{2})$');
+    ss.getSheets().forEach(sh => {
+      const m = pola.exec(sh.getName());
+      if (m && (semuaSumber || m[1] >= bulanDari)) sumber.push(sh);
+    });
   }
   const total = sumber.reduce((a, sh) => a + Math.max(0, sh.getLastRow() - 1), 0);
-  if (total > KONFIG.REKAP_BATAS_BARIS) {
-    throw new Error('Log + arsip terlalu besar (' + total + ' baris, batas ' + KONFIG.REKAP_BATAS_BARIS +
-      '). Arsipkan log lama dulu (menu "Arsipkan log bulan lalu"), lalu ulangi.');
+  // Jalur malam hanya butuh beberapa hari tetapi tetap membaca seluruh Log: batasnya 3x lebih longgar daripada jalur penuh.
+  const batas = KONFIG.REKAP_BATAS_BARIS * (semuaSumber ? 1 : 3);
+  if (total > batas) {
+    throw new Error('Log + arsip terlalu besar (' + total + ' baris, batas ' + batas + '). Memindahkan baris ke arsip TIDAK mengurangi jumlah ini ' +
+      'untuk "Bangun ulang"; naikkan KONFIG.REKAP_BATAS_BARIS di kode bila memang perlu (tiap 60000 baris ≈ puluhan detik baca).');
   }
   const t0 = Date.now();
   const unik = sumber.length > 1 ? new Map() : null;   // baris yang sama di Log dan arsip (arsip terhenti sebelum menghapus) dihitung sekali
@@ -1393,11 +1436,11 @@ function agregasiBaris_(baris, dari, sampai) {
     const h = Math.floor(b[0]);
     if (dari !== null && h < dari) return;
     if (h > sampai) { info.masaDepan++; return; }
-    const a = hari[h] || (hari[h] = { masuk: 0, keluar: 0, entri: 0, batalIN: 0, batalOUT: 0, opnameEntri: 0, opnameSelisih: 0, ditolak: 0 });
     const jenis = String(b[6]);
+    if ((jenis === 'IN' || jenis === 'OUT') && (b[7] === '' || !isFinite(Number(b[7])))) { info.qtyRusak++; return; }   // tidak membuat baris hari "nol" palsu
+    const a = hari[h] || (hari[h] = { masuk: 0, keluar: 0, entri: 0, batalIN: 0, batalOUT: 0, opnameEntri: 0, opnameSelisih: 0, ditolak: 0 });
     if (jenis === 'IN' || jenis === 'OUT') {
       const q = Number(b[7]);
-      if (b[7] === '' || !isFinite(q)) { info.qtyRusak++; return; }
       if (jenis === 'IN') a.masuk += q; else a.keluar += q;
       if (q > 0) a.entri++;
       else if (q < 0) { if (jenis === 'IN') a.batalIN -= q; else a.batalOUT -= q; }
@@ -1467,7 +1510,8 @@ function gabungRekap_(lama, baru, paksa, sekarang) {
   return { baris: baris.concat(lama.lain), ditulis: ditulis, dipertahankan: dipertahankan };
 }
 
-function tulisTabelRekap_(sh, baris, sekarang, nLama) {
+function tulisTabelRekap_(sh, baris, sekarang, nLama, peringatan) {
+  pastikanUkuran_(sh, 3, KOLOM_REKAP_STATUS);
   // Tabel baru bisa lebih pendek dari yang lama (tanggal ganda digabung, baris kosong dirapatkan): bersihkan sisa di bawahnya.
   if (nLama > baris.length) sh.getRange(baris.length + 2, 1, nLama - baris.length, HEADER_REKAP.length).clearContent();
   if (baris.length) {
@@ -1477,7 +1521,17 @@ function tulisTabelRekap_(sh, baris, sekarang, nLama) {
     sh.getRange(2, 2, baris.length, 9).setNumberFormat('#,##0');
     sh.getRange(2, 11, baris.length, 1).setNumberFormat('dd/MM/yyyy HH:mm');
   }
-  sh.getRange(2, KOLOM_REKAP_STATUS).setValue(sekarang).setNumberFormat('dd/MM/yyyy HH:mm');
+  sh.getRange(2, KOLOM_REKAP_STATUS, 2, 1).setValues([[sekarang], [peringatan || '']]);
+  sh.getRange(2, KOLOM_REKAP_STATUS).setNumberFormat('dd/MM/yyyy HH:mm');
+}
+
+/** Teks PERIKSA dari baris Log yang tak terbaca; disimpan di sel di bawah "terakhir dihitung" supaya jalur malam pun tidak diam-diam. */
+function peringatanRekap_(info) {
+  const t = [];
+  if (info.tidakTerbaca) t.push(info.tidakTerbaca + ' baris Log dengan Waktu tak terbaca diabaikan');
+  if (info.qtyRusak) t.push(info.qtyRusak + ' baris Log dengan Qty bukan angka diabaikan');
+  if (info.masaDepan) t.push(info.masaDepan + ' baris Log bertanggal masa depan diabaikan');
+  return t.length ? 'PERIKSA: ' + t.join('; ') : '';
 }
 
 /**
@@ -1497,9 +1551,9 @@ function perbaruiRekapSatu_(ss, cfg, opsi) {
     dari = Math.min(hariIni - (KONFIG.REKAP_HARI_ULANG - 1), terakhir - 1);
     semuaSumber = false;
   }
-  const agr = agregasiBaris_(kumpulkanBarisLog_(ss, cfg, semuaSumber), dari, hariIni);
+  const agr = agregasiBaris_(kumpulkanBarisLog_(ss, cfg, semuaSumber, dari), dari, hariIni);
   const gabung = gabungRekap_(lama, agr.hari, !!opsi.paksa, sekarang);
-  tulisTabelRekap_(sh, gabung.baris, sekarang, lama.n);
+  tulisTabelRekap_(sh, gabung.baris, sekarang, lama.n, peringatanRekap_(agr.info));
   return { ditulis: gabung.ditulis, dipertahankan: gabung.dipertahankan, info: agr.info, semuaSumber: semuaSumber };
 }
 
@@ -1648,10 +1702,13 @@ function perbaruiSatu_(ss, cfg) {
         if (!peta.kolom[c + 1] || peta.kolom[c + 1].jenis !== 'IN' || !peta.kolom[c + 2] || peta.kolom[c + 2].jenis !== 'OUT') return;
         hasil.push(pasangValidasi_(sh.getRange(KONFIG.BARIS_DATA, c + 1, nBaris, 2), huruf_(c + 1) + KONFIG.BARIS_DATA, 'inout'));
       });
-      const ok = hasil.filter(x => x !== null);
+      const sem = hasil.filter(x => x === 'sementara').length;
+      const ok = hasil.filter(x => x !== null && x !== 'sementara');
+      const ditolak = hasil.length - ok.length - sem;
       lapor.push(awal + 'validasi IN/OUT diperbarui di ' + ok.length + ' dari ' + hasil.length + ' warna' +
         (ok.length ? ' (rumus ' + ok[0] + ')' : '') +
-        (ok.length < hasil.length ? '. Sisanya DITOLAK Google: validasinya dikosongkan supaya B1 bisa diketik; script tetap menolak isian salah dengan tanda merah' : '') + '.');
+        (ditolak ? '. ' + ditolak + ' warna DITOLAK Google: validasinya dikosongkan supaya B1 bisa diketik; script tetap menolak isian salah dengan tanda merah' : '') +
+        (sem ? '. ' + sem + ' warna GAGAL SEMENTARA (layanan Google sibuk): validasi lamanya dibiarkan, jalankan menu 4 lagi' : '') + '.');
     }
   } catch (err) {
     lapor.push(awal + 'validasi GAGAL (' + err.message + '). Aman diulang.');
@@ -1960,28 +2017,38 @@ let VARIAN_VALIDASI_ = null;   // varian rumus yang diterima Google di eksekusi 
  *   1. rumus berkoma   2. rumus bertitik koma   3. aturan "angka antara" (tanpa rumus; tidak dipakai untuk IN/OUT yang menerima "B1",
  *   karena aturan itu menolak teks B1 diam-diam)
  * Kalau semuanya ditolak, validasi dilewati (aturan lama pada IN/OUT dihapus supaya "B1" bisa diketik): script sendiri menolak isian
- * salah dengan tanda merah + catatan, jadi ini tidak boleh menggagalkan migrasi. Mengembalikan 'koma' | 'titik koma' | 'rentang' | null.
+ * salah dengan tanda merah + catatan, jadi ini tidak boleh menggagalkan migrasi. Mengembalikan 'koma' | 'titik koma' | 'rentang' | 'sementara' (galat layanan, validasi lama dibiarkan) | null.
  */
 function pasangValidasi_(range, sel, jenis) {
   const stok = jenis === 'stok';
   const maks = KONFIG.MAKS_QTY;
   const batalOk = !stok && KONFIG.IZINKAN_PEMBATALAN;
   const bantuan = stok ? 'STOK: angka bulat 0–' + maks
-    : 'Isi angka bulat 1–' + maks + ' lalu Enter.' + (batalOk ? ' Salah ketik hari ini? Ketik B + jumlah yang dibatalkan, mis. B1.' : '');
+    : 'Isi angka bulat 1–' + maks + ' lalu Enter.' + (batalOk ? ' Membatalkan entri sebelumnya hari ini: ketik B + jumlah, mis. B1.' : '');
   const angka = p => 'AND(' + ['ISNUMBER(' + sel + ')', sel + (stok ? '>=0' : '>0'), sel + '<=' + maks, sel + '=INT(' + sel + ')'].join(p) + ')';
-  const teksB = p => 'AND(' + ['ISTEXT(' + sel + ')', 'REGEXMATCH(' + [sel, '"^[Bb][0-9]+$"'].join(p) + ')'].join(p) + ')';
-  const rumus = p => '=' + (batalOk ? 'OR(' + [angka(p), teksB(p)].join(p) + ')' : angka(p));
+  const angkaSaja = p => 'AND(' + [sel + (stok ? '>=0' : '>0'), sel + '<=' + maks, sel + '=INT(' + sel + ')'].join(p) + ')';
+  // AND/OR tidak memotong evaluasi: INT("B1") = #VALUE! merambat dan membuat "B1" ditolak. Cabang dipisah dengan IF
+  // (hanya cabang terpilih yang dihitung). Terbukti di LibreOffice: OR(AND(ISNUMBER..INT..),ISTEXT) = #VALUE! untuk "B1".
+  const rumus = p => '=' + (batalOk
+    ? 'IF(' + ['ISNUMBER(' + sel + ')', angkaSaja(p),
+      'IF(' + ['ISTEXT(' + sel + ')', 'REGEXMATCH(' + [sel, '"^\\s*[Bb]\\s*[0-9]+\\s*$"'].join(p) + ')', 'FALSE'].join(p) + ')'].join(p) + ')'
+    : angka(p));
   const pisah = { 'koma': ',', 'titik koma': ';' };
   const urut = VARIAN_VALIDASI_ === 'titik koma' ? ['titik koma', 'koma'] : ['koma', 'titik koma'];
   const percobaan = urut.map(nama => [nama, b => b.requireFormulaSatisfied(rumus(pisah[nama]))]);
   if (!batalOk) percobaan.push(['rentang', b => b.requireNumberBetween(stok ? 0 : 1, maks)]);
+  let sementara = false;
   for (let i = 0; i < percobaan.length; i++) {
     try {
       range.setDataValidation(percobaan[i][1](SpreadsheetApp.newDataValidation()).setAllowInvalid(false).setHelpText(bantuan).build());
       if (percobaan[i][0] !== 'rentang') VARIAN_VALIDASI_ = percobaan[i][0];
       return percobaan[i][0];
-    } catch (err) { /* lokal file menolak varian ini: coba berikutnya */ }
+    } catch (err) {
+      // lokal file menolak varian ini: coba berikutnya. Galat layanan (timeout/kuota) bukan penolakan rumus: jangan dianggap ditolak.
+      if (/timed out|time out|habis waktu|quota|kuota|try again|coba lagi|unavailable|tidak tersedia|rate limit|internal error/i.test(String(err && err.message))) sementara = true;
+    }
   }
+  if (sementara) return 'sementara';   // validasi lama dibiarkan; ulangi nanti (menu 4 aman diulang)
   if (batalOk) { try { range.clearDataValidations(); } catch (err) { /* biarkan */ } }
   return null;
 }

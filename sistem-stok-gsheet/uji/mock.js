@@ -205,6 +205,8 @@ function buatKonteks(ss, opsi = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + EKSPOR_KONSTANTA, ctx, { filename: 'Kode.gs' });
+  // Penyapu hanya bekerja 06-19 WIB: tanpa ini uji bergantung jam nyata. Uji jam kerja mengatur SAPU_JAM sendiri; opsi.jamAsli = pakai nilai kode.
+  if (!opsi.jamAsli) ctx.__KONFIG.SAPU_JAM = { awal: 0, akhir: 24 };
   ctx.__alerts = alerts; ctx.__triggers = triggers; ctx.__opsi = opsi;
   return ctx;
 }
