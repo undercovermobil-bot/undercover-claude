@@ -965,7 +965,7 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(!galat && !!galatPenuh && /terlalu besar/.test(galatPenuh.message), 'batas baris: jalur malam longgar (3x), jalur penuh tetap ketat');
 }
 
-// ---------- total di kolom C: Keluar/Masuk hari ini + Keluar kemarin / 7 hari / bulan ini (rumus ke Log); menu 4 melengkapi
+// ---------- total di kolom C: Keluar/Masuk hari ini + Keluar/Masuk kemarin (rumus ke Log); menu 4 melengkapi dan membersihkan rumus lama
 {
   const u = SEDIA_UC();
   const peta = u.ctx.bacaPeta_(u.BU), rm = peta.barisTotal + 1;
@@ -974,18 +974,31 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(/^=SUMIFS\('Log Stok UC'!\$H:\$H,.*"OUT".*">="&TODAY\(\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(0)), 'C(mutasi): Keluar hari ini');
   cek(/"IN".*">="&TODAY\(\)/.test(f(1)), 'C(mutasi+1): Masuk hari ini');
   cek(/"OUT".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(2)), 'C(mutasi+2): Keluar kemarin [TODAY()-1, TODAY())');
-  cek(/"OUT".*">="&\(TODAY\(\)-6\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(3)), 'C(mutasi+3): Keluar 7 hari (hari ini + 6 sebelumnya)');
-  cek(/"OUT".*">="&DATE\(YEAR\(TODAY\(\)\),MONTH\(TODAY\(\)\),1\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(4)), 'C(mutasi+4): Keluar bulan ini (tanggal 1 s/d hari ini)');
-  cek([0, 1, 2, 3, 4].every(i => f(i).indexOf(log) > 0) && /kemarin/.test(u.BU.peek(rm + 2, 3).nf) && /7 hari/.test(u.BU.peek(rm + 3, 3).nf) && /bulan ini/.test(u.BU.peek(rm + 4, 3).nf), 'semua rumus merujuk Log sheet ini; format menyebut periode');
+  cek(/"IN".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(3)), 'C(mutasi+3): Masuk kemarin [TODAY()-1, TODAY())');
+  cek(f(4) === '', 'tidak ada baris lagi di bawah Masuk kemarin');
+  cek([0, 1, 2, 3].every(i => f(i).indexOf(log) > 0) && /Keluar kemarin/.test(u.BU.peek(rm + 2, 3).nf) && /Masuk kemarin/.test(u.BU.peek(rm + 3, 3).nf), 'semua rumus merujuk Log sheet ini; format menyebut periode');
   cek(u.BU.getColumnWidth(3) >= 170, 'kolom C cukup lebar untuk teks periode');
-  // menu 4 pada sheet versi sebelumnya (hanya 2 baris total) melengkapi 3 baris lain; sel asing tidak ditimpa
-  u.BU.getRange(rm + 2, 3, 3, 1).clearContent();
-  u.BU.getRange(rm + 3, 3).setValue('catatan staf');
+  // sheet versi sebelumnya: 5 baris (kemarin, 7 hari, bulan ini) + sel asing -> menu 4 mengganti yang milik script
+  const q = "'Log Stok UC'!";
+  u.BU.getRange(rm + 3, 3).setFormulas([['=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"OUT",' + q + '$A:$A,">="&(TODAY()-6),' + q + '$A:$A,"<"&(TODAY()+1))']]);   // Keluar 7 hari lama
+  u.BU.getRange(rm + 4, 3).setFormulas([['=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"OUT",' + q + '$A:$A,">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),' + q + '$A:$A,"<"&(TODAY()+1))']]);   // Keluar bulan ini lama
   u.BU.setColumnWidth(3, 130);
   u.ctx.perbaruiSheetLama();
   const lap = u.ctx.__alerts.slice(-1)[0];
-  cek(/C\d+ \(Keluar kemarin\)/.test(lap) && /C\d+ \(Keluar bulan ini\)/.test(lap) && /sel C\d+ berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa/.test(lap), 'menu 4: baris kosong dilengkapi, sel berisi catatan staf TIDAK ditimpa');
-  cek(u.BU.getRange(rm + 3, 3).getValue() === 'catatan staf' && u.BU.getColumnWidth(3) >= 170, 'menu 4: catatan staf utuh; kolom C dilebarkan');
+  cek(/C\d+ \(Masuk kemarin\)/.test(lap) && /C\d+ \(rumus lama dihapus\)/.test(lap), 'menu 4: baris 7 hari diganti Masuk kemarin, baris bulan ini (rumus lama) dihapus');
+  cek(/Masuk kemarin/.test(u.BU.peek(rm + 3, 3).nf) && f(4) === '', 'menu 4: hasil akhir 4 baris, tanpa sisa');
+  // isian staf di baris sisa tidak dihapus
+  u.BU.getRange(rm + 4, 3).setValue('catatan staf');
+  u.ctx.perbaruiSheetLama();
+  cek(u.BU.getRange(rm + 4, 3).getValue() === 'catatan staf', 'menu 4: isian staf di bawah total tidak dihapus');
+  u.BU.getRange(rm + 4, 3).clearContent(); u.BU.getRange(rm + 4, 3).setFormulas([['=TODAY()-6']]);   // rumus staf sendiri, bukan milik script
+  u.ctx.perbaruiSheetLama();
+  cek(u.BU.getRange(rm + 4, 3).getFormula() === '=TODAY()-6', 'menu 4: rumus staf (bukan SUMIFS ke Log) di bawah total tidak dihapus');
+  u.BU.getRange(rm + 4, 3).clearContent();
+  // sel asing di baris yang dipakai tidak ditimpa
+  u.BU.getRange(rm + 2, 3).clearContent(); u.BU.getRange(rm + 2, 3).setValue('catatan staf 2');
+  u.ctx.perbaruiSheetLama();
+  cek(u.BU.getRange(rm + 2, 3).getValue() === 'catatan staf 2' && /sel C\d+ berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: sel asing TIDAK ditimpa');
 }
 
 // ---------- petunjuk B hanya pada isian yang mirip usaha membatalkan; validasi: galat layanan tidak menghapus validasi lama

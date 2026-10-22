@@ -96,14 +96,14 @@ const HEADER_REKAP = ['Tanggal', 'Masuk (unit)', 'Keluar (unit)', 'Selisih', 'En
 const KOLOM_REKAP_STATUS = 15;
 const FORMAT_TOTAL_KELUAR = '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"';
 const FORMAT_TOTAL_MASUK = '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"';
-// Total di kolom C mulai baris "MASUK / KELUAR HARI INI" ke bawah (semua rumus langsung ke Log; periode dihitung dari TODAY()).
+// Total di kolom C mulai baris "MASUK / KELUAR HARI INI" ke bawah: hari ini dan kemarin (semua rumus langsung ke Log; periode dihitung dari TODAY()).
 const TOTAL_HARIAN = [
   { nama: 'Keluar', jenis: 'OUT', periode: 'hari', format: FORMAT_TOTAL_KELUAR },
   { nama: 'Masuk', jenis: 'IN', periode: 'hari', format: FORMAT_TOTAL_MASUK },
   { nama: 'Keluar kemarin', jenis: 'OUT', periode: 'kemarin', format: '"Keluar kemarin "#,##0" unit";"Keluar kemarin -"#,##0" unit"' },
-  { nama: 'Keluar 7 hari', jenis: 'OUT', periode: 'minggu', format: '"Keluar 7 hari "#,##0" unit";"Keluar 7 hari -"#,##0" unit"' },
-  { nama: 'Keluar bulan ini', jenis: 'OUT', periode: 'bulan', format: '"Keluar bulan ini "#,##0" unit";"Keluar bulan ini -"#,##0" unit"' },
+  { nama: 'Masuk kemarin', jenis: 'IN', periode: 'kemarin', format: '"Masuk kemarin "#,##0" unit";"Masuk kemarin -"#,##0" unit"' },
 ];
+const TOTAL_HARIAN_LAMA = 2;   // versi sebelumnya punya 2 baris lagi (Keluar 7 hari, Keluar bulan ini): menu 4 membersihkannya bila rumus milik script
 const LEBAR_KOLOM_TOTAL = 170;
 const TEKS_BANNER_LAMA = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Jangan ketik di kolom STOK.';
 const TEKS_BANNER_BARU = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Salah ketik hari ini? Ketik B + jumlah (mis. B1) di sel yang sama untuk membatalkan. Jangan ketik di kolom STOK.';
@@ -1734,8 +1734,10 @@ function perbaruiSatu_(ss, cfg) {
   // 2. total harian di kolom C (baris rekap harian dan satu baris di bawahnya)
   try {
     pastikanUkuran_(sh, barisMutasi + TOTAL_HARIAN.length - 1, 3);
-    const f = sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getFormulas();
-    const v = sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getValues();
+    const nBaca = TOTAL_HARIAN.length + TOTAL_HARIAN_LAMA;
+    pastikanUkuran_(sh, barisMutasi + nBaca - 1, 3);
+    const f = sh.getRange(barisMutasi, 3, nBaca, 1).getFormulas();
+    const v = sh.getRange(barisMutasi, 3, nBaca, 1).getValues();
     const rencana = TOTAL_HARIAN;
     const ditulis = [];
     rencana.forEach((rc, i) => {
@@ -1750,6 +1752,13 @@ function perbaruiSatu_(ss, cfg) {
       sh.getRange(r, 3).setFontWeight('bold');
       ditulis.push('C' + r + ' (' + rc.nama + ')');
     });
+    // baris sisa versi sebelumnya (rumus milik script saja; isian lain tidak disentuh)
+    for (let i = TOTAL_HARIAN.length; i < nBaca; i++) {
+      if (f[i][0].indexOf("=SUMIFS('" + cfg.log + "'!") === 0 && /TODAY\(\)-6|MONTH\(TODAY\(\)\)/.test(f[i][0])) {
+        sh.getRange(barisMutasi + i, 3).clearContent().setNumberFormat('General');
+        ditulis.push('C' + (barisMutasi + i) + ' (rumus lama dihapus)');
+      }
+    }
     if (ditulis.length && sh.getColumnWidth(3) < LEBAR_KOLOM_TOTAL) sh.setColumnWidth(3, LEBAR_KOLOM_TOTAL);
     if (ditulis.length) lapor.push(awal + 'total harian ' + ditulis.join(', ') + '.');
   } catch (err) {
