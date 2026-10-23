@@ -732,7 +732,7 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   const rm = peta.barisTotal + 1;
   cek(u.BU.peek(rm, 2).v === 'MASUK / KELUAR HARI INI', 'baris rekap harian tepat di bawah TOTAL STOK');
   cek(u.BU.peek(rm, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') && u.BU.peek(rm + 1, 3).f === u.ctx.rumusTotalHarian_('Log Stok UC', 'IN'), 'C(rekap) = total KELUAR, C(rekap+1) = total MASUK, langsung dari Log');
-  cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') === "=SUMIFS('Log Stok UC'!$H:$H,'Log Stok UC'!$G:$G,\"OUT\",'Log Stok UC'!$A:$A,\">=\"&TODAY(),'Log Stok UC'!$A:$A,\"<\"&(TODAY()+1))", 'rumus total harian: SUMIFS atas Qty (bersih) tanpa kriteria warna');
+  cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') === "=SUMIFS('Log Stok UC'!$H:$H,'Log Stok UC'!$G:$G,\"OUT\",'Log Stok UC'!$D:$D,\"<>Motor\",'Log Stok UC'!$A:$A,\">=\"&TODAY(),'Log Stok UC'!$A:$A,\"<\"&(TODAY()+1))", 'rumus total harian: SUMIFS atas Qty (bersih) tanpa kriteria warna, tanpa produk terpisah (Motor)');
   cek(u.BU.peek(rm, 3).nf === '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"' && u.BU.peek(rm + 1, 3).nf === '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"', 'format total harian dua seksi (negatif tidak tampil "-Keluar")');
   cek(u.BU.peek(1, 4).v === u.ctx.__K.TEKS_BANNER_BARU && /B1/.test(u.BU.peek(1, 4).v), 'banner memuat petunjuk pembatalan');
   cek(u.BU.peek(4, A_IN).dv && /REGEXMATCH/.test(u.BU.peek(4, A_IN).dv.f) && /ketik B/.test(u.BU.peek(4, A_IN).dv.help) && !/REGEXMATCH/.test(u.BU.peek(4, A_STOK).dv.f), 'validasi IN/OUT memuat pola B + teks bantuan; STOK tanpa pola B');
@@ -965,40 +965,93 @@ const A_STOK = 4, A_IN = 5, A_OUT = 6, H_STOK = 7, H_IN = 8, H_OUT = 9;   // war
   cek(!galat && !!galatPenuh && /terlalu besar/.test(galatPenuh.message), 'batas baris: jalur malam longgar (3x), jalur penuh tetap ketat');
 }
 
-// ---------- total di kolom C: Keluar/Masuk hari ini + Keluar/Masuk kemarin (rumus ke Log); menu 4 melengkapi dan membersihkan rumus lama
+// ---------- total di kolom C: Keluar/Masuk hari ini + kemarin (tanpa Motor) + 4 baris Motor sendiri; menu 4 melengkapi dan membersihkan rumus lama
 {
   const u = SEDIA_UC();
   const peta = u.ctx.bacaPeta_(u.BU), rm = peta.barisTotal + 1;
   const f = i => u.BU.getRange(rm + i, 3).getFormula();
   const log = "'Log Stok UC'!";
-  cek(/^=SUMIFS\('Log Stok UC'!\$H:\$H,.*"OUT".*">="&TODAY\(\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(0)), 'C(mutasi): Keluar hari ini');
-  cek(/"IN".*">="&TODAY\(\)/.test(f(1)), 'C(mutasi+1): Masuk hari ini');
-  cek(/"OUT".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(2)), 'C(mutasi+2): Keluar kemarin [TODAY()-1, TODAY())');
-  cek(/"IN".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(3)), 'C(mutasi+3): Masuk kemarin [TODAY()-1, TODAY())');
-  cek(f(4) === '', 'tidak ada baris lagi di bawah Masuk kemarin');
-  cek([0, 1, 2, 3].every(i => f(i).indexOf(log) > 0) && /Keluar kemarin/.test(u.BU.peek(rm + 2, 3).nf) && /Masuk kemarin/.test(u.BU.peek(rm + 3, 3).nf), 'semua rumus merujuk Log sheet ini; format menyebut periode');
+  cek(/^=SUMIFS\('Log Stok UC'!\$H:\$H,.*"OUT".*"<>Motor".*">="&TODAY\(\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(0)), 'C(mutasi): Keluar hari ini (tanpa Motor)');
+  cek(/"IN".*"<>Motor".*">="&TODAY\(\)/.test(f(1)), 'C(mutasi+1): Masuk hari ini (tanpa Motor)');
+  cek(/"OUT".*"<>Motor".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(2)), 'C(mutasi+2): Keluar kemarin [TODAY()-1, TODAY())');
+  cek(/"IN".*"<>Motor".*">="&\(TODAY\(\)-1\),.*"<"&TODAY\(\)\)$/.test(f(3)), 'C(mutasi+3): Masuk kemarin [TODAY()-1, TODAY())');
+  cek(/"OUT".*\$D:\$D,"Motor".*">="&TODAY\(\),.*"<"&\(TODAY\(\)\+1\)\)$/.test(f(4)) && f(4).indexOf('<>') < 0, 'C(mutasi+4): Motor keluar hari ini (hanya Motor)');
+  cek(/"IN".*\$D:\$D,"Motor".*">="&TODAY\(\)/.test(f(5)) && /"OUT".*"Motor".*TODAY\(\)-1/.test(f(6)) && /"IN".*"Motor".*TODAY\(\)-1/.test(f(7)), 'C(mutasi+5..7): Motor masuk hari ini, keluar kemarin, masuk kemarin');
+  cek(f(8) === '', 'tidak ada baris lagi di bawah Motor masuk kemarin');
+  cek([0, 1, 2, 3, 4, 5, 6, 7].every(i => f(i).indexOf(log) > 0) && /Keluar kemarin/.test(u.BU.peek(rm + 2, 3).nf) && /Masuk kemarin/.test(u.BU.peek(rm + 3, 3).nf) && /Motor keluar /.test(u.BU.peek(rm + 4, 3).nf) && /Motor masuk kemarin/.test(u.BU.peek(rm + 7, 3).nf), 'semua rumus merujuk Log sheet ini; format menyebut periode dan Motor');
   cek(u.BU.getColumnWidth(3) >= 170, 'kolom C cukup lebar untuk teks periode');
-  // sheet versi sebelumnya: 5 baris (kemarin, 7 hari, bulan ini) + sel asing -> menu 4 mengganti yang milik script
+  // sheet versi sebelumnya: rumus lama di bawah rencana (mis. 7 hari / bulan ini) dihapus; rumus/isian staf tidak disentuh
   const q = "'Log Stok UC'!";
-  u.BU.getRange(rm + 3, 3).setFormulas([['=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"OUT",' + q + '$A:$A,">="&(TODAY()-6),' + q + '$A:$A,"<"&(TODAY()+1))']]);   // Keluar 7 hari lama
-  u.BU.getRange(rm + 4, 3).setFormulas([['=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"OUT",' + q + '$A:$A,">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),' + q + '$A:$A,"<"&(TODAY()+1))']]);   // Keluar bulan ini lama
+  u.BU.getRange(rm + 8, 3).setFormulas([['=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"OUT",' + q + '$A:$A,">="&(TODAY()-6),' + q + '$A:$A,"<"&(TODAY()+1))']]);
+  u.BU.getRange(rm + 9, 3).setFormulas([['=TODAY()-6']]);
   u.BU.setColumnWidth(3, 130);
   u.ctx.perbaruiSheetLama();
   const lap = u.ctx.__alerts.slice(-1)[0];
-  cek(/C\d+ \(Masuk kemarin\)/.test(lap) && /C\d+ \(rumus lama dihapus\)/.test(lap), 'menu 4: baris 7 hari diganti Masuk kemarin, baris bulan ini (rumus lama) dihapus');
-  cek(/Masuk kemarin/.test(u.BU.peek(rm + 3, 3).nf) && f(4) === '', 'menu 4: hasil akhir 4 baris, tanpa sisa');
-  // isian staf di baris sisa tidak dihapus
-  u.BU.getRange(rm + 4, 3).setValue('catatan staf');
-  u.ctx.perbaruiSheetLama();
-  cek(u.BU.getRange(rm + 4, 3).getValue() === 'catatan staf', 'menu 4: isian staf di bawah total tidak dihapus');
-  u.BU.getRange(rm + 4, 3).clearContent(); u.BU.getRange(rm + 4, 3).setFormulas([['=TODAY()-6']]);   // rumus staf sendiri, bukan milik script
-  u.ctx.perbaruiSheetLama();
-  cek(u.BU.getRange(rm + 4, 3).getFormula() === '=TODAY()-6', 'menu 4: rumus staf (bukan SUMIFS ke Log) di bawah total tidak dihapus');
-  u.BU.getRange(rm + 4, 3).clearContent();
-  // sel asing di baris yang dipakai tidak ditimpa
+  cek(/C\d+ \(rumus lama dihapus\)/.test(lap) && f(8) === '' && u.BU.getRange(rm + 9, 3).getFormula() === '=TODAY()-6', 'menu 4: rumus lama milik script dihapus, rumus staf utuh');
+  u.BU.getRange(rm + 9, 3).clearContent();
   u.BU.getRange(rm + 2, 3).clearContent(); u.BU.getRange(rm + 2, 3).setValue('catatan staf 2');
   u.ctx.perbaruiSheetLama();
-  cek(u.BU.getRange(rm + 2, 3).getValue() === 'catatan staf 2' && /sel C\d+ berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4: sel asing TIDAK ditimpa');
+  cek(u.BU.getRange(rm + 2, 3).getValue() === 'catatan staf 2' && /sel C\d+ berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa/.test(u.ctx.__alerts.slice(-1)[0]) && u.BU.getColumnWidth(3) >= 170, 'menu 4: sel asing TIDAK ditimpa; kolom C dilebarkan');
+  // produk terpisah dimatikan: tidak ada pengecualian di total utama; baris Motor milik script dibersihkan oleh menu 4
+  u.kons().PRODUK_TERPISAH = { label: 'Motor', nama: [] };
+  cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT') === "=SUMIFS('Log Stok UC'!$H:$H,'Log Stok UC'!$G:$G,\"OUT\",'Log Stok UC'!$A:$A,\">=\"&TODAY(),'Log Stok UC'!$A:$A,\"<\"&(TODAY()+1))" && u.ctx.totalHarian_().length === 4, 'PRODUK_TERPISAH.nama = []: total utama memuat semua produk, 4 baris');
+  u.BU.getRange(rm + 2, 3).clearContent();
+  u.ctx.perbaruiSheetLama();
+  cek(f(4) === '' && f(7) === '' && /rumus lama dihapus/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 4 saat dimatikan: baris Motor milik script dibersihkan');
+  u.kons().PRODUK_TERPISAH = { label: 'Motor', nama: ['Mo~to*r?"x'] };
+  cek(u.ctx.rumusTotalHarian_('Log Stok UC', 'OUT').indexOf('"<>Mo~~to~*r~?""x"') > 0, 'karakter khusus kriteria SUMIFS (~ * ? ") di-escape');
+}
+
+// ---------- produk terpisah (Motor): total utama dan Rekap utama TANPA Motor; Motor punya kolom Q:R sendiri di Rekap
+{
+  const u = SEDIA_UC();
+  const cfg = u.kons().SISTEM[0];
+  const hari0 = Math.floor(u.ctx.waktuSerial_(new Date()));
+  const baris = (w, produk, jenis, q) => [w, 'Stok Cover UC', 4, produk, 'X', 'Abu-abu', jenis, q, 10, 10, '', ''];
+  const a = u.ctx.agregasiBaris_([baris(hari0 + 0.1, 'Honda Brio', 'OUT', 5), baris(hari0 + 0.2, 'Motor', 'OUT', 3), baris(hari0 + 0.3, 'motor', 'IN', 4),
+    baris(hari0 + 0.4, 'Motor', 'OUT', -1), baris(hari0 + 0.5, 'Honda Brio', 'IN', 2), baris(hari0 + 0.6, 'Motor Matic', 'OUT', 7)], null, hari0).hari[hari0];
+  cek(a.keluar === 12 && a.masuk === 2 && a.terpisahKeluar === 2 && a.terpisahMasuk === 4, 'agregasi: Motor (huruf besar/kecil diabaikan, pembatalan bersih) terpisah; "Motor Matic" tetap produk biasa: ' + JSON.stringify(a));
+  cek(a.entri === 5 && a.batalOUT === 0, 'agregasi: Entri menghitung semua produk; pembatalan Motor tidak masuk Dibatalkan (unit) utama: ' + a.entri + '/' + a.batalOUT);
+  // rekap tertulis: Q1:R1 berjudul Motor (sheet baru), nilai di Q:R, utama tanpa Motor
+  const rk = u.ss.getSheetByName('Rekap Harian UC');
+  cek(rk.getRange(1, 17, 1, 2).getValues()[0].join('|') === 'Masuk motor (unit)|Keluar motor (unit)', 'sheet Rekap baru: judul kolom Q:R untuk Motor');
+  u.ctx.tulisLog_(u.ss, cfg, [baris(hari0 + 0.1, 'Honda Brio', 'OUT', 5), baris(hari0 + 0.2, 'Motor', 'OUT', 3), baris(hari0 + 0.3, 'Motor', 'IN', 4)]);
+  u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false });
+  const r2 = rk.getRange(2, 1, 1, 18).getValues()[0];
+  cek(r2[1] === 0 && r2[2] === 5 && r2[16] === 4 && r2[17] === 3, 'rekap: Masuk/Keluar utama tanpa Motor (0/5); Q:R = Motor masuk/keluar (4/3): ' + JSON.stringify([r2[1], r2[2], r2[16], r2[17]]));
+  // sumber berkurang: baris lama dipertahankan UTUH termasuk kolom Motor
+  rk.getRange(2, 5).setValue(99);
+  u.ctx.perbaruiRekapSatu_(u.ss, cfg, { semua: true, paksa: false });
+  const r3 = rk.getRange(2, 1, 1, 18).getValues()[0];
+  cek(/SUMBER BERKURANG/.test(r3[11]) && r3[16] === 4 && r3[17] === 3, 'rekap: hari "sumber berkurang" dipertahankan, kolom Motor ikut utuh');
+  // sheet rekap lama tanpa kolom Q:R (sebelum fitur ini): menu nightly TIDAK menulis Q:R; menu 4 memasang judul lalu mengisi
+  rk.getRange(2, 5).setValue(1);   // kembali ke jumlah entri yang wajar (bukan sumber berkurang)
+  rk.getRange(1, 17, 1, 2).clearContent(); rk.getRange(2, 17, 1, 2).clearContent(); rk.maxCols = 15;
+  u.ctx.rekapHarianOtomatis();
+  cek(rk.maxCols === 15 && rk.getRange(2, 1, 1, 13).getValues()[0][0] !== '', 'rekap lama tanpa kolom Q:R: trigger malam tetap jalan, tidak menambah/menulis kolom Motor');
+  u.ctx.perbaruiSheetLama();
+  const r4 = rk.getRange(2, 1, 1, 18).getValues()[0];
+  cek(rk.getRange(1, 17, 1, 2).getValues()[0].join('|') === 'Masuk motor (unit)|Keluar motor (unit)' && r4[16] === 4 && r4[17] === 3, 'menu 4: judul Q:R dipasang dan Motor terisi dari riwayat Log');
+  // isian lain di Q1:R1: tidak ditimpa
+  rk.getRange(1, 17, 1, 2).setValues([['punya staf', 'x']]);
+  rk.getRange(2, 17, 1, 2).setValues([['a', 'b']]);
+  u.ctx.rekapHarianOtomatis();
+  u.ctx.perbaruiSheetLama();
+  cek(rk.getRange(1, 17).getValue() === 'punya staf' && rk.getRange(2, 17).getValue() === 'a' && /kolom Q:R .* berisi hal lain/.test(u.ctx.__alerts.slice(-1)[0]), 'isian staf di Q:R tidak ditimpa; dilaporkan');
+  // tabel menyusut (tanggal ganda digabung): sisa di Q:R ikut dibersihkan
+  const u2 = SEDIA_UC();
+  const rk2 = u2.ss.getSheetByName('Rekap Harian UC');
+  const cfg2 = u2.kons().SISTEM[0];
+  u2.ctx.tulisLog_(u2.ss, cfg2, [baris(hari0 + 0.1, 'Honda Brio', 'OUT', 5)]);
+  u2.ctx.perbaruiRekapSatu_(u2.ss, cfg2, { semua: true, paksa: false });
+  rk2.getRange(3, 1, 1, 13).setValues([[hari0, 0, 1, -1, 0, 0, 0, 0, 0, 0, hari0, 'OK', '']]); rk2.getRange(3, 1).setNumberFormat('dd/MM/yyyy');
+  rk2.getRange(3, 17, 1, 2).setValues([[77, 88]]);
+  u2.ctx.perbaruiRekapSatu_(u2.ss, cfg2, { semua: true, paksa: false });
+  cek(rk2.getRange(3, 1).getValue() === '' && rk2.getRange(3, 17, 1, 2).getValues()[0].join('') === '', 'tabel menyusut: sisa kolom Motor (Q:R) dibersihkan');
+  // dimatikan: Rekap tanpa kolom Motor, Masuk/Keluar utama memuat semua
+  u.kons().PRODUK_TERPISAH = { label: 'Motor', nama: [] };
+  const b = u.ctx.agregasiBaris_([baris(hari0 + 0.2, 'Motor', 'OUT', 3)], null, hari0).hari[hari0];
+  cek(b.keluar === 3 && b.terpisahKeluar === 0, 'nama [] : Motor dihitung seperti produk lain');
 }
 
 // ---------- petunjuk B hanya pada isian yang mirip usaha membatalkan; validasi: galat layanan tidak menghapus validasi lama

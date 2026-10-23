@@ -46,6 +46,7 @@ const KONFIG = {
   SAPU_MENIT: 15,               // trigger waktu penyapu input tertinggal (1, 5, 10, 15, atau 30). Tiap jalan ±8-10 detik dari kuota harian
   SAPU_JAM: { awal: 6, akhir: 19 },   // penyapu hanya bekerja pada jam ini (WIB), di luar jam itu langsung berhenti
   TUNGGU_LOCK_MS: 3000,         // lama trigger edit menunggu lock. Singkat: yang kalah giliran berhenti, pemegang lock sudah menyapu semua sel
+  PRODUK_TERPISAH: { label: 'Motor', nama: ['Motor'] },   // produk yang pencatatan masuk/keluarnya DIPISAH: tidak masuk total utama (kolom C) dan Rekap Harian utama, punya baris dan kolom sendiri. nama [] = tidak dipisah. Cocok persis dengan kolom Nama Produk (huruf besar/kecil diabaikan)
   IZINKAN_PEMBATALAN: true,     // sel IN/OUT boleh berisi "B" + jumlah (mis. B1): membatalkan sebagian entri HARI INI untuk produk x warna x jenis yang sama
   BATAS_BACA_BATAL: 3000,       // baris teratas Log yang dibaca untuk memeriksa pembatalan (hanya saat ada entri B)
   REKAP_JAM: 0,                 // trigger rekap harian berjalan sekitar jam ini (WIB) + REKAP_MENIT. Mengubahnya: Matikan lalu Aktifkan input otomatis
@@ -96,14 +97,36 @@ const HEADER_REKAP = ['Tanggal', 'Masuk (unit)', 'Keluar (unit)', 'Selisih', 'En
 const KOLOM_REKAP_STATUS = 15;
 const FORMAT_TOTAL_KELUAR = '"Keluar "#,##0" unit";"Keluar -"#,##0" unit"';
 const FORMAT_TOTAL_MASUK = '"Masuk "#,##0" unit";"Masuk -"#,##0" unit"';
-// Total di kolom C mulai baris "MASUK / KELUAR HARI INI" ke bawah: hari ini dan kemarin (semua rumus langsung ke Log; periode dihitung dari TODAY()).
-const TOTAL_HARIAN = [
-  { nama: 'Keluar', jenis: 'OUT', periode: 'hari', format: FORMAT_TOTAL_KELUAR },
-  { nama: 'Masuk', jenis: 'IN', periode: 'hari', format: FORMAT_TOTAL_MASUK },
-  { nama: 'Keluar kemarin', jenis: 'OUT', periode: 'kemarin', format: '"Keluar kemarin "#,##0" unit";"Keluar kemarin -"#,##0" unit"' },
-  { nama: 'Masuk kemarin', jenis: 'IN', periode: 'kemarin', format: '"Masuk kemarin "#,##0" unit";"Masuk kemarin -"#,##0" unit"' },
-];
-const TOTAL_HARIAN_LAMA = 2;   // versi sebelumnya punya 2 baris lagi (Keluar 7 hari, Keluar bulan ini): menu 4 membersihkannya bila rumus milik script
+const KOLOM_REKAP_TERPISAH = 17;   // Q, R: Masuk/Keluar produk terpisah (P dibiarkan kosong; O2/O3 = status)
+const fmtTotal_ = awalan => '"' + awalan + ' "#,##0" unit";"' + awalan + ' -"#,##0" unit"';
+/**
+ * Total di kolom C mulai baris "MASUK / KELUAR HARI INI" ke bawah: hari ini dan kemarin (semua rumus langsung ke Log; periode dihitung dari
+ * TODAY()). Total utama TIDAK memuat produk terpisah (KONFIG.PRODUK_TERPISAH); produk itu punya 4 baris sendiri di bawahnya.
+ */
+function totalHarian_() {
+  const daftar = [
+    { nama: 'Keluar', jenis: 'OUT', periode: 'hari', format: FORMAT_TOTAL_KELUAR },
+    { nama: 'Masuk', jenis: 'IN', periode: 'hari', format: FORMAT_TOTAL_MASUK },
+    { nama: 'Keluar kemarin', jenis: 'OUT', periode: 'kemarin', format: fmtTotal_('Keluar kemarin') },
+    { nama: 'Masuk kemarin', jenis: 'IN', periode: 'kemarin', format: fmtTotal_('Masuk kemarin') },
+  ];
+  if (namaTerpisah_().length) {
+    const l = KONFIG.PRODUK_TERPISAH.label;
+    [['keluar', 'OUT', 'hari'], ['masuk', 'IN', 'hari'], ['keluar kemarin', 'OUT', 'kemarin'], ['masuk kemarin', 'IN', 'kemarin']].forEach(x => {
+      daftar.push({ nama: l + ' ' + x[0], jenis: x[1], periode: x[2], golongan: 'terpisah', format: fmtTotal_(l + ' ' + x[0]) });
+    });
+  }
+  return daftar;
+}
+/** Nama produk terpisah (tanpa spasi tepi, tanpa kosong). */
+function namaTerpisah_() {
+  const t = KONFIG.PRODUK_TERPISAH;
+  return t && t.nama ? t.nama.map(x => String(x).trim()).filter(Boolean) : [];
+}
+function headerTerpisah_() {
+  const l = KONFIG.PRODUK_TERPISAH && KONFIG.PRODUK_TERPISAH.label || 'Terpisah';
+  return ['Masuk ' + l.toLowerCase() + ' (unit)', 'Keluar ' + l.toLowerCase() + ' (unit)'];
+}
 const LEBAR_KOLOM_TOTAL = 170;
 const TEKS_BANNER_LAMA = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Jangan ketik di kolom STOK.';
 const TEKS_BANNER_BARU = 'STOK dihitung otomatis. Isi angka di kolom IN / OUT lalu Enter. Salah ketik hari ini? Ketik B + jumlah (mis. B1) di sel yang sama untuk membatalkan. Jangan ketik di kolom STOK.';
@@ -915,16 +938,20 @@ function teksBanner_() {
 }
 
 /** Total IN atau OUT HARI INI (semua warna) langsung dari Log. Sama dengan rumus per warna di baris rekap, tanpa kriteria warna; bersih (Qty negatif = pembatalan). */
-function rumusTotalHarian_(logNama, jenis, periode) {
+function rumusTotalHarian_(logNama, jenis, periode, golongan) {
   const q = "'" + logNama + "'!";
-  // batas [dari, sampai) dalam nomor hari; "7 hari" = hari ini + 6 hari sebelumnya; "bulan ini" = tanggal 1 sampai hari ini
+  // batas [dari, sampai) dalam nomor hari
   const batas = {
     hari: ['TODAY()', '(TODAY()+1)'],
     kemarin: ['(TODAY()-1)', 'TODAY()'],
-    minggu: ['(TODAY()-6)', '(TODAY()+1)'],
-    bulan: ['DATE(YEAR(TODAY()),MONTH(TODAY()),1)', '(TODAY()+1)'],
   }[periode || 'hari'];
-  return '=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"' + jenis + '",' + q + '$A:$A,">="&' + batas[0] + ',' + q + '$A:$A,"<"&' + batas[1] + ')';
+  const esc = n => n.replace(/[~*?]/g, '~$&').replace(/"/g, '""');   // kriteria SUMIFS: ~ * ? bersifat khusus
+  const waktu = q + '$A:$A,">="&' + batas[0] + ',' + q + '$A:$A,"<"&' + batas[1];
+  const nama = namaTerpisah_();
+  if (golongan === 'terpisah') {
+    return '=' + nama.map(n => 'SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"' + jenis + '",' + q + '$D:$D,"' + esc(n) + '",' + waktu + ')').join('+');
+  }
+  return '=SUMIFS(' + q + '$H:$H,' + q + '$G:$G,"' + jenis + '",' + nama.map(n => q + '$D:$D,"<>' + esc(n) + '",').join('') + waktu + ')';
 }
 
 function bangunSheet_(sh, cfg, d) {
@@ -936,7 +963,7 @@ function bangunSheet_(sh, cfg, d) {
   const barisDataAkhir = KONFIG.BARIS_DATA + n - 1;
   const barisTotal = barisDataAkhir + 2;
   const barisMutasi = barisTotal + 1;
-  pastikanUkuran_(sh, barisMutasi + TOTAL_HARIAN.length - 1, totalKolom);   // total harian lain di bawah baris rekap
+  pastikanUkuran_(sh, barisMutasi + totalHarian_().length - 1, totalKolom);   // total harian lain di bawah baris rekap
 
   // Header
   sh.getRange(1, 1).setValue('No');
@@ -1006,10 +1033,11 @@ function bangunSheet_(sh, cfg, d) {
   sh.getRange(barisMutasi, 2).setValue(KONFIG.LABEL_MUTASI);
   sh.getRange(barisTotal, 3, 1, fTotal.length).setFormulas([fTotal]);
   sh.getRange(barisMutasi, 3, 1, fMutasi.length).setFormulas([fMutasi]);
-  TOTAL_HARIAN.slice(1).forEach((t, i) => {   // baris di bawah baris rekap: masuk hari ini, keluar kemarin / 7 hari / bulan ini
-    sh.getRange(barisMutasi + 1 + i, 3).setFormulas([[rumusTotalHarian_(cfg.log, t.jenis, t.periode)]]);
+  const plan = totalHarian_();
+  plan.slice(1).forEach((t, i) => {   // baris di bawah baris rekap: masuk hari ini, kemarin, lalu produk terpisah
+    sh.getRange(barisMutasi + 1 + i, 3).setFormulas([[rumusTotalHarian_(cfg.log, t.jenis, t.periode, t.golongan)]]);
   });
-  TOTAL_HARIAN.forEach((t, i) => sh.getRange(barisMutasi + i, 3).setNumberFormat(t.format).setFontWeight('bold'));
+  plan.forEach((t, i) => sh.getRange(barisMutasi + i, 3).setNumberFormat(t.format).setFontWeight('bold'));
 
   // Format
   sh.getRange(1, 1, 3, totalKolom).setFontWeight('bold').setHorizontalAlignment('center')
@@ -1389,11 +1417,12 @@ function siapkanRekap_(ss, nama) {
   let sh = ss.getSheetByName(nama);
   if (sh) return sh;
   sh = ss.insertSheet(nama);
-  pastikanUkuran_(sh, 2, KOLOM_REKAP_STATUS);
+  pastikanUkuran_(sh, 2, KOLOM_REKAP_TERPISAH + 1);
   sh.getRange(1, 1, 1, HEADER_REKAP.length).setValues([HEADER_REKAP]).setFontWeight('bold').setBackground(KONFIG.WARNA_SEL.HEADER);
   sh.getRange(1, KOLOM_REKAP_STATUS).setValue('Terakhir dihitung (WIB)').setFontWeight('bold').setBackground(KONFIG.WARNA_SEL.HEADER);
+  if (namaTerpisah_().length) sh.getRange(1, KOLOM_REKAP_TERPISAH, 1, 2).setValues([headerTerpisah_()]).setFontWeight('bold').setBackground(KONFIG.WARNA_SEL.HEADER);
   sh.setFrozenRows(1);
-  [100, 90, 90, 70, 60, 110, 120, 110, 120, 90, 120, 260, 200, 30, 150].forEach((w, i) => sh.setColumnWidth(i + 1, w));
+  [100, 90, 90, 70, 60, 110, 120, 110, 120, 90, 120, 260, 200, 30, 150, 30, 110, 110].forEach((w, i) => sh.setColumnWidth(i + 1, w));
   return sh;
 }
 
@@ -1447,6 +1476,7 @@ function kumpulkanBarisLog_(ss, cfg, semuaSumber, dari) {
 /** Jumlahkan baris Log (kolom A sudah nomor seri) per nomor hari WIB. dari/sampai = nomor hari (null = tanpa batas bawah). */
 function agregasiBaris_(baris, dari, sampai) {
   const hari = {};
+  const terpisah = namaTerpisah_().map(x => x.toLowerCase());
   const info = { dibaca: baris.length, tidakTerbaca: 0, qtyRusak: 0, masaDepan: 0 };
   baris.forEach(b => {
     if (b[0] === null || b[0] === undefined) { info.tidakTerbaca++; return; }
@@ -1455,17 +1485,19 @@ function agregasiBaris_(baris, dari, sampai) {
     if (h > sampai) { info.masaDepan++; return; }
     const jenis = String(b[6]);
     if ((jenis === 'IN' || jenis === 'OUT') && (b[7] === '' || !isFinite(Number(b[7])))) { info.qtyRusak++; return; }   // tidak membuat baris hari "nol" palsu
-    const a = hari[h] || (hari[h] = { masuk: 0, keluar: 0, entri: 0, batalIN: 0, batalOUT: 0, opnameEntri: 0, opnameSelisih: 0, ditolak: 0 });
+    const a = hari[h] || (hari[h] = { masuk: 0, keluar: 0, entri: 0, batalIN: 0, batalOUT: 0, opnameEntri: 0, opnameSelisih: 0, ditolak: 0, terpisahMasuk: 0, terpisahKeluar: 0 });
+    const sendiri = terpisah.length > 0 && terpisah.indexOf(String(b[3]).toLowerCase()) >= 0;   // produk terpisah: satuannya dihitung di kolom sendiri
     if (jenis === 'IN' || jenis === 'OUT') {
       const q = Number(b[7]);
-      if (jenis === 'IN') a.masuk += q; else a.keluar += q;
-      if (q > 0) a.entri++;
-      else if (q < 0) { if (jenis === 'IN') a.batalIN -= q; else a.batalOUT -= q; }
+      if (sendiri) { if (jenis === 'IN') a.terpisahMasuk += q; else a.terpisahKeluar += q; }
+      else if (jenis === 'IN') a.masuk += q; else a.keluar += q;
+      if (q > 0) a.entri++;   // Entri menghitung semua produk (juga pelindung "sumber berkurang")
+      else if (q < 0 && !sendiri) { if (jenis === 'IN') a.batalIN -= q; else a.batalOUT -= q; }
     } else if (jenis === 'KOREKSI') {
       a.opnameEntri++;
       const sb = Number(b[8]);
       const sd = Number(b[9]);
-      if (b[8] !== '' && b[9] !== '' && isFinite(sb) && isFinite(sd)) a.opnameSelisih += sd - sb;
+      if (!sendiri && b[8] !== '' && b[9] !== '' && isFinite(sb) && isFinite(sd)) a.opnameSelisih += sd - sb;
     } else if (jenis === 'DITOLAK') {
       a.ditolak++;
     }
@@ -1475,16 +1507,23 @@ function agregasiBaris_(baris, dari, sampai) {
 
 /** Tabel rekap yang ada: baris per hari ({hari, nilai}) + baris bertanggal tak terbaca (dipertahankan). Tanggal ganda digabung (Entri terbesar menang). */
 function bacaTabelRekap_(sh, zona) {
-  const hasil = { baris: [], lain: [], n: 0 };   // n = jumlah baris data yang dibaca (termasuk baris kosong), untuk membersihkan sisa saat menulis
-  const n = sh.getLastRow() - 1;
+  const hasil = { baris: [], lain: [], n: 0, terpisahOk: false };   // n = jumlah baris data yang dibaca (termasuk baris kosong), untuk membersihkan sisa saat menulis
+  const n = Math.max(sh.getLastRow() - 1, 0);
+  // kolom produk terpisah (Q, R) dipakai hanya bila judulnya sudah tepat (dipasang saat sheet dibuat / menu 4); isian lain di sana tidak ditimpa
+  let tp = null;
+  if (namaTerpisah_().length && sh.getMaxColumns() >= KOLOM_REKAP_TERPISAH + 1) {
+    tp = sh.getRange(1, KOLOM_REKAP_TERPISAH, n + 1, 2).getValues();
+    hasil.terpisahOk = headerTerpisah_().every((x, i) => String(tp[0][i]).trim() === x);
+  }
   if (n < 1) return hasil;
   hasil.n = n;
   const nilai = sh.getRange(2, 1, n, HEADER_REKAP.length).getValues();
+  nilai.forEach((b, i) => { if (hasil.terpisahOk) b.push(tp[i + 1][0], tp[i + 1][1]); });
   const ubahA = konversiKolomWaktu_(nilai.map(b => b[0]), zona);
   const ubahK = konversiKolomWaktu_(nilai.map(b => b[10]), zona);
   const peta = new Map();
   nilai.forEach(b => {
-    if (b.every(x => x === '')) return;
+    if (b.slice(0, HEADER_REKAP.length).every(x => x === '')) return;
     const w = ubahA(b[0]);
     if (w === null) { hasil.lain.push(b); return; }
     const h = Math.floor(w);
@@ -1513,7 +1552,7 @@ function gabungRekap_(lama, baru, paksa, sekarang) {
     const ada = peta.get(h);
     if (!ada || paksa || a.entri >= Number(ada[4] || 0)) {
       peta.set(h, [h, a.masuk, a.keluar, a.masuk - a.keluar, a.entri, a.batalIN, a.batalOUT, a.opnameEntri, a.opnameSelisih, a.ditolak,
-        sekarang, 'OK', ada ? ada[12] : '']);
+        sekarang, 'OK', ada ? ada[12] : '', a.terpisahMasuk, a.terpisahKeluar]);
       ditulis++;
     } else {
       const tetap = ada.slice();
@@ -1527,13 +1566,20 @@ function gabungRekap_(lama, baru, paksa, sekarang) {
   return { baris: baris.concat(lama.lain), ditulis: ditulis, dipertahankan: dipertahankan };
 }
 
-function tulisTabelRekap_(sh, baris, sekarang, nLama, peringatan) {
+function tulisTabelRekap_(sh, baris, sekarang, nLama, peringatan, terpisahOk) {
   pastikanUkuran_(sh, 3, KOLOM_REKAP_STATUS);
   // Tabel baru bisa lebih pendek dari yang lama (tanggal ganda digabung, baris kosong dirapatkan): bersihkan sisa di bawahnya.
-  if (nLama > baris.length) sh.getRange(baris.length + 2, 1, nLama - baris.length, HEADER_REKAP.length).clearContent();
+  if (nLama > baris.length) {
+    sh.getRange(baris.length + 2, 1, nLama - baris.length, HEADER_REKAP.length).clearContent();
+    if (terpisahOk) sh.getRange(baris.length + 2, KOLOM_REKAP_TERPISAH, nLama - baris.length, 2).clearContent();
+  }
   if (baris.length) {
     pastikanUkuran_(sh, baris.length + 1, KOLOM_REKAP_STATUS);
-    sh.getRange(2, 1, baris.length, HEADER_REKAP.length).setValues(baris);
+    sh.getRange(2, 1, baris.length, HEADER_REKAP.length).setValues(baris.map(r => r.slice(0, HEADER_REKAP.length)));
+    if (terpisahOk) {
+      sh.getRange(2, KOLOM_REKAP_TERPISAH, baris.length, 2).setValues(baris.map(r => [r.length > HEADER_REKAP.length ? r[HEADER_REKAP.length] : '', r.length > HEADER_REKAP.length + 1 ? r[HEADER_REKAP.length + 1] : '']));
+      sh.getRange(2, KOLOM_REKAP_TERPISAH, baris.length, 2).setNumberFormat('#,##0');
+    }
     sh.getRange(2, 1, baris.length, 1).setNumberFormat('dd/MM/yyyy');
     sh.getRange(2, 2, baris.length, 9).setNumberFormat('#,##0');
     sh.getRange(2, 11, baris.length, 1).setNumberFormat('dd/MM/yyyy HH:mm');
@@ -1570,7 +1616,7 @@ function perbaruiRekapSatu_(ss, cfg, opsi) {
   }
   const agr = agregasiBaris_(kumpulkanBarisLog_(ss, cfg, semuaSumber, dari), dari, hariIni);
   const gabung = gabungRekap_(lama, agr.hari, !!opsi.paksa, sekarang);
-  tulisTabelRekap_(sh, gabung.baris, sekarang, lama.n, peringatanRekap_(agr.info));
+  tulisTabelRekap_(sh, gabung.baris, sekarang, lama.n, peringatanRekap_(agr.info), lama.terpisahOk);
   return { ditulis: gabung.ditulis, dipertahankan: gabung.dipertahankan, info: agr.info, semuaSumber: semuaSumber };
 }
 
@@ -1733,12 +1779,11 @@ function perbaruiSatu_(ss, cfg) {
 
   // 2. total harian di kolom C (baris rekap harian dan satu baris di bawahnya)
   try {
-    pastikanUkuran_(sh, barisMutasi + TOTAL_HARIAN.length - 1, 3);
-    const nBaca = TOTAL_HARIAN.length + TOTAL_HARIAN_LAMA;
+    const rencana = totalHarian_();
+    const nBaca = Math.max(rencana.length, 8) + 2;   // + sisa versi sebelumnya (7 hari / bulan ini / produk terpisah yang kini dimatikan)
     pastikanUkuran_(sh, barisMutasi + nBaca - 1, 3);
     const f = sh.getRange(barisMutasi, 3, nBaca, 1).getFormulas();
     const v = sh.getRange(barisMutasi, 3, nBaca, 1).getValues();
-    const rencana = TOTAL_HARIAN;
     const ditulis = [];
     rencana.forEach((rc, i) => {
       const r = barisMutasi + i;
@@ -1748,13 +1793,13 @@ function perbaruiSatu_(ss, cfg) {
         lapor.push(awal + 'sel C' + r + ' berisi sesuatu yang bukan rumus total harian; TIDAK ditimpa. Kosongkan dulu bila memang mau diganti.');
         return;
       }
-      sh.getRange(r, 3).setFormulas([[rumusTotalHarian_(cfg.log, rc.jenis, rc.periode)]]).setNumberFormat(rc.format);
+      sh.getRange(r, 3).setFormulas([[rumusTotalHarian_(cfg.log, rc.jenis, rc.periode, rc.golongan)]]).setNumberFormat(rc.format);
       sh.getRange(r, 3).setFontWeight('bold');
       ditulis.push('C' + r + ' (' + rc.nama + ')');
     });
     // baris sisa versi sebelumnya (rumus milik script saja; isian lain tidak disentuh)
-    for (let i = TOTAL_HARIAN.length; i < nBaca; i++) {
-      if (f[i][0].indexOf("=SUMIFS('" + cfg.log + "'!") === 0 && /TODAY\(\)-6|MONTH\(TODAY\(\)\)/.test(f[i][0])) {
+    for (let i = rencana.length; i < nBaca; i++) {
+      if (f[i][0].indexOf("=SUMIFS('" + cfg.log + "'!") === 0) {
         sh.getRange(barisMutasi + i, 3).clearContent().setNumberFormat('General');
         ditulis.push('C' + (barisMutasi + i) + ' (rumus lama dihapus)');
       }
@@ -1789,6 +1834,17 @@ function perbaruiSatu_(ss, cfg) {
     if (sudahAda && HEADER_REKAP.some((x, i) => String(judul[i]).trim() !== x)) {
       lapor.push(awal + 'sheet "' + cfg.rekap + '" sudah ada dengan judul kolom berbeda; TIDAK disentuh. Ganti namanya lalu ulangi.');
     } else {
+      if (namaTerpisah_().length) {
+        pastikanUkuran_(rk, 2, KOLOM_REKAP_TERPISAH + 1);
+        const jt = rk.getRange(1, KOLOM_REKAP_TERPISAH, 1, 2).getValues()[0];
+        const ht = headerTerpisah_();
+        if (jt.every(x => String(x).trim() === '')) {
+          rk.getRange(1, KOLOM_REKAP_TERPISAH, 1, 2).setValues([ht]).setFontWeight('bold').setBackground(KONFIG.WARNA_SEL.HEADER);
+          rk.setColumnWidths(KOLOM_REKAP_TERPISAH, 2, 110);
+        } else if (jt.some((x, i) => String(x).trim() !== ht[i])) {
+          lapor.push(awal + 'kolom Q:R di "' + cfg.rekap + '" berisi hal lain; kolom ' + KONFIG.PRODUK_TERPISAH.label + ' di rekap TIDAK ditulis. Kosongkan Q1:R1 lalu ulangi.');
+        }
+      }
       lapor.push(awal + ringkasRekap_(cfg, denganKunciRekap_(() => perbaruiRekapSatu_(ss, cfg, { semua: true, paksa: false }))));
     }
   } catch (err) {
@@ -1798,7 +1854,7 @@ function perbaruiSatu_(ss, cfg) {
   // pemeriksaan akhir: rumus total harian tidak boleh menampilkan galat
   try {
     SpreadsheetApp.flush();
-    sh.getRange(barisMutasi, 3, TOTAL_HARIAN.length, 1).getValues().forEach((x, i) => {
+    sh.getRange(barisMutasi, 3, totalHarian_().length, 1).getValues().forEach((x, i) => {
       if (/^#/.test(String(x[0]))) lapor.push(awal + 'PERIKSA: C' + (barisMutasi + i) + ' menampilkan ' + x[0] + '.');
     });
   } catch (err) { /* hanya pemeriksaan */ }
