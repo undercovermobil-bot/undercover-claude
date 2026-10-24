@@ -33,6 +33,50 @@ Folder `uji/` (simulasi untuk menguji kode) tidak perlu dipakai.
 8. Opsional: **3. Kunci kolom STOK**. Sheet Log boleh disembunyikan. **Sheet yang sudah pernah dimigrasi** (bukan migrasi baru): jalankan menu **4** sebelum langkah 6 (lihat "Memasang versi kode baru").
 9. 1–3 hari pertama: pantau **Executions** (lihat "Biaya").
 
+## Susunan kolom baru (24 Okt 2026): STOK | OUT | OUT HARI INI
+
+Per warna tetap 3 kolom, tetapi kolom **IN dihapus**:
+
+| Sebelum | Sesudah |
+|---|---|
+| STOK \| IN \| OUT | **STOK** (stok masuk diketik di sini) \| **OUT** (input keluar) \| **OUT HARI INI** (catatan keluar hari ini produk itu, diisi otomatis) |
+
+**Cara pakai staf**
+
+| Kejadian | Yang diketik | Hasil |
+|---|---|---|
+| Barang masuk (stok 20, masuk 2) | `22` langsung di kolom **STOK** | STOK jadi 22. Log mencatat `KOREKSI` (sebelum 20, sesudah 22). **Tidak dihitung sebagai "Masuk"**; Masuk tidak dicatat lagi. |
+| Barang keluar | angka di kolom **OUT**, Enter | STOK turun, **OUT HARI INI** naik, Log `OUT` |
+| Salah ketik OUT hari ini | `B` + jumlah (mis. `B1`) di sel OUT yang sama | STOK naik, OUT HARI INI turun, Log `OUT` dengan Qty negatif |
+| Hasil cek gudang (opname) berbeda dari STOK | jumlah **fisik sekarang** langsung di kolom **STOK** | STOK ditimpa, Log `KOREKSI`. **Jangan input OUT lagi dan jangan menghapus apa pun**: OUT yang sudah tercatat tetap benar dan tetap ada di OUT HARI INI. |
+| Salah ketik di STOK sendiri | ketik lagi angka yang benar di STOK | tercatat `KOREKSI` lagi |
+
+**Dua tombol rekap** (menu **📦 Sistem Stok**)
+- **Rekap harian: simpan sekarang (TANPA reset)**: menyimpan angka hari ini ke sheet Rekap Harian. OUT HARI INI dan total "Keluar hari ini" tidak berubah.
+- **Rekap harian: simpan lalu RESET OUT hari ini jadi 0**: menyimpan rekap dulu, lalu mengosongkan semua kolom OUT HARI INI dan total "Keluar hari ini" jadi 0. Dipakai misalnya jam 19.00, atau saat jumlah stok meleset dan penghitungan harus mulai dari nol. Rekap hari itu **tetap memuat semua entri sebelum reset** (dihitung dari Log); STOK dan Log tidak berubah. Kalau rekap gagal, reset dibatalkan.
+- Tengah malam WIB OUT HARI INI kembali 0 sendiri (entri pertama hari baru, atau trigger malam ±00.30, mana yang lebih dulu). Angka hari lalu tetap ada di Log, Rekap Harian, dan baris **Keluar kemarin**.
+- **Hitung ulang OUT HARI INI dari Log**: perbaikan kalau ada angka yang meleset (mis. sel diedit manual). Dihitung dari Log sejak reset terakhir, atau sejak tengah malam. Kalau ada dua baris produk dengan nama + SKU sama, hanya baris pertama yang terisi.
+
+**Kolom C di bawah "MASUK / KELUAR HARI INI"** (susunan baru): 1. **Keluar hari ini** (jumlah kolom OUT HARI INI, tanpa Motor), 2. **Keluar kemarin** (dari Log), 3. **Motor keluar** (hari ini), 4. **Motor keluar kemarin**. Baris Masuk **dihapus**. Per warna, baris yang sama berisi total OUT HARI INI warna itu.
+
+**Mengubah sheet yang sudah dipakai: menu 5** (tanpa migrasi ulang). Urutan aman:
+1. **File → Make a copy** (cadangan), minta staf menutup file ±1 menit.
+2. Pastikan tidak ada angka tertinggal di kolom IN/OUT. Menu 5 menolak sheet yang masih punya angka di sana (dilaporkan baris dan kolomnya).
+3. Tempel `Kode.gs` baru, simpan, refresh Google Sheet.
+4. Menu **5. Ubah susunan kolom** → Yes. Baca dialognya: harus ada "susunan kolom diubah", "total harian ... diperbarui", dan "OUT HARI INI diisi dari Log hari ini". Menu 5 mengubah label baris 3, tampilan kolom, validasi, baris total di kolom C, banner, Rekap, lalu mengisi OUT HARI INI dari OUT hari ini di Log. **STOK dan Log tidak diubah.** Bisa diulang bila gagal di tengah.
+5. Kalau sebelumnya memakai menu 3 (kunci): jalankan **3** lagi. Di susunan baru, kolom STOK dan OUT boleh diisi staf; hanya OUT HARI INI yang terkunci.
+6. Tes: ketik OUT 1 di satu produk (STOK turun 1, OUT HARI INI = 1), lalu `B1` (kembali), lalu ketik STOK baru di sel lain (Log mencatat KOREKSI dengan angka "Stok Sebelum" yang benar).
+7. Tidak perlu menu 2 lagi (trigger tidak berubah).
+- **Jalan mundur**: pulihkan dari salinan/Version history, tempel kode lama. Entri yang dicatat sesudah konversi tetap ada di Log.
+
+**Yang perlu diketahui**
+- Kolom STOK sekarang diketik staf, jadi **salah ketik di STOK langsung mengubah stok** (tercatat di Log, tetapi tidak ada pengaman seperti `B`). Cek ulang angkanya sebelum Enter.
+- "Stok Sebelum" di Log untuk edit STOK kini diambil dari Log (stok sesudah terakhir produk dan warna itu). Sebelumnya sering kosong atau 0 karena Google tidak memberi nilai lama dengan konsisten. Kalau produk itu belum pernah tercatat di Log, kolomnya kosong dengan keterangan "stok sebelum tidak diketahui". Karena itu "Selisih opname" di Rekap kini terisi mulai hari ini; hari-hari lama tetap 0.
+- Rekap Harian: kolom Masuk tidak terisi lagi untuk entri baru (tidak ada IN). Kenaikan stok terlihat sebagai "Selisih opname (unit)".
+- Edit manual di kolom OUT HARI INI diabaikan dan tidak dicatat; angkanya diperbaiki oleh menu "Hitung ulang".
+- Entri di detik yang sama dengan reset dianggap sebelum reset (hanya berpengaruh pada "Hitung ulang").
+- Dugaan lama bahwa file berlokal Indonesia (rumus validasi bertitik koma) penyebab error migrasi 20 Okt **keliru**: file asli berlokal **en_US**. Penyebab sebenarnya belum diketahui; rumus berkoma yang terpasang sekarang bekerja.
+
 ## Daftar urutan produk (100 SKU terlaris)
 
 Urutan produk sheet baru **tidak sama dengan sheet lama**. Urutan, nama, dan Kode SKU diambil dari sheet **Urutan UC** dan **Urutan STP** (satu baris per produk). Isinya dibuat dari file `Urutan Stok UC STP.xlsx` (sumber data di repo: `uji/daftar-urutan.js`) dan harus **diimpor ke Google Sheet sebelum menu 1a / 1b**.
@@ -76,7 +120,7 @@ Setelah migrasi, urutan sudah ada di sheet baru: tambah / hapus produk dikerjaka
 
 ## Cara kerja
 
-Tiap warna jadi 3 kolom: **STOK | IN | OUT**.
+Tiap warna jadi 3 kolom: **STOK | IN | OUT** (**susunan lama**, berlaku sampai sheet diubah dengan menu 5; susunan terbaru **STOK | OUT | OUT HARI INI** dijelaskan di bagian "Susunan kolom baru" di atas).
 
 | Aksi staf | Hasil otomatis (beberapa detik) |
 |---|---|
@@ -291,7 +335,7 @@ Kalau semua pengguna dipercaya dan Log cukup, boleh tidak dikunci. Untuk membuka
 
 Kalau migrasi error di tengah jalan, sheet lama tidak berubah (script menghapus sheet setengah jadi dan sheet Log kosong yang dibuatnya). Zona waktu file baru diubah setelah migrasi berhasil.
 
-**Migrasi gagal dengan pesan "Argumen aturan validasi data "=AND(ISNUMBER(D4),…" tidak valid"** (kode sebelum 2026-10-20 di file berlokal Indonesia, yang memakai titik koma sebagai pemisah argumen rumus): tempel `Kode.gs` terbaru lalu ulangi menu 1a/1b. Sheet tidak diubah saat migrasi gagal, jadi aman diulang (kalau ada tab sisa bernama "… (baru)", hapus dulu). Kode baru mencoba rumus validasi berkoma, lalu bertitik koma, lalu aturan "angka antara"; kalau semuanya ditolak Google, migrasi tetap selesai tanpa validasi dan menyebutnya di catatan akhir (script tetap menolak isian salah dengan tanda merah + catatan). Lokal file dilihat di **File → Settings → General → Locale**. Cadangan kalau masih gagal: ubah Locale ke United States sementara, jalankan migrasi, lalu kembalikan (rumus ikut menyesuaikan sendiri).
+**Migrasi gagal dengan pesan "Argumen aturan validasi data "=AND(ISNUMBER(D4),…" tidak valid"** (kode sebelum 2026-10-20 di file berlokal Indonesia, yang memakai titik koma sebagai pemisah argumen rumus): tempel `Kode.gs` terbaru lalu ulangi menu 1a/1b. Sheet tidak diubah saat migrasi gagal, jadi aman diulang (kalau ada tab sisa bernama "… (baru)", hapus dulu). Kode baru mencoba rumus validasi berkoma, lalu bertitik koma, lalu aturan "angka antara"; kalau semuanya ditolak Google, migrasi tetap selesai tanpa validasi dan menyebutnya di catatan akhir (script tetap menolak isian salah dengan tanda merah + catatan). Lokal file dilihat di **File → Settings → General → Locale**. (Koreksi 24 Okt: file asli ternyata berlokal en_US, jadi dugaan lokal ini keliru; penyebab error 20 Okt belum diketahui.) Cadangan kalau masih gagal: ubah Locale ke United States sementara, jalankan migrasi, lalu kembalikan (rumus ikut menyesuaikan sendiri).
 
 Menu **📦 Sistem Stok** tidak muncul? Cek: kode sudah di-save (Ctrl+S), Apps Script dibuka lewat **Extensions → Apps Script** dari spreadsheet yang sama, file sudah format Google Sheets (bukan .xlsx), lalu refresh lagi.
 
