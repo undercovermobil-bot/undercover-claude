@@ -290,7 +290,6 @@ function prosesBlok_(ss, sheet, cfg, peta, edit, e) {
   if (!peta.labelAda || peta.barisTotal - 1 < KONFIG.BARIS_DATA || peta.kolomTerakhir < 1) return;
   // Rekap "hari ini" memakai TODAY() menurut zona file, jam Log memakai WIB: samakan.
   if (ss.getSpreadsheetTimeZone() !== KONFIG.ZONA_WAKTU) ss.setSpreadsheetTimeZone(KONFIG.ZONA_WAKTU);
-  if (peta.layoutBaru) pastikanHariBerjalan_(ss, sheet, cfg, peta);   // hari berganti: kolom OUT HARI INI mulai dari 0
   // Ulangi penyapuan selama masih ada yang diproses: sel yang diketik staf selagi putaran sebelumnya berjalan ikut terbawa,
   // sehingga trigger yang kalah giliran lock tidak meninggalkan angka. Putaran ke-2 dst. hanya menyapu (tanpa area edit).
   for (let putaran = 1; putaran <= KONFIG.PUTARAN_MAKS; putaran++) {
@@ -302,6 +301,13 @@ function prosesBlok_(ss, sheet, cfg, peta, edit, e) {
 /** Satu putaran penyapuan. Mengembalikan jumlah sel IN/OUT yang berhasil diproses. */
 function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
   const namaSheet = sheet.getName();
+  const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script. Satu instan untuk hari berganti DAN stempel Log.
+  // Hari berganti: kolom OUT HARI INI mulai dari 0. Sebelum blok dibaca (angka di memori harus yang terbaru). Gagal (mis. izin) tidak boleh
+  // menghentikan pemrosesan STOK: OUT HARI INI saja yang dilewati (diperbaiki lewat menu "Hitung ulang OUT HARI INI").
+  if (peta.layoutBaru && !peta.hariGagal) {
+    try { pastikanHariBerjalan_(ss, sheet, cfg, peta, Math.floor(waktu)); }
+    catch (err) { peta.hariGagal = true; console.error('OUT HARI INI tidak diperbarui: ' + err.message); ss.toast('OUT HARI INI belum diperbarui (' + err.message + '). STOK tetap diproses.', 'Perhatian', 8); }
+  }
   const baris0 = KONFIG.BARIS_DATA;
   const baris1 = peta.barisTotal - 1;
   const kol1 = peta.kolomTerakhir;
@@ -333,7 +339,6 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
   // Jangan menandai merah sel yang isinya sudah berubah/terhapus sejak dibaca (staf bisa menghapus selagi diproses).
   const tandai = (sel, nilai, pesanError) => (sel.getValue() === nilai ? tandaiError_(sel, pesanError) : false);
   const user = emailUser_(e || {});
-  const waktu = waktuSerial_(new Date());   // jam WIB sebagai angka, tidak tergantung zona waktu file/script
   const log = [];
   const pesan = [];
   const selesai = [];   // sel IN/OUT yang sudah diproses, dikosongkan setelah dicek ulang
@@ -342,7 +347,12 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
   const ambilNet = () => netBatal || (netBatal = netHariIni_(ss, cfg, Math.floor(waktu), log));
   // Stok terakhir per produk x warna menurut Log, dibaca malas (hanya saat ada koreksi STOK): e.oldValue dari Google tidak bisa diandalkan.
   let logStok = null;
-  const ambilLogStok = () => logStok || (logStok = bacaLogStok_(ss, cfg));
+  let logStokGagal = false;
+  const ambilLogStok = () => {
+    if (logStok) return logStok;
+    if (logStokGagal) return [];
+    try { return (logStok = bacaLogStok_(ss, cfg)); } catch (err) { logStokGagal = true; return []; }   // koreksi tetap dicatat, stok sebelum "tidak diketahui"
+  };
 
   try {
   for (let r = baris0; r <= baris1; r++) {
@@ -370,7 +380,10 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
         // Stok sebelum: dari Log (stok sesudah terakhir produk x warna ini). e.oldValue dari Google terbukti tidak konsisten (kosong, atau 0 padahal
         // sel berisi), jadi hanya dipakai bila Log belum punya catatan produk ini.
         let lama = stokTerakhir_(ambilLogStok(), log, produk, sku, info.warna);
-        if (lama === null && satuSel && e && e.oldValue !== undefined && e.oldValue !== '') lama = angkaStok_(e.oldValue);
+        if (lama === null && satuSel && e && e.oldValue !== undefined && e.oldValue !== '') {
+          const v = angkaStok_(e.oldValue);
+          if (v !== null && v !== 0) lama = v;   // 0 dari Google terbukti bisa palsu (sel berisi): dianggap tidak diketahui
+        }
         log.push([waktu, namaSheet, r, produk, sku, info.warna, 'KOREKSI', '', lama === null ? '' : lama, baru, user,
           (satuSel ? 'Edit langsung kolom STOK' : 'Edit banyak sel sekaligus') + (lama === null ? ', stok sebelum tidak diketahui' : '')]);
         continue;
@@ -455,16 +468,23 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
 
       sheet.getRange(r, info.kolomStok).setValue(sesudah);
       baris[info.kolomStok - 1] = sesudah;
-      if (info.kolomHari) {   // layout baru: catatan keluar hari ini di sebelah kolom OUT
-        const hl = baris[info.kolomHari - 1];
-        const hb = Math.max(0, (typeof hl === 'number' && isFinite(hl) ? hl : 0) + (batal !== null ? -batal : qty));
-        sheet.getRange(r, info.kolomHari).setValue(hb);
-        baris[info.kolomHari - 1] = hb;
-      }
       selesai.push({ r: r, c: c, nilai: nilai, sel: sel, jenis: info.jenis, warna: info.warna, catatan: catatanSel });
       baris[c - 1] = '';
       log.push([waktu, namaSheet, r, produk, sku, info.warna, info.jenis, qtyLog, sebelum, sesudah, pelaku, [ketBatal, ket].filter(Boolean).join('; ')]);
       pesan.push((ketBatal ? ketBatal + ' ' + batal + ' · ' : '') + produk + ' ' + info.warna + ': ' + sebelum + ' → ' + sesudah);
+      // Layout baru: catatan keluar hari ini di sebelah kolom OUT. SESUDAH STOK ditulis dan entri dicatat (selesai/log): kalau penulisan ini gagal,
+      // entri tidak boleh diproses ulang (STOK terpotong dua kali). Gagal = dilewati; menu "Hitung ulang OUT HARI INI" memulihkan dari Log.
+      if (info.kolomHari && !peta.hariGagal) {
+        try {
+          const hl = baris[info.kolomHari - 1];
+          const hb = Math.max(0, (typeof hl === 'number' && isFinite(hl) ? hl : 0) + (batal !== null ? -batal : qty));
+          sheet.getRange(r, info.kolomHari).setValue(hb);
+          baris[info.kolomHari - 1] = hb;
+        } catch (err) {
+          peta.hariGagal = true;
+          console.error('OUT HARI INI baris ' + r + ' gagal ditulis: ' + err.message);
+        }
+      }
     }
   }
 
@@ -2447,8 +2467,8 @@ function kosongkanHari_(sheet, peta) {
  * Pastikan angka OUT HARI INI milik hari ini. Hari berganti: kosongkan (angka hari lalu tetap di Log dan Rekap Harian).
  * Belum ada status (mis. sheet baru dikonversi lewat cara lain): bangun dari Log. Lock dokumen sudah dipegang pemanggil.
  */
-function pastikanHariBerjalan_(ss, sheet, cfg, peta) {
-  const hari = Math.floor(waktuSerial_(new Date()));
+function pastikanHariBerjalan_(ss, sheet, cfg, peta, hariOpsi) {
+  const hari = hariOpsi !== undefined ? hariOpsi : Math.floor(waktuSerial_(new Date()));
   const st = bacaStatusHari_(cfg);
   if (st && st.hari >= hari) return;
   if (!st) { hitungUlangHari_(ss, sheet, cfg, peta, hari); return; }
@@ -2508,7 +2528,13 @@ function hitungUlangHari_(ss, sheet, cfg, peta, hari, sejak) {
 function styleKolomHari_(sh, kolom, nBaris) {
   const r = sh.getRange(KONFIG.BARIS_DATA, kolom, nBaris, 1);
   r.setBackground(WARNA_KOLOM_HARI).setFontWeight('bold').setNumberFormat(KONFIG.FORMAT_STOK).setHorizontalAlignment('center');
-  try { r.clearDataValidations(); } catch (err) { /* tidak ada validasi */ }
+  // Ketikan staf di kolom ini ditolak Sheets (rumus selalu salah); tulisan script tidak terkena validasi. Tanpa ini staf bisa mengira ini kolom input.
+  try {
+    r.setDataValidation(SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false)
+      .setHelpText('Kolom ini terisi otomatis. Ketik jumlah keluar di kolom OUT di sebelah kiri.').build());
+  } catch (err) {
+    try { r.clearDataValidations(); } catch (e2) { /* tanpa validasi: edit di sini diabaikan script */ }
+  }
 }
 
 /** Rumus di kolom C milik script (total harian)? Dikenali dari awal rumusnya; isian/rumus lain tidak pernah ditimpa atau dihapus. */
