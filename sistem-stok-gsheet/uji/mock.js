@@ -19,12 +19,17 @@ class Sheet {
   getRange(a, b, c, d) {
     if (typeof a === 'string') {
       const m = a.match(/^([A-Z]+):([A-Z]+)$/);
-      if (!m) throw new Error('A1 notation tidak didukung mock: ' + a);
-      const c1 = colNum(m[1]), c2 = colNum(m[2]);
-      return new Range(this, 1, c1, this.maxRows, c2 - c1 + 1);
+      if (m) {
+        const c1 = colNum(m[1]), c2 = colNum(m[2]);
+        return new Range(this, 1, c1, this.maxRows, c2 - c1 + 1);
+      }
+      const m2 = a.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+      if (!m2) throw new Error('A1 notation tidak didukung mock: ' + a);
+      return new Range(this, +m2[2], colNum(m2[1]), +m2[4] - +m2[2] + 1, colNum(m2[3]) - colNum(m2[1]) + 1);
     }
     return new Range(this, a, b, c === undefined ? 1 : c, d === undefined ? 1 : d);
   }
+  getRangeList(daftar) { const r = daftar.map(a => this.getRange(a)); this.ss.__panggilanRangeList = (this.ss.__panggilanRangeList || 0) + 1; return { clearContent() { r.forEach(x => x.clearContent()); return this; } }; }
   getLastRow() { let m = 0; for (const [k, x] of this.cells) if (x.v !== '' || x.f !== '') m = Math.max(m, +k.split(',')[0]); return m; }
   getLastColumn() { let m = 0; for (const [k, x] of this.cells) if (x.v !== '' || x.f !== '') m = Math.max(m, +k.split(',')[1]); return m; }
   getMaxRows() { return this.maxRows; }
@@ -148,12 +153,13 @@ function colNum(s) { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0
 
 // Konstanta `const` tingkat atas tidak jadi properti global di vm: diekspor lewat globalThis.__KONFIG / __K supaya uji bisa membacanya.
 const EKSPOR_KONSTANTA = "\n;globalThis.__KONFIG = KONFIG; globalThis.__K = {}; " +
-  "['HEADER_LOG', 'HEADER_REKAP', 'TEKS_BANNER_LAMA', 'TEKS_BANNER_BARU', 'FORMAT_TOTAL_KELUAR', 'FORMAT_TOTAL_MASUK', 'KOLOM_REKAP_STATUS']" +
+  "['HEADER_LOG', 'HEADER_REKAP', 'TEKS_BANNER_LAMA', 'TEKS_BANNER_BARU', 'FORMAT_TOTAL_KELUAR', 'FORMAT_TOTAL_MASUK', 'KOLOM_REKAP_STATUS', 'TEKS_BANNER_HARI', 'TEKS_BANNER_HARI_TANPA_B', 'LEBAR_KOLOM_HARI']" +
   ".forEach(n => { try { globalThis.__K[n] = eval(n); } catch (e) { /* konstanta belum ada di versi kode ini */ } });";
 
 function buatKonteks(ss, opsi = {}) {
   const alerts = [];
   const triggers = [];
+  const propDok = opsi.propDok || {};
   // opsi.tolakValidasi = { di: 'require' | 'build' | 'apply', formula: f => bool, rentang: bool } mensimulasikan lokal file yang menolak
   // rumus validasi (mis. id_ID: pemisah argumen titik koma, rumus berkoma ditolak Google dengan "Argumen aturan validasi data ... tidak valid").
   const dvBuilder = () => {
@@ -197,6 +203,13 @@ function buatKonteks(ss, opsi = {}) {
         return fmt.replace('yyyy', p.year).replace('MM', p.month).replace('dd', p.day).replace('HH', p.hour).replace('mm', p.minute).replace('ss', p.second);
       },
     },
+    PropertiesService: {
+      getDocumentProperties: () => ({
+        getProperty: k => (k in propDok ? propDok[k] : null),
+        setProperty(k, v) { propDok[k] = String(v); return this; },
+        deleteProperty(k) { delete propDok[k]; return this; },
+      }),
+    },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@x' }), getActiveUser: () => ({ getEmail: () => '' }) },
     ScriptApp: {
       getProjectTriggers: () => triggers.slice(),
@@ -208,6 +221,9 @@ function buatKonteks(ss, opsi = {}) {
   vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + EKSPOR_KONSTANTA, ctx, { filename: 'Kode.gs' });
   // Penyapu hanya bekerja 06-19 WIB: tanpa ini uji bergantung jam nyata. Uji jam kerja mengatur SAPU_JAM sendiri; opsi.jamAsli = pakai nilai kode.
   if (!opsi.jamAsli) ctx.__KONFIG.SAPU_JAM = { awal: 0, akhir: 24 };
+  // Uji lama memakai susunan STOK/IN/OUT; uji layout baru memakai opsi.layout = 'baru'.
+  ctx.__KONFIG.LAYOUT = opsi.layout || 'lama';
+  ctx.__propDok = propDok;
   ctx.__alerts = alerts; ctx.__triggers = triggers; ctx.__opsi = opsi;
   return ctx;
 }

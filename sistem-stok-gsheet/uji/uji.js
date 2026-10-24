@@ -1665,6 +1665,261 @@ const penuh = logUC().getLastRow(); logUC().maxRows = penuh;
 const stokPenuh = uv(4, D);
 edit(U, 4, E, 1); cek(uv(4, D) === stokPenuh + 1 && logUC().getLastRow() === penuh + 1, 'log tumbuh melewati batas baris');
 
+// =====================================================================================================
+// LAYOUT BARU (2026-10-24): STOK | OUT | OUT HARI INI. Stok masuk diketik di STOK (KOREKSI), kolom IN dihapus.
+// =====================================================================================================
+// Jam palsu: geser "sekarang" di konteks kode (Log dan reset memakai detik sebagai resolusi).
+const geserJam = (u, ms) => { u.ctx.__geser = (u.ctx.__geser || 0) + ms; const g = u.ctx.__geser; require('vm').runInContext('Date = (function (Asli) { return class extends Asli { constructor(...a) { if (a.length) super(...a); else super(Asli.now() + ' + g + '); } static now() { return Asli.now() + ' + g + '; } }; })(Object.getPrototypeOf(Date) === Function.prototype ? Date : Date);', u.ctx); };
+const B_STOK = 4, B_OUT = 5, B_HARI = 6, H2_STOK = 7, H2_OUT = 8, H2_HARI = 9;
+const SEDIA_BARU = () => SEDIA_UC({ layout: 'baru' });
+const hariSel = (u, r, c) => { const x = u.BU.peek(r, c); return x ? x.v : ''; };
+const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'null');
+
+// ---------- struktur sheet baru
+{
+  const u = SEDIA_BARU();
+  const peta = u.ctx.bacaPeta_(u.BU);
+  cek(peta.layoutBaru === true && peta.kolom[B_STOK].jenis === 'STOK' && peta.kolom[B_OUT].jenis === 'OUT' && peta.kolom[B_HARI].jenis === 'HARI' && peta.kolom[B_OUT].kolomHari === B_HARI, 'peta layout baru: STOK/OUT/HARI, OUT tahu kolom HARI-nya');
+  cek([4, 5, 6, 7, 8, 9].map(c => u.BU.peek(3, c).v).join('|') === 'STOK|OUT|OUT HARI INI|STOK|OUT|OUT HARI INI', 'judul baris 3 per warna');
+  cek(!!u.BU.peek(4, B_OUT).dv && /REGEXMATCH/.test(u.BU.peek(4, B_OUT).dv.f) && !u.BU.peek(4, B_HARI).dv && !!u.BU.peek(4, B_STOK).dv, 'validasi: OUT menerima B+angka, OUT HARI INI tanpa validasi, STOK tetap');
+  cek(u.BU.peek(4, B_HARI).bg === '#efefef' && u.BU.peek(4, B_HARI).nf === u.kons().FORMAT_STOK && u.BU.getColumnWidth(B_HARI) === u.ctx.__K.LEBAR_KOLOM_HARI, 'kolom OUT HARI INI: latar abu muda, nol tidak tampil, lebar sendiri');
+  cek(u.BU.getRange(1, 4).getValue() === u.ctx.__K.TEKS_BANNER_HARI, 'banner menjelaskan: stok masuk diketik di STOK');
+  const rm = peta.barisTotal + 1;
+  const f = i => u.BU.getRange(rm + i, 3).getFormula();
+  const eb = peta.barisTotal - 1;
+  cek(f(0) === '=SUMIF($D$3:$AY$3,"OUT HARI INI",$D$' + rm + ':$AY$' + rm + ')-SUMPRODUCT(($B$4:$B$' + eb + '="Motor")*($D$3:$AY$3="OUT HARI INI"),$D$4:$AY$' + eb + ')', 'C(mutasi): Keluar hari ini = jumlah kolom OUT HARI INI dikurangi Motor: ' + f(0));
+  cek(/"OUT".*"<>Motor".*TODAY\(\)-1/.test(f(1)) && /SUMPRODUCT/.test(f(2)) && f(2).indexOf('-SUMPRODUCT') < 0 && /"OUT".*"Motor".*TODAY\(\)-1/.test(f(3)) && f(4) === '', 'baris lain: Keluar kemarin (Log), Motor keluar hari ini (kolom), Motor keluar kemarin (Log); tanpa baris Masuk');
+  cek(u.BU.getRange(rm, B_HARI).getFormula() === '=SUM(F4:F' + eb + ')' && u.BU.getRange(rm, B_OUT).getFormula() === '' && u.BU.getRange(rm, H2_HARI).getFormula() === '=SUM(I4:I' + eb + ')', 'total per warna di kolom OUT HARI INI; kolom OUT kosong');
+  cek(statusHari(u) && statusHari(u).hari === Math.floor(u.ctx.waktuSerial_(new Date())), 'migrasi menyimpan status hari ini');
+}
+
+// ---------- OUT mengisi OUT HARI INI; B mengurangi; ditolak tidak mengubah
+{
+  const u = SEDIA_BARU();
+  const s0 = u.st(4, B_STOK);
+  u.kirim(4, B_OUT, 3);
+  cek(u.st(4, B_STOK) === s0 - 3 && u.sel(4, B_OUT).v === '' && hariSel(u, 4, B_HARI) === 3 && u.log1()[6] === 'OUT' && u.log1()[7] === 3, 'OUT 3: STOK turun 3, sel OUT kosong, OUT HARI INI = 3, Log OUT 3');
+  u.kirim(4, B_OUT, 2);
+  cek(hariSel(u, 4, B_HARI) === 5, 'OUT 2 lagi: OUT HARI INI = 5 (kumulatif)');
+  u.kirim(4, B_OUT, 'B1');
+  cek(hariSel(u, 4, B_HARI) === 4 && u.st(4, B_STOK) === s0 - 4 && u.log1()[7] === -1 && /BATAL OUT/.test(u.log1()[11]), 'B1: OUT HARI INI turun jadi 4, STOK naik 1, Log Qty -1');
+  u.kirim(4, B_OUT, 'B9');
+  cek(hariSel(u, 4, B_HARI) === 4 && u.st(4, B_STOK) === s0 - 4 && u.sel(4, B_OUT).bg === '#e06666' && /DITOLAK/.test(u.sel(4, B_OUT).note), 'B melebihi net hari ini: ditolak, OUT HARI INI dan STOK tidak berubah');
+  u.kirim(4, B_OUT, '');
+  u.kirim(4, B_OUT, s0 + 50);
+  cek(hariSel(u, 4, B_HARI) === 4 && u.sel(4, B_OUT).bg === '#e06666', 'OUT melebihi stok: ditolak, OUT HARI INI tidak berubah');
+  u.kirim(4, B_OUT, '');
+  u.kirim(4, H2_OUT, 1); u.kirim(5, B_OUT, 2);
+  cek(hariSel(u, 4, H2_HARI) === 1 && hariSel(u, 5, B_HARI) === 2 && hariSel(u, 4, B_HARI) === 4, 'warna dan produk lain punya catatan sendiri-sendiri');
+  // edit manual di OUT HARI INI diabaikan (tanpa Log, tanpa tanda merah)
+  const n = u.nLog();
+  u.BU.getRange(4, B_HARI).setValue(77);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(4, B_HARI), source: u.ss, value: '77' });
+  cek(u.nLog() === n && u.sel(4, B_HARI).bg === '#efefef', 'edit manual di OUT HARI INI diabaikan (tidak dicatat, tidak ditandai)');
+  // angka tertinggal di OUT (trigger terlewat) diproses penyapu dan ikut mengisi OUT HARI INI
+  u.BU.getRange(6, B_OUT).setValue(2);
+  const sb = u.st(6, B_STOK);
+  u.ctx.sapuInputStok();
+  cek(u.st(6, B_STOK) === sb - 2 && hariSel(u, 6, B_HARI) === 2 && u.sel(6, B_OUT).v === '', 'penyapu: angka tertinggal di OUT diproses dan masuk OUT HARI INI');
+}
+
+// ---------- ganti hari, reset, hitung ulang
+{
+  const u = SEDIA_BARU();
+  const hari = Math.floor(u.ctx.waktuSerial_(new Date()));
+  u.kirim(4, B_OUT, 2);
+  // hari berganti (status kemarin, sel masih berisi angka kemarin): entri pertama hari ini mengosongkan dulu
+  u.ctx.__propDok['HARI|Stok Cover UC'] = JSON.stringify({ hari: hari - 1, sejak: hari - 1 });
+  u.BU.getRange(4, B_HARI).setValue(9); u.BU.getRange(5, B_HARI).setValue(4);
+  u.kirim(6, B_OUT, 1);
+  cek(hariSel(u, 4, B_HARI) === '' && hariSel(u, 5, B_HARI) === '' && hariSel(u, 6, B_HARI) === 1 && statusHari(u).hari === hari, 'hari berganti: OUT HARI INI kemarin dikosongkan sebelum entri pertama hari ini');
+  // trigger malam melakukannya walau tidak ada entri
+  u.ctx.__propDok['HARI|Stok Cover UC'] = JSON.stringify({ hari: hari - 1, sejak: hari - 1 });
+  u.BU.getRange(4, B_HARI).setValue(9);
+  u.ctx.rekapHarianOtomatis();
+  cek(hariSel(u, 4, B_HARI) === '' && statusHari(u).hari === hari, 'trigger malam: hari berganti, OUT HARI INI kosong tanpa menunggu entri');
+  // tanpa status (mis. properti hilang): dibangun dari Log hari ini
+  delete u.ctx.__propDok['HARI|Stok Cover UC'];
+  u.BU.getRange(4, B_HARI).setValue(55); u.BU.getRange(7, B_HARI).setValue(5);
+  u.kirim(5, B_OUT, 1);
+  cek(hariSel(u, 4, B_HARI) === 2 && hariSel(u, 6, B_HARI) === 1 && hariSel(u, 5, B_HARI) === 1 && hariSel(u, 7, B_HARI) === '', 'status hilang: dibangun dari Log (OUT 2 baris 4, OUT 1 baris 6, OUT 1 baris 5), angka liar dibuang');
+}
+{
+  const u = SEDIA_BARU();
+  u.kirim(4, B_OUT, 3); u.kirim(5, B_OUT, 2);
+  const nLog = u.nLog();
+  const LGbaris = () => u.LG().getRange(2, 1, u.nLog(), 12).getValues().map(r => r.slice(6, 8).join(':')).join(',');
+  const logSebelum = LGbaris();
+  // jawab TIDAK: tidak ada yang berubah
+  u.ctx.__opsi.jawab = 'NO';
+  u.ctx.rekapDanResetHariIni();
+  u.ctx.__opsi.jawab = 'YES';
+  cek(hariSel(u, 4, B_HARI) === 3 && hariSel(u, 5, B_HARI) === 2, 'rekap + reset: jawab Tidak -> tidak ada yang berubah');
+  geserJam(u, 3000);
+  u.ctx.rekapDanResetHariIni();
+  geserJam(u, 3000);
+  const rk = u.ss.getSheetByName('Rekap Harian UC');
+  const r2 = rk.getRange(2, 1, 1, 18).getValues()[0];
+  cek(r2[2] === 5 && r2[4] === 2, 'rekap + reset: rekap menyimpan SEMUA entri sebelum reset (Keluar 5, Entri 2): ' + JSON.stringify(r2.slice(0, 5)));
+  cek(hariSel(u, 4, B_HARI) === '' && hariSel(u, 5, B_HARI) === '' && u.nLog() === nLog && LGbaris() === logSebelum, 'rekap + reset: OUT HARI INI kosong; Log tidak berubah');
+  cek(statusHari(u).sejak > Math.floor(u.ctx.waktuSerial_(new Date())) && /direset ke 0/.test(u.ctx.__alerts.slice(-1)[0]), 'rekap + reset: status "sejak" = saat reset; dialog melapor');
+  // entri sesudah reset mulai dari 0; rekap hari ini ikut bertambah
+  u.kirim(4, B_OUT, 1);
+  cek(hariSel(u, 4, B_HARI) === 1, 'sesudah reset: OUT HARI INI mulai dari 0 (1, bukan 4)');
+  // B atas entri SEBELUM reset: boleh (net dari Log), OUT HARI INI tidak jadi minus
+  u.kirim(4, B_OUT, 'B2');
+  cek(hariSel(u, 4, B_HARI) === 0 && u.sel(4, B_OUT).note === '', 'B atas entri sebelum reset: diterima, OUT HARI INI tidak minus (0)');
+  // hitung ulang dari Log sejak reset: hanya entri sesudah reset (OUT 1, B2 -> bersih -1 -> 0)
+  u.BU.getRange(4, B_HARI).setValue(99); u.BU.getRange(9, H2_HARI).setValue(7);
+  u.ctx.hitungUlangOutHariIni();
+  cek(hariSel(u, 4, B_HARI) === '' && hariSel(u, 9, H2_HARI) === '' && /dihitung ulang dari Log/.test(u.ctx.__alerts.slice(-1)[0]), 'hitung ulang: angka liar dibuang, hanya entri sejak reset yang dihitung');
+  // tanpa reset: hitung ulang sejak tengah malam memuat semua entri hari ini
+  delete u.ctx.__propDok['HARI|Stok Cover UC'];
+  u.ctx.hitungUlangOutHariIni();
+  cek(hariSel(u, 5, B_HARI) === 2 && hariSel(u, 4, B_HARI) === 2, 'hitung ulang sejak tengah malam: net per produk (baris 4: 3+1-2 = 2, baris 5 = 2)');
+  // rekap tidak ada -> reset dibatalkan
+  u.ss.deleteSheet(u.ss.getSheetByName('Rekap Harian UC'));
+  u.kirim(6, B_OUT, 1);
+  u.ctx.rekapDanResetHariIni();
+  cek(hariSel(u, 6, B_HARI) === 1 && /reset Stok Cover UC DIBATALKAN/.test(u.ctx.__alerts.slice(-1)[0]), 'rekap + reset: sheet rekap tidak ada -> reset dibatalkan');
+}
+{
+  // sheet masih susunan lama: tombol reset/hitung ulang menolak dengan petunjuk
+  const u = SEDIA_UC();
+  u.ctx.rekapDanResetHariIni();
+  cek(/menu 5/.test(u.ctx.__alerts.slice(-1)[0]), 'rekap + reset pada susunan lama: diarahkan ke menu 5');
+  u.ctx.hitungUlangOutHariIni();
+  cek(/menu 5/.test(u.ctx.__alerts.slice(-1)[0]), 'hitung ulang pada susunan lama: diarahkan ke menu 5');
+}
+
+// ---------- reset: entri di detik yang sama dengan reset dianggap sebelum reset; baris ganda; rekap gagal -> tidak reset
+{
+  const u = SEDIA_BARU();
+  u.kirim(4, B_OUT, 3);
+  u.ctx.rekapDanResetHariIni();
+  u.ctx.hitungUlangOutHariIni();
+  cek(hariSel(u, 4, B_HARI) === '', 'hitung ulang: entri yang terjadi sebelum/di detik reset tidak ikut dihitung lagi');
+  // dua baris dengan nama + SKU sama: hanya baris pertama yang menerima angkanya
+  const v = SEDIA_BARU();
+  v.BU.getRange(6, 2, 1, 2).setValues([[v.BU.peek(5, 2).v, v.BU.peek(5, 3).v]]);
+  geserJam(v, 3000);   // entri sesudah migrasi (status "sejak" = saat migrasi, resolusi detik)
+  v.kirim(5, B_OUT, 2);
+  v.ctx.hitungUlangOutHariIni();
+  cek(hariSel(v, 5, B_HARI) === 2 && hariSel(v, 6, B_HARI) === '', 'hitung ulang: baris ganda (nama + SKU sama) -> hanya baris pertama berisi');
+  // rekap gagal -> reset dibatalkan
+  const w = SEDIA_BARU();
+  w.kirim(4, B_OUT, 2);
+  w.kons().REKAP_BATAS_BARIS = 0;
+  w.ctx.rekapDanResetHariIni();
+  w.kons().REKAP_BATAS_BARIS = 60000;
+  cek(hariSel(w, 4, B_HARI) === 2 && /reset Stok Cover UC DIBATALKAN/.test(w.ctx.__alerts.slice(-1)[0]), 'rekap gagal: reset dibatalkan, OUT HARI INI utuh');
+  // rekap + reset hanya untuk sheet berformat baru; yang lama tidak disentuh
+}
+
+// ---------- STOK diketik langsung: Stok Sebelum dari Log (e.oldValue tidak diandalkan)
+{
+  const u = SEDIA_BARU();
+  const s0 = u.st(4, B_STOK);
+  u.kirim(4, B_OUT, 3);   // Log: sesudah = s0-3
+  u.BU.getRange(4, B_STOK).setValue(s0 + 5);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(4, B_STOK), source: u.ss, value: String(s0 + 5), oldValue: undefined });
+  let l = u.log1();
+  cek(l[6] === 'KOREKSI' && l[8] === s0 - 3 && l[9] === s0 + 5 && l[11] === 'Edit langsung kolom STOK' && hariSel(u, 4, B_HARI) === 3, 'ketik STOK: KOREKSI dengan stok sebelum dari Log (e.oldValue kosong); OUT HARI INI tidak berubah');
+  u.BU.getRange(4, B_STOK).setValue(s0 + 9);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(4, B_STOK), source: u.ss, value: String(s0 + 9), oldValue: '0' });   // Google kadang memberi 0 padahal sel berisi
+  l = u.log1();
+  cek(l[8] === s0 + 5 && l[9] === s0 + 9, 'ketik STOK lagi: stok sebelum = hasil KOREKSI sebelumnya (bukan "0" dari e.oldValue)');
+  // produk belum pernah tercatat di Log: pakai e.oldValue bila ada, kalau tidak "tidak diketahui"
+  const sa = u.st(20, B_STOK);
+  u.BU.getRange(20, B_STOK).setValue(sa + 1);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(20, B_STOK), source: u.ss, value: String(sa + 1), oldValue: String(sa) });
+  cek(u.log1()[8] === sa, 'produk belum ada di Log: memakai e.oldValue');
+  u.BU.getRange(21, B_STOK).setValue(7);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(21, B_STOK), source: u.ss, value: '7' });
+  cek(u.log1()[8] === '' && /stok sebelum tidak diketahui/.test(u.log1()[11]), 'tanpa Log dan tanpa e.oldValue: kosong + keterangan "tidak diketahui" (bukan 0 palsu)');
+  // tempel beberapa sel sekaligus: tiap sel memakai Log
+  u.kirim(5, B_OUT, 1); u.kirim(5, H2_OUT, 1);
+  const sb = u.st(5, B_STOK), sc = u.st(5, H2_STOK);
+  u.BU.getRange(5, B_STOK).setValue(sb + 4); u.BU.getRange(5, H2_STOK).setValue(sc + 2);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(5, B_STOK, 1, 4), source: u.ss });
+  const dua = u.LG().getRange(2, 1, 2, 12).getValues();
+  cek(dua.every(x => x[6] === 'KOREKSI') && dua.some(x => x[8] === sb && x[9] === sb + 4) && dua.some(x => x[8] === sc && x[9] === sc + 2) && /Edit banyak sel sekaligus$/.test(dua[0][11]), 'tempel banyak sel STOK: stok sebelum tiap sel dari Log');
+}
+
+// ---------- menu 5: ubah susunan sheet yang sudah dimigrasi
+{
+  const u = SEDIA_UC();   // susunan lama
+  const hari = Math.floor(u.ctx.waktuSerial_(new Date()));
+  u.kirim(4, 6, 3);       // OUT warna 1 baris 4 (kolom lama OUT = 6)
+  u.kirim(4, 5, 5);       // IN warna 1 baris 4
+  u.kirim(5, 9, 2);       // OUT warna 2 baris 5
+  const stokSebelum = u.BU.getRange(4, 4, 30, 6).getValues();
+  const logSebelum = u.nLog();
+  const peta0 = u.ctx.bacaPeta_(u.BU), rm = peta0.barisTotal + 1;
+  cek(peta0.layoutBaru === false, 'sheet awal: susunan lama');
+  u.ctx.ubahSusunanKolom();
+  const lap = u.ctx.__alerts.slice(-1)[0];
+  const peta = u.ctx.bacaPeta_(u.BU);
+  cek(peta.layoutBaru === true && peta.kolom[5].jenis === 'OUT' && peta.kolom[6].jenis === 'HARI', 'menu 5: label baris 3 diubah (kolom ke-2 = OUT, ke-3 = OUT HARI INI)');
+  cek(hariSel(u, 4, 6) === 3 && hariSel(u, 5, 9) === 2 && hariSel(u, 4, 5) === '', 'menu 5: OUT HARI INI diisi dari OUT hari ini di Log (IN diabaikan)');
+  cek(u.nLog() === logSebelum && JSON.stringify(u.BU.getRange(4, 4, 30, 6).getValues().map((r, i) => [r[0], r[3]])) === JSON.stringify(stokSebelum.map(r => [r[0], r[3]])), 'menu 5: STOK dan Log tidak berubah');
+  cek(u.BU.getRange(rm, 6).getFormula() === '=SUM(F4:F' + (peta.barisTotal - 1) + ')' && u.BU.getRange(rm, 5).getFormula() === '' && u.BU.getRange(rm + 1, 3).getFormula().indexOf('"IN"') < 0, 'menu 5: total per warna diganti; baris Masuk dihapus dari kolom C');
+  cek(/SUMIF\(\$D\$3/.test(u.BU.getRange(rm, 3).getFormula()) && u.BU.getRange(rm + 4, 3).getFormula() === '' && u.BU.getRange(rm + 7, 3).getFormula() === '', 'menu 5: rencana total baru (4 baris), sisa rumus lama dihapus');
+  cek(!u.BU.peek(4, 6).dv && !!u.BU.peek(4, 5).dv && /REGEXMATCH/.test(u.BU.peek(4, 5).dv.f) && u.BU.peek(4, 6).bg === '#efefef', 'menu 5: validasi OUT, tanpa validasi di OUT HARI INI, tampilan abu muda');
+  cek(u.BU.getRange(1, 4).getValue() === u.ctx.__K.TEKS_BANNER_HARI && /susunan kolom diubah/.test(lap) && statusHari(u).hari === hari, 'menu 5: banner baru, status hari tersimpan, laporan');
+  u.kirim(4, 5, 1);
+  cek(hariSel(u, 4, 6) === 4 && u.sel(4, 5).v === '', 'sesudah menu 5: OUT di kolom ke-2 berjalan dan menambah OUT HARI INI');
+  // diulang: dilewati
+  u.ctx.ubahSusunanKolom();
+  cek(/sudah berformat STOK\/OUT\/OUT HARI INI/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 5 diulang: dilewati');
+  // menu 4 pada susunan baru: aman diulang
+  u.ctx.perbaruiSheetLama();
+  u.ctx.perbaruiSheetLama();
+  cek(!/GAGAL/.test(u.ctx.__alerts.slice(-1)[0]) && hariSel(u, 4, 6) === 4, 'menu 4 pada susunan baru: aman diulang, tidak merusak OUT HARI INI');
+}
+{
+  // angka tertinggal di IN/OUT: sheet dilewati, tidak ada yang diubah
+  const u = SEDIA_UC();
+  u.BU.getRange(7, 8).setValue(3);   // IN warna 2 baris 7, belum diproses
+  u.ctx.ubahSusunanKolom();
+  cek(/DILEWATI\. Masih ada isi di kolom IN\/OUT: baris 7 H/.test(u.ctx.__alerts.slice(-1)[0]) && u.ctx.bacaPeta_(u.BU).layoutBaru === false && u.BU.peek(3, 5).v === 'IN', 'menu 5: angka tertinggal -> sheet dilewati, susunan lama utuh');
+  u.BU.getRange(7, 8).clearContent();
+  u.BU.protections = u.BU.protections || [];
+  const p = u.BU.protect(); p.bolehEdit = false;
+  u.ctx.ubahSusunanKolom();
+  cek(/Sheet dikunci/.test(u.ctx.__alerts.slice(-1)[0]) && u.ctx.bacaPeta_(u.BU).layoutBaru === false, 'menu 5: sheet terkunci untuk akun ini -> dilewati');
+}
+{
+  // sel asing di kolom C tidak ditimpa; label TOTAL STOK hilang -> dilewati
+  const u = SEDIA_UC();
+  const peta = u.ctx.bacaPeta_(u.BU), rm = peta.barisTotal + 1;
+  u.BU.getRange(rm + 1, 3).clearContent(); u.BU.getRange(rm + 1, 3).setValue('catatan staf');
+  u.ctx.ubahSusunanKolom();
+  cek(u.BU.getRange(rm + 1, 3).getValue() === 'catatan staf' && /TIDAK ditimpa/.test(u.ctx.__alerts.slice(-1)[0]) && u.ctx.bacaPeta_(u.BU).layoutBaru === true, 'menu 5: sel asing di kolom C tidak ditimpa, susunan tetap berubah');
+  const w = SEDIA_UC();
+  const pw = w.ctx.bacaPeta_(w.BU);
+  w.BU.getRange(pw.barisTotal, 2).setValue('');
+  w.ctx.ubahSusunanKolom();
+  cek(/label "TOTAL STOK".*dilewati/.test(w.ctx.__alerts.slice(-1)[0]) && w.ctx.bacaPeta_(w.BU).layoutBaru === false, 'menu 5: label TOTAL STOK hilang -> dilewati');
+}
+
+// ---------- kunci, cek status, rekap pada susunan baru
+{
+  const u = SEDIA_BARU();
+  u.ctx.kunciKolomStok();
+  const p = u.BU.getProtections().filter(x => !x.removed).slice(-1)[0];
+  const adaDi = (kol) => p.unprot.some(r => r.c === kol);
+  cek(adaDi(B_STOK) && adaDi(B_OUT) && !adaDi(B_HARI) && /STOK\/OUT tetap bisa diisi/.test(u.ctx.__alerts.slice(-1)[0]), 'kunci (susunan baru): STOK dan OUT bebas diisi staf, OUT HARI INI terkunci');
+  u.ctx.cekStatus();
+  cek(/format STOK\/OUT\/OUT HARI INI \(aktif\); OUT HARI INI dihitung sejak/.test(u.ctx.__alerts.slice(-1)[0]) && !/merujuk log versi lama/.test(u.ctx.__alerts.slice(-1)[0]), 'cek status (susunan baru): menyebut susunan dan "dihitung sejak", tanpa peringatan palsu');
+  // rekap: IN tidak ada lagi; Keluar dan Motor tetap benar
+  u.ctx.tulisLog_(u.ss, u.kons().SISTEM[0], [[u.ctx.waktuSerial_(new Date()), 'Stok Cover UC', 184, 'Motor', '', 'Abu-abu', 'OUT', 3, 5, 2, '', '']]);
+  u.kirim(4, B_OUT, 2);
+  u.ctx.perbaruiRekapSekarang();
+  const r = u.ss.getSheetByName('Rekap Harian UC').getRange(2, 1, 1, 18).getValues()[0];
+  cek(r[1] === 0 && r[2] === 2 && r[17] === 3, 'rekap (susunan baru): Masuk 0, Keluar 2 (tanpa Motor), Keluar motor 3');
+}
+
 console.log(`\n${lulus} lulus, ${gagal} gagal`);
 const dump = {};
 for (const s of ss.sheets) { const o = {}; for (const [k, x] of s.cells) if (x.v !== '' || x.f) o[k] = x.f || (Object.prototype.toString.call(x.v) === '[object Date]' ? { date: x.v.toISOString() } : x.v); dump[s.name] = o; }
