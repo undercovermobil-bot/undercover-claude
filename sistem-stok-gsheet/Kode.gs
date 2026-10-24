@@ -50,6 +50,7 @@ const KONFIG = {
   LAYOUT: 'baru',               // susunan kolom per warna untuk migrasi 1a/1b: 'baru' = STOK | OUT | OUT HARI INI (stok masuk diketik langsung di STOK); 'lama' = STOK | IN | OUT
   LABEL_HARI: 'OUT HARI INI',   // judul baris 3 kolom catatan keluar hari ini per produk (layout baru)
   IZINKAN_PEMBATALAN: true,     // sel IN/OUT boleh berisi "B" + jumlah (mis. B1): membatalkan sebagian entri HARI INI untuk produk x warna x jenis yang sama
+  BATAS_BACA_HARI: 30000,       // maks. baris Log yang dibaca untuk membangun ulang OUT HARI INI (dibaca bertahap 3000 baris sampai melewati waktu mulai)
   BATAS_BACA_BATAL: 3000,       // baris teratas Log yang dibaca untuk memeriksa pembatalan (hanya saat ada entri B)
   REKAP_JAM: 0,                 // trigger rekap harian berjalan sekitar jam ini (WIB) + REKAP_MENIT. Mengubahnya: Matikan lalu Aktifkan input otomatis
   REKAP_MENIT: 30,
@@ -228,7 +229,7 @@ function prosesInputStok(e) {
     // Kolom OUT HARI INI diisi script. Ketikan/tempel staf di sana tidak dicatat; angkanya dikembalikan dari Log (tanpa menunggu lama).
     if (kenaHari && peta.layoutBaru) {
       const lk = LockService.getDocumentLock();
-      if (!lk.tryLock(KONFIG.TUNGGU_LOCK_MS)) return;
+      if (!lk.tryLock(KONFIG.TUNGGU_LOCK_MS)) { tandaiPerlu_(cfg, true); return; }   // sibuk: dipulihkan pada eksekusi berikutnya
       try { pulihkanHari_(e.source || SpreadsheetApp.getActiveSpreadsheet(), sheet, cfg, peta); } finally { lk.releaseLock(); }
     }
     return;
@@ -363,8 +364,8 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
   let logStokGagal = false;
   const ambilLogStok = () => {
     if (logStok) return logStok;
-    if (logStokGagal) return [];
-    try { return (logStok = bacaLogStok_(ss, cfg)); } catch (err) { logStokGagal = true; return []; }   // koreksi tetap dicatat, stok sebelum "tidak diketahui"
+    if (logStokGagal) return new Map();
+    try { return (logStok = bacaLogStok_(ss, cfg)); } catch (err) { logStokGagal = true; return new Map(); }   // koreksi tetap dicatat, stok sebelum "tidak diketahui"
   };
 
   try {
@@ -392,7 +393,16 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
         resetSel_(sel, 'STOK', info.warna);
         // Stok sebelum: dari Log (stok sesudah terakhir produk x warna ini). e.oldValue dari Google terbukti tidak konsisten (kosong, atau 0 padahal
         // sel berisi), jadi hanya dipakai bila Log belum punya catatan produk ini.
-        let lama = stokTerakhir_(ambilLogStok(), log, produk, sku, info.warna);
+        const cat = catatanTerakhir_(ambilLogStok(), log, produk, sku, info.warna);
+        let lama = cat.length ? angkaLog_(cat[0][9]) : null;
+        // Rantai Log putus: STOK diketik bersamaan dengan entri OUT di sel yang sama. Entri OUT diproses lebih dulu dari sel yang sudah berisi angka
+        // baru (Stok Sebelum 49), padahal Log terakhir mencatat 39; lalu kejadian edit STOK tiba dan melihat angka yang sama dengan Log (tidak ada
+        // selisih). Perubahan yang "hilang" itu dicatat sekarang sebagai KOREKSI terlambat supaya Log dan Rekap tidak kehilangannya.
+        if (lama !== null && baru === lama && cat.length === 2 && angkaLog_(cat[0][8]) !== null && angkaLog_(cat[0][8]) !== angkaLog_(cat[1][9])) {
+          log.push([waktu, namaSheet, r, produk, sku, info.warna, 'KOREKSI', '', angkaLog_(cat[1][9]), angkaLog_(cat[0][8]), user,
+            'Dicatat terlambat: stok berubah dari ' + angkaLog_(cat[1][9]) + ' ke ' + angkaLog_(cat[0][8]) + ' sebelum entri terakhir produk ini (diketik bersamaan dengan entri itu)']);
+          continue;
+        }
         if (lama === null && satuSel && e && e.oldValue !== undefined && e.oldValue !== '') {
           const v = angkaStok_(e.oldValue);
           if (v !== null && v !== 0) lama = v;   // 0 dari Google terbukti bisa palsu (sel berisi): dianggap tidak diketahui
@@ -496,7 +506,7 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
         } catch (err) {
           peta.hariGagal = true;
           console.error('OUT HARI INI baris ' + r + ' gagal ditulis: ' + err.message);
-          try { const st0 = bacaStatusHari_(cfg); if (st0) simpanStatusHari_(cfg, st0.hari, st0.sejak, true); } catch (e2) { /* tanpa penanda: menu Hitung ulang */ }
+          tandaiPerlu_(cfg, true);
           try { ss.toast('OUT HARI INI gagal ditulis (' + err.message + '). STOK dan Log benar; angka dipulihkan otomatis dari Log pada entri berikutnya.', 'Perhatian', 8); } catch (e3) { /* abaikan */ }
         }
       }
@@ -2462,28 +2472,45 @@ function logSudahAda_(ss, cfg, rows) {
 
 // ---------------------------------------------------------------- stok sebelum dari Log, catatan keluar hari ini (layout baru)
 
-/** Baris teratas Log (kolom A..J), terbaru di atas. Dibaca sekali per putaran, hanya bila ada koreksi STOK. */
+const angkaLog_ = v => (v !== '' && v !== null && v !== undefined && isFinite(Number(v)) ? Number(v) : null);
+
+/**
+ * Indeks Log untuk "stok sebelum": 3000 baris teratas Log (kolom A..J, terbaru di atas) jadi Map kunci produk x warna -> [catatan terbaru,
+ * catatan sebelumnya] (hanya baris yang Stok Sesudah-nya angka). Dibaca sekali per putaran, hanya bila ada koreksi STOK.
+ */
 function bacaLogStok_(ss, cfg) {
+  const idx = new Map();
   const sh = ss.getSheetByName(cfg.log);
-  if (!sh || sh.getLastRow() < 2) return [];
-  return sh.getRange(2, 1, Math.min(sh.getLastRow() - 1, KONFIG.BATAS_BACA_BATAL), 10).getValues();
+  if (!sh || sh.getLastRow() < 2) return idx;
+  sh.getRange(2, 1, Math.min(sh.getLastRow() - 1, KONFIG.BATAS_BACA_BATAL), 10).getValues().forEach(b => {
+    if (angkaLog_(b[9]) === null) return;
+    const k = kunciBatal_(b[3], b[4], b[5], '');
+    const e = idx.get(k);
+    if (!e) idx.set(k, [b]); else if (e.length < 2) e.push(b);
+  });
+  return idx;
 }
 
-/** Stok sesudah terakhir produk x warna: dari baris Log yang sedang disusun (terbaru), lalu dari Log. null = belum pernah tercatat. */
-function stokTerakhir_(barisLog, logJalan, produk, sku, warna) {
+/** Dua catatan Log terakhir produk x warna ([terbaru, sebelumnya]): dari baris yang sedang disusun (terbaru di akhir), lalu dari indeks Log. */
+function catatanTerakhir_(indeks, logJalan, produk, sku, warna) {
   const kunci = kunciBatal_(produk, sku, warna, '');
-  const angka = v => (v !== '' && v !== null && v !== undefined && isFinite(Number(v)) ? Number(v) : null);
-  for (let i = logJalan.length - 1; i >= 0; i--) {
+  const hasil = [];
+  for (let i = logJalan.length - 1; i >= 0 && hasil.length < 2; i--) {
     const b = logJalan[i];
-    if (kunciBatal_(b[3], b[4], b[5], '') === kunci && angka(b[9]) !== null) return angka(b[9]);
+    if (kunciBatal_(b[3], b[4], b[5], '') === kunci && angkaLog_(b[9]) !== null) hasil.push(b);
   }
-  for (let i = 0; i < barisLog.length; i++) {
-    const b = barisLog[i];
-    if (kunciBatal_(b[3], b[4], b[5], '') === kunci && angka(b[9]) !== null) return angka(b[9]);
-  }
-  return null;
+  const e = indeks.get(kunci) || [];
+  for (let i = 0; i < e.length && hasil.length < 2; i++) hasil.push(e[i]);
+  return hasil;
 }
 
+/** Stok sesudah terakhir produk x warna menurut Log. null = belum pernah tercatat. */
+function stokTerakhir_(indeks, logJalan, produk, sku, warna) {
+  const h = catatanTerakhir_(indeks, logJalan, produk, sku, warna);
+  return h.length ? angkaLog_(h[0][9]) : null;
+}
+
+const KUNCI_PERLU = 'PERLU|';
 const KUNCI_HARI = 'HARI|';   // DocumentProperties: {hari: nomor hari WIB, sejak: nomor seri waktu mulai hitung} per sheet
 
 function bacaStatusHari_(cfg) {
@@ -2491,12 +2518,22 @@ function bacaStatusHari_(cfg) {
     const t = PropertiesService.getDocumentProperties().getProperty(KUNCI_HARI + cfg.nama);
     if (!t) return null;
     const o = JSON.parse(t);
-    return typeof o.hari === 'number' && typeof o.sejak === 'number' ? { hari: o.hari, sejak: o.sejak, perlu: !!o.perlu } : null;
+    return typeof o.hari === 'number' && typeof o.sejak === 'number' ? { hari: o.hari, sejak: o.sejak } : null;
   } catch (err) { return null; }
 }
-function simpanStatusHari_(cfg, hari, sejak, perlu) {
-  // perlu = penulisan OUT HARI INI pernah gagal: bangun ulang dari Log pada kesempatan berikutnya (sejak tetap dipakai)
-  PropertiesService.getDocumentProperties().setProperty(KUNCI_HARI + cfg.nama, JSON.stringify({ hari: hari, sejak: sejak, perlu: !!perlu }));
+function simpanStatusHari_(cfg, hari, sejak) {
+  PropertiesService.getDocumentProperties().setProperty(KUNCI_HARI + cfg.nama, JSON.stringify({ hari: hari, sejak: sejak }));
+}
+// Penanda terpisah (tanpa baca-tulis status, jadi tidak bisa menimpa reset yang berjalan bersamaan): OUT HARI INI mungkin tidak cocok dengan Log
+// (penulisan gagal, atau pemulihan dilewati karena sistem sibuk) -> dibangun ulang dari Log pada kesempatan berikutnya.
+function tandaiPerlu_(cfg, nilai) {
+  try {
+    const pr = PropertiesService.getDocumentProperties();
+    if (nilai) pr.setProperty(KUNCI_PERLU + cfg.nama, '1'); else pr.deleteProperty(KUNCI_PERLU + cfg.nama);
+  } catch (err) { /* tanpa penanda: menu "Hitung ulang OUT HARI INI" */ }
+}
+function perluDipulihkan_(cfg) {
+  try { return PropertiesService.getDocumentProperties().getProperty(KUNCI_PERLU + cfg.nama) === '1'; } catch (err) { return false; }
 }
 /** Kembalikan OUT HARI INI dari Log (sejak reset terakhir / tengah malam). Tidak pernah melempar galat. Lock dokumen dipegang pemanggil. */
 function pulihkanHari_(ss, sheet, cfg, peta) {
@@ -2527,9 +2564,11 @@ function kosongkanHari_(sheet, peta) {
 function pastikanHariBerjalan_(ss, sheet, cfg, peta, hariOpsi) {
   const hari = hariOpsi !== undefined ? hariOpsi : Math.floor(waktuSerial_(new Date()));
   const st = bacaStatusHari_(cfg);
-  if (st && st.hari >= hari && !st.perlu) return;
   if (!st) { hitungUlangHari_(ss, sheet, cfg, peta, hari); return; }
-  if (st.perlu) { hitungUlangHari_(ss, sheet, cfg, peta, hari, st.hari === hari ? st.sejak : hari); return; }
+  if (st.hari >= hari) {
+    if (perluDipulihkan_(cfg)) hitungUlangHari_(ss, sheet, cfg, peta, hari, st.hari === hari ? st.sejak : hari);
+    return;
+  }
   kosongkanHari_(sheet, peta);
   simpanStatusHari_(cfg, hari, hari);
 }
@@ -2545,19 +2584,15 @@ function hitungUlangHari_(ss, sheet, cfg, peta, hari, sejak) {
   const r0 = KONFIG.BARIS_DATA;
   const r1 = peta.barisTotal - 1;
   const n = r1 - r0 + 1;
+  // Dilipat berurutan dari yang terlama ke yang terbaru dengan klem 0 di tiap langkah: sama persis dengan angka yang dihitung langsung saat entri masuk
+  // (B atas entri sebelum reset tidak membuat angka minus).
   const net = new Map();
-  const lg = ss.getSheetByName(cfg.log);
-  if (lg && lg.getLastRow() >= 2) {
-    const baris = lg.getRange(2, 1, Math.min(lg.getLastRow() - 1, KONFIG.BATAS_BACA_BATAL), 8).getValues();
-    const ubah = konversiKolomWaktu_(baris.map(b => b[0]), ss.getSpreadsheetTimeZone());
-    baris.forEach(b => {
-      const w = ubah(b[0]);
-      const q = Number(b[7]);
-      if (w === null || w <= waktuMulai || String(b[6]) !== 'OUT' || b[7] === '' || !isFinite(q)) return;
-      const k = kunciBatal_(b[3], b[4], b[5], 'OUT');
-      net.set(k, (net.get(k) || 0) + q);
-    });
-  }
+  bacaLogSejak_(ss, cfg, waktuMulai).reverse().forEach(b => {
+    const q = Number(b[7]);
+    if (String(b[6]) !== 'OUT' || b[7] === '' || !isFinite(q)) return;
+    const k = kunciBatal_(b[3], b[4], b[5], 'OUT');
+    net.set(k, Math.max(0, (net.get(k) || 0) + q));
+  });
   if (n >= 1 && kol.length) {
     const nama = sheet.getRange(r0, 2, n, 2).getValues();
     const dipakai = new Set();
@@ -2569,17 +2604,49 @@ function hitungUlangHari_(ss, sheet, cfg, peta, hari, sejak) {
         const k = kunciBatal_(x[0], x[1], warna, 'OUT');
         if (!String(x[0]).trim() || dipakai.has(k) || !net.has(k)) return [''];
         dipakai.add(k);
-        const v = Math.max(0, net.get(k));
+        const v = net.get(k);
         if (v) { unit += v; produk++; return [v]; }
         return [''];
       });
       sheet.getRange(r0, c, n, 1).setValues(isi);
     });
     simpanStatusHari_(cfg, hari, waktuMulai);
+    tandaiPerlu_(cfg, false);
     return { produk: produk, unit: unit };
   }
   simpanStatusHari_(cfg, hari, waktuMulai);
+  tandaiPerlu_(cfg, false);
   return { produk: 0, unit: 0 };
+}
+
+/**
+ * Baris Log yang terjadi SESUDAH waktu mulai (nomor seri), terbaru di atas, dibaca bertahap (3000 baris) sampai ada baris yang sudah lebih tua dari waktu mulai.
+ * Melewati KONFIG.BATAS_BACA_HARI baris tanpa menemukan batas = galat (jangan pernah membangun dari sebagian Log: hasilnya nol palsu).
+ * Kolom A diganti nomor seri waktu (baris yang waktunya tak terbaca dibuang).
+ */
+function bacaLogSejak_(ss, cfg, waktuMulai) {
+  const hasil = [];
+  const sh = ss.getSheetByName(cfg.log);
+  if (!sh || sh.getLastRow() < 2) return hasil;
+  const total = sh.getLastRow() - 1;
+  const zona = ss.getSpreadsheetTimeZone();
+  for (let mulai = 0; mulai < total; mulai += KONFIG.BATAS_BACA_BATAL) {
+    if (mulai >= KONFIG.BATAS_BACA_HARI) {
+      throw new Error('Log terlalu panjang sejak waktu mulai (lebih dari ' + KONFIG.BATAS_BACA_HARI + ' baris): OUT HARI INI tidak dibangun ulang supaya tidak salah nol.');
+    }
+    const baris = sh.getRange(2 + mulai, 1, Math.min(KONFIG.BATAS_BACA_BATAL, total - mulai), 8).getValues();
+    const ubah = konversiKolomWaktu_(baris.map(b => b[0]), zona);
+    let tembus = false;
+    baris.forEach(b => {
+      const w = ubah(b[0]);
+      if (w === null) return;
+      if (w <= waktuMulai) { tembus = true; return; }
+      b[0] = w;
+      hasil.push(b);
+    });
+    if (tembus) break;
+  }
+  return hasil;
 }
 
 /** Tampilan kolom OUT HARI INI: latar abu muda, tebal, nol tidak tampil, tanpa validasi (diisi script). */
@@ -2598,7 +2665,9 @@ function styleKolomHari_(sh, kolom, nBaris) {
 
 /** Rumus di kolom C milik script (total harian)? Dikenali dari awal rumusnya; isian/rumus lain tidak pernah ditimpa atau dihapus. */
 function milikTotal_(f, cfg) {
-  return f.indexOf("=SUMIFS('" + cfg.log + "'!") === 0 || f.indexOf('=SUMIF($D$3:$') === 0 || f.indexOf('=SUMPRODUCT(($B$' + KONFIG.BARIS_DATA + ':$B$') === 0;
+  return f.indexOf("=SUMIFS('" + cfg.log + "'!") === 0 ||
+    new RegExp('^=SUMIF\\(\\$D\\$3:\\$[A-Z]+\\$3,"' + KONFIG.LABEL_HARI + '",\\$D\\$\\d+:\\$[A-Z]+\\$\\d+\\)').test(f) ||
+    /^=SUMPRODUCT\(\((TRIM\()?\$B\$\d+:\$B\$\d+\)?="/.test(f);
 }
 
 function pastikanUkuran_(sh, baris, kolom) {

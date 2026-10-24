@@ -149,6 +149,27 @@ function tzOffsetMs(ms, tz) {
 function wallKeInstant(wallMs, tz) { const o = tzOffsetMs(wallMs, tz); return wallMs - tzOffsetMs(wallMs - o, tz); }
 function instanKeSerial(ms, tz) { return (ms + tzOffsetMs(ms, tz) - Date.UTC(1899, 11, 30)) / 86400000; }
 
+// Jam uji dibekukan pada TENGAH HARI WIB hari ini (lalu berjalan normal): uji tidak boleh bergantung pada jam asli (mis. dijalankan menjelang tengah
+// malam, atau di luar jam kerja penyapu). Dimatikan dengan env UJI_JAM_ASLI=1.
+const AsliDate = Date;
+let OFFSET_JAM = null;
+function offsetJam() {
+  if (process.env.UJI_JAM_ASLI) return 0;
+  if (OFFSET_JAM === null) {
+    const now = AsliDate.now();
+    const w = new AsliDate(now + 7 * 3600000);
+    OFFSET_JAM = AsliDate.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate(), 5, 0, 0) - now;   // 12:00 WIB
+  }
+  return OFFSET_JAM;
+}
+function bekukanJamHost() {
+  const off = offsetJam();
+  if (!off) return;
+  global.Date = class extends AsliDate {
+    constructor(...a) { if (a.length) super(...a); else super(AsliDate.now() + off); }
+    static now() { return AsliDate.now() + off; }
+  };
+}
 function colNum(s) { let n = 0; for (const ch of s) n = n * 26 + ch.charCodeAt(0) - 64; return n; }
 
 // Konstanta `const` tingkat atas tidak jadi properti global di vm: diekspor lewat globalThis.__KONFIG / __K supaya uji bisa membacanya.
@@ -218,6 +239,7 @@ function buatKonteks(ss, opsi = {}) {
     },
   };
   vm.createContext(ctx);
+  if (offsetJam()) vm.runInContext('Date = (function (Asli) { return class extends Asli { constructor(...a) { if (a.length) super(...a); else super(Asli.now() + ' + offsetJam() + '); } static now() { return Asli.now() + ' + offsetJam() + '; } }; })(Date);', ctx);
   vm.runInContext(fs.readFileSync(opsi.kode, 'utf8') + EKSPOR_KONSTANTA, ctx, { filename: 'Kode.gs' });
   // Penyapu hanya bekerja 06-19 WIB: tanpa ini uji bergantung jam nyata. Uji jam kerja mengatur SAPU_JAM sendiri; opsi.jamAsli = pakai nilai kode.
   if (!opsi.jamAsli) ctx.__KONFIG.SAPU_JAM = { awal: 0, akhir: 24 };
@@ -228,4 +250,4 @@ function buatKonteks(ss, opsi = {}) {
   return ctx;
 }
 
-module.exports = { Spreadsheet, Sheet, Range, buatKonteks, colNum };
+module.exports = { Spreadsheet, Sheet, Range, buatKonteks, colNum, bekukanJamHost };
