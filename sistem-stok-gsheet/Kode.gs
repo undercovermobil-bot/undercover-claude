@@ -140,7 +140,7 @@ function rumusPlan_(t, ctx) {
   if (t.sumber !== 'kolom') return rumusTotalHarian_(ctx.log, t.jenis, t.periode, t.golongan);
   const a = ctx.akhirKol;
   const lab = '"' + KONFIG.LABEL_HARI.replace(/"/g, '""') + '"';
-  const bagian = n => 'SUMPRODUCT(($B$' + KONFIG.BARIS_DATA + ':$B$' + ctx.barisAkhirData + '="' + n.replace(/"/g, '""') + '")*($D$3:$' + a + '$3=' + lab + '),$D$' +
+  const bagian = n => 'SUMPRODUCT((TRIM($B$' + KONFIG.BARIS_DATA + ':$B$' + ctx.barisAkhirData + ')="' + n.replace(/"/g, '""') + '")*($D$3:$' + a + '$3=' + lab + '),$D$' +
     KONFIG.BARIS_DATA + ':$' + a + '$' + ctx.barisAkhirData + ')';
   const nama = namaTerpisah_();
   if (t.golongan === 'terpisah') return '=' + nama.map(bagian).join('+');
@@ -219,8 +219,20 @@ function prosesInputStok(e) {
   const kolomAkhir = Math.min(c1, peta.kolomTerakhir);
   if (barisAwal > barisAkhir || c0 > kolomAkhir) return;
   let relevan = false;
-  for (let c = c0; c <= kolomAkhir; c++) if (peta.kolom[c] && peta.kolom[c].jenis !== 'HARI') relevan = true;   // kolom OUT HARI INI diisi script: edit di sana diabaikan
-  if (!relevan) return;
+  let kenaHari = false;
+  for (let c = c0; c <= kolomAkhir; c++) {
+    if (peta.kolom[c] && peta.kolom[c].jenis !== 'HARI') relevan = true;
+    if (peta.kolom[c] && peta.kolom[c].jenis === 'HARI') kenaHari = true;
+  }
+  if (!relevan) {
+    // Kolom OUT HARI INI diisi script. Ketikan/tempel staf di sana tidak dicatat; angkanya dikembalikan dari Log (tanpa menunggu lama).
+    if (kenaHari && peta.layoutBaru) {
+      const lk = LockService.getDocumentLock();
+      if (!lk.tryLock(KONFIG.TUNGGU_LOCK_MS)) return;
+      try { pulihkanHari_(e.source || SpreadsheetApp.getActiveSpreadsheet(), sheet, cfg, peta); } finally { lk.releaseLock(); }
+    }
+    return;
+  }
 
   // Menunggu lock memakan kuota trigger harian (waktu tunggu ikut dihitung). IN/OUT: tunggu sebentar saja, yang kalah giliran
   // berhenti karena pemegang lock menyapu SEMUA sel (dan memeriksa ulang sebelum melepas lock). Koreksi STOK manual tidak ikut
@@ -246,6 +258,7 @@ function prosesInputStok(e) {
   try {
     const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
     prosesBlok_(ss, sheet, cfg, peta, { r0: barisAwal, r1: barisAkhir, c0: c0, c1: kolomAkhir, satu: r0 === r1 && c0 === c1 }, e);
+    if (kenaHari && peta.layoutBaru) pulihkanHari_(ss, sheet, cfg, peta);
   } finally {
     lock.releaseLock();
   }
@@ -483,6 +496,8 @@ function prosesPutaran_(ss, sheet, cfg, peta, edit, e) {
         } catch (err) {
           peta.hariGagal = true;
           console.error('OUT HARI INI baris ' + r + ' gagal ditulis: ' + err.message);
+          try { const st0 = bacaStatusHari_(cfg); if (st0) simpanStatusHari_(cfg, st0.hari, st0.sejak, true); } catch (e2) { /* tanpa penanda: menu Hitung ulang */ }
+          try { ss.toast('OUT HARI INI gagal ditulis (' + err.message + '). STOK dan Log benar; angka dipulihkan otomatis dari Log pada entri berikutnya.', 'Perhatian', 8); } catch (e3) { /* abaikan */ }
         }
       }
     }
@@ -1896,6 +1911,16 @@ function perbaruiSatu_(ss, cfg) {
     lapor.push(awal + 'validasi GAGAL (' + err.message + '). Aman diulang.');
   }
 
+  // 1b. susunan baru: tampilan + validasi (tolak ketikan staf) kolom OUT HARI INI, idempoten
+  if (peta.layoutBaru) {
+    try {
+      const nB = peta.barisTotal - KONFIG.BARIS_DATA;
+      kolomHariDari_(peta).forEach(c => { styleKolomHari_(sh, c, nB); if (sh.getColumnWidth(c) !== LEBAR_KOLOM_HARI) sh.setColumnWidth(c, LEBAR_KOLOM_HARI); });
+    } catch (err) {
+      lapor.push(awal + 'tampilan OUT HARI INI GAGAL (' + err.message + '). Aman diulang.');
+    }
+  }
+
   // 2. total harian di kolom C (baris rekap harian dan satu baris di bawahnya)
   try {
     const rencana = totalHarian_(peta.layoutBaru);
@@ -2047,7 +2072,7 @@ function ubahSusunanKolom() {
       try {
         ubahSusunanSatu_(ss, cfg).forEach(x => lapor.push(x));
       } catch (err) {
-        lapor.push('"' + cfg.nama + '": GAGAL (' + err.message + '). Aman diulang.');
+        lapor.push('"' + cfg.nama + '": GAGAL (' + err.message + '). Jalankan menu 5 lagi (melanjutkan blok yang belum diubah); kalau pesannya "sudah berformat", jalankan menu 4 lalu "Hitung ulang OUT HARI INI".');
       }
     });
   } finally {
@@ -2062,7 +2087,6 @@ function ubahSusunanSatu_(ss, cfg) {
   if (!sh) return [nama + ': tidak ada, dilewati.'];
   const peta = bacaPeta_(sh);
   if (!Object.keys(peta.kolom).length) return [nama + ': belum berformat STOK/IN/OUT (jalankan menu 1 dulu), dilewati.'];
-  if (peta.layoutBaru) return [nama + ': sudah berformat STOK/OUT/OUT HARI INI, dilewati (kalau ada yang kurang, jalankan menu 4).'];
   if (!peta.labelAda) return [nama + ': label "' + KONFIG.LABEL_TOTAL + '" di kolom B tidak ditemukan, dilewati. Kembalikan labelnya dulu.'];
   const log = ss.getSheetByName(cfg.log);
   if (!log) return [nama + ': sheet "' + cfg.log + '" tidak ada, dilewati.'];
@@ -2071,44 +2095,65 @@ function ubahSusunanSatu_(ss, cfg) {
   const barisMutasi = cariBarisMutasi_(sh, peta);
   if (!barisMutasi) return [nama + ': baris "' + KONFIG.LABEL_MUTASI + '" tidak ditemukan di bawah TOTAL STOK, dilewati.'];
 
-  // Tiap warna harus tepat STOK | IN | OUT.
-  const stok = Object.keys(peta.kolom).map(Number).filter(c => peta.kolom[c].jenis === 'STOK').sort((a, b) => a - b);
-  const tidakLazim = stok.filter(c => !peta.kolom[c + 1] || peta.kolom[c + 1].jenis !== 'IN' || !peta.kolom[c + 2] || peta.kolom[c + 2].jenis !== 'OUT');
-  if (tidakLazim.length || !stok.length) {
+  // Tiap warna: STOK | IN | OUT (susunan lama, akan diubah) atau STOK | OUT | OUT HARI INI (sudah baru). Sheet campuran (konversi sebelumnya
+  // terhenti) dilanjutkan: hanya blok yang masih lama yang diubah.
+  const jenisDi = (c, k) => (peta.kolom[c + k] ? peta.kolom[c + k].jenis : '');
+  const semua = Object.keys(peta.kolom).map(Number).filter(c => peta.kolom[c].jenis === 'STOK').sort((a, b) => a - b);
+  const stok = semua.filter(c => jenisDi(c, 1) === 'IN' && jenisDi(c, 2) === 'OUT');
+  const sudahBaru = semua.filter(c => jenisDi(c, 1) === 'OUT' && jenisDi(c, 2) === 'HARI');
+  const tidakLazim = semua.filter(c => stok.indexOf(c) < 0 && sudahBaru.indexOf(c) < 0);
+  if (tidakLazim.length || !semua.length) {
     return [nama + ': susunan kolom tidak lazim (bukan STOK | IN | OUT di tiap warna: ' + tidakLazim.map(c => peta.kolom[c].warna).join(', ') + '), dilewati.'];
   }
+  if (!stok.length) return [nama + ': sudah berformat STOK/OUT/OUT HARI INI, dilewati (kalau ada yang kurang, jalankan menu 4 lalu "Hitung ulang OUT HARI INI").'];
   // Tidak boleh ada angka tertinggal: kolom OUT lama akan menjadi OUT HARI INI, kolom IN lama menjadi OUT.
   const r0 = KONFIG.BARIS_DATA;
   const nBaris = peta.barisTotal - r0;
-  const blok = sh.getRange(r0, 1, nBaris, peta.kolomTerakhir).getValues();
-  const tertinggal = [];
-  for (let r = 0; r < nBaris; r++) {
-    stok.forEach(c => { [c + 1, c + 2].forEach(k => { if (blok[r][k - 1] !== '') tertinggal.push('baris ' + (r0 + r) + ' ' + huruf_(k) + ' (' + peta.kolom[c].warna + ')'); }); });
-  }
-  if (tertinggal.length) {
-    return [nama + ': DILEWATI. Masih ada isi di kolom IN/OUT: ' + tertinggal.slice(0, 8).join(', ') + (tertinggal.length > 8 ? ', … (' + tertinggal.length + ' sel)' : '') +
-      '. Tunggu diproses penyapu (≤15 menit) atau kosongkan, lalu ulangi.'];
-  }
+  const cariTertinggal = () => {
+    const blok = sh.getRange(r0, 1, nBaris, peta.kolomTerakhir).getValues();
+    const t = [];
+    for (let r = 0; r < nBaris; r++) {
+      stok.forEach(c => { [c + 1, c + 2].forEach(k => { if (blok[r][k - 1] !== '') t.push('baris ' + (r0 + r) + ' ' + huruf_(k) + ' (' + peta.kolom[c].warna + ')'); }); });
+    }
+    return t;
+  };
+  const pesanTertinggal = t => 'Masih ada isi di kolom IN/OUT: ' + t.slice(0, 8).join(', ') + (t.length > 8 ? ', … (' + t.length + ' sel)' : '') +
+    '. Angka biasa diproses penyapu (≤15 menit); sel bertanda merah (ditolak) tidak disapu: hapus manual. Lalu ulangi.';
+  const tertinggal = cariTertinggal();
+  if (tertinggal.length) return [nama + ': DILEWATI. ' + pesanTertinggal(tertinggal)];
 
   const lapor = [];
-  // Urutan: tampilan dan validasi dulu, label (penanda layout) terakhir. Gagal di tengah = layout lama masih utuh, aman diulang.
-  stok.forEach(c => {
-    sh.getRange(r0, c + 1, nBaris, 1).clearDataValidations();
-    pasangValidasi_(sh.getRange(r0, c + 1, nBaris, 1), huruf_(c + 1) + r0, 'inout');
-    styleKolomHari_(sh, c + 2, nBaris);
-    sh.setColumnWidth(c + 2, LEBAR_KOLOM_HARI);
-  });
-  stok.forEach(c => { sh.getRange(3, c + 1, 1, 2).setValues([['OUT', KONFIG.LABEL_HARI]]); });
+  // Titik tanpa kembali: label baris 3 ditulis SEKALI (atomik). Sebelumnya pemeriksaan diulang: staf bisa saja mengetik selagi dialog dijawab.
+  const ulang = cariTertinggal();
+  if (ulang.length) return [nama + ': DIBATALKAN (belum ada yang diubah). Ada angka masuk selagi dikerjakan. ' + pesanTertinggal(ulang)];
+  const c1 = stok[0], c2 = stok[stok.length - 1] + 2;
+  const judul = sh.getRange(3, c1, 1, c2 - c1 + 1).getValues()[0];
+  stok.forEach(c => { judul[c + 1 - c1] = 'OUT'; judul[c + 2 - c1] = KONFIG.LABEL_HARI; });
+  sh.getRange(3, c1, 1, c2 - c1 + 1).setValues([judul]);
   lapor.push(nama + ': susunan kolom diubah (' + stok.length + ' warna): STOK | OUT | OUT HARI INI.');
+  // Sisa tanda dari kolom IN lama (latar merah / catatan) tidak boleh terbawa ke kolom OUT baru.
+  stok.forEach(c => { sh.getRange(r0, c + 1, nBaris, 1).setBackground(null).setNote(''); });
 
-  // Sisanya (total kolom C, per warna, banner, validasi, rekap) memakai menu 4 yang sudah sadar layout.
+  // Validasi OUT, tampilan OUT HARI INI, total kolom C, per warna, banner, rekap: menu 4 yang sudah sadar layout.
   perbaruiSatu_(ss, cfg).forEach(x => lapor.push(x));
-  // OUT HARI INI diisi dari entri OUT hari ini di Log.
   const peta2 = bacaPeta_(sh);
-  if (!peta2.layoutBaru) throw new Error('label OUT HARI INI tidak terbaca setelah diubah; jalankan menu 5 lagi');
+  if (!peta2.layoutBaru) throw new Error('label OUT HARI INI tidak terbaca setelah diubah; jalankan menu 4 lalu "Hitung ulang OUT HARI INI"');
+  // Angka yang sempat diketik selagi proses: di kolom OUT (dulu IN) akan diproses sebagai OUT; di OUT HARI INI (dulu OUT) akan ditimpa.
+  const sesudah = sh.getRange(r0, 1, nBaris, peta2.kolomTerakhir).getValues();
+  const liar = [];
+  for (let r = 0; r < nBaris; r++) {
+    stok.forEach(c => {
+      if (sesudah[r][c] !== '') liar.push('baris ' + (r0 + r) + ' OUT ' + peta.kolom[c].warna + ' = ' + sesudah[r][c] + ' (dulu kolom IN: akan diproses sebagai OUT, hapus bila itu stok masuk)');
+      if (sesudah[r][c + 1] !== '') liar.push('baris ' + (r0 + r) + ' OUT HARI INI ' + peta.kolom[c].warna + ' = ' + sesudah[r][c + 1] + ' (dulu kolom OUT: ditimpa, ketik ulang bila itu keluar yang belum tercatat)');
+    });
+  }
+  if (liar.length) lapor.push(nama + ': PERIKSA, angka diketik selagi proses: ' + liar.slice(0, 6).join('; ') + (liar.length > 6 ? '; … (' + liar.length + ')' : '') + '.');
   const hari = Math.floor(waktuSerial_(new Date()));
   const h = hitungUlangHari_(ss, sh, cfg, peta2, hari);
   lapor.push(nama + ': OUT HARI INI diisi dari Log hari ini: ' + h.produk + ' kolom produk, ' + h.unit + ' unit.');
+  let adaKunci = false;
+  try { adaKunci = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).some(p => p.getDescription() === KONFIG.DESKRIPSI_PROTEKSI); } catch (err) { /* abaikan */ }
+  if (adaKunci) lapor.push(nama + ': PROTEKSI menu 3 masih memakai susunan lama: JALANKAN ULANG menu 3 (kalau tidak, kolom STOK tetap terkunci untuk staf dan OUT HARI INI terbuka).');
   return lapor;
 }
 
@@ -2446,11 +2491,23 @@ function bacaStatusHari_(cfg) {
     const t = PropertiesService.getDocumentProperties().getProperty(KUNCI_HARI + cfg.nama);
     if (!t) return null;
     const o = JSON.parse(t);
-    return typeof o.hari === 'number' && typeof o.sejak === 'number' ? o : null;
+    return typeof o.hari === 'number' && typeof o.sejak === 'number' ? { hari: o.hari, sejak: o.sejak, perlu: !!o.perlu } : null;
   } catch (err) { return null; }
 }
-function simpanStatusHari_(cfg, hari, sejak) {
-  PropertiesService.getDocumentProperties().setProperty(KUNCI_HARI + cfg.nama, JSON.stringify({ hari: hari, sejak: sejak }));
+function simpanStatusHari_(cfg, hari, sejak, perlu) {
+  // perlu = penulisan OUT HARI INI pernah gagal: bangun ulang dari Log pada kesempatan berikutnya (sejak tetap dipakai)
+  PropertiesService.getDocumentProperties().setProperty(KUNCI_HARI + cfg.nama, JSON.stringify({ hari: hari, sejak: sejak, perlu: !!perlu }));
+}
+/** Kembalikan OUT HARI INI dari Log (sejak reset terakhir / tengah malam). Tidak pernah melempar galat. Lock dokumen dipegang pemanggil. */
+function pulihkanHari_(ss, sheet, cfg, peta) {
+  try {
+    if (!peta.labelAda) return;
+    const hari = Math.floor(waktuSerial_(new Date()));
+    const st = bacaStatusHari_(cfg);
+    hitungUlangHari_(ss, sheet, cfg, peta, hari, st && st.hari === hari ? st.sejak : hari);
+  } catch (err) {
+    console.error('OUT HARI INI belum dipulihkan: ' + err.message);
+  }
 }
 function kolomHariDari_(peta) {
   return Object.keys(peta.kolom).map(Number).filter(c => peta.kolom[c].jenis === 'HARI').sort((a, b) => a - b);
@@ -2470,8 +2527,9 @@ function kosongkanHari_(sheet, peta) {
 function pastikanHariBerjalan_(ss, sheet, cfg, peta, hariOpsi) {
   const hari = hariOpsi !== undefined ? hariOpsi : Math.floor(waktuSerial_(new Date()));
   const st = bacaStatusHari_(cfg);
-  if (st && st.hari >= hari) return;
+  if (st && st.hari >= hari && !st.perlu) return;
   if (!st) { hitungUlangHari_(ss, sheet, cfg, peta, hari); return; }
+  if (st.perlu) { hitungUlangHari_(ss, sheet, cfg, peta, hari, st.hari === hari ? st.sejak : hari); return; }
   kosongkanHari_(sheet, peta);
   simpanStatusHari_(cfg, hari, hari);
 }
@@ -2527,6 +2585,7 @@ function hitungUlangHari_(ss, sheet, cfg, peta, hari, sejak) {
 /** Tampilan kolom OUT HARI INI: latar abu muda, tebal, nol tidak tampil, tanpa validasi (diisi script). */
 function styleKolomHari_(sh, kolom, nBaris) {
   const r = sh.getRange(KONFIG.BARIS_DATA, kolom, nBaris, 1);
+  r.setNote('');
   r.setBackground(WARNA_KOLOM_HARI).setFontWeight('bold').setNumberFormat(KONFIG.FORMAT_STOK).setHorizontalAlignment('center');
   // Ketikan staf di kolom ini ditolak Sheets (rumus selalu salah); tulisan script tidak terkena validasi. Tanpa ini staf bisa mengira ini kolom input.
   try {

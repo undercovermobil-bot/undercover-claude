@@ -1687,7 +1687,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   const rm = peta.barisTotal + 1;
   const f = i => u.BU.getRange(rm + i, 3).getFormula();
   const eb = peta.barisTotal - 1;
-  cek(f(0) === '=SUMIF($D$3:$AY$3,"OUT HARI INI",$D$' + rm + ':$AY$' + rm + ')-SUMPRODUCT(($B$4:$B$' + eb + '="Motor")*($D$3:$AY$3="OUT HARI INI"),$D$4:$AY$' + eb + ')', 'C(mutasi): Keluar hari ini = jumlah kolom OUT HARI INI dikurangi Motor: ' + f(0));
+  cek(f(0) === '=SUMIF($D$3:$AY$3,"OUT HARI INI",$D$' + rm + ':$AY$' + rm + ')-SUMPRODUCT((TRIM($B$4:$B$' + eb + ')="Motor")*($D$3:$AY$3="OUT HARI INI"),$D$4:$AY$' + eb + ')', 'C(mutasi): Keluar hari ini = jumlah kolom OUT HARI INI dikurangi Motor: ' + f(0));
   cek(/"OUT".*"<>Motor".*TODAY\(\)-1/.test(f(1)) && /SUMPRODUCT/.test(f(2)) && f(2).indexOf('-SUMPRODUCT') < 0 && /"OUT".*"Motor".*TODAY\(\)-1/.test(f(3)) && f(4) === '', 'baris lain: Keluar kemarin (Log), Motor keluar hari ini (kolom), Motor keluar kemarin (Log); tanpa baris Masuk');
   cek(u.BU.getRange(rm, B_HARI).getFormula() === '=SUM(F4:F' + eb + ')' && u.BU.getRange(rm, B_OUT).getFormula() === '' && u.BU.getRange(rm, H2_HARI).getFormula() === '=SUM(I4:I' + eb + ')', 'total per warna di kolom OUT HARI INI; kolom OUT kosong');
   cek(statusHari(u) && statusHari(u).hari === Math.floor(u.ctx.waktuSerial_(new Date())), 'migrasi menyimpan status hari ini');
@@ -1696,6 +1696,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
 // ---------- OUT mengisi OUT HARI INI; B mengurangi; ditolak tidak mengubah
 {
   const u = SEDIA_BARU();
+  geserJam(u, 3000);   // sesudah detik migrasi (status "sejak")
   const s0 = u.st(4, B_STOK);
   u.kirim(4, B_OUT, 3);
   cek(u.st(4, B_STOK) === s0 - 3 && u.sel(4, B_OUT).v === '' && hariSel(u, 4, B_HARI) === 3 && u.log1()[6] === 'OUT' && u.log1()[7] === 3, 'OUT 3: STOK turun 3, sel OUT kosong, OUT HARI INI = 3, Log OUT 3');
@@ -1715,7 +1716,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   const n = u.nLog();
   u.BU.getRange(4, B_HARI).setValue(77);
   u.ctx.prosesInputStok({ range: u.BU.getRange(4, B_HARI), source: u.ss, value: '77' });
-  cek(u.nLog() === n && u.sel(4, B_HARI).bg === '#efefef', 'edit manual di OUT HARI INI diabaikan (tidak dicatat, tidak ditandai)');
+  cek(u.nLog() === n && u.sel(4, B_HARI).bg === '#efefef' && hariSel(u, 4, B_HARI) === 4, 'edit manual di OUT HARI INI tidak dicatat dan angkanya dikembalikan dari Log (4, bukan 77)');
   // angka tertinggal di OUT (trigger terlewat) diproses penyapu dan ikut mengisi OUT HARI INI
   u.BU.getRange(6, B_OUT).setValue(2);
   const sb = u.st(6, B_STOK);
@@ -1951,6 +1952,64 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   w.BU.getRange(pw.barisTotal, 2).setValue('');
   w.ctx.ubahSusunanKolom();
   cek(/label "TOTAL STOK".*dilewati/.test(w.ctx.__alerts.slice(-1)[0]) && w.ctx.bacaPeta_(w.BU).layoutBaru === false, 'menu 5: label TOTAL STOK hilang -> dilewati');
+}
+
+// ---------- menu 5: ketahanan (hasil tinjauan independen)
+{
+  // sheet campuran (konversi sebelumnya terhenti): dilanjutkan, bukan "sudah berformat"
+  const u = SEDIA_UC();
+  [4, 7, 10, 13, 16].forEach(c => u.BU.getRange(3, c + 1, 1, 2).setValues([['OUT', 'OUT HARI INI']]));
+  cek(u.ctx.bacaPeta_(u.BU).layoutBaru === true, 'sheet campuran: terbaca layout baru (sebagian)');
+  u.ctx.ubahSusunanKolom();
+  const p = u.ctx.bacaPeta_(u.BU);
+  const stok = Object.keys(p.kolom).map(Number).filter(c => p.kolom[c].jenis === 'STOK');
+  cek(stok.every(c => p.kolom[c + 1].jenis === 'OUT' && p.kolom[c + 2].jenis === 'HARI') && /susunan kolom diubah \(11 warna\)/.test(u.ctx.__alerts.slice(-1)[0]), 'sheet campuran: sisa blok lama diubah, laporan menyebut 11 warna: ' + u.ctx.__alerts.slice(-1)[0].slice(0, 120));
+}
+{
+  // angka masuk di antara pemeriksaan pertama dan penulisan label: DIBATALKAN, tidak ada yang berubah
+  const u = SEDIA_UC();
+  const RgP = Object.getPrototypeOf(u.BU.getRange(1, 1));
+  const asli = RgP.getValues;
+  let blok = 0;
+  RgP.getValues = function () {
+    if (this.sh.name === 'Stok Cover UC' && this.r === 4 && this.c === 1 && this.nr > 50) { blok++; if (blok === 2) u.BU.getRange(7, 8).setValue(3); }
+    return asli.apply(this, arguments);
+  };
+  u.ctx.ubahSusunanKolom();
+  RgP.getValues = asli;
+  cek(/DIBATALKAN \(belum ada yang diubah\)/.test(u.ctx.__alerts.slice(-1)[0]) && u.ctx.bacaPeta_(u.BU).layoutBaru === false && u.BU.peek(3, 5).v === 'IN', 'angka masuk sesudah pemeriksaan pertama: DIBATALKAN, label tetap lama');
+}
+{
+  // angka diketik sesudah label ditulis: dilaporkan; sisa tanda merah di kolom IN lama dibersihkan; catatan menu 3
+  const u = SEDIA_UC();
+  u.ctx.kunciKolomStok();
+  u.BU.getRange(6, 5).setNote('DITOLAK: sisa').setBackground('#e06666');
+  const asliPS = u.ctx.perbaruiSatu_;
+  u.ctx.perbaruiSatu_ = function (...a) { const r = asliPS.apply(this, a); u.BU.getRange(7, 5).setValue(3); u.BU.getRange(7, 6).setValue(4); return r; };
+  u.ctx.ubahSusunanKolom();
+  const lap = u.ctx.__alerts.slice(-1)[0];
+  cek(/PERIKSA, angka diketik selagi proses: .*baris 7 OUT Abu-abu = 3.*baris 7 OUT HARI INI Abu-abu = 4/.test(lap), 'angka yang diketik selagi proses dilaporkan (OUT dari IN lama, OUT HARI INI ditimpa)');
+  cek(u.BU.peek(6, 5).note === '' && u.BU.peek(6, 5).bg === null, 'sisa tanda merah dan catatan dari kolom IN lama dibersihkan');
+  cek(/PROTEKSI menu 3 masih memakai susunan lama/.test(lap), 'laporan: proteksi menu 3 lama -> jalankan ulang menu 3');
+}
+{
+  // penulisan OUT HARI INI gagal sekali: status ditandai "perlu", entri berikutnya membangun ulang dari Log (sejak reset)
+  const u = SEDIA_BARU();
+  geserJam(u, 3000);
+  const RgP = Object.getPrototypeOf(u.BU.getRange(1, 1));
+  const asli = RgP.setValue;
+  let gagalSekali = true;
+  RgP.setValue = function (v) { if (gagalSekali && this.sh.name === 'Stok Cover UC' && this.c === B_HARI) { gagalSekali = false; throw new Error('Service Spreadsheets timed out'); } return asli.call(this, v); };
+  u.kirim(4, B_OUT, 3);
+  RgP.setValue = asli;
+  cek(statusHari(u).perlu === true && u.ss.toasts.some(t => /OUT HARI INI gagal ditulis/.test(t)) && hariSel(u, 4, B_HARI) === '', 'tulis OUT HARI INI gagal: status "perlu" + toast, STOK/Log sudah benar');
+  u.kirim(5, B_OUT, 2);
+  cek(hariSel(u, 4, B_HARI) === 3 && hariSel(u, 5, B_HARI) === 2 && statusHari(u).perlu === false, 'entri berikutnya: OUT HARI INI dibangun ulang dari Log (3 dan 2), status pulih');
+}
+{
+  // nama "Motor " (spasi ekor) di sheet tetap dikenali (TRIM) seperti di Log
+  const u = SEDIA_BARU();
+  cek(/TRIM\(\$B\$4:/.test(u.BU.getRange(u.ctx.bacaPeta_(u.BU).barisTotal + 1, 3).getFormula()), 'rumus total memakai TRIM pada nama produk (samakan dengan Log yang sudah di-trim)');
 }
 
 // ---------- kunci, cek status, rekap pada susunan baru
