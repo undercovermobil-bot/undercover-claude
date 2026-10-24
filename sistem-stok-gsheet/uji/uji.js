@@ -2155,6 +2155,30 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   cek(/Stok Cover UC: OUT HARI INI direset/.test(u.ctx.__alerts.slice(-1)[0]) && !/Stok Cover STP: OUT HARI INI direset/.test(u.ctx.__alerts.slice(-1)[0]), 'campuran: tombol reset hanya untuk sheet susunan baru');
 }
 
+{
+  // bangun ulang tanpa status ("sejak" tidak diberikan): mulai TENGAH MALAM hari ini; entri kemarin tidak ikut
+  const u = SEDIA_BARU();
+  geserJam(u, 3000);
+  const cfg = u.kons().SISTEM[0];
+  const hari = Math.floor(u.ctx.waktuSerial_(new Date()));
+  u.ctx.tulisLog_(u.ss, cfg, [[hari - 1 + 0.9, 'Stok Cover UC', 4, u.BU.peek(4, 2).v, u.BU.peek(4, 3).v, 'Abu-abu', 'OUT', 40, 1, 1, '', '']]);   // 23:36 kemarin
+  u.kirim(4, B_OUT, 3);
+  delete u.ctx.__propDok['HARI|Stok Cover UC'];
+  u.kirim(5, B_OUT, 1);   // status hilang -> dibangun dari Log sejak tengah malam
+  cek(hariSel(u, 4, B_HARI) === 3 && hariSel(u, 5, B_HARI) === 1, 'bangun ulang tanpa status: sejak tengah malam hari ini; OUT kemarin (40) tidak ikut: ' + hariSel(u, 4, B_HARI));
+}
+{
+  // menu 5: label baris 3 ditulis dengan SATU panggilan (atomik), bukan per warna
+  const u = SEDIA_UC();
+  const RgP = Object.getPrototypeOf(u.BU.getRange(1, 1));
+  const asli = RgP.setValues;
+  let panggilan = 0;
+  RgP.setValues = function (v) { if (this.sh.name === 'Stok Cover UC' && this.r === 3 && this.nr === 1 && this.nc > 2 && v[0].some(x => x === 'OUT HARI INI')) panggilan++; return asli.apply(this, arguments); };
+  u.ctx.ubahSusunanKolom();
+  RgP.setValues = asli;
+  cek(panggilan === 1 && u.ctx.bacaPeta_(u.BU).layoutBaru === true, 'menu 5: label baris 3 ditulis dalam satu panggilan (' + panggilan + ')');
+}
+
 // ---------- kunci, cek status, rekap pada susunan baru
 {
   const u = SEDIA_BARU();
