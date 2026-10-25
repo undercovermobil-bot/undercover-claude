@@ -1682,7 +1682,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   const peta = u.ctx.bacaPeta_(u.BU);
   cek(peta.layoutBaru === true && peta.kolom[B_STOK].jenis === 'STOK' && peta.kolom[B_OUT].jenis === 'OUT' && peta.kolom[B_HARI].jenis === 'HARI' && peta.kolom[B_OUT].kolomHari === B_HARI, 'peta layout baru: STOK/OUT/HARI, OUT tahu kolom HARI-nya');
   cek([4, 5, 6, 7, 8, 9].map(c => u.BU.peek(3, c).v).join('|') === 'STOK|OUT|OUT HARI INI|STOK|OUT|OUT HARI INI', 'judul baris 3 per warna');
-  cek(!!u.BU.peek(4, B_OUT).dv && /REGEXMATCH/.test(u.BU.peek(4, B_OUT).dv.f) && !!u.BU.peek(4, B_HARI).dv && /FALSE/.test(u.BU.peek(4, B_HARI).dv.f) && u.BU.peek(4, B_HARI).dv.invalid === false && !!u.BU.peek(4, B_STOK).dv, 'validasi: OUT menerima B+angka, OUT HARI INI menolak ketikan staf (rumus FALSE), STOK tetap');
+  cek(!!u.BU.peek(4, B_OUT).dv && /REGEXMATCH/.test(u.BU.peek(4, B_OUT).dv.f) && !u.BU.peek(4, B_HARI).dv && !!u.BU.peek(4, B_STOK).dv, 'validasi: OUT menerima B+angka, OUT HARI INI TANPA validasi (cegah segitiga merah "Invalid"), STOK tetap');
   cek(u.BU.peek(4, B_HARI).bg === '#efefef' && u.BU.peek(4, B_HARI).nf === u.kons().FORMAT_STOK && u.BU.getColumnWidth(B_HARI) === u.ctx.__K.LEBAR_KOLOM_HARI, 'kolom OUT HARI INI: latar abu muda, nol tidak tampil, lebar sendiri');
   cek(u.BU.getRange(1, 4).getValue() === u.ctx.__K.TEKS_BANNER_HARI, 'banner menjelaskan: stok masuk diketik di STOK');
   const rm = peta.barisTotal + 1;
@@ -1917,7 +1917,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   cek(u.nLog() === logSebelum && JSON.stringify(u.BU.getRange(4, 4, 30, 6).getValues().map((r, i) => [r[0], r[3]])) === JSON.stringify(stokSebelum.map(r => [r[0], r[3]])), 'menu 5: STOK dan Log tidak berubah');
   cek(u.BU.getRange(rm, 6).getFormula() === '=SUM(F4:F' + (peta.barisTotal - 1) + ')' && u.BU.getRange(rm, 5).getFormula() === '' && u.BU.getRange(rm + 1, 3).getFormula().indexOf('"IN"') < 0, 'menu 5: total per warna diganti; baris Masuk dihapus dari kolom C');
   cek(/SUMIF\(\$D\$3/.test(u.BU.getRange(rm, 3).getFormula()) && u.BU.getRange(rm + 4, 3).getFormula() === '' && u.BU.getRange(rm + 7, 3).getFormula() === '', 'menu 5: rencana total baru (4 baris), sisa rumus lama dihapus');
-  cek(!!u.BU.peek(4, 6).dv && /FALSE/.test(u.BU.peek(4, 6).dv.f) && !!u.BU.peek(4, 5).dv && /REGEXMATCH/.test(u.BU.peek(4, 5).dv.f) && u.BU.peek(4, 6).bg === '#efefef', 'menu 5: validasi OUT, OUT HARI INI menolak ketikan staf, tampilan abu muda');
+  cek(!u.BU.peek(4, 6).dv && !!u.BU.peek(4, 5).dv && /REGEXMATCH/.test(u.BU.peek(4, 5).dv.f) && u.BU.peek(4, 6).bg === '#efefef', 'menu 5: validasi OUT, OUT HARI INI tanpa validasi, tampilan abu muda');
   cek(u.BU.getRange(1, 4).getValue() === u.ctx.__K.TEKS_BANNER_HARI && /susunan kolom diubah/.test(lap) && statusHari(u).hari === hari, 'menu 5: banner baru, status hari tersimpan, laporan');
   u.kirim(4, 5, 1);
   cek(hariSel(u, 4, 6) === 4 && u.sel(4, 5).v === '', 'sesudah menu 5: OUT di kolom ke-2 berjalan dan menambah OUT HARI INI');
@@ -2177,6 +2177,16 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   u.ctx.ubahSusunanKolom();
   RgP.setValues = asli;
   cek(panggilan === 1 && u.ctx.bacaPeta_(u.BU).layoutBaru === true, 'menu 5: label baris 3 ditulis dalam satu panggilan (' + panggilan + ')');
+}
+
+{
+  // sheet yang sudah dikonversi dengan kode lama (aturan "tolak semua" di OUT HARI INI): menu 4 menghapusnya (penyebab segitiga merah "Invalid")
+  const u = SEDIA_BARU();
+  const p = u.ctx.bacaPeta_(u.BU);
+  u.BU.getRange(4, B_HARI, p.barisTotal - 4, 1).setDataValidation(u.ctx.SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).build());
+  cek(!!u.BU.peek(4, B_HARI).dv && /FALSE/.test(u.BU.peek(4, B_HARI).dv.f), 'prasyarat: aturan lama terpasang');
+  u.ctx.perbaruiSheetLama();
+  cek(!u.BU.peek(4, B_HARI).dv && !u.BU.peek(10, H2_HARI).dv && !!u.BU.peek(4, B_OUT).dv, 'menu 4: aturan "tolak semua" lama di OUT HARI INI dihapus; validasi OUT utuh');
 }
 
 // ---------- kunci, cek status, rekap pada susunan baru

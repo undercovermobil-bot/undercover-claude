@@ -2649,18 +2649,16 @@ function bacaLogSejak_(ss, cfg, waktuMulai) {
   return hasil;
 }
 
-/** Tampilan kolom OUT HARI INI: latar abu muda, tebal, nol tidak tampil, tanpa validasi (diisi script). */
+/**
+ * Tampilan kolom OUT HARI INI: latar abu muda, tebal, nol tidak tampil, TANPA validasi. Aturan validasi "tolak semua" pernah dipakai untuk menahan
+ * ketikan staf, tetapi Sheets menandai SETIAP sel berisi angka (termasuk yang ditulis script) dengan segitiga merah "Invalid". Sebagai gantinya ketikan
+ * staf dikembalikan dari Log oleh script (pulihkanHari_) dan kolomnya bisa dikunci lewat menu 3. Menjalankan ulang menu 4 menghapus aturan lama.
+ */
 function styleKolomHari_(sh, kolom, nBaris) {
   const r = sh.getRange(KONFIG.BARIS_DATA, kolom, nBaris, 1);
   r.setNote('');
   r.setBackground(WARNA_KOLOM_HARI).setFontWeight('bold').setNumberFormat(KONFIG.FORMAT_STOK).setHorizontalAlignment('center');
-  // Ketikan staf di kolom ini ditolak Sheets (rumus selalu salah); tulisan script tidak terkena validasi. Tanpa ini staf bisa mengira ini kolom input.
-  try {
-    r.setDataValidation(SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false)
-      .setHelpText('Kolom ini terisi otomatis. Ketik jumlah keluar di kolom OUT di sebelah kiri.').build());
-  } catch (err) {
-    try { r.clearDataValidations(); } catch (e2) { /* tanpa validasi: edit di sini diabaikan script */ }
-  }
+  try { r.clearDataValidations(); } catch (err) { /* tidak ada validasi */ }
 }
 
 /** Rumus di kolom C milik script (total harian)? Dikenali dari awal rumusnya; isian/rumus lain tidak pernah ditimpa atau dihapus. */
