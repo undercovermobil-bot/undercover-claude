@@ -2193,9 +2193,16 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
 {
   const u = SEDIA_BARU();
   u.ctx.kunciKolomStok();
-  const p = u.BU.getProtections().filter(x => !x.removed).slice(-1)[0];
+  const p = u.BU.getProtections('SHEET').filter(x => x.desc === u.kons().DESKRIPSI_PROTEKSI).slice(-1)[0];
+  const pr = u.BU.getProtections('RANGE').filter(x => x.desc === u.kons().DESKRIPSI_PROTEKSI_HARI);
   const adaDi = (kol) => p.unprot.some(r => r.c === kol);
-  cek(adaDi(B_STOK) && adaDi(B_OUT) && !adaDi(B_HARI) && /STOK\/OUT tetap bisa diisi/.test(u.ctx.__alerts.slice(-1)[0]), 'kunci (susunan baru): STOK dan OUT bebas diisi staf, OUT HARI INI terkunci');
+  cek(adaDi(B_STOK) && adaDi(B_OUT) && !adaDi(B_HARI) && /STOK\/OUT tetap bisa diisi; popup peringatan di 16 kolom OUT HARI INI/.test(u.ctx.__alerts.slice(-1)[0]), 'kunci (susunan baru): STOK dan OUT bebas diisi staf, OUT HARI INI terkunci');
+  cek(pr.length === 16 && pr.every(x => x.peringatan === true) && pr.map(x => x.rentang.c).join(',') === [6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51].join(','), 'kunci (susunan baru): 16 proteksi mode PERINGATAN, tepat di kolom OUT HARI INI');
+  u.ctx.kunciKolomStok();
+  cek(u.BU.getProtections('RANGE').filter(x => x.desc === u.kons().DESKRIPSI_PROTEKSI_HARI).length === 16 && u.BU.getProtections('SHEET').filter(x => x.desc === u.kons().DESKRIPSI_PROTEKSI).length === 1, 'kunci diulang: proteksi lama diganti, tidak menggandakan (16 peringatan + 1 sheet)');
+  const lama = SEDIA_UC();
+  lama.ctx.kunciKolomStok();
+  cek(lama.BU.getProtections('RANGE').length === 0 && !/popup peringatan/.test(lama.ctx.__alerts.slice(-1)[0]), 'kunci (susunan lama): tidak ada proteksi peringatan');
   u.ctx.cekStatus();
   cek(/format STOK\/OUT\/OUT HARI INI \(aktif\); OUT HARI INI dihitung sejak/.test(u.ctx.__alerts.slice(-1)[0]) && !/merujuk log versi lama/.test(u.ctx.__alerts.slice(-1)[0]), 'cek status (susunan baru): menyebut susunan dan "dihitung sejak", tanpa peringatan palsu');
   // rekap: IN tidak ada lagi; Keluar dan Motor tetap benar

@@ -74,6 +74,7 @@ const KONFIG = {
     { kunci: 'transparan', bg: '#efefef', fg: '#000000' },
   ],
   DESKRIPSI_PROTEKSI: 'Sistem stok: hanya IN/OUT yang boleh diisi',
+  DESKRIPSI_PROTEKSI_HARI: 'Sistem stok: kolom OUT HARI INI terisi otomatis (jangan diedit)',
 };
 
 // Urutan warna di sheet: 0-4 Reguler, 5-13 Strip, 14 Premium (STP: Transparan), 15 Exclusive.
@@ -1278,7 +1279,16 @@ function kunciKolomStok() {
     const p = sh.protect().setDescription(KONFIG.DESKRIPSI_PROTEKSI);
     p.setUnprotectedRanges(bebas);
     batasiKePemilik_(p, me);
-    hasil.push(cfg.nama + ': dikunci, ' + bebas.length + (peta.layoutBaru ? ' kolom STOK/OUT tetap bisa diisi' : ' kolom IN/OUT tetap bisa diisi'));
+    // Susunan baru: pemilik tidak bisa dikunci keluar dari kolomnya sendiri, tetapi tiap kolom OUT HARI INI diberi proteksi mode PERINGATAN:
+    // popup muncul bagi siapa pun (termasuk pemilik) yang mengedit kolom itu. Tulisan script tidak terpengaruh.
+    let peringatan = 0;
+    if (peta.layoutBaru) {
+      kolomHariDari_(peta).forEach(c => {
+        sh.getRange(KONFIG.BARIS_DATA, c, peta.barisTotal - KONFIG.BARIS_DATA, 1).protect().setDescription(KONFIG.DESKRIPSI_PROTEKSI_HARI).setWarningOnly(true);
+        peringatan++;
+      });
+    }
+    hasil.push(cfg.nama + ': dikunci, ' + bebas.length + (peta.layoutBaru ? ' kolom STOK/OUT tetap bisa diisi; popup peringatan di ' + peringatan + ' kolom OUT HARI INI' : ' kolom IN/OUT tetap bisa diisi'));
   });
 
   KONFIG.SISTEM.forEach(cfg => {
@@ -2796,6 +2806,9 @@ function emailUser_(e) {
 function hapusProteksiLama_(sh) {
   sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).forEach(p => {
     if (p.getDescription() === KONFIG.DESKRIPSI_PROTEKSI) p.remove();
+  });
+  sh.getProtections(SpreadsheetApp.ProtectionType.RANGE).forEach(p => {
+    if (p.getDescription() === KONFIG.DESKRIPSI_PROTEKSI_HARI) p.remove();
   });
 }
 

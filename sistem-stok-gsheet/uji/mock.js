@@ -54,14 +54,15 @@ class Sheet {
   setColumnWidth(c, w) { (this.lebar = this.lebar || {})[c] = w; }
   getColumnWidth(c) { return (this.lebar || {})[c] || 100; }
   setColumnWidths() {}
-  protect() { const p = new Protection(); this.protections.push(p); return p; }
-  getProtections() { return this.protections.slice(); }
+  protect() { const p = new Protection(); p.tipe = 'SHEET'; this.protections.push(p); return p; }
+  getProtections(tipe) { return this.protections.filter(x => !x.removed && (!tipe || x.tipe === tipe)); }
 }
 
 class Protection {
-  constructor() { this.desc = ''; this.unprot = []; this.editors = ['owner@x', 'staf@x']; }
+  constructor() { this.tipe = 'SHEET'; this.desc = ''; this.unprot = []; this.editors = ['owner@x', 'staf@x']; }
   setDescription(d) { this.desc = d; return this; }
   getDescription() { return this.desc; }
+  setWarningOnly(b) { this.peringatan = !!b; return this; }
   setUnprotectedRanges(r) { this.unprot = r; return this; }
   addEditor(u) { const e = u.getEmail(); if (!this.editors.includes(e)) this.editors.push(e); return this; }
   getEditors() { return this.editors.map(e => ({ getEmail: () => e })); }
@@ -101,6 +102,7 @@ class Range {
   setValue(v) { return this.each(x => { if (typeof v === 'string' && v.startsWith('=')) { x.f = v; x.v = ''; } else { x.v = v; x.f = ''; } }); }
   clearContent() { return this.each(x => { x.v = ''; x.f = ''; }); }
   setNote(n) { return this.each(x => { x.note = n || ''; }); }
+  protect() { const p = new Protection(); p.tipe = 'RANGE'; p.rentang = this; this.sh.protections.push(p); return p; }
   getNote() { return this.sh.cell(this.r, this.c).note; }
   getNotes() { const o = []; for (let i = 0; i < this.nr; i++) { const row = []; for (let j = 0; j < this.nc; j++) { const x = this.sh.peek(this.r + i, this.c + j); row.push(x ? x.note : ''); } o.push(row); } return o; }
   setBackground(b) { return this.each(x => { x.bg = b; }); }

@@ -333,6 +333,8 @@ Tanpa kunci, semua editor bisa mengetik apa saja di sel mana pun, termasuk menim
 - STOK tetap berubah saat staf mengisi IN/OUT, karena trigger berjalan sebagai pemilik file.
 - Efek samping: staf tidak bisa koreksi stok langsung (opname) dan tidak bisa menambah produk/baris. Itu dikerjakan pemilik.
 
+**Susunan baru (STOK | OUT | OUT HARI INI):** staf boleh mengisi **STOK** (stok masuk, opname) dan **OUT**; hanya kolom **OUT HARI INI** yang terkunci. Menu 3 juga memasang **popup peringatan** di tiap kolom OUT HARI INI ("Anda akan mengedit bagian yang tidak boleh diubah"). Popup muncul bagi **siapa pun yang mengedit, termasuk pemilik file**, dan editnya masih bisa dilanjutkan dengan klik OK; script tidak terpengaruh. Pemilik tidak bisa dikunci keluar dari sheet miliknya sendiri; kalau staf memakai akun pemilik, popup dan pengembalian angka dari Log (beberapa detik sesudah edit) adalah penahannya. Penahan paling kuat: staf memakai akun Google sendiri dengan izin edit, karena untuk mereka kolom itu terkunci penuh. Menjalankan ulang menu 3 mengganti proteksi lama (tidak menggandakan). Deskripsi proteksi peringatan: "Sistem stok: kolom OUT HARI INI terisi otomatis (jangan diedit)".
+
 Kalau semua pengguna dipercaya dan Log cukup, boleh tidak dikunci. Untuk membuka kunci: **Data → Protect sheets and ranges** → hapus perlindungan bernama "Sistem stok: hanya IN/OUT yang boleh diisi".
 
 **Waktu migrasi terbaik di file asli: akhir hari**, setelah OUT dihapus dan IN sudah final. Script mengambil angka IN apa adanya sebagai STOK awal.
