@@ -2125,7 +2125,11 @@ function ubahSusunanSatu_(ss, cfg) {
   if (tidakLazim.length || !semua.length) {
     return [nama + ': susunan kolom tidak lazim (bukan STOK | IN | OUT di tiap warna: ' + tidakLazim.map(c => peta.kolom[c].warna).join(', ') + '), dilewati.'];
   }
-  if (!stok.length) return [nama + ': sudah berformat STOK/OUT/OUT HARI INI, dilewati (kalau ada yang kurang, jalankan menu 4 lalu "Hitung ulang OUT HARI INI").'];
+  if (!stok.length) {
+    // Sudah berformat baru: tidak ada yang diubah susunannya, tetapi tampilan/validasi/total dilengkapi lewat menu 4 (mis. membersihkan aturan lama
+    // di OUT HARI INI sesudah kode diperbarui). Aman diulang.
+    return [nama + ': sudah berformat STOK/OUT/OUT HARI INI; susunan tidak diubah, tampilan dan total dilengkapi (menu 4).'].concat(perbaruiSatu_(ss, cfg));
+  }
   // Tidak boleh ada angka tertinggal: kolom OUT lama akan menjadi OUT HARI INI, kolom IN lama menjadi OUT.
   const r0 = KONFIG.BARIS_DATA;
   const nBaris = peta.barisTotal - r0;

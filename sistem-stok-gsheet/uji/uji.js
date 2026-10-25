@@ -1923,7 +1923,7 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   cek(hariSel(u, 4, 6) === 4 && u.sel(4, 5).v === '', 'sesudah menu 5: OUT di kolom ke-2 berjalan dan menambah OUT HARI INI');
   // diulang: dilewati
   u.ctx.ubahSusunanKolom();
-  cek(/sudah berformat STOK\/OUT\/OUT HARI INI/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 5 diulang: dilewati');
+  cek(/sudah berformat STOK\/OUT\/OUT HARI INI; susunan tidak diubah/.test(u.ctx.__alerts.slice(-1)[0]) && /total harian|banner sudah sesuai|validasi IN\/OUT diperbarui/.test(u.ctx.__alerts.slice(-1)[0]), 'menu 5 diulang pada sheet yang sudah baru: susunan tidak diubah, tapi tampilan/validasi/total dilengkapi (menu 4)');
   // menu 4 pada susunan baru: aman diulang
   u.ctx.perbaruiSheetLama();
   u.ctx.perbaruiSheetLama();
@@ -2187,6 +2187,15 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   cek(!!u.BU.peek(4, B_HARI).dv && /FALSE/.test(u.BU.peek(4, B_HARI).dv.f), 'prasyarat: aturan lama terpasang');
   u.ctx.perbaruiSheetLama();
   cek(!u.BU.peek(4, B_HARI).dv && !u.BU.peek(10, H2_HARI).dv && !!u.BU.peek(4, B_OUT).dv, 'menu 4: aturan "tolak semua" lama di OUT HARI INI dihapus; validasi OUT utuh');
+}
+
+{
+  // sheet yang sudah dikonversi dengan kode lama (aturan "tolak semua" di OUT HARI INI) lalu kode diperbarui dan MENU 5 dijalankan (bukan menu 4)
+  const u = SEDIA_BARU();
+  const p = u.ctx.bacaPeta_(u.BU);
+  u.BU.getRange(4, B_HARI, p.barisTotal - 4, 1).setDataValidation(u.ctx.SpreadsheetApp.newDataValidation().requireFormulaSatisfied('=FALSE').setAllowInvalid(false).build());
+  u.ctx.ubahSusunanKolom();
+  cek(!u.BU.peek(4, B_HARI).dv && !u.BU.peek(10, H2_HARI).dv, 'menu 5 pada sheet yang sudah baru: aturan "tolak semua" lama di OUT HARI INI ikut dihapus (segitiga merah hilang)');
 }
 
 // ---------- kunci, cek status, rekap pada susunan baru
