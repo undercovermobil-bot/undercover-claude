@@ -48,7 +48,8 @@ TAMBAH_MEREK = {'WRV': 'Honda WRV', 'CRF1100L Africa Twin': 'Honda CRF1100L Afri
 RE_STANDAR = re.compile(r'^(?:Body\s+)?Cover (Mobil|Motor) (.+?) (Reguler|Premium|Exclusive)\s*(?:-\s*.*)?$')
 RE_UA_DEPAN = re.compile(r'^Undercover Autocare - Cover (Mobil|Motor) (.+?) (Reguler|Premium|Exclusive)$')
 RE_MOTOR_LAMA = re.compile(r'^Body Cover Motor / Sarung / Selimut Motor (.+)$')
-RE_DESK = re.compile(r'(Untuk Order Cover (?:Mobil|Motor)) (?!untuk )')
+# \s* (bukan spasi tunggal): 2 deskripsi salah ketik 'Cover MobilSuzuki Fronx' (tanpa spasi)
+RE_DESK = re.compile(r'(Untuk Order Cover (?:Mobil|Motor))(?!\s+untuk\b)\s*(?=\S)')
 
 
 def urai(nama):
