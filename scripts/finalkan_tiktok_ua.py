@@ -195,7 +195,8 @@ def main(base_path, gagal_path, out_dir, all_paths):
     # ---- 2. all_information: 275 produk gagal
     n_baris = n_atr = 0
     for p, (w, ws, h) in wbs.items():
-        rows_gagal = [r for r in range(6, ws.max_row + 1) if str(ws.cell(row=r, column=1).value) in gagal]
+        target = gagal | ids          # gagal atribut + produk lolos yg deskripsinya berubah (1 upload saja)
+        rows_gagal = [r for r in range(6, ws.max_row + 1) if str(ws.cell(row=r, column=1).value) in target]
         if not rows_gagal:
             continue
         c_nama, c_desk, c_merek = h['product_name'], h['product_description'], h['brand']
@@ -227,7 +228,7 @@ def main(base_path, gagal_path, out_dir, all_paths):
         if sisa <= ws.max_row:
             ws.delete_rows(sisa, ws.max_row - sisa + 1)
         n_baris += len(rows_gagal)
-        w.save(os.path.join(out_dir, 'UA_TIKTOK_ALL_INFORMATION_275_produk.xlsx'))
+        w.save(os.path.join(out_dir, 'UA_TIKTOK_ALL_INFORMATION_semua_perubahan.xlsx'))
     # ---- 3. laporan
     lw = openpyxl.Workbook(); ls = lw.active; ls.title = 'Perubahan Generasi'
     for c, v in enumerate(['ID Produk', 'Model', 'Tipe', 'Generasi lama', 'Generasi baru', 'Status upload', 'Berubah'], 1):
