@@ -229,9 +229,11 @@ function prosesInputStok(e) {
   if (!relevan) {
     // Kolom OUT HARI INI diisi script. Ketikan/tempel staf di sana tidak dicatat; angkanya dikembalikan dari Log (tanpa menunggu lama).
     if (kenaHari && peta.layoutBaru) {
+      const ssH = e.source || SpreadsheetApp.getActiveSpreadsheet();
+      toastHariOtomatis_(ssH);
       const lk = LockService.getDocumentLock();
       if (!lk.tryLock(KONFIG.TUNGGU_LOCK_MS)) { tandaiPerlu_(cfg, true); return; }   // sibuk: dipulihkan pada eksekusi berikutnya
-      try { pulihkanHari_(e.source || SpreadsheetApp.getActiveSpreadsheet(), sheet, cfg, peta); } finally { lk.releaseLock(); }
+      try { pulihkanHari_(ssH, sheet, cfg, peta); } finally { lk.releaseLock(); }
     }
     return;
   }
@@ -260,7 +262,7 @@ function prosesInputStok(e) {
   try {
     const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
     prosesBlok_(ss, sheet, cfg, peta, { r0: barisAwal, r1: barisAkhir, c0: c0, c1: kolomAkhir, satu: r0 === r1 && c0 === c1 }, e);
-    if (kenaHari && peta.layoutBaru) pulihkanHari_(ss, sheet, cfg, peta);
+    if (kenaHari && peta.layoutBaru) { toastHariOtomatis_(ss); pulihkanHari_(ss, sheet, cfg, peta); }
   } finally {
     lock.releaseLock();
   }
@@ -2549,6 +2551,11 @@ function tandaiPerlu_(cfg, nilai) {
 function perluDipulihkan_(cfg) {
   try { return PropertiesService.getDocumentProperties().getProperty(KUNCI_PERLU + cfg.nama) === '1'; } catch (err) { return false; }
 }
+/** Toast pengingat bila staf mengedit kolom OUT HARI INI (popup peringatan Google punya kotak "jangan tampilkan lagi 5 menit" yang tidak bisa dimatikan). */
+function toastHariOtomatis_(ss) {
+  try { ss.toast('Kolom OUT HARI INI terisi otomatis. Angka yang Anda ketik dikembalikan dari Log. Isi jumlah keluar di kolom OUT (di kiri).', 'OUT HARI INI', 8); } catch (err) { /* abaikan */ }
+}
+
 /** Kembalikan OUT HARI INI dari Log (sejak reset terakhir / tengah malam). Tidak pernah melempar galat. Lock dokumen dipegang pemanggil. */
 function pulihkanHari_(ss, sheet, cfg, peta) {
   try {

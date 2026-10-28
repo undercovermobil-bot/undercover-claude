@@ -2198,6 +2198,24 @@ const statusHari = u => JSON.parse(u.ctx.__propDok['HARI|Stok Cover UC'] || 'nul
   cek(!u.BU.peek(4, B_HARI).dv && !u.BU.peek(10, H2_HARI).dv, 'menu 5 pada sheet yang sudah baru: aturan "tolak semua" lama di OUT HARI INI ikut dihapus (segitiga merah hilang)');
 }
 
+{
+  // toast pengingat tiap ada edit di kolom OUT HARI INI (tanpa kotak "jangan tampilkan lagi")
+  const u = SEDIA_BARU();
+  geserJam(u, 3000);
+  u.kirim(4, B_OUT, 3);
+  const n0 = u.ss.toasts.length;
+  u.BU.getRange(4, B_HARI).setValue(77);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(4, B_HARI), source: u.ss, value: '77' });
+  cek(u.ss.toasts.length === n0 + 1 && /terisi otomatis.*dikembalikan dari Log/.test(u.ss.toasts.slice(-1)[0]) && hariSel(u, 4, B_HARI) === 3, 'edit di OUT HARI INI: toast pengingat + angka dikembalikan dari Log');
+  const n1 = u.ss.toasts.length;
+  u.BU.getRange(5, B_OUT).setValue(1); u.BU.getRange(5, B_HARI).setValue(88);
+  u.ctx.prosesInputStok({ range: u.BU.getRange(5, B_OUT, 1, 2), source: u.ss });
+  cek(u.ss.toasts.slice(n1).some(t => /terisi otomatis/.test(t)), 'edit yang menjangkau OUT dan OUT HARI INI: toast pengingat juga muncul');
+  const n2 = u.ss.toasts.length;
+  u.kirim(6, B_OUT, 1);
+  cek(!u.ss.toasts.slice(n2).some(t => /terisi otomatis/.test(t)), 'edit biasa di kolom OUT: tanpa toast pengingat');
+}
+
 // ---------- kunci, cek status, rekap pada susunan baru
 {
   const u = SEDIA_BARU();
