@@ -5,10 +5,17 @@
 
 # Lokasi repo diambil dari letak script ini (scripts\..), jadi jalan di device mana pun.
 $repoPath = Split-Path -Parent $PSScriptRoot
+# Task Scheduler kadang jalan dengan PATH lama (tanpa git) - tambahkan lokasi default Git for Windows.
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $env:Path += ";C:\Program Files\Git\cmd" }
 $logFile = Join-Path $repoPath "auto-commit-log.txt"
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 Set-Location $repoPath
+
+# Ambil perubahan terbaru dulu, lalu sinkron memory dua arah dengan vault Obsidian lokal
+# (lihat sync-vault-memory.ps1) supaya catatan sesi lokal ikut ter-push.
+git pull --rebase --autostash origin main 2>&1 | Out-Null
+& (Join-Path $PSScriptRoot "sync-vault-memory.ps1") -Mode both | Out-Null
 
 $status = git status --porcelain
 if ([string]::IsNullOrWhiteSpace($status)) {
