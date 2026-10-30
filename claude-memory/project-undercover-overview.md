@@ -7,6 +7,9 @@ metadata:
   originSessionId: ca643b54-9c86-4cb3-9ab5-8314c2b1cb44
 ---
 
+> [!info] Update 2026-10-30
+> Diimpor dari repo GitHub `undercover-claude` (commit 6d677f7, 26 Okt 2026). Sub-proyek sekarang lebih dari 3: SKU Sync, Sync SKU Gudang BigSeller ([[project-undercover-bigseller-sync]]), Stock Sync ([[project-undercover-stock-sync-status]]), Sistem Stok Google Sheet ([[project-undercover-sistem-stok-gsheet]]), Harga per tipe bodi ([[project-undercover-harga-referensi]]), Analisa Penjualan ([[project-undercover-analisa-penjualan]]), Dashboard ([[project-undercover-dashboard]]), Shopee Price Monitor, Audit Foto. Di PC ini (user `OWNER`): clone repo = `C:\Users\OWNER\Documents\Undercover-Repo` (git clone 2026-10-30), data besar = `G:\My Drive\E-commerce`. Path `C:\Users\chand\...` di bawah tidak berlaku di PC ini — lihat [[sumber-data-google-drive]].
+
 Undercover = pemeliharaan katalog produk untuk bisnis cover mobil dengan 4 toko (Undercover Autocare/UA, Otonation/OT, Otoprotection/OP, Smartprotection/SP) di Shopee/TikTok/Lazada. Tiga sub-proyek:
 
 1. **SKU Sync** (utama, paling bernilai) — menyamakan SKU semua listing ke 1 master, hasilkan file siap-upload per toko/channel. Lihat [[project-undercover-sku-sync-rules]], [[project-undercover-sku-sync-status]].
