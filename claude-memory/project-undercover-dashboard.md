@@ -10,7 +10,10 @@ Dashboard 1 file HTML (Chart.js) berisi penjualan & iklan 9 toko ([[toko-dan-id-
 
 **Lokasi sumber:** `G:\My Drive\E-commerce\Undercover-Dashboard\dashboard-src\` (`template.html`, `script.js`, `data/dashboard_data.json`, `build.py`). Detail teknis: [[dashboard-README]], cara tarik data: [[bigseller-pull-snippets]], desain: [[Plan - Dashboard Penjualan & Iklan (Jun-Sep 2026)]].
 
-## Status (per 2026-10-21, terakhir tercatat)
+## Status
+**Terbaru (per 2026-11-02, dari sesi lain, lihat [[bigseller-dashboard-refresh]]):** artifact utama di-refresh dengan data sampai **1 Nov 2026 (N=154)**. Salinan data di Drive (`dashboard_data.json`, N=142) sudah basi; data live ada di `Documents\Undercover\data\dashboard_data.base_2026-11-01.json`. Pekerjaan lanjutan: export manual → DATA ([[manual-export-to-dashboard-mapping]]) dan analisa margin ([[project-undercover-margin]]).
+
+**Per 2026-10-21 (catatan sebelumnya):**
 - Data 1 Jun – 20 Okt 2026, N=142 hari. Artifact utama v4.
 - Okt 1–20: Pendapatan Kotor Rp960.807.214, pesanan valid 2.676/2.871, biaya iklan Rp76.312.136, ROAS Riil 12,59x, Δ vs 1–20 Sep −16,9%.
 - Bulanan: Jun 1.407.364.859 · Jul 1.715.485.260 · Agu 1.807.840.680 · Sep 1.659.040.141 (setelah revisi live 14 Okt).
@@ -31,4 +34,5 @@ Dashboard 1 file HTML (Chart.js) berisi penjualan & iklan 9 toko ([[toko-dan-id-
 
 ## Tugas berikutnya
 - [ ] **1 Nov 2026**: tarik poin penalti akhir Oktober 4 toko Shopee → isi `HEALTH_MONTHEND['2026-10-31']` di `script.js`.
-- [ ] Perpanjang data ke 21–31 Okt (rekonsiliasi ulang Jun–Okt dulu), tambah preset bulan November.
+- [x] Perpanjang data ke 21–31 Okt dan 1 Nov — selesai 2026-11-02 (N=154).
+- [ ] Preset bulan November, dan cek poin penalti akhir Oktober (`HEALTH_MONTHEND`) sudah terisi atau belum — tanggal 1 Nov sudah lewat, belum terkonfirmasi di catatan.
