@@ -56,3 +56,5 @@ Output: `Documents\Undercover\Cek gagal upload\Audit Foto Shopee UA - 1 Agustus 
 **Keterkaitan dgn sub-proyek SKU:** pid `27755059717` (Mitsubishi L300 Pickup Reguler) ternyata punya **0 foto galeri, hanya sampul** — itulah sebab konkret kegagalan unggah SKU-nya di Shopee (*"Jumlah gambar produk harus antara 3 dan 9"*, lihat [[project-undercover-bigseller-sync]]). Tambah minimal 3 foto galeri dulu, baru SKU-nya bisa diunggah.
 
 **Keterbatasan yang tetap ada:** ini proksi TANGGAL UNGGAH, bukan pemeriksaan visual. Foto lama yang kebetulan sudah sesuai template ikut keflag; foto yang diunggah ulang setelah Jan 2025 tapi desainnya masih lama tidak terdeteksi. Tetap sarankan spot-check visual sebelum eksekusi massal.
+
+**Lanjutan 2026-11-05:** penggantian foto produk dan foto per varian warna Smartprotection ke marketplace dicatat di [[project-undercover-foto-smartprotection-marketplace]].

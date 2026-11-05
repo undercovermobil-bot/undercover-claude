@@ -20,3 +20,5 @@
 - [Sistem Stok Otomatis Google Sheet (mulai 2026-10-08)](project-undercover-sistem-stok-gsheet.md) — Apps Script STOK|IN|OUT utk "Stok Cover UC" + "Stok Cover STP" (kode `sistem-stok-gsheet/`); sheet lama jadi "(lama)"; **layout Stock Opname berubah → stock sync baca kolom STOK 4+3k**
 - [project-undercover-dashboard](project-undercover-dashboard.md) — Dashboard Penjualan & Iklan — Undercover Autocare Group
 - [project-undercover-margin](project-undercover-margin.md) — Analisa margin per pesanan (income Shopee/TikTok vs HPP, setelah iklan) dibangun 2-3 Nov 2026; hasil Okt, keputusan HPP per toko, skrip dan artifact
+- [feedback-undercover-foto-marketplace-lessons](feedback-undercover-foto-marketplace-lessons.md) — Pelajaran dan jebakan saat mengganti foto produk lewat file mass update Shopee/Lazada/TikTok (hosting gambar, baris berurutan, batch, verifikasi isi)
+- [project-undercover-foto-smartprotection-marketplace](project-undercover-foto-smartprotection-marketplace.md) — Penggantian foto produk Smartprotection Signature (set 1–30 dan 31–60) di Shopee, Lazada, TikTok: lokasi file, susunan kolom per platform, pemetaan warna, status, TODO
