@@ -48,3 +48,10 @@ Belum ada foto: ±50 produk Signature lain, semua produk **Transparan**, dan **X
 - [ ] Unggah Shopee 31–60 (batch 1–5), Lazada foto produk lalu varian; cek hasil, ulang yang gagal.
 - [ ] Kalau Shopee/Lazada juga menolak `i.ibb.co`, buat versi `i.ibb.co.com`.
 - [ ] Foto Transparan, ±50 Signature sisanya, Xpander Cross.
+
+## Set 60+ (folder `Smartpro\SMARTPRO NEW 60+`, 48 model) — audit 2026-11-06
+Temuan, belum diperbaiki saat dicatat: (1) HOME dua spasi `SMARTPRO SIGNATURE  XFORCE HOME.jpg` dan `...E CLASS  HOME.jpg`; (2) `ELITE FEVEREST`,`-1`,`-2` seharusnya `ELITE EVEREST`; (3) Juke dan Palisade punya 16 file salinan ganda masing-masing (Signature -6..-11, Epic/Elite/Warrior -3..-5, `HOME-1`, isi byte sama dengan aslinya); (4) HOME salah tulis: "BMW C Class" (seharusnya Mercedes-Benz C Class; katalog "Mercedes Benz C Class", file `BMW C Class*` ikut diganti nama) dan "Mercedez Benz E Class" (Mercedes); (5) `SIGNATURE CORTEZ-5.png` caption terpotong (tanpa "Biru Benhur"). Selain itu 48 model lengkap (16 file), 1083x1083, caption cocok, zip sama dengan folder.
+
+**Perbaikan set 60+ (2026-11-06):** spasi ganda HOME (XFORCE, E CLASS) dan FEVEREST dirapikan; Cortez dipulihkan (Abu-Abu asli dari zip, Biru Benhur perbaikan user jadi `-5`); C Class jadi `MERCEDES BENZ C Class` (15 PNG + HOME baru); 32 salinan ganda Juke/Palisade dipindah ke `Smartpro\_arsip_sebelum_revisi\Salinan ganda Juke-Palisade` (isi identik, diverifikasi). Folder 60+ kini 768 gambar = 48 model x 16. Pelajaran: di PowerShell jangan menamai fungsi `H` (alias `h` = Get-History).
+
+**Link set 60+ (2026-11-06):** rencana unggah ke Postimages lewat Claude in Chrome: 658 gambar unik (768 file, sisanya kembar) dalam 31 batch <=9 MB, disiapkan di `Undercover\up60`. Batch 1 (22 gambar) sempat terunggah (galeri `https://postimg.cc/gallery/FLZ3rcg/8d0751bb`), tetapi `postimg.cc` lalu tidak bisa dibuka di Chrome (Privacy error / halaman galeri gagal; `postimages.org` tetap bisa) sehingga Direct link tidak bisa diambil. Dihentikan menunggu jaringan/jalur lain. Jangan lewati peringatan sertifikat.
