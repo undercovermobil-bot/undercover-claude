@@ -84,6 +84,36 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Besaran: Jul 113 pesanan batal salah penjual (Rp36,6 jt), Agu 83 (Rp26,7 jt), Sep 98 (Rp36,0 jt), Okt 61 (Rp21,4 jt; laba kotor hilang Rp5,0 jt).
 - Dashboard v10 dipublikasi; tampilan awal kini bulan terakhir (Okt), bukan seluruh rentang detail.
 
+## Optimasi dashboard v11 (10 Nov)
+- Iklan kini diambil per hari dari file marketplace bila ada; hari tanpa file sebelum `--ads-from` (1 Okt) memakai BigSeller. Begitu user mengunggah iklan Jul–Sep ke `Ads\<toko>\`, cukup jalankan ulang `py -3 -I tools\dashboard_export.py`, tanpa ubah kode. Cek 10 Nov: belum ada file iklan Jul–Sep (Drive hanya sampai iklan November ±8 Nov).
+- Ringkasan: tabel "Per bulan" (Jun–Okt: pendapatan, uang masuk, HPP, iklan, margin sebelum/setelah iklan, pesanan batal), tidak terpengaruh filter tanggal.
+- Pelacak data diringkas dari 74 ke 56 baris: baris Juni dan November dijadikan satu per "Semua toko"; baris "Iklan Jul-Sep" menghitung hari yang sudah dari file marketplace. November: file iklan sudah ada, pesanan dan income November diunduh awal Desember (jalankan ekspor dengan `--end 2026-11-30`).
+
+## Iklan November di dashboard v12 (10 Nov)
+- Keputusan user 10 Nov: iklan sebelum Oktober TIDAK diunduh dari marketplace; Jul-Sep tetap dari BigSeller. Pelacak: "Iklan Jul-Sep" = Lengkap (sumber BigSeller), "Juni (data historis)" = Lengkap (tidak ditagih lagi).
+- `tools\dashboard_export.py`: `--end` = hari terakhir penjualan (31 Okt), `--ads-end auto` = hari terbaru yang punya file iklan (kini 9 Nov). Hari setelah `--end` hanya berisi iklan; kunci JSON `salesTo`. Pelacak baru: "Iklan November" per toko (hari yang kurang tercantum) dan baris global "November (bulan berjalan)".
+- Dashboard: halaman Iklan menampilkan sampai 9 Nov. Halaman lain dibatasi sampai 31 Okt (ada catatan bila rentang melewati itu; rentang murni November menampilkan "Penjualan belum ada" dengan tombol ke menu Iklan). ROAS Riil dan margin tidak dihitung untuk rentang yang melewati hari penjualan terakhir. Tampilan awal tetap Oktober; preset 7/30 hari terakhir relatif ke 31 Okt.
+- Data iklan November 1-9 Nov: Undercover Shopee/TikTok dan Smartpro sampai 8 Nov (Smartpro TikTok tanpa 2 Nov), Otoprotection sampai 3 Nov, Otonation sampai 9 Nov.
+- Awal Desember: unduh Order dan Income November per toko, lalu `py -3 -I tools\dashboard_export.py --end 2026-11-30`.
+
+## Ringkasan format laba rugi, dashboard v13 (10 Nov)
+- Permintaan user: dashboard rapi siap untuk klien, urutan dari penjualan termasuk pembatalan penjual, istilah keuangan. Ringkasan dirombak menjadi alur laporan laba rugi:
+  Penjualan bruto (pesanan dibayar setelah diskon penjual) − Pembatalan oleh penjual − Retur dan refund = **Penjualan bersih** (= Pendapatan Kotor sisi penjual) − HPP = **Laba kotor** − Biaya marketplace (penjualan bersih − dana diterima: komisi, layanan, selisih ongkir, voucher penjual) − Biaya iklan = **Laba kontribusi** (sebelum biaya operasional dan pajak). Memo: Dana diterima dari marketplace.
+- Catatan istilah: "Laba kotor" di dashboard kini = penjualan bersih − HPP (standar akuntansi). Angka lama "margin sebelum iklan" (uang masuk − HPP) tidak lagi ditampilkan; "margin setelah iklan" = laba kontribusi. "Uang masuk" diganti "Dana diterima" di semua halaman.
+- Laba kontribusi kini dihitung untuk semua toko walau file iklan belum lengkap (ditandai oranye "+", catatan "belum final"); sebelumnya margin setelah iklan disembunyikan bila iklan tidak lengkap.
+- Susunan Ringkasan: 6 kartu (bruto, bersih, laba kotor, biaya marketplace, biaya iklan, laba kontribusi) → pita angka pendukung (pesanan, rata-rata per pesanan, dana diterima, ROAS Riil, pembatalan penjual, retur) → tabel Laporan laba rugi (nilai, % penjualan bersih, periode lalu, perubahan; potongan ditulis dalam kurung) + penjualan bersih per toko → grafik → Laba rugi per toko → Laba rugi per bulan → Pembatalan oleh penjual.
+- Data: kolom harian baru `refund` (negatif) di `margin-data.json`; retur Jul–Okt ±0,8–1,1% penjualan bersih. Okt: bruto Rp1,522 M, bersih Rp1,489 M, laba kotor Rp741 jt (49,7%), biaya marketplace Rp403 jt (27,1%), iklan Rp121 jt (8,1%), laba kontribusi Rp217 jt (14,6%).
+
+## Filter multi-pilih (v14) dan saran optimasi Undercover & Smartpro (10 Nov)
+- Dashboard v14: filter Toko dan Marketplace bisa pilih beberapa sekaligus (`MultiSelectMenu` di `select-menu.tsx`; `Filter.store`/`platform` kini `string[]`, kosong = semua).
+- Temuan data Jul–Okt (laba kontribusi = penjualan bersih − HPP − biaya marketplace − iklan):
+  - Undercover Shopee: pesanan 4.070 → 2.974 (−27%), rata-rata per pesanan Rp302rb → Rp354rb; laba kontribusi Rp92 jt (7,5%) → Rp179 jt (Sep, 15,5%) → Rp150 jt (Okt, 14,2%). Kenaikan harga terbukti menaikkan laba. Okt turun karena biaya Layanan Promo XTRA+ naik 4,8% → 6,9% harga (±Rp22 jt/bulan; juga naik di Smartpro 4,5 → 5,9%) dan iklan naik Rp72 → Rp80 jt sementara ROAS Riil turun 17,1 → 13,1.
+  - Undercover TikTok: kontribusi 6,8% → 16,4%; komisi platform & Mall 11,6% vs Smartpro 7,4% (selisih ±4 poin ≈ Rp13 jt/bulan, kemungkinan biaya layanan Mall). Pengiriman gagal (COD) 83 pesanan Jul–Okt.
+  - Cover Motor Regular rugi sebelum iklan: Shopee −13% (146 unit Okt, harga Rp117rb, HPP Rp101rb), TikTok −6,4%. Titik impas ±Rp138rb; untuk 10% sebelum iklan ±Rp160rb.
+  - Smartpro Shopee: iklan 15,5% penjualan (Sep 20,6%, kontribusi −1,1%); impas ROAS Riil ±4,3x, Sep 4,9x. Biaya marketplace 22,9% (lebih murah dari Undercover 28,1%). Smartpro TikTok iklan 13,4%, pesanan turun 144 → 51.
+  - PPh 22 0,5% mulai Okt di semua toko: pajak dipungut di muka, bisa dikreditkan.
+- Saran yang diberikan ke user: lihat percakapan 10 Nov (prioritas: harga/iklan motor, cek Promo XTRA+, batas anggaran iklan per toko, SOP kirim tepat waktu dan konfirmasi COD, isi HPP Exclusive/Premium).
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).

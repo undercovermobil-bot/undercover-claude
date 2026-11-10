@@ -1,7 +1,7 @@
 ---
 type: project
 tags: [undercover, smartprotection, foto, shopee, lazada, tiktok]
-updated: 2026-11-05
+updated: 2026-11-10
 description: "Penggantian foto produk Smartprotection Signature (set 1–30 dan 31–60) di Shopee, Lazada, TikTok: lokasi file, susunan kolom per platform, pemetaan warna, status, TODO"
 ---
 
@@ -44,7 +44,7 @@ Belum ada foto: ±50 produk Signature lain, semua produk **Transparan**, dan **X
 - Kijang: file Elite/Epic pernah tertukar nama (diperbaiki 2026-10-31); `EPIC TRITON-2` dan `ELITE GRAND LIVINA-1` di Drive set 1–30 masih cacat, sheet memakai link ibb.co.com pengganti.
 
 ## TODO
-- [ ] TikTok 31–60: v1 (`i.ibb.co`) dan v2 (`i.ibb.co.com`) sama-sama ditolak 30/30 (2026-11-04 dan 2026-11-05). v3 = 30 sampul HOME diunggah ke Postimages lewat Claude in Chrome (2026-11-05), file `..._v3-postimg.xlsx`, menunggu unggah. Link Postimg tidak bisa dibuka dari jaringan/Chrome di sini (halaman error), jadi isi gambarnya belum terverifikasi; kalau v3 gagal, coba Pusat Media TikTok atau URL CDN Shopee setelah Shopee selesai.
+- [ ] Unggah `TikTok_60+_atribut-impor-dan-foto_48produk_allinfo.xlsx` (All Information) — atribut "Imported goods"=Tidak + foto baru dalam satu file. Catatan: asumsi "Tidak" (produksi lokal); konfirmasi ke user bila ada produk barang impor.
 - [ ] Unggah Shopee 31–60 (batch 1–5), Lazada foto produk lalu varian; cek hasil, ulang yang gagal.
 - [ ] Kalau Shopee/Lazada juga menolak `i.ibb.co`, buat versi `i.ibb.co.com`.
 - [ ] Foto Transparan, ±50 Signature sisanya, Xpander Cross.
@@ -59,3 +59,15 @@ Temuan, belum diperbaiki saat dicatat: (1) HOME dua spasi `SMARTPRO SIGNATURE  X
 **Link set 60+ (2026-11-09):** 658 gambar unik (768 file) diunggah ke Postimages lewat Claude in Chrome dalam 31 batch (1 unggahan per galeri; input file diganti setelah unggah). Direct link diambil dari dropdown `embed_box`=`code_direct`; pencocokan nama dinormalisasi (hapus non-alfanumerik) karena Postimg mengubah nama (spasi jadi tanda hubung). Hasil: `Smartpro\SMARTPRO NEW 60+\image url 60+ (postimg).txt` dan `...(nama file dan link).csv`. Kegagalan sebelumnya (postimg.cc Privacy error 2026-11-06) hilang pada 2026-11-09.
 
 **Set 60+ file marketplace (2026-11-09):** dibuat dari ekspor 9 Nov, hanya 48 produk (file ringkas, baris berurutan): Shopee 8 batch x 6, Lazada foto produk 1 file, Lazada varian 3 file (510/510/463 SKU), TikTok 1 file; di `Foto Produk\{Shopee,Lazada,TikTok}0+`. Catatan: Nissan Evalia di Shopee tanpa variasi Orange (14 variasi); TikTok E Class bertitel lama "Cover Mobil / Selimut Mobil Mercedes Benz E Class"; Kuda Shopee typo "Eite Biru". Sampul HOME memakai link Postimg (TikTok menolak ibb).
+
+**Lazada foto produk 60+ (2026-11-10):** hasil unggah 35/48 berhasil; 13 gagal ("Fail to migrate third party CDN main images", tanpa kode): Stargazer, Air EV, Stream, Santa Fe, Serena, Vitara, Cortez, Starlet, Carry Pickup, Mercedes C Class, Everest, Aerio Hatchback, MG S5 EV. File ulang `Lazada_foto-produk_60+_ULANG-13produk.xlsx` (link Postimg yang sama) dibuat.
+
+**Lazada foto produk 60+ ulang 13 produk (2026-11-10):** **Sukses 13/13** (ID Upload 7397410, file `Lazada_foto-produk_60+_ULANG-13produk...`). Foto produk 60+ di Lazada selesai 48/48.
+
+**TikTok 60+ — KOREKSI (2026-11-10):** ketiga file result (9:56, 10:38, dan result ulang) ternyata masing-masing berisi **48 produk gagal, bukan 2** — pembacaan awal keliru karena mode `read_only` openpyxl memotong jumlah baris file TikTok ini (dimensi sheet salah). Jadi unggah `TikTok_60+_48produk.xlsx` gagal **48/48**, semua dengan alasan sama: **atribut wajib "Imported goods" (ID 102254) kosong** — TikTok menjadikannya wajib di kategori *Cover & Shelter Mobil*. Pelajaran: jangan percaya `max_row` openpyxl `read_only` untuk file TikTok.
+
+**TikTok 60+ fix atribut + foto sekaligus (2026-11-10):** file `all_information` ternyata pre-filled 218 produk (4.159 baris SKU) dan punya kolom `product_property/102254` "Imported goods" (pilihan dropdown: Ya/Tidak, dari sheet HiddenAttr kolom O/P) — pembacaan awal yang bilang kolomnya tidak ada keliru karena truncation `read_only`. Dibuat `Foto Produk\TikTok\60+\TikTok_60+_atribut-impor-dan-foto_48produk_allinfo.xlsx` (0,55 MB): template pre-filled dipangkas ke 48 produk (1.391 baris SKU), semua baris diisi Imported goods = **"Tidak"** + foto baru (main Postimg + 8 CDN) di kolom main_image–image_9; deskripsi/harga/stok data asli tidak diubah. Menunggu unggah (jenis template All Information). Verifikasi: 48/48 produk, 1.391/1.391 baris atribut terisi, sampul postimg 1.391, deskripsi lengkap.
+
+**TikTok 31–60 (2026-11-10, dari riwayat unggah):** file `..._v4-postimg-direct_30-produk.xlsx` tercatat **Selesai (30 produk)** pada 05/11 — set 31–60 di TikTok **selesai**, tidak perlu v3 lagi.
+
+**Shopee 60+ batch 1–2 (2026-11-10):** batch1 3/6 sukses (gagal: APV Luxury, Xpander Cross, Destinator), batch2 3/6 sukses (gagal: SX4, Vitara, Captiva). Alasan semua: "Maaf, server gagal upload beberapa foto. Mohon coba lagi nanti." = error sementara sisi Shopee (link sama dipakai produk lain yang sukses) → cukup unggah ulang file batch yang sama, tidak perlu file baru.
