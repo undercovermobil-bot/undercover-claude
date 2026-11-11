@@ -114,6 +114,15 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
   - PPh 22 0,5% mulai Okt di semua toko: pajak dipungut di muka, bisa dikreditkan.
 - Saran yang diberikan ke user: lihat percakapan 10 Nov (prioritas: harga/iklan motor, cek Promo XTRA+, batas anggaran iklan per toko, SOP kirim tepat waktu dan konfirmasi COD, isi HPP Exclusive/Premium).
 
+## Istilah Revenue dan penjelasan istilah (v15, 10 Nov)
+- Atas permintaan user, "Penjualan bruto" diganti **Revenue** (pesanan dibayar setelah diskon penjual, sebelum pembatalan penjual dan retur). Istilah lain tetap: Penjualan bersih (= Pendapatan Kotor sisi penjual), Laba kotor (penjualan bersih − HPP), Biaya marketplace, Laba kontribusi, Dana diterima (uang cair dari marketplace = penjualan bersih − biaya marketplace; pesanan belum cair = perkiraan).
+- Setiap kartu utama dan angka pendukung di Ringkasan punya ikon info (ⓘ) berisi definisinya; baris Penjualan bersih dan Laba kotor di tabel laba rugi diberi keterangan rumus. Tooltip grafik harian dilebarkan agar angka tidak terpotong.
+
+## Istilah bahasa Inggris (v16, 11 Nov)
+- Keputusan user: semua istilah/label dashboard bahasa Inggris. Menu: Overview, Ads, Marketplace Fees, Products, Orders, Data Tracker. Laba rugi: Revenue → Seller Cancellations → Returns & Refunds → Net Sales (= Pendapatan Kotor) → COGS (HPP) → Gross Profit → Marketplace Fees → Ad Spend → Contribution Margin; memo Marketplace Payout (dana diterima). Lainnya: Average Order Value, Real ROAS, Platform ROAS, Ad GMV (omzet iklan).
+- Catatan penjelasan panjang, isi ikon ⓘ, dan tanggal tetap bahasa Indonesia. Nama alasan batal dan kelompok biaya diterjemahkan di `dashboard_export.py` (`CAT_EN`, `FEE_EN`); status/item pelacak diterjemahkan di tampilan (`STATUS_EN`, `ITEM_EN` di views.tsx), data tetap Indonesia.
+- HPP Okt Rp748 jt = Rp721 jt dari HPP sheet user (96,4%) + Rp27 jt perkiraan untuk 3,7% penjualan tanpa HPP (Exclusive/Premium/custom).
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).
