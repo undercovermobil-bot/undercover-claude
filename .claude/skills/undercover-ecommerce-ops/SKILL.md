@@ -17,7 +17,9 @@ lalu perbarui skill ini. Balas dalam Bahasa Indonesia.
 - Export marketplace datang dari user (biasanya di `Downloads`): **cari sendiri** file yang dimaksud (Glob, cek timestamp).
 
 ## Prinsip lintas-project (tidak boleh dilanggar)
-1. **Jangan timpa file asli.** Hasil ke folder baru `Downloads\<Toko> <Tugas> <YYYY-MM-DD>\` (atau `out\` di folder kerja).
+1. **Jangan timpa file asli.** Bangun hasil di folder kerja/scratch, lalu **file yang masih perlu diupload ditaruh di satu folder tetap
+   `C:\Users\OWNER\Documents\Undercover Siap Upload\`** (permintaan user 2026-11-12): nama `<no> <Marketplace> <Toko> - <isi>.xlsx` + `0 BACA DULU - urutan upload.txt`
+   (urutan, jenis template, apa yang diisi otomatis, kekurangan). Keluarkan file yang sudah sukses; jangan mencampur file lama dan baru.
 2. **File mass-upload hanya berisi baris yang berubah**, dan hanya kolom yang dimaksud (buktikan dengan perbandingan sel per sel). Nomor baris data harus **berurutan** dari baris data pertama (baris bolong = 0 diproses; `scripts/compact_rows.py`).
 3. Template membawa kolom **harga** (TikTok, Shopee) dan **stok** (Shopee Info Penjualan): upload di hari export, atau pastikan tidak ada perubahan.
 4. **BigSeller read-only**: hanya membaca; tidak menulis, mengekspor, mengunduh, atau mengubah pengaturan. Satu-satunya angka omzet = Pendapatan Kotor sisi penjual.
@@ -35,6 +37,7 @@ lalu perbarui skill ini. Balas dalam Bahasa Indonesia.
 | Isi SKU kosong / buat SKU, siapkan file SKU siap upload | `references/workflow-fill-blank-sku.md` |
 | Ganti foto produk lewat mass update (hosting, batch, verifikasi) | `references/workflow-foto-marketplace.md` |
 | Aturan SKU, warna, tier, Total Formula, kode format lama, acuan top-100 | `references/sku-rules.md` |
+| File TikTok ditolak ("atribut produk is missing"), atribut wajib per kategori | `references/marketplace-files.md` (bagian TikTok atribut wajib) |
 | Tata letak file Shopee/TikTok, kolom, jebakan membaca/menulis xlsx, urutan upload | `references/marketplace-files.md` |
 | Pelajaran dan keputusan user yang sudah pernah terjadi | `references/lessons-learned.md` |
 
@@ -51,6 +54,7 @@ lalu perbarui skill ini. Balas dalam Bahasa Indonesia.
 - `scripts/verify_archive_top100.py`: integritas file archive + cek terhadap ranking top-100 + produk dengan SKU kosong.
 - `scripts/compact_rows.py`: rapatkan nomor baris data (wajib untuk file yang hanya berisi sebagian produk).
 - `scripts/shopee_retry_failed.py`: file ulang untuk produk yang gagal pada mass update basic info Shopee (membuang karakter yang ditolak).
+- `scripts/tiktok_isi_atribut_wajib.py`: isi atribut wajib TikTok (Imported goods, Tahun, Model) dan, dengan `--only-archive`, simpan hanya produk "(Archive)". **Wajib dijalankan untuk setiap file TikTok all_information sebelum diserahkan.**
 - Di repo `C:\Users\OWNER\Documents\Undercover-Repo\scripts\`: `isi_sku_kosong_tiktok_sp.py` (TikTok) dan
   `isi_sku_kosong_shopee_op.py` (Shopee Info Penjualan); edit tabel `TARGET` untuk produk lain. Skrip sub-project lain dicatat di
   `references/project-map.md`.
@@ -70,4 +74,5 @@ Setelah setiap pekerjaan e-commerce:
 `_conflicts\` untuk digabung manual. Skill ini hanya untuk repo e-commerce (bukan repo Digital Marketing).
 
 ## Changelog
+- 2026-11-12 (sore): upload TikTok OP gagal total karena atribut wajib kosong -> `tiktok_isi_atribut_wajib.py`; `verify_archive_top100.py --by-id` untuk export baru; folder tetap `Documents\Undercover Siap Upload`; pelajaran di `lessons-learned.md` dan `marketplace-files.md`.
 - 2026-11-12: dibuat dari pekerjaan archive Otoprotection (Shopee + TikTok), pengisian SKU MG S5 EV / Santa Fe / Smartpro, dan verifikasi terhadap ranking top-100; diperluas ke seluruh project e-commerce (peta sub-project); alur foto marketplace ditambahkan dari catatan sesi lain.

@@ -52,3 +52,13 @@ di repo memanggilnya otomatis. Ini sempat terlewat pada file SKU 11-12 Nov dan d
 - Alasan yang sudah terjadi: "Deskripsi produk mengandung karakter yang tidak valid [X]" (karakter `➤` U+27A4 dan `✔` U+2714 ada di deskripsi lama OP).
   Perbaikan: buat file ulang hanya untuk produk yang perlu berubah dan hapus karakter itu dari deskripsi (`scripts/shopee_retry_failed.py`).
 - Sel hasil edit di file buatan skrip bisa berupa `inlineStr` (bukan shared string); pembaca kustom harus menangani keduanya.
+
+## TikTok - atribut wajib per kategori (sering membuat SELURUH file gagal)
+- Kolom 32+ = atribut kategori, kunci baris 1 `product_property/<id>`: 100107 Jenis Garansi, 100177 Model, 100530 Tahun, **102254 Imported goods**, 102752 Compatible brands.
+  Posisi kolom berubah antar versi template: cari lewat kunci, bukan nomor.
+- Kategori Cover & Shelter Mobil (931592) mewajibkan Tahun dan Imported goods; produk lama sering kosong. Satu produk kosong = **semua baris file ditolak**.
+  Kategori lain di toko: Radiator (813968, wajib Model + Tahun + Imported), Sarung Setir (850832) dan Bantal Alas Kursi (850704) (Imported), Golf (603573) (Imported).
+- Pilihan dropdown ada di sheet `HiddenAttr` (pasangan kolom kategori+opsi; kolomnya dapat dibaca dari rumus `dataValidation` sel baris 6). Imported goods: Ya/Tidak; Tahun: 2026 dst; Model: daftar ±1.851 (mis. `GLC`, `CLS-Class`).
+- Perbaikan: `scripts/tiktok_isi_atribut_wajib.py <asli> <keluaran> [--only-archive]` (hanya mengisi sel kosong, memverifikasi sel lain tidak berubah).
+- File Result TikTok (`..._all_information_result*.xlsx`): sheet Template dengan kolom A `err_info` tambahan; berisi baris yang GAGAL; satu pesan per baris (atribut pertama yang kurang).
+  Jika jumlah baris Result = jumlah baris file yang diupload, seluruh upload gagal (kasus OP 12 Nov: 8.058 dari 8.058).

@@ -54,9 +54,22 @@ def show(title, items):
         print(f"    ... +{len(items) - LIMIT} lainnya")
 
 
-def integrity(orig, arch, start_row, name_col, width, label):
-    """Bandingkan sel per sel; hanya kolom nama yang boleh berbeda, dan harus + ' (Archive)'."""
-    o, a = dict(orig), dict(arch)
+BY_ID = False  # --by-id: pasangkan baris lewat id produk (export baru urutannya berbeda), bukan nomor baris
+KEY_SHOPEE = lambda v: v[0]  # noqa: E731
+KEY_TIKTOK = lambda v: (v[0], v[4])  # noqa: E731  (product_id, sku_id)
+
+
+def integrity(orig, arch, start_row, name_col, width, label, key=None):
+    """Bandingkan sel per sel; hanya kolom nama yang boleh berbeda, dan harus + ' (Archive)'.
+    key=None: pasangkan per nomor baris (file archive hasil edit dari file asli).
+    key=fungsi: pasangkan per id (file kedua = export baru dari marketplace, urutan baris bisa berubah)."""
+    if key is not None:
+        o = {key(pad(v, width)): v for r, v in orig if r >= start_row and v and v[0]}
+        a = {key(pad(v, width)): v for r, v in arch if r >= start_row and v and v[0]}
+        is_data = lambda k: True  # noqa: E731
+    else:
+        o, a = dict(orig), dict(arch)
+        is_data = lambda r: r >= start_row  # noqa: E731
     only = set(o) ^ set(a)
     other, badfmt, renamed = collections.Counter(), [], set()
     for r in sorted(set(o) & set(a)):
@@ -64,7 +77,7 @@ def integrity(orig, arch, start_row, name_col, width, label):
         for c in range(width):
             if x[c] == y[c]:
                 continue
-            if c == name_col and r >= start_row:
+            if c == name_col and is_data(r):
                 renamed.add(x[0])
                 if y[c] != (x[c] or "") + " (Archive)":
                     badfmt.append((r, x[c], y[c]))
@@ -79,7 +92,8 @@ def tiktok(pairs, top):
     for orig_f, arch_f in pairs:
         o = load_xlsx(orig_f)["Template"]
         a = load_xlsx(arch_f)["Template"]
-        renamed = integrity(o, a, 6, 2, 48, "TikTok " + os.path.basename(orig_f).replace("Tiktoksellercenter_batchedit_", "")[:42])
+        renamed = integrity(o, a, 6, 2, 48, "TikTok " + os.path.basename(orig_f).replace("Tiktoksellercenter_batchedit_", "")[:42],
+                            KEY_TIKTOK if BY_ID else None)
         prods = collections.OrderedDict()
         for r, v in o:
             if r >= 6 and v and v[0]:
@@ -106,7 +120,7 @@ def sheet1(path):
 
 def shopee(pair, sales, top):
     o, a = sheet1(pair[0]), sheet1(pair[1])
-    renamed = integrity(o, a, 7, 2, 5, "Shopee basic info")
+    renamed = integrity(o, a, 7, 2, 5, "Shopee basic info", KEY_SHOPEE if BY_ID else None)
     names = {v[0]: v[2] for r, v in o if r >= 7 and v and v[0]}
     print(f"   produk {len(names)}: di-archive {len(renamed)}, dipertahankan {len(names) - len(renamed)}")
     if not sales:
@@ -143,7 +157,11 @@ def main():
     ap.add_argument("--shopee", nargs=2, metavar=("ASLI", "ARCHIVE"))
     ap.add_argument("--sales", nargs="+", default=[])
     ap.add_argument("--alias", action="append", default=["SZK-VITARA=SZK-GVT"], help="KODE_RANKING=KODE_LISTING")
+    ap.add_argument("--by-id", action="store_true",
+                    help="file kedua = EXPORT BARU dari marketplace (urutan baris berubah): pasangkan per id produk, bukan per nomor baris")
     args = ap.parse_args()
+    global BY_ID
+    BY_ID = args.by_id
     top, _ = top100(args.ranking, dict(x.split("=") for x in args.alias))
     print(f"Top-100 (peringkat <= 100, setelah alias): {len(top)} model")
     if args.tiktok:

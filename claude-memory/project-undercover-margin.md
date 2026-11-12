@@ -123,6 +123,37 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Catatan penjelasan panjang, isi ikon ⓘ, dan tanggal tetap bahasa Indonesia. Nama alasan batal dan kelompok biaya diterjemahkan di `dashboard_export.py` (`CAT_EN`, `FEE_EN`); status/item pelacak diterjemahkan di tampilan (`STATUS_EN`, `ITEM_EN` di views.tsx), data tetap Indonesia.
 - HPP Okt Rp748 jt = Rp721 jt dari HPP sheet user (96,4%) + Rp27 jt perkiraan untuk 3,7% penjualan tanpa HPP (Exclusive/Premium/custom).
 
+## Rencana optimasi iklan + diskon semua toko (12 Nov)
+- File: `Documents\Undercover\Optimasi_Iklan_Diskon_Semua_Toko_20261112.pdf` (5 hal.), menggantikan `Optimasi_Iklan_Undercover_Nov2026.pdf` (2 Nov, BigSeller, tanpa HPP). Skrip: `tools\ads_optimizer.py` (per iklan Shopee dari Data Keseluruhan/Shop+, per produk TikTok dari Product data; Okt dan 1–8 Nov; margin produk Okt) dan `tools\ads_plan_report.py` (aturan tindakan + HTML ke PDF lewat Chrome headless).
+- Patokan Okt: ROAS impas = 1/margin sebelum iklan; target = laba kontribusi 10%. Undercover Shopee impas 4,6x/target 8,5x; TikTok 4,1x/7,0x; Smartpro Shopee 4,3x/7,6x; Smartpro TikTok 3,7x/5,8x; Otoprotection 3,4x/5,1–5,2x; Otonation 3,8x/6,1x.
+- Temuan: semua iklan produk Undercover Shopee ROAS 11–20x (untung); Shop+ di Smartpro (ROAS 0,9–2,1x), Otoprotection (0,4x), Otonation (1,8x) rugi, saran hentikan. Undercover TikTok belanja naik ±30% awal Nov, ROAS 16x ke 13x. Rencana 2 Nov: Avanza/Innova sudah dipatuhi; Brio, Agya, HRV, Rush, Fortuner justru naik belanjanya; Ayla turun terlalu jauh.
+- Budget: 4.071 rb/hari ke 3.822 rb/hari (Undercover Shopee 2.523 ke 2.503; TikTok 1.068 ke 1.017; Smartpro Shopee 223 ke 102; Otonation 71 ke 45).
+- Diskon tambahan aman (laba kontribusi tetap >=10%): Undercover Shopee 6,7% (saran 5%), Undercover TikTok 10% (7%), Otoprotection Shopee 12,8% (8%), Otoprotection TikTok 15,4% (10%), Smartpro TikTok 5,6% (3–5%), Smartpro Shopee dan Otonation 0% (rapikan iklan dulu). Voucher toko 3–5% min. belanja Rp600rb, paket beli 2 hemat 3–5%, affiliate 5–8%. Kalender: Payday 25 Nov–1 Des, 12.12.
+
+## HPP motor terbaru dan rencana harga motor (12 Nov)
+- Sumber: sheet `Motor ` di `G:\My Drive\Finance\Copy of DATA UC HPP Top 100 Terlaris.xlsx` (Google Drive id 1k3Ng-5Sz7gcyvuc0WNiwHdB5sPErXrjZ, gid 1374462676), **blok 3 baris terbawah** = angka yang dipakai (komponen tali/rit/lain Rp14.000, sebelumnya Rp15.000).
+- HPP: **Motor Regular Rp98.083** (kain 715.000 ÷ 12 pcs = 59.583 + SDM 24.500 + komponen 14.000); **Motor Strip Rp98.083**; **Motor Jumbo Rp117.944** (715.000 ÷ 9 = 79.444 + 24.500 + 14.000). `data\hpp_models.json` bagian `motor` sudah diperbarui (berlaku di ekspor dashboard berikutnya).
+- Harga jual sekarang (sheet): Regular Rp110.000, Strip Rp120.000, Jumbo Rp230.000. Dengan tumpukan biaya sheet 42,95% (iklan 7,5%, admin 10,45%, GOE 5,5%, Promo XTRA 6,5%, SPaylater 2,5%, affiliate 8%, event toko 2,5%) margin Regular −Rp35rb dan Strip −Rp30rb per unit; Jumbo +Rp13rb.
+- **Rencana user: ubah harga motor.** Harga jual terbaru di sheet: Regular dan Strip **Rp195.370**, Jumbo **Rp234.930** (margin bersih Rp13.375 / Rp16.083 = 6,85%). Data riil Okt: Motor Regular Shopee terjual 146 unit di harga rata-rata Rp117rb, margin −13% sebelum iklan; titik impas riil ±Rp138rb, margin 10% sebelum iklan ±Rp160rb. Kenaikan ke Rp195rb (+67%) kemungkinan besar menurunkan volume; pertimbangkan bertahap (Rp150–160rb dulu).
+
+## Target toko Smartpro dan Otoprotection: kejar omzet (12 Nov)
+- Keputusan user: untuk Smartprotection dan Otoprotection (Shopee dan TikTok) prioritas menaikkan omzet; boleh "sedikit bakar iklan" asal masuk akal, laba kontribusi sampai ±0% masih boleh. Undercover dan Otonation tetap target laba kontribusi ≥10%.
+- Diterapkan di `tools\ads_plan_report.py` (`GROWTH`, `GROWTH_ADS` = 15% penjualan): patokan iklan = ROAS impas; hentikan < 0,8× impas, turunkan < impas, naikkan 30% ≥ 1,5× impas, budget diisi sampai ±15% penjualan Okt. Budget/hari: Smartpro Shopee 223 → 232 rb (Shop+ dipindah ke iklan produk), Smartpro TikTok 49 → 76 rb, Otoprotection Shopee 47 → 97 rb, Otoprotection TikTok 90 → 128 rb.
+- Diskon mode omzet (iklan 15%, laba 0%): saran Smartpro Shopee diskon 5% + voucher 2%, Smartpro TikTok 8% + voucher 4%, Otoprotection Shopee dan TikTok 10% + voucher 5%; affiliate 5–10%. PDF `Optimasi_Iklan_Diskon_Semua_Toko_20261112.pdf` diperbarui.
+
+## Hitungan harga dan diskon motor (12 Nov)
+- Rumus: harga minimal = HPP / (1 − tumpukan biaya − margin). Tumpukan sheet 42,95% (termasuk iklan 7,5%); riil Okt Shopee 35,7% (biaya 28,1% + iklan 7,6%), TikTok 33,6%.
+- Regular/Strip (HPP Rp98.083): harga minimal laba 0% / 5% / 10% = sheet Rp171,9rb / Rp188,4rb / Rp208,5rb; riil Shopee Rp152,5rb / Rp165,4rb / Rp180,6rb; riil TikTok Rp147,7rb / Rp159,7rb / Rp173,9rb.
+- Di harga Rp195.370 (biaya sheet): diskon maks 12,0% (laba 0%, harga Rp171,9rb), 7,1% (laba 3%), 3,5% (laba 5%). Dengan biaya riil: 21,9% (Shopee) / 24,4% (TikTok) untuk laba 0%, 15,3% / 18,2% untuk laba 5%.
+- Jumbo (HPP Rp117.944) di Rp234.930: persen diskon sama (12,0% / 7,1% / 3,5% biaya sheet); harga minimal laba 0% sheet Rp206,7rb, riil Shopee Rp183,4rb.
+- Saran: tampilkan harga Rp195rb dengan diskon penjual 10% (harga bayar ±Rp176rb, laba ±1,3% di biaya sheet, ±8,6% di biaya riil Shopee); hindari voucher/flash sale tambahan di motor.
+
+## Keputusan harga motor: Rp195rb + diskon 10% (12 Nov)
+- Rencana: Motor Regular/Strip harga coret Rp195.370 (boleh dibulatkan Rp195.000-196.000), diskon penjual 10%, harga bayar ±Rp175.800-176.400. Belum diterapkan di marketplace (per 12 Nov hanya hitungan).
+- Laba di harga bayar Rp175.833 (HPP Rp98.083): biaya sheet 42,95% (sudah termasuk iklan 7,5% = ROAS ±13,3x dan affiliate 8%) +1,3%; stack riil Shopee 35,7% +8,5%; TikTok 33,6% +10,6%. Tanpa affiliate (sheet) +9,3%. Jika affiliate 8% ditambah penuh di atas stack riil: ±+0,5% Shopee, ±+2,6% TikTok.
+- Aturan: tanpa voucher/flash sale tambahan di motor; total potongan maks ±15% (bayar ±Rp166rb). Kalau penjualan turun: naikkan diskon produk bertahap 10 -> 12 -> 15% (tunggu ±1 minggu), harga coret tetap. Diskon >12% bersama affiliate 8% rugi di stack sheet; saran affiliate motor 3-5%. Untuk 12.12 ubah harga sekarang (riwayat harga bisa membuat pendaftaran campaign ditolak). Atur masa berlaku diskon panjang.
+- ROAS iklan motor riil (klaim platform): Undercover Shopee Okt 17,4x (belanja Rp0,18 jt), 1-8 Nov 15,6x; Undercover TikTok Okt 15,8x (Rp0,81 jt), 1-8 Nov 10,1x. ROAS impas motor di harga baru ±9x (perkiraan, margin riil ±11-12% sebelum iklan). Di harga lama iklan motor rugi walau ROAS 15x+. Jangan naikkan belanja iklan motor dulu; cek ROAS riil 1-2 minggu setelah harga baru.
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).

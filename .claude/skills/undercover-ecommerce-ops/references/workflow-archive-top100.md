@@ -42,3 +42,10 @@ Catatan lengkap: vault `project-undercover-archive-op-2026-11`.
 2. `py -3 -I scripts/shopee_retry_failed.py --archive <file archive> --result <Result> --out <retry.xlsx>`: baris berurutan dari 7, karakter ditolak dibuang dari deskripsi.
 3. Setelah semua diupload, minta export basic info terbaru dan jalankan `verify_archive_top100.py` (file asli = export sebelum archive; file archive = export terbaru)
    untuk memastikan jumlah produk "(Archive)" = jumlah yang direncanakan. Contoh OP 12 Nov: 264 direncanakan, 174 berhasil, 90 gagal karena `➤`/`✔`.
+
+## TikTok: file archive hanya produk "(Archive)" dengan atribut terisi (koreksi 2026-11-12)
+Upload TikTok pertama (file berisi semua 485 produk) gagal 8.058/8.058 baris karena atribut wajib kosong (lihat `marketplace-files.md`).
+1. `py -3 -I scripts/tiktok_isi_atribut_wajib.py <template_ARCHIVE.xlsx> <keluaran.xlsx> --only-archive` (satu perintah per file template `_1`, `_2`, ...).
+   Hasil: hanya produk "(Archive)" (OP: 267 produk, 3.908 baris), Imported goods/Tahun/Model terisi, sel lain identik.
+2. Produk yang dipertahankan tidak ikut di file ini, jadi file SKU TikTok (produk yang sama) tidak bentrok dan urutan upload bebas.
+3. Setelah sukses: hapus produk "(Archive)" lewat UI. Cek ulang dengan export terbaru: `verify_archive_top100.py --by-id ...`.

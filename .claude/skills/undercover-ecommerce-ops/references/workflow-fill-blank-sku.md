@@ -30,4 +30,4 @@ Dipakai untuk produk yang SKU variannya kosong (mis. MG S5 EV, Corolla Gen 1-4 S
 - Produk Shopee tanpa variasi: SKU Induk legacy (`CVR####-OTP-...`) dan kolom SKU kosong; isi kolom SKU dengan SKU channel lain toko yang sama.
 - Label Strip berbeda per kanal/toko: TikTok OP "Strip 1 Abu-abu", Shopee OP "Strip 1 Abu", SP/UA "Epic Abu".
 - Variasi Transparan Mini Cooper berbentuk "Hatch, 3 Pintu" (sub-model + pintu), bukan warna: kodenya `3P`/`5P`.
-- Edit XML: cari baris dengan `\br="N"`; sel kosong TikTok berisi shared string kosong, bukan sel hilang (resep di `marketplace-files.md`).
+- Edit XML: cari baris dengan `\br="N"`; sel kosong TikTok berisi shared string kosong, bukan sel hilang (resep di `marketplace-files.md`).- **TikTok: isi atribut wajib sebelum menyerahkan file** (`scripts/tiktok_isi_atribut_wajib.py <file SKU> <keluaran>`): tanpa Imported goods file SKU ditolak seluruhnya (kasus MG S5 EV OP 12 Nov; file SP #7 punya masalah yang sama).
