@@ -16,6 +16,8 @@ Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis u
 - 2026-11-12 | Teknis | openpyxl gagal membuka export Shopee (`activePane`); pakai pembaca zip+XML. Mengubah sel dengan edit XML mentah menjaga template tetap valid; verifikasi dengan membaca ulang dan membandingkan sel per sel.
 - 2026-11-12 | Pengingat | Saya tidak bisa mengirim pengingat di luar sesi kecuali ada tugas terjadwal yang dipasang atas persetujuan user; saat user kembali, ingatkan dari TODO catatan vault.
 - 2026-11-12 | Skill | Sesi lain menambah sub-project (foto marketplace) tanpa memperbarui skill. Saat memakai skill ini, buka `00 Home.md` vault dan tambahkan sub-project yang belum ada di `project-map.md`.
+- 2026-11-12 | Upload Shopee OP | Upload file archive (483 baris) menghasilkan 182 gagal: 90 produk yang di-archive dan 92 produk yang tidak berubah, semuanya "karakter tidak valid [➤]/[✔]" di deskripsi lama. Berhasil: 174 dari 264. Perbaikan: file ulang 90 produk dengan karakter itu dibuang. Selalu minta file Result dan hitung ulang sebelum menyatakan selesai.
+- 2026-11-12 | Baris bolong | Catatan sesi foto: baris bolong = 0 diproses. File SKU saya (TikTok MG/SP, Shopee MG/Santa Fe) awalnya berisi nomor baris asli (mis. 4318) -> direnumerasi sebelum diupload; skrip pengisi SKU kini memanggil `compact_rows` otomatis. **Baca `00 Home`/catatan lessons sub-project lain (foto) sebelum membuat file mass-upload.**
 - Preferensi user: Bahasa Indonesia; jawab setiap pertanyaan yang dikutip satu per satu; bukti nyata di atas dugaan; tidak mau diminta konfirmasi untuk hal yang sudah jelas; hemat token.
 
 
@@ -23,3 +25,5 @@ Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis u
 - Land Cruiser `J60` -> `G1` (OP dan SP) menunggu SKU gudang `G1` di BigSeller.
 - Taft GT memakai `F70` (formula TF=1, ranking: satu SKU dengan Feroza `G1`); Corolla OP Reguler Gen 2 `G2` vs formula `G1`.
 - Shopee Smartpro dan Undercover belum dicek untuk SKU kosong (butuh export Info Penjualan); SKU gudang BigSeller untuk kode baru belum dicek; MG S5 EV belum di master.
+
+- 2026-11-12: Saran iklan dinilai dengan margin riil (ROAS impas = 1/margin sebelum iklan), bukan hanya ROAS. File iklan marketplace harian cukup untuk analisa per iklan (Shopee Data Keseluruhan) dan per produk (TikTok Product data); skrip `Documents\Undercover\tools\ads_optimizer.py` + `ads_plan_report.py`. Shop+ di toko kecil terbukti rugi.

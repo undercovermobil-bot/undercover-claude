@@ -18,7 +18,7 @@ lalu perbarui skill ini. Balas dalam Bahasa Indonesia.
 
 ## Prinsip lintas-project (tidak boleh dilanggar)
 1. **Jangan timpa file asli.** Hasil ke folder baru `Downloads\<Toko> <Tugas> <YYYY-MM-DD>\` (atau `out\` di folder kerja).
-2. **File mass-upload hanya berisi baris yang berubah**, dan hanya kolom yang dimaksud (buktikan dengan perbandingan sel per sel).
+2. **File mass-upload hanya berisi baris yang berubah**, dan hanya kolom yang dimaksud (buktikan dengan perbandingan sel per sel). Nomor baris data harus **berurutan** dari baris data pertama (baris bolong = 0 diproses; `scripts/compact_rows.py`).
 3. Template membawa kolom **harga** (TikTok, Shopee) dan **stok** (Shopee Info Penjualan): upload di hari export, atau pastikan tidak ada perubahan.
 4. **BigSeller read-only**: hanya membaca; tidak menulis, mengekspor, mengunduh, atau mengubah pengaturan. Satu-satunya angka omzet = Pendapatan Kotor sisi penjual.
 5. **Verifikasi sebelum menyerahkan** dan laporkan apa adanya, termasuk yang belum dicek. Jangan menyimpulkan "SKU salah" sebelum membuka file Total Formula dan master; kalau keliru, cabut terang-terangan.
@@ -49,6 +49,8 @@ lalu perbarui skill ini. Balas dalam Bahasa Indonesia.
 ## Skrip
 - `scripts/xlsx_zip.py`: pembaca xlsx berbasis zip+XML (openpyxl gagal pada export Shopee). Hanya baca.
 - `scripts/verify_archive_top100.py`: integritas file archive + cek terhadap ranking top-100 + produk dengan SKU kosong.
+- `scripts/compact_rows.py`: rapatkan nomor baris data (wajib untuk file yang hanya berisi sebagian produk).
+- `scripts/shopee_retry_failed.py`: file ulang untuk produk yang gagal pada mass update basic info Shopee (membuang karakter yang ditolak).
 - Di repo `C:\Users\OWNER\Documents\Undercover-Repo\scripts\`: `isi_sku_kosong_tiktok_sp.py` (TikTok) dan
   `isi_sku_kosong_shopee_op.py` (Shopee Info Penjualan); edit tabel `TARGET` untuk produk lain. Skrip sub-project lain dicatat di
   `references/project-map.md`.

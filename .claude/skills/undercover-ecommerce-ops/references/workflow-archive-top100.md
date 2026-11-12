@@ -36,3 +36,9 @@ Catatan lengkap: vault `project-undercover-archive-op-2026-11`.
 - Daftar stok `daftar-urutan.js` tidak memuat Land Cruiser (peringkat 51) padahal top-100: jangan dipakai sebagai acuan archive.
 - `RINGKASAN` buatan sesi lain boleh dipakai sebagai petunjuk, tetapi **verifikasi ulang** dari file asli.
 - SKU Land Cruiser satu untuk semua generasi itu benar (Total Formula = 1), hanya kodenya `J60` (format lama) yang belum `G1`.
+
+## Setelah upload Shopee: baca file Result dan ulangi yang gagal
+1. File `Result_...` hanya memuat baris gagal. Hitung: gagal yang namanya berakhiran "(Archive)" = perlu diulang; sisanya (produk tidak berubah) abaikan.
+2. `py -3 -I scripts/shopee_retry_failed.py --archive <file archive> --result <Result> --out <retry.xlsx>`: baris berurutan dari 7, karakter ditolak dibuang dari deskripsi.
+3. Setelah semua diupload, minta export basic info terbaru dan jalankan `verify_archive_top100.py` (file asli = export sebelum archive; file archive = export terbaru)
+   untuk memastikan jumlah produk "(Archive)" = jumlah yang direncanakan. Contoh OP 12 Nov: 264 direncanakan, 174 berhasil, 90 gagal karena `➤`/`✔`.

@@ -9,9 +9,15 @@ Warna: Abu-abu ABU, Hitam HTM, Biru(Benhur) BRU, Merah MRH, Hijau(Army) GRN, Ora
 Strip: Epic = Strip 1 (S1x), Elite = Strip 2 (S2x), Warrior = Strip 3 (S3x), x = A/B/M; Transparan TRP.
 """
 import json
+import os
 import re
 import sys
 import zipfile
+
+# compact_rows ada di skill e-commerce (di repo ini: .claude/skills/undercover-ecommerce-ops/scripts)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills",
+                                "undercover-ecommerce-ops", "scripts"))
+from compact_rows import compact  # noqa: E402
 
 # pid TikTok -> (awalan model, cara menentukan kode generasi)
 #   "gen"  : G<n> dari label "Gen n"      "fixed:X" : kode tetap X      "pintu" : 3P/5P dari label "3 Pintu"/"5 Pintu"
@@ -121,6 +127,7 @@ def main(src, dst):
         data = newx.encode("utf8") if it.filename == "xl/worksheets/sheet1.xml" else zin.read(it.filename)
         zout.writestr(it, data, compress_type=zipfile.ZIP_DEFLATED)
     zout.close()
+    compact(dst, 5)  # marketplace memproses 0 baris bila ada baris bolong: data harus berurutan dari baris 6
     json.dump(changes, open(dst + ".json", "w", encoding="utf8"), ensure_ascii=False)
     print("baris diisi:", len(changes))
 

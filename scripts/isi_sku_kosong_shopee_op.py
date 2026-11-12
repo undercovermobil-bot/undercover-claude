@@ -7,9 +7,15 @@ Pakai:  py -3 -I isi_sku_kosong_shopee_op.py <export.xlsx> <keluaran.xlsx>   (ja
 Warna: Abu-abu ABU, Hitam HTM, Biru(Benhur) BRU, Merah MRH, Hijau(Army) GRN, Orange ORG;
 Strip N + Abu/Biru/Merah = S<N>A/B/M; Transparan = TRP.
 """
+import os
 import re
 import sys
 import zipfile
+
+# compact_rows ada di skill e-commerce (di repo ini: .claude/skills/undercover-ecommerce-ops/scripts)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills",
+                                "undercover-ecommerce-ops", "scripts"))
+from compact_rows import compact  # noqa: E402
 
 # pid Shopee -> ("gen", awalan model)  atau  ("sku", SKU tetap untuk produk tanpa variasi)
 TARGET = {
@@ -89,6 +95,7 @@ def main(src, dst):
         data = newx.encode("utf8") if it.filename == "xl/worksheets/sheet1.xml" else zin.read(it.filename)
         zout.writestr(it, data, compress_type=zipfile.ZIP_DEFLATED)
     zout.close()
+    compact(dst, 6)  # marketplace memproses 0 baris bila ada baris bolong: data harus berurutan dari baris 7
     for c in changes:
         print(c)
     print("baris diisi:", len(changes))

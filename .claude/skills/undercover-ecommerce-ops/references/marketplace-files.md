@@ -40,3 +40,15 @@ Contoh kerja: `Undercover-Repo\scripts\isi_sku_kosong_tiktok_sp.py` dan `isi_sku
 ## Urutan upload (TikTok)
 Upload file `_ARCHIVE` (rename) **sebelum** file SKU untuk produk yang sama: file archive membawa SKU kosong untuk produk yang belum
 diisi dan bisa menimpa SKU baru bila diupload belakangan. Setelah rename, produk bertanda "(Archive)" dihapus manual lewat UI marketplace.
+
+## Baris data harus berurutan (wajib)
+Marketplace memproses **0 baris** bila file mass-upload punya baris bolong. File yang hanya berisi sebagian produk harus direnumerasi: data berurutan
+mulai baris data pertama (**Shopee 7, TikTok 6, Lazada 5**). Pakai `scripts/compact_rows.py <file> <jumlah_baris_header>` (Shopee 6, TikTok 5); skrip pengisi SKU
+di repo memanggilnya otomatis. Ini sempat terlewat pada file SKU 11-12 Nov dan diperbaiki sebelum diupload.
+
+## File hasil upload (`Result_shopee_mass_update_basic_info_*.xlsx`)
+- Hanya memuat baris yang **gagal**; kolom E "Alasan Gagal". Baris yang berhasil tidak tercantum.
+- Mass update basic info memproses **semua** baris file; produk yang namanya tidak berubah pun bisa gagal (alasan sama) - tidak perlu diulang.
+- Alasan yang sudah terjadi: "Deskripsi produk mengandung karakter yang tidak valid [X]" (karakter `➤` U+27A4 dan `✔` U+2714 ada di deskripsi lama OP).
+  Perbaikan: buat file ulang hanya untuk produk yang perlu berubah dan hapus karakter itu dari deskripsi (`scripts/shopee_retry_failed.py`).
+- Sel hasil edit di file buatan skrip bisa berupa `inlineStr` (bukan shared string); pembaca kustom harus menangani keduanya.
