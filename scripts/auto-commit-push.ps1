@@ -16,6 +16,8 @@ Set-Location $repoPath
 # (lihat sync-vault-memory.ps1) supaya catatan sesi lokal ikut ter-push.
 git pull --rebase --autostash origin main 2>&1 | Out-Null
 & (Join-Path $PSScriptRoot "sync-vault-memory.ps1") -Mode both | Out-Null
+# Skill Claude e-commerce: ~\.claude\skills\undercover-ecommerce-ops <-> .claude\skills\ di repo (lihat sync-skill.ps1).
+& (Join-Path $PSScriptRoot "sync-skill.ps1") -Mode both | Out-Null
 
 $status = git status --porcelain
 if ([string]::IsNullOrWhiteSpace($status)) {

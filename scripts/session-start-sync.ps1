@@ -8,4 +8,6 @@ Set-Location $repoPath
 git pull --rebase --autostash origin main 2>&1 | Out-Null
 $changes = & (Join-Path $PSScriptRoot "sync-vault-memory.ps1") -Mode pull
 if ($changes) { "Sinkron memory dari repo: " + ($changes -join "; ") }
+$skillChanges = & (Join-Path $PSScriptRoot "sync-skill.ps1") -Mode pull
+if ($skillChanges) { "Sinkron skill dari repo: " + ($skillChanges -join "; ") }
 exit 0

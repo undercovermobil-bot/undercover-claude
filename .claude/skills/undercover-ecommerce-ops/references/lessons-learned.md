@@ -1,0 +1,25 @@
+# Pelajaran dan keputusan (bertambah seiring waktu)
+
+Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis ulang entri lama (koreksi = entri baru).
+
+- 2026-11-11 | Archive OP | Hasil verifikasi harus datang dari file asli, bukan dari `RINGKASAN` sesi lain; angka dan isi ternyata cocok, tetapi baru bisa dinyatakan setelah dicek.
+- 2026-11-11 | Top-100 | "100 SKU terlaris" = 100 grup kode; satu kode mewakili beberapa nama mobil. Saya sempat menyebut "109 model" sebagai salah catat; keliru, itu hitungan nama mobil (110 di sheet UA, tanpa Land Cruiser jadi 109).
+- 2026-11-11 | Top-100 | Daftar stok (`daftar-urutan.js`) bukan acuan archive: STP tidak memuat Land Cruiser (#51). Acuan = file RANKING.
+- 2026-11-11 | Archive | Export live SP dan UA di Downloads menunjukkan keadaan setelah mereka dirampingkan: model kembar di luar top-100 (Avega Hatchback, Feroza Long, Mazda 2 Sedan, Aerio Sedan, Mazda 3, BMW M3) tidak ada; Land Cruiser dan MG S5 EV ada. User memutuskan model kembar tidak ikut dipertahankan.
+- 2026-11-11 | Listing campuran | Hilux (`HLR/HLX`), HiAce (`HAC/HAL`), Grand Vitara memang satu listing yang dipertahankan; bukan anomali.
+- 2026-11-11 | MG S5 EV | Produk top-100 (#88) dengan SKU kosong di OP dan SP (TikTok dan Shopee). Master SKU sheet MG kosong. SKU dibuat dengan kode SP, pola warna dari SKU yang sudah ada (cocok 100%).
+- 2026-11-11 | Total Formula | Saya menyebut SKU Land Cruiser "salah" (75 varian -> 15 SKU) berdasar master G1-G5. Salah: Total Formula = 1, satu SKU untuk semua generasi memang benar; yang belum sesuai hanya kode `J60` (harusnya `G1`). **Selalu buka file formula sebelum melabeli SKU kembar sebagai bug.**
+- 2026-11-11 | Corolla | Gen 1-2 satu formula: Gen 2 harus `G1` (sama dengan SKU Transparan SP). Draft pertama saya meniru OP (`G2`) dan salah; OP Reguler Corolla Gen 2 sendiri masih `G2` (belum sesuai formula).
+- 2026-11-11 | TikTok | Upload file archive dulu, baru file SKU: file archive membawa `seller_sku` kosong untuk produk yang belum diisi.
+- 2026-11-11 | Harga | User memastikan tidak ada perubahan harga sejak export 10 Nov, sehingga file SKU Smartpro yang dibuat dari export lama boleh diupload. Selalu tanyakan/jelaskan karena template membawa kolom harga.
+- 2026-11-12 | Shopee | Export Info Penjualan OP: 483 produk, sama dengan basic info; variasi Shopee tanpa spasi setelah koma ("Strip 1 Biru,Gen 1 : 2025-Now"); produk tanpa variasi (Santa Fe Transparan) menyimpan SKU legacy di SKU Induk dan kolom SKU kosong.
+- 2026-11-12 | Teknis | openpyxl gagal membuka export Shopee (`activePane`); pakai pembaca zip+XML. Mengubah sel dengan edit XML mentah menjaga template tetap valid; verifikasi dengan membaca ulang dan membandingkan sel per sel.
+- 2026-11-12 | Pengingat | Saya tidak bisa mengirim pengingat di luar sesi kecuali ada tugas terjadwal yang dipasang atas persetujuan user; saat user kembali, ingatkan dari TODO catatan vault.
+- 2026-11-12 | Skill | Sesi lain menambah sub-project (foto marketplace) tanpa memperbarui skill. Saat memakai skill ini, buka `00 Home.md` vault dan tambahkan sub-project yang belum ada di `project-map.md`.
+- Preferensi user: Bahasa Indonesia; jawab setiap pertanyaan yang dikutip satu per satu; bukti nyata di atas dugaan; tidak mau diminta konfirmasi untuk hal yang sudah jelas; hemat token.
+
+
+## Kasus terbuka (per 2026-11-12)
+- Land Cruiser `J60` -> `G1` (OP dan SP) menunggu SKU gudang `G1` di BigSeller.
+- Taft GT memakai `F70` (formula TF=1, ranking: satu SKU dengan Feroza `G1`); Corolla OP Reguler Gen 2 `G2` vs formula `G1`.
+- Shopee Smartpro dan Undercover belum dicek untuk SKU kosong (butuh export Info Penjualan); SKU gudang BigSeller untuk kode baru belum dicek; MG S5 EV belum di master.

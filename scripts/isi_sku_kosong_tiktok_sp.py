@@ -23,6 +23,9 @@ TARGET = {
     "1737299175856506415": ("DHT-FRZ", "fixed:F70"),  # Taft GT Transparan
     "1737299182912374319": ("DHT-FRZ", "fixed:F70"),  # Taft GT Reguler+Strip
 }
+# Total Formula (G:\My Drive\E-commerce\Data Mobil Lebih dari 1 Formula.xlsx, Sheet2): beberapa generasi satu formula
+# = satu kode. Corolla "Gen 1-2 (1966-1974)" satu formula, jadi Gen 2 memakai G1 (sama dengan SKU Transparan SP).
+GEN_OVERRIDE = {"TYT-CRL": {"2": "1"}}
 SOLID = {"abu-abu": ("R", "ABU"), "hitam": ("R", "HTM"), "merah": ("R", "MRH"), "hijau army": ("R", "GRN"),
          "orange": ("R", "ORG")}
 TIER = {"epic": "1", "elite": "2", "eltie": "2", "warrior": "3", "warior": "3"}
@@ -56,7 +59,7 @@ def build_sku(prefix, how, color, label, cat_from_color):
     cat, suf = cat_from_color
     if how == "gen":
         m = re.match(r"^Gen\s*(\d+)", label)
-        gen = "G" + m.group(1)
+        gen = "G" + GEN_OVERRIDE.get(prefix, {}).get(m.group(1), m.group(1))
     elif how.startswith("fixed:"):
         gen = how.split(":", 1)[1]
     else:  # pintu
