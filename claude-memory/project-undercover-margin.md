@@ -154,6 +154,14 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Aturan: tanpa voucher/flash sale tambahan di motor; total potongan maks ±15% (bayar ±Rp166rb). Kalau penjualan turun: naikkan diskon produk bertahap 10 -> 12 -> 15% (tunggu ±1 minggu), harga coret tetap. Diskon >12% bersama affiliate 8% rugi di stack sheet; saran affiliate motor 3-5%. Untuk 12.12 ubah harga sekarang (riwayat harga bisa membuat pendaftaran campaign ditolak). Atur masa berlaku diskon panjang.
 - ROAS iklan motor riil (klaim platform): Undercover Shopee Okt 17,4x (belanja Rp0,18 jt), 1-8 Nov 15,6x; Undercover TikTok Okt 15,8x (Rp0,81 jt), 1-8 Nov 10,1x. ROAS impas motor di harga baru ±9x (perkiraan, margin riil ±11-12% sebelum iklan). Di harga lama iklan motor rugi walau ROAS 15x+. Jangan naikkan belanja iklan motor dulu; cek ROAS riil 1-2 minggu setelah harga baru.
 
+## Koreksi optimasi iklan: biaya iklan tanpa batas, kendali = target ROAS (13 Nov)
+- Fakta dari user: iklan di Shopee dan TikTok dipasang **tanpa batas biaya** (budget unlimited), jadi rencana "budget/hari per iklan" di PDF 12 Nov tidak relevan. Yang diatur adalah **target ROAS** (GMV Max ROAS Shopee, ROI target GMV Max TikTok); belanja harian adalah hasil.
+- PDF baru: `Documents\Undercover\Optimasi_Iklan_Diskon_Semua_Toko_20261113.pdf` (5 hal.; menggantikan versi 12 Nov). Skrip `tools\ads_plan_report.py` ditulis ulang (cadangan versi lama di temp).
+- Aturan: toko laba (Undercover, Otonation) lantai target T = max(ROAS target 10%, 1,2x impas); ROAS < 1,2x impas matikan; < T naikkan target ke T; >= 1,3 T turunkan target ke max(T, 0,8 x ROAS, maks 20x); selain itu tahan. Toko omzet (Smartpro, Otoprotection) T = 1,15x impas; matikan < 0,8x impas; naikkan target bila ROAS < impas; turunkan target (0,7 x ROAS) bila >= 1,5x impas.
+- Turunkan target = platform belanja lebih banyak; ubah maks. 20% per langkah, tunggu 3-4 hari. Target dasar toko: Undercover Shopee 8,5x, TikTok 7,5x, Smartpro Shopee 5,0x, Smartpro TikTok 4,5x, Otoprotection 4,0x, Otonation 6,5x.
+- Pengaman pengganti batas biaya: pantau iklan % penjualan bersih mingguan (toko laba: laba kontribusi tetap >=10%, yaitu Undercover Shopee ±11,8%; toko omzet 15%); lewat batas naikkan target 20%; iklan ROAS 3 hari di bawah impas dimatikan. Shop+ bidding otomatis tanpa opsi target ROAS: matikan.
+- Iklan merah (matikan) total ±Rp123rb/hari dari belanja Rp4.071rb/hari. Kalender 12.12: turunkan target ROAS iklan hijau ±30% hanya di hari H. Iklan uji produk tanpa iklan: mulai target ROAS 15x lalu turunkan.
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).
@@ -200,3 +208,9 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Data baru sejak 7 Nov: iklan Undercover Shopee (Data Keseluruhan, Iklan Produk Otomatis, Shop+) dan TikTok sampai 6 Nov. Lainnya tidak berubah: Smartpro iklan 1 Nov; Otonation 2 Nov; Otoprotection Shopee 4/5 Nov (Shop+ 3 Nov), TikTok 3 Nov. Tidak ada file sales/income baru (folder Sales hanya berisi Okt).
 - Jun–Sep **tidak punya data uang cair riil**: uang masuk = Pendapatan Kotor × rasio uang masuk Okt per toko (Undercover Shopee 71,6%, TikTok 74,1%, Smartpro Shopee 76,6%, dll.; total ±72,7%). Iklan Jun–Sep dari data iklan BigSeller. HPP dari nama produk BigSeller.
 - Margin setelah iklan per bulan (estimasi, dashboard): Jun 89,5 jt (6,4% dari pendapatan 1.407 jt), Jul 108,9 jt (6,3%), Agu 163,1 jt (9,0%), Sep 238,5 jt (14,4%), Okt 211,6 jt (14,2%). HPP/pendapatan turun dari 61% (Jun) ke 50% (Okt): belum dijelaskan (kemungkinan bauran produk/harga/pemetaan nama); perlu diperiksa sebelum dipercaya. Untuk angka riil perlu Income Shopee/TikTok Jun–Sep.
+
+## Harga motor diterapkan ke file upload (13 Nov)
+- Pembulatan keputusan user: Regular Rp196.000, Strip Rp206.000 (+10rb); Jumbo (harga lama ≥Rp200rb) Rp235.000 (234.930 dibulatkan, asumsi) dan Jumbo Strip Rp245.000. Hanya produk "Cover Motor ... Reguler" tier R/S di toko Undercover; Premium (330/240/220rb) tidak diubah.
+- File: Shopee UA 2 file (1.427 baris) + TikTok UA 1 file (1.368 baris) di `Documents\Undercover Siap Upload` (no. 5-7), dari export 13 Nov. Lazada UA tidak punya produk motor. Diskon penjual 10% diatur manual di Seller Center. Belum diupload per 13 Nov.
+- Koreksi 13 Nov: Jumbo (harga lama ≥Rp200rb) TIDAK diubah, hanya Reguler Rp196rb dan Strip Rp206rb. File diperkecil: Shopee 577 + 280 baris, TikTok 861 baris.
+- Koreksi final 13 Nov: Jumbo minimal Rp235.000 (Rp230rb naik jadi 235rb, yang sudah ≥235rb/240rb tetap). File: Shopee 1.122 + 305 baris, TikTok 1.368 baris.

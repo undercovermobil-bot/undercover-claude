@@ -31,6 +31,10 @@ from compact_rows import ROW_TAG, SHEET, renumber_row, row_number, set_dimension
 HEADER_ROWS = 5
 TAHUN_CATS = {"931592", "813968"}
 MODEL_CATS = {"813968"}
+# Atribut wajib tambahan (empiris, Result 13 Nov 2026): (id atribut, kategori yang memintanya, nilai default dari dropdown)
+#   102755 (kolom "Bile.."; opsi 16:9/4:3) diminta Cover & Shelter Mobil; 102752 Compatible brands + 102765 Lithium volume
+#   density diminta Radiator (Mercedes Transparan yang nyasar). Nilai dipilih sesuai mayoritas produk yang sudah sukses.
+EXTRA = [("102755", {"931592"}, "16:9"), ("102752", {"813968"}, "Mercedes-Benz"), ("102765", {"813968"}, "<400Wh or l")]
 CELL = re.compile(r'<c r="([A-Z]+)(\d+)"([^>]*?)(/>|>.*?</c>)', re.S)
 
 
@@ -105,6 +109,7 @@ def main():
     iImp = keys.get("product_property/102254")
     iTah = keys.get("product_property/100530")
     iMod = keys.get("product_property/100177")
+    iExtra = {pid: keys.get("product_property/" + pid) for pid, _, _ in EXTRA}
     data = {r: v for r, v in t if r > HEADER_ROWS}
 
     # dropdown per atribut -> {kategori: set(opsi)}
@@ -112,7 +117,7 @@ def main():
     head, rows, tail = split_sheet(xml)
     ha = wb.get("HiddenAttr", [])
     opts = {}
-    for label, idx in (("imported", iImp), ("tahun", iTah), ("model", iMod)):
+    for label, idx in [("imported", iImp), ("tahun", iTah), ("model", iMod)] + [("x" + p, i) for p, i in iExtra.items()]:
         if idx is None:
             continue
         cc = dropdown_cols(tail, letters(idx))
@@ -166,6 +171,13 @@ def main():
                 per_attr["Model"] += 1
             else:
                 warns.append("r%d: Model kosong, tidak ketemu opsi dropdown untuk '%s'" % (r, name[:60]))
+        for xid, xcats, xval in EXTRA:
+            xi = iExtra[xid]
+            if xi is not None and not g(v, xi) and cid in xcats:
+                if "x" + xid in opts and cat in opts["x" + xid] and xval not in opts["x" + xid][cat]:
+                    warns.append("r%d: '%s' tidak ada di dropdown atribut %s kategori %s" % (r, xval, xid, cat))
+                fill[xi] = xval
+                per_attr["attr " + xid] += 1
         if fill:
             changes[r] = fill
 
@@ -194,7 +206,7 @@ def main():
     problems = []
     if len(out) != len(src_rows) or sorted(out) != list(range(HEADER_ROWS + 1, HEADER_ROWS + 1 + len(src_rows))):
         problems.append("nomor baris keluaran tidak berurutan / jumlah beda")
-    allowed = {x for x in (iImp, iTah, iMod) if x is not None}
+    allowed = {x for x in [iImp, iTah, iMod] + list(iExtra.values()) if x is not None}
     diff_other = diff_allowed = 0
     for new_r, old_r in zip(sorted(out), src_rows):
         nv, ov = out[new_r], data[old_r]
