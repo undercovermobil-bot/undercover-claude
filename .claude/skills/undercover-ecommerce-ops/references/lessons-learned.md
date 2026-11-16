@@ -37,3 +37,8 @@ Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis u
 
 ## 2026-11-13: iklan marketplace tanpa batas biaya
 - Iklan Shopee (GMV Max ROAS) dan TikTok (GMV Max) di toko Undercover dipasang tanpa batas biaya. Jangan merekomendasikan "budget/hari" per iklan; beri **target ROAS** (lantai dari ROAS impas/target 10%), langkah maks. 20% per 3-4 hari, plus pengaman iklan % penjualan bersih mingguan. Belanja harian = hasil, bukan input.
+
+## 2026-11-14: target iklan per toko dan diagnosis omzet
+- Target user: iklan ±8% penjualan / ROAS 13-15x; Undercover pita 12-15x; Smartpro & Otoprotection sampai BEP (target ROAS = impas). Jangan pakai satu aturan iklan untuk semua toko.
+- Saat omzet turun, cek dulu harga per unit dan unit per model (margin-data.json `orders`: combo, day, status, net, money, cost, hppState, product, units, no) dan corong iklan bulanan (`ads` harian: [tayangan, klik, pesanan, unit, omzet iklan, biaya]). Kenaikan harga Agt 2026 menjelaskan turunnya volume UC; jangan langsung salahkan iklan.
+- PDF Chrome headless: `.page` dengan min-height + `.foot` absolute bottom negatif membuat halaman ekstra; pakai min-height 182mm + padding-bottom dan foot bottom 0. Ukur tinggi tiap section dengan --dump-dom + skrip kecil sebelum print.
