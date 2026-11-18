@@ -42,3 +42,9 @@ Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis u
 - Target user: iklan ±8% penjualan / ROAS 13-15x; Undercover pita 12-15x; Smartpro & Otoprotection sampai BEP (target ROAS = impas). Jangan pakai satu aturan iklan untuk semua toko.
 - Saat omzet turun, cek dulu harga per unit dan unit per model (margin-data.json `orders`: combo, day, status, net, money, cost, hppState, product, units, no) dan corong iklan bulanan (`ads` harian: [tayangan, klik, pesanan, unit, omzet iklan, biaya]). Kenaikan harga Agt 2026 menjelaskan turunnya volume UC; jangan langsung salahkan iklan.
 - PDF Chrome headless: `.page` dengan min-height + `.foot` absolute bottom negatif membuat halaman ekstra; pakai min-height 182mm + padding-bottom dan foot bottom 0. Ukur tinggi tiap section dengan --dump-dom + skrip kecil sebelum print.
+
+## 2026-11-18 — Audit selisih stok sheet vs BigSeller
+- Selisih stok datang dari **stok masuk**, bukan OUT (OUT sheet vs penjualan BigSeller 98% cocok). Cek dulu layout sheet: kolom IN sudah dihapus user (STOK | OUT | OUT HARI INI), restock = KOREKSI.
+- Banyak "koreksi minus" = pembatalan salah input restock (kelipatan 5/10), bukan barang hilang. Bandingkan per hari DAN per SKU-warna; snapshot di jam berbeda menyesatkan (jeda scan pagi vs input sore).
+- Riwayat mutasi BigSeller: `inventory/inout/record/pageList.json` (form-urlencoded); detail di vault `bigseller-pull-snippets`. Google Sheet bisa dibaca dari tab BigSeller via JSONP gviz.
+- BigSeller login ada di Chrome user, bukan browser pane.

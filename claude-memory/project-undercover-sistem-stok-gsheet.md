@@ -54,7 +54,12 @@ Setelah user migrasi, Stock_Opname yang diunduh punya layout BARU: kolom IN lama
 UC: baris 40 & 41 formula Value Premium rusak (`=AF40*AM4441128`); 14 baris tanpa formula Value (50,58,68,69,70,82,83,94,118,140,190,191,192,194); 46 sel OUT masih terisi; baris 19 "Toyota Swift" (SKU SZK-SWF) kemungkinan typo.
 STP: total lama cuma SUM s/d baris 104 → X-Over (Hijau Army 1), Soluna & C Class (Transparan 1+1) tidak ikut (246 vs 243). Baris 5,6,7,8,11 (Strip tanpa Elite Abu & Warior Abu) dan baris 10 (Innova merujuk L9) → **user minta diperbaiki: migrasi otomatis membuat ulang formula standar** (catatan 'DIPERBAIKI'). **Smartprotection tidak jual Exclusive** (user 2026-10-08) → `tanpaValue: ['Exclusive']`, tidak dilaporkan.
 
+## Status di file asli (dicek 2026-11-18)
+- **Sudah terpasang di Google Sheet asli** sejak ±23 Okt 2026 (Log Stok UC mulai 23/10; zona file Asia/Jakarta; Rekap Harian UC/STP jalan tiap 00.33).
+- **Layout diubah user**: per warna sekarang **STOK | OUT | OUT HARI INI** — kolom IN tidak ada lagi. Akibatnya stok masuk dicatat dengan mengetik angka STOK baru (tercatat KOREKSI), Masuk = 0 tiap hari sejak 24 Okt. Sheet "(lama)" disembunyikan.
+- STP hampir tidak dipakai (Log STP ±5 entri). Semua entri dari satu akun Google bersama.
+- Analisis selisih vs BigSeller & usulan SOP: [[project-undercover-stok-opname-diskrepansi]].
+
 ## Belum diverifikasi
 - Trigger dari aplikasi Sheets HP (tidak ada pernyataan resmi Google) — user diminta tes.
-- Status pemasangan di Sheet asli user: belum ada konfirmasi.
 - File unduhan 2026-10-08: 11 sheet, 0 formula lintas sheet → sheet lain aman dibiarkan.
