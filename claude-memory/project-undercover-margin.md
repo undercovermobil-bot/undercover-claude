@@ -224,3 +224,23 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - File: Shopee UA 2 file (1.427 baris) + TikTok UA 1 file (1.368 baris) di `Documents\Undercover Siap Upload` (no. 5-7), dari export 13 Nov. Lazada UA tidak punya produk motor. Diskon penjual 10% diatur manual di Seller Center. Belum diupload per 13 Nov.
 - Koreksi 13 Nov: Jumbo (harga lama ≥Rp200rb) TIDAK diubah, hanya Reguler Rp196rb dan Strip Rp206rb. File diperkecil: Shopee 577 + 280 baris, TikTok 861 baris.
 - Koreksi final 13 Nov: Jumbo minimal Rp235.000 (Rp230rb naik jadi 235rb, yang sudah ≥235rb/240rb tetap). File: Shopee 1.122 + 305 baris, TikTok 1.368 baris.
+
+## Campaign TikTok Gajian Sale Nov & 12.12 (dicek 16 Nov, toko Undercover)
+- Co-Funded Voucher: voucher untuk pembeli 10-35%, ditanggung platform 40% / penjual 60% (biaya efektif penjual 6-21% harga; tingkat 25% untuk pesanan ≥Rp300rb = 15%, 30% untuk ≥Rp500rb = 18%). Aktif 25 Nov-13 Des 07.00; pendaftaran sampai 13 Des; harga yang disubmit tetap aktif di luar campaign. Syarat harga: ≤ harga 30 hari terakhir (Special Link: ≤ harga terendah 7 hari).
+- Ada juga Flash Sale Pasti 50% (diskon 20-50% "ditanggung TikTok Shop") yang belum dibaca syaratnya.
+- Perkiraan Avanza Rp385rb tanpa diskon penjual: voucher 25% -> biaya penjual ±Rp58rb, margin setelah iklan ±8%; dengan diskon penjual 7% tambahan ±4%.
+
+### Koreksi 16 Nov: Undercover TikTok ikut Growth Xtra Program Super (XBP), jadi tanggungan voucher lebih kecil
+- Program saya: **Growth Xtra Program Super** (disetujui sejak 9 Des 2025; biaya layanan mulai 2%, maks Rp100rb per pesanan, voucher GXP dari TikTok Shop, bisa digabung voucher produk), plus PayLater 0% 11.11. Kategori Otomotif GXP biasa 3,5%.
+- Campaign Gajian Sale: versi **[XBP] Co-Funded Voucher = platform 65% / penjual 35%** (status "Diundang", belum didaftarkan produk); versi biasa platform 40% / penjual 60%. Biaya penjual XBP: voucher 20% = 7%, 25% = 8,75% (pesanan ≥Rp300rb, maks Rp105rb), 30% = 10,5%, 35% hari puncak = 12,25%.
+- Perkiraan Avanza Rp385rb (biaya riil TikTok ±26% tanpa iklan, iklan Rp28rb): tanpa diskon sendiri margin setelah iklan ±12,9%; diskon sendiri 7% ±8,7%; 10% ±6,8%. Saran: ikut versi XBP, diskon sendiri 5-7%. Syarat harga: ≤ harga terendah 7 hari (Special Link) / 30 hari (Co-Funded).
+
+### Special Link TikTok (campaign ID 7691233037536544519, dicek 16 Nov)
+- Undercover sudah mendaftarkan **100 produk cover motor**, semua "Sedang ditinjau". Harga eceran Rp196-206rb / Rp235rb (harga baru sudah tayang di TikTok), harga campaign 5% di bawahnya: Rp186.200 / Rp195.700 / Rp223.250.
+- Gratis tanpa biaya tambahan; penjual XBP dapat dukungan voucher platform hingga 20% (non-XBP 6%). Syarat harga: ≤ harga terendah 7 hari (L7D). Kunci harga: 25 Nov-1 Des dan 1-13 Des sampai 07.00.
+- Margin setelah iklan (biaya riil TikTok 33,6% incl iklan 7,6%): Regular Rp186,2rb ±13,7%, Strip Rp195,7rb ±16,3%, Jumbo Rp223,25rb ±13,6%. Di diskon 10% (Rp176,4rb) ±10,8%.
+
+## Iklan Shopee Undercover, cek langsung 16 Nov (7 hari terakhir, 9-15 Nov)
+- Total: biaya iklan Rp22,06 jt, penjualan iklan Rp281 jt, ROAS 12,74 (ACOS ±7,85%), 773 pesanan, CTR 3,76%. Semua iklan aktif jenis GMV Max ROAS; 35 iklan berbelanja = Rp16,1 jt (73% biaya). Jenis manual/Exclusive/Premium tidak berbelanja.
+- Target ROAS yang dipasang 15-20, ROAS nyata 11-13 (35 dari 35 di bawah target) -> diagnosis "ROAS Rendah" dan pembatasan volume. Impas 4,6x, target laba 10% 8,5x: ruang besar. Saran: turunkan target bertahap ke ±10-12x.
+- Saldo iklan hanya Rp41.859 vs belanja ±Rp2,05 jt/hari (peringatan "saldo hampir habis") -> isi saldo / isi otomatis. Brio dan Avanza (belanja terbesar) bertanda "Penurunan Jumlah Pesanan".
