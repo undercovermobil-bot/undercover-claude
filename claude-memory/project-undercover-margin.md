@@ -3,7 +3,7 @@ name: project-undercover-margin
 description: "Analisa margin per pesanan (income Shopee/TikTok vs HPP, setelah iklan) dibangun 2-3 Nov 2026; hasil Okt, keputusan HPP per toko, skrip dan artifact"
 type: project
 tags: [margin, hpp, dashboard, analisa]
-updated: 2026-11-05
+updated: 2026-11-19
 ---
 
 # Analisa margin Undercover (mulai 2026-11-02)
@@ -244,3 +244,11 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Total: biaya iklan Rp22,06 jt, penjualan iklan Rp281 jt, ROAS 12,74 (ACOS ±7,85%), 773 pesanan, CTR 3,76%. Semua iklan aktif jenis GMV Max ROAS; 35 iklan berbelanja = Rp16,1 jt (73% biaya). Jenis manual/Exclusive/Premium tidak berbelanja.
 - Target ROAS yang dipasang 15-20, ROAS nyata 11-13 (35 dari 35 di bawah target) -> diagnosis "ROAS Rendah" dan pembatasan volume. Impas 4,6x, target laba 10% 8,5x: ruang besar. Saran: turunkan target bertahap ke ±10-12x.
 - Saldo iklan hanya Rp41.859 vs belanja ±Rp2,05 jt/hari (peringatan "saldo hampir habis") -> isi saldo / isi otomatis. Brio dan Avanza (belanja terbesar) bertanda "Penurunan Jumlah Pesanan".
+
+
+## Koreksi HPP strip dari sheet STRIP 1 (19 Nov 2026)
+- Sumber kolom `HPP` sheet STRIP 1 (`DATA UC HPP Top 100 Terlaris.xlsx`): strip = HPP polos + **Rp20.000** (sebelumnya Rp21.000 dari user 6 Nov; sheet strip memakai komponen lain Rp14rb vs polos Rp15rb), Alphard +**Rp26.000** (sebelumnya 27rb), HiAce +Rp31.000 (tetap). STRIP 2 diabaikan (keputusan user). Aturan ringkas di [[feedback-undercover-hpp-strip-premium]].
+- `tools\margin_all.py`: `STRIP_ADD` = 20000 / Alphard 26000 / HiAce 31000; `line_hpp()` tidak lagi menambah untuk label Motor (HPP motor Strip = Regular).
+- Celah diperbaiki: `tools\discount_capacity.py` dan `tools\fee_margin.py` memakai `hpp[lab]` (tanpa strip); kini `m.line_hpp(lab, variasi, hpp)`. `discount_reguler.py` hanya diubah teks (Rp21rb -> Rp20rb). `dashboard_export.py` sudah memakai `line_hpp` (otomatis ikut; baris 181 jalur data BigSeller Jan-Jun tanpa nama variasi tetap polos).
+- Dampak Undercover Okt (fee_margin): margin sebelum iklan Shopee 22,6% -> 21,8%, TikTok 25,4% -> 24,4%; setelah iklan Shopee 14,8% -> 13,9%, TikTok 17,3% -> 16,3%. `discount_capacity` kini memisahkan kelompok HPP strip (202.500, 178.667, 238.250, dst.). Contoh Shopee HPP 182.500: diskon maks normal 15,6% -> 14,0%, semua potongan aktif 1,5% -> -0,4%.
+- Dashboard dan artifact yang dibangun dari `margin_all`/`dashboard_export` sebelum 19 Nov masih memakai angka lama; jalankan ulang saat dashboard berikutnya dibangun. Folder `tools` bukan git, jadi tidak ada commit repo.
