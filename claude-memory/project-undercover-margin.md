@@ -172,6 +172,10 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Belum diterapkan di marketplace (per 14 Nov hanya rencana).
 - Dashboard artifact `LPAmvucR6uaSEVGvQADh66` dipublish ulang 14 Nov (v18): ekspor ulang dengan HPP motor baru (rata-rata HPP motor per unit Rp101.444 -> Rp100.447), data iklan s.d. 11 Nov; angka toko lain tidak berubah.
 
+## Dashboard v19: iklan sampai 25 Nov (26 Nov)
+- Artifact `LPAmvucR6uaSEVGvQADh66` dipublish ulang (v19): iklan Nov sampai 25 Nov (Undercover lengkap; Smartpro Shopee tanpa 18, 23-25 Nov; Smartpro TikTok tanpa 23-25; Otoprotection Shopee tanpa 4-5, 24-25; Otonation tanpa 24-25; Otoprotection TikTok hanya 4 hari Nov). Penjualan (Order/Income/Onhold) masih sampai 31 Okt, November diunduh awal Desember.
+- Masalah file: TikTok Smartpro 18 Nov (kampanye 1881805369878546) salah folder di Ads\Otoprotection, jadi biayanya terhitung ke Otoprotection TikTok; TikTok UC kampanye 1881995424867714 tidak ada 18-22 Nov; TikTok Otoprotection tidak ada file sejak 4 Nov (cek apakah iklan dimatikan).
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).
