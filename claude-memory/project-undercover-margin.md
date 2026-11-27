@@ -176,12 +176,24 @@ Skrip `tools\discount_capacity.py`. Syarat user: margin minimal 5% **setelah ikl
 - Artifact `LPAmvucR6uaSEVGvQADh66` dipublish ulang (v19): iklan Nov sampai 25 Nov (Undercover lengkap; Smartpro Shopee tanpa 18, 23-25 Nov; Smartpro TikTok tanpa 23-25; Otoprotection Shopee tanpa 4-5, 24-25; Otonation tanpa 24-25; Otoprotection TikTok hanya 4 hari Nov). Penjualan (Order/Income/Onhold) masih sampai 31 Okt, November diunduh awal Desember.
 - Masalah file: TikTok Smartpro 18 Nov (kampanye 1881805369878546) salah folder di Ads\Otoprotection, jadi biayanya terhitung ke Otoprotection TikTok; TikTok UC kampanye 1881995424867714 tidak ada 18-22 Nov; TikTok Otoprotection tidak ada file sejak 4 Nov (cek apakah iklan dimatikan).
 
+## Cek kelengkapan file (27 Nov 15.16, data s.d. 26 Nov)
+- Lengkap: Shopee Undercover, Smartpro, Otonation; TikTok Undercover.
+- Belum ada: Lazada ads UC 16 Okt, 17-21 & 26 Nov; Smartpro Lazada ads 23-26 Nov; Smartpro TikTok 23-26 Nov; Otoprotection Shopee 18 & 24-26 Nov (Shop+ juga 5, 13-15, 23-25 Okt, 4-5 Nov); Otoprotection TikTok 4-26 Nov; Income Shopee Okt Undercover hanya di Downloads (belum di Drive); penjualan Nov semua toko.
+- Enam file 18 Nov di `Ads\Otoprotection` sebenarnya milik Smartprotection (3 Shopee, 2 TikTok, 1 Lazada). Dashboard v19 menghitung data Shopee/TikTok-nya sebagai Otoprotection. Pindahkan ke Smartpro: TikTok 1881805369878546 dan Lazada; sisanya sudah ada di Smartpro.
+
+## Unduh iklan Shopee lewat Claude in Chrome (uji 27 Nov, berhasil)
+- User sudah login di profil Chrome per toko; data diambil langsung dari marketplace (keputusan user: bukan lewat BigSeller). Per 27 Nov profil Otoprotection = "Browser 3" di Claude in Chrome.
+- URL: `https://seller.shopee.co.id/portal/marketing/pas/index?from=<unix 00:00 WIB>&to=<unix 23:59:59 WIB>&group=custom&view_mode=classic` (Iklan Produk: `type=new_cpc_homepage`; Shop+: `type=shop_homepage`). Download Data: "Data Keseluruhan Iklan" dan "Rincian Data Iklan Produk Otomatis" (konfirmasi), Shop+: "Shop+ Ads Data"; lalu klik Download di "Laporan Terakhir". File masuk Downloads, cek `Username`/`Periode`, salin ke `E-commerce Data\Ads\<toko>` tanpa menimpa.
+- Otoprotection Shopee 24-26 Nov (9 file) sudah diunduh dan disalin. Shop+ 24-26 Nov belanja Rp117.667, omzet Rp0.
+- Dari cek isi semua file: hanya 6 file salah toko (18 Nov, di `Ads\Otoprotection`, milik Smartprotection). Income Shopee Okt Undercover dan laporan Lazada UC 1-31 Okt (memuat 16 Okt) hanya ada di Downloads. Pemindahan menunggu persetujuan user.
+- Menurut user iklan seharusnya ada tiap hari, jadi tanggal kosong = file belum diunduh. Dashboard masih memakai BigSeller untuk Juni (semua) dan iklan Jul-Sep.
+
 ## Belum lengkap (per 5 Nov)
 - Logo Undercover untuk dashboard.
 - Otoprotection Shopee: file iklan Shop+ 2–31 Okt (Rp50.000 di 1 Okt, jadi memang jalan).
 - TikTok Onhold untuk Smartpro dan Otoprotection (estimasi memakai rasio).
 - Tab Pending Shopee (opsional), file Income November untuk finalisasi, penjualan 1 Nov semua toko.
-- Tidak ada file Lazada untuk iklan; dashboard tidak punya blok iklan Lazada.
+- Koreksi 27 Nov: file iklan Lazada **ada** (Undercover dan Smartprotection), yaitu xlsx bernama `YYYY-MM-DD--YYYY-MM-DDHH_MM.xlsx` (ReportType Promoted Product, toko dibaca dari `Seller Info`). Belum dibaca converter; dashboard belum punya blok iklan Lazada.
 
 ## Tindak lanjut
 - [ ] Jalankan ulang margin setelah income November dan iklan Shop+ Otoprotection lengkap, lalu publish ulang dashboard React.

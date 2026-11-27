@@ -48,3 +48,19 @@ Format: `YYYY-MM-DD | konteks | pelajaran`. Tambahkan di bawah, jangan menulis u
 - Banyak "koreksi minus" = pembatalan salah input restock (kelipatan 5/10), bukan barang hilang. Bandingkan per hari DAN per SKU-warna; snapshot di jam berbeda menyesatkan (jeda scan pagi vs input sore).
 - Riwayat mutasi BigSeller: `inventory/inout/record/pageList.json` (form-urlencoded); detail di vault `bigseller-pull-snippets`. Google Sheet bisa dibaca dari tab BigSeller via JSONP gviz.
 - BigSeller login ada di Chrome user, bukan browser pane.
+
+## 2026-11-27: kelengkapan file iklan dicek per jenis file dan per kampanye
+- Dashboard menandai satu hari TikTok "ada" bila minimal satu kampanye ada. Di v19 saya melaporkan TikTok Undercover lengkap, padahal kampanye 1881995424867714 tidak ada 18-22 Nov (±Rp0,9 jt belanja). Cek kelengkapan per kampanye (dan per jenis file Shopee), jangan per hari.
+- File yang "tidak ada" belum tentu hari tanpa belanja: Shop+ UC 11 Nov dan kampanye TikTok di atas ternyata ada belanjanya.
+
+## 2026-11-27: cek kelengkapan harus dari isi file, bukan nama
+- Nama file Shopee/TikTok sama antar toko: file Smartprotection di folder Otoprotection terhitung "ada". Cek `Nama Toko` di CSV Shopee (peringatan `manual_to_data.scan_ads`), merek di nama produk TikTok, dan `Seller Info` laporan Lazada.
+- `YYYY-MM-DD--YYYY-MM-DDHH_MM.xlsx` di folder Ads = laporan iklan Lazada (Promoted Product). Sebelumnya salah disimpulkan "Lazada tidak punya file iklan".
+- Income Shopee bisa terbaca dari Downloads (`shopee_income_paths`) padahal belum disalin ke Drive.
+
+## 2026-11-27: unduh iklan Shopee lewat Claude in Chrome
+- Profil Chrome per toko tersambung sebagai browser terpisah di Claude in Chrome; cek nama toko di pojok kanan atas Seller Centre sebelum mengunduh.
+- Tanggal bisa diatur lewat URL (`from`/`to` unix WIB + `group=custom`), tidak perlu klik kalender. Laporan masuk daftar "Laporan Terakhir" dulu, tunggu tombol Download.
+- Nama file sama antar toko: selalu cek `Username` dan `Periode` di dalam CSV sebelum menyalin ke folder toko.
+- Keputusan user: sumber data = marketplace langsung, bukan BigSeller; tanya dulu sebelum memindahkan file.
+

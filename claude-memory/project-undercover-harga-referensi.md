@@ -2271,3 +2271,39 @@ minta user re-download template "All_Information" yg lebih lengkap
 File final: `SHOPEE_OTOPROTECTION_1.xlsx` (422 baris), `_2.xlsx` (45
 baris), `TIKTOK_OTOPROTECTION_1.xlsx` (1 baris), `_2.xlsx` (460
 baris) - semua sudah dipotong Transparan-saja.
+
+## 2026-11-27: Harga SP Signature dari sheet "Harga jual 2%" (GSheet HPP STP OTP)
+
+Sumber: GSheet `1PF3WI97Ib6Jd0ZDwD5jWwEszEU5lAPP_dIG0iWnSlsY`, sheet **"Harga jual 2%"** kolom AB "Harga Jual Terbaru"
+(margin bersih 2%). Kolom Pcs/Roll sheet ini hanya terisi baris 2-152 -> baris 153+ **dipinjam dari sheet "HPP 12%"** (keputusan user).
+Keputusan user (AskUserQuestion 2026-11-27):
+- Lantai per Pcs/Roll = ceil ribuan: 7=263rb, 6=294rb, 5=337rb, 4=402rb, 3=510rb.
+- Spread **maks Rp3.000 per tier Pcs/Roll saja** (BUKAN Pcs/Roll x tipe bodi seperti v3): urutan dari PANJANG_MM
+  (`harga_baru_sp_op_matriks_v2`), posisi proporsional, jumlah langkah = min(rentang/100mm, 3). Tier 7 (Mini EV vs Air EV, beda 57mm) -> +1rb.
+- 10 terlaris (Avanza, Brio, Innova, Jazz, Ertiga, HR-V, Agya, Ayla, Xenia, Livina) dipatok di lantai.
+- Strip = Reguler + 43rb. Transparan & "Custom" tidak disentuh.
+- Kembaran ikut prefix SKU: TYT-AVZ->Avanza, DHT-AYL->Agya, TYT-RSH->Rush, TYT-ALP->Alphard, TYT-CLY->Calya, TYT-RZE->Raize, DHT-FRZ->Feroza
+  (Rocky F70 & Taft GT ikut Feroza). DHT-GMX TIDAK (Luxio salah tag, tetap harga Luxio 338rb; Gran Max Minibus 402rb karena sheet = 4 pcs/roll).
+Hasil (export 26 Nov): Shopee 3.808, TikTok 3.776 (108 produk), Lazada 8.159 baris; hampir semua TURUN ~9% (Avanza 370->337rb,
+Brio 322->294rb, Fortuner 443->403rb). Naik: Gran Max Minibus (371->402rb), Rocky lama (324->337rb), BMW M2 Lazada (199->338rb, harga lama salah).
+16 model Lazada tanpa Pcs/Roll/panjang dilewati (Eclipse, Passat, Peugeot 3008/306, Cedric, Mazda 3 Hatchback, Aerio Sedan, Fusion, Fox, GLB, Lantis, Matrix, Darion, Hummer H3, Jaecoo J5).
+Skrip: `Documents\Undercover\tools\harga-sp-2pct-2026-11-27\` (sheet2pct, hitung, tulis, verif, cek3). OP belum (menunggu file).
+**Bentrok**: file campaign Shopee SP 12.12 (14 Nov) dihitung dari harga lama -> harga campaign bisa di atas harga normal baru.
+
+### Revisi user 2026-11-27 (sama hari)
+- **Custom** ikut disesuaikan: ukuran = tier lama -> lantai baru: Subcompact 287->263rb, Compact 322->294rb, Midsize 370->337rb,
+  Large 443->402rb, Jumbo 565->510rb; Strip Custom tetap = harga Reguler (struktur lama dipertahankan). 75 varian Shopee (Custom hanya di Shopee).
+- **Gran Max Minibus** = harga Luxio (5 pcs, 338rb/381rb): sheet menulis 4 pcs, tapi harga lama 371rb = tier 5 pcs dan SKU DHT-GMX dipakai bersama Luxio.
+  Bentrok harga di DHT-GMX jadi hilang.
+- **Rocky F70** ikut Pcs/Roll Rocky sendiri (6 pcs) -> 296rb/339rb (harga lama 324rb = tier 6 pcs). Prefix DHT-FRZ tidak lagi dipaksa ke Feroza;
+  akibatnya SKU DHT-FRZ dipakai Rocky F70 (296rb) dan Feroza/Taft GT (337rb) dengan harga beda, sama seperti kondisi lama (324 vs 370rb).
+- 16 model Lazada-only (Eclipse, Passat, Peugeot 3008/306, Cedric, Mazda 3 Hatchback & Sedan, Aerio Sedan, Fusion, Fox, GLB, Lantis, Matrix,
+  Darion, Hummer H3, Jaecoo J5) tidak ada di Shopee/TikTok SP -> user berencana menghapusnya dari Lazada.
+- Campaign Shopee SP 12.12: user take down dulu, setup ulang setelah harga baru naik.
+Hasil akhir: Shopee 3.883, TikTok 3.776, Lazada 8.159 baris.
+
+### Otoprotection (OP) 2026-11-27 — harga ikut SKU SP
+Export OP 27 Nov (Shopee `mass_update_sales_info_476733837_...`, TikTok all_information 27 Nov). Karena SKU OP = SKU SP, harga diambil
+per SKU dari file SP final (10-12), bukan dari nama listing OP yang tidak seragam. Pengecualian: DHT-FRZ (dua harga) -> lewat nama
+(Rocky 296rb, Feroza/Taft 337rb); SKU yang tidak ada di SP -> lewat prefix (Corolla Gen lama di TikTok 15 baris, Evalia 1 baris).
+Transparan (T) dilewati. Hasil: Shopee 3.720 baris, TikTok 3.885 baris (110 produk); semua turun 23-55rb. Skrip `tulis_op.py`.
